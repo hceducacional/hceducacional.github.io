@@ -32,6 +32,9 @@ const ICONS = {
   monitor: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
   star: '<path d="M11.52 2.3a.53.53 0 0 1 .95 0l2.31 4.68a2.12 2.12 0 0 0 1.6 1.16l5.16.76a.53.53 0 0 1 .3.9l-3.74 3.64a2.12 2.12 0 0 0-.61 1.88l.88 5.14a.53.53 0 0 1-.77.56l-4.62-2.43a2.12 2.12 0 0 0-1.97 0L6.4 21.01a.53.53 0 0 1-.77-.56l.88-5.14a2.12 2.12 0 0 0-.61-1.88L2.16 9.8a.53.53 0 0 1 .3-.91l5.16-.75a2.12 2.12 0 0 0 1.6-1.16z"/>',
   grip: '<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>',
+  lock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  eye: '<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/>',
+  eyeoff: '<path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c4.84 0 8.66 3.08 9.94 6.65a1 1 0 0 1 0 .7 10.75 10.75 0 0 1-1.44 2.49M14.08 14.16a3 3 0 0 1-4.24-4.24M17.48 17.5a10.75 10.75 0 0 1-15.42-5.15 1 1 0 0 1 0-.7 10.75 10.75 0 0 1 4.45-5.14M2 2l20 20"/>',
   clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
   tools: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/>',
 };
@@ -261,6 +264,7 @@ function renderDashboard(view) {
                 ${b.pill ? `<span class="pill">${esc(b.pill)}</span>` : ''}
                 <h2>${esc(b.title)}</h2>
                 <p>${esc(b.desc)}</p>
+                ${bannerLink(b) ? `<a class="slide-cta" href="${esc(bannerLink(b))}" target="_blank" rel="noopener noreferrer">Acessar ${CHEV_SVG}</a>` : ''}
               </div>
             </div>`).join('')}
         </div>
@@ -369,6 +373,13 @@ function initRecentNews() {
   row.addEventListener('transitionend', update);
   new ResizeObserver(update).observe(row);
   update();
+}
+
+/* Link do botão "Acessar" do banner (vazio se desativado ou inválido) */
+function bannerLink(b) {
+  if (!b.linkOn) return '';
+  const u = normalizeUrl(b.url || '');
+  return isSafeUrl(u) ? u : '';
 }
 
 function initCarousel() {
@@ -482,6 +493,14 @@ function renderConfig(view) {
   panel.addEventListener('input', (e) => {
     const f = e.target.closest('[data-field]'); if (!f) return;
     const i = +f.dataset.i;
+    if (f.type === 'checkbox') {
+      banners[i][f.dataset.field] = f.checked;
+      const box = f.closest('.bi-link');
+      box.classList.toggle('on', f.checked);
+      const url = box.querySelector('[data-field="url"]');
+      if (f.checked) { url.removeAttribute('tabindex'); setTimeout(() => url.focus(), 250); } else url.setAttribute('tabindex', '-1');
+      saveBanners(); return;
+    }
     banners[i][f.dataset.field] = f.value;
     if (f.dataset.field === 'title') panel.querySelector(`[data-sub="${i}"]`).textContent = f.value;
     clearTimeout(panel._t); panel._t = setTimeout(saveBanners, 300);
@@ -530,6 +549,16 @@ function drawBannerPanel() {
           <div class="field"><label>Texto da pílula</label><input data-i="${i}" data-field="pill" value="${esc(b.pill)}"></div>
           <div class="field"><label>Título</label><input data-i="${i}" data-field="title" value="${esc(b.title)}"></div>
           <div class="field"><label>Descrição</label><input data-i="${i}" data-field="desc" value="${esc(b.desc)}"></div>
+          <div class="field full bi-link ${b.linkOn ? 'on' : ''}">
+            <div class="bi-link-row">
+              <div class="pref-text"><strong>Botão “Acessar”</strong><span>Mostra um botão no banner que abre o link em uma nova guia</span></div>
+              <label class="switch"><input type="checkbox" data-i="${i}" data-field="linkOn" ${b.linkOn ? 'checked' : ''}><span></span></label>
+            </div>
+            <div class="bi-link-url"><div>
+              <label>Link de acesso</label>
+              <input data-i="${i}" data-field="url" value="${esc(b.url || '')}" placeholder="https://www.exemplo.com.br" inputmode="url" ${b.linkOn ? '' : 'tabindex="-1"'}>
+            </div></div>
+          </div>
         </div>
       </div>`).join('')}
 
@@ -1325,10 +1354,148 @@ function drawRecentPanel() {
 }
 
 /* =========================================================
+   ACESSO RESTRITO (senha antes de abrir um sistema)
+   O endereço de destino fica criptografado com a própria senha (AES-GCM,
+   chave derivada por PBKDF2): sem a senha certa não é possível descobri-lo.
+   Para trocar senha ou link, gere um novo bloco com HC_lockLink(url, senha).
+   ========================================================= */
+const LOCKED_LINKS = {
+  semipresencial: {
+    title: 'Sistema Semipresencial',
+    salt: 'wAQLLGsqFsD+BVg1T/Kf/g==', iv: 'IE3/lY3FB/J56sKA',
+    data: '84SrvteffUlK0qls1NGAv0E23ShnamX1cJvecZqLe9Kur1gYuQkHZOqlwrHK',
+  },
+  // Configurações: o conteúdo cifrado é só uma confirmação ("hc-config-ok")
+  config: {
+    title: 'Configurações',
+    sub: 'Área restrita à equipe do polo. Digite a senha para continuar.',
+    salt: 'uPiwFtLM7Gqma51QN/H2xQ==', iv: 'ZJXH826ONPxbj/Mt',
+    data: '0auLW64GLet+bn0wWjFywQuGUHMjxjq7WfbmRA==',
+  },
+};
+const LOCK_ITER = 250000;
+const fromB64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+async function lockKey(pass, salt, usage) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: LOCK_ITER, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, [usage]);
+}
+async function unlockLink(item, pass) {
+  try {
+    const key = await lockKey(pass, fromB64(item.salt), 'decrypt');
+    const out = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(item.iv) }, key, fromB64(item.data));
+    return new TextDecoder().decode(out);
+  } catch { return null; } // senha errada
+}
+window.HC_lockLink = async (url, pass) => {
+  const b64 = (u) => btoa(String.fromCharCode(...new Uint8Array(u)));
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await lockKey(pass, salt, 'encrypt'), new TextEncoder().encode(url));
+  return { salt: b64(salt), iv: b64(iv), data: b64(ct) };
+};
+
+/* Pop-up de senha. onOk recebe o conteúdo decifrado; onCancel é chamado ao fechar sem entrar. */
+function openLock(id, onOk = (url) => openUnlocked(url), onCancel) {
+  const item = LOCKED_LINKS[id];
+  if (!item || document.querySelector('.lk')) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'lk';
+  wrap.innerHTML = `
+    <div class="lk-backdrop"></div>
+    <form class="lk-card" role="dialog" aria-modal="true" aria-labelledby="lk-title" autocomplete="off">
+      <span class="lk-icon"><i data-icon="lock"></i></span>
+      <h2 id="lk-title">${esc(item.title)}</h2>
+      <p class="lk-sub">${esc(item.sub || 'Acesso restrito a pessoas autorizadas. Digite a senha para continuar.')}</p>
+      <div class="lk-field">
+        <input type="password" id="lk-pass" placeholder="Senha de acesso" aria-label="Senha de acesso" autocomplete="off" spellcheck="false">
+        <button type="button" class="lk-eye" aria-label="Mostrar senha"><i data-icon="eye"></i></button>
+      </div>
+      <p class="lk-msg" role="alert"></p>
+      <div class="lk-actions">
+        <button type="button" class="btn-soft lk-cancel">Cancelar</button>
+        <button type="submit" class="btn-dark lk-go">Entrar</button>
+      </div>
+    </form>`;
+  document.body.appendChild(wrap);
+  paintIcons(wrap);
+  const card = wrap.querySelector('.lk-card');
+  const input = wrap.querySelector('#lk-pass');
+  const msg = wrap.querySelector('.lk-msg');
+  const go = wrap.querySelector('.lk-go');
+  const eye = wrap.querySelector('.lk-eye');
+  const lastFocus = document.activeElement;
+  requestAnimationFrame(() => wrap.classList.add('in'));
+  setTimeout(() => input.focus(), 60);
+
+  let done = false;
+  const close = () => {
+    if (!done) onCancel?.();
+    document.removeEventListener('keydown', onKey);
+    wrap.classList.remove('in');
+    setTimeout(() => wrap.remove(), 300);
+    lastFocus?.focus?.({ preventScroll: true });
+  };
+  const onKey = (e) => {
+    if (e.key === 'Escape') close();
+    if (e.key === 'Tab') {
+      const f = [...card.querySelectorAll('input, button')];
+      if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+      else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+    }
+  };
+  document.addEventListener('keydown', onKey);
+  wrap.querySelector('.lk-backdrop').addEventListener('click', close);
+  wrap.querySelector('.lk-cancel').addEventListener('click', close);
+  eye.addEventListener('click', () => {
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    eye.setAttribute('aria-label', show ? 'Ocultar senha' : 'Mostrar senha');
+    eye.innerHTML = `<i data-icon="${show ? 'eyeoff' : 'eye'}"></i>`; paintIcons(eye);
+    input.focus();
+  });
+  input.addEventListener('input', () => { msg.textContent = ''; card.classList.remove('error'); });
+
+  card.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!input.value) { input.focus(); return; }
+    go.disabled = true; go.textContent = 'Verificando…';
+    const url = await unlockLink(item, input.value);
+    go.disabled = false; go.textContent = 'Entrar';
+    if (!url) {
+      msg.textContent = 'Senha incorreta. Tente novamente.';
+      card.classList.remove('error'); void card.offsetWidth; card.classList.add('error');
+      input.select();
+      return;
+    }
+    done = true;
+    if (onOk(url, msg, close) !== false) close();
+  });
+}
+/* Abre o sistema liberado em nova guia (com alternativa se o navegador bloquear) */
+function openUnlocked(url, msg, close) {
+  const win = window.open(url, '_blank', 'noopener');
+  if (win === null && !document.hidden) {
+    msg.innerHTML = `<a class="lk-open" href="${esc(url)}" target="_blank" rel="noopener">Abrir o sistema</a>`;
+    msg.classList.add('ok');
+    msg.querySelector('a').addEventListener('click', () => setTimeout(close, 100));
+    return false;
+  }
+}
+
+/* Configurações: liberadas só nesta guia, até ela ser fechada ou a sessão ser encerrada */
+const CONFIG_FLAG = 'hc:config-ok';
+const configUnlocked = () => { try { return sessionStorage.getItem(CONFIG_FLAG) === '1'; } catch { return false; } };
+const setConfigUnlocked = (on) => { try { on ? sessionStorage.setItem(CONFIG_FLAG, '1') : sessionStorage.removeItem(CONFIG_FLAG); } catch {} };
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('[data-locked]'); if (!a) return;
+  e.preventDefault();
+  openLock(a.dataset.locked);
+});
+
+/* =========================================================
    Páginas ainda não construídas
    ========================================================= */
 const TITLES = {
-  atividades: 'Atividades do Dia', relatorio: 'Relatório Mensal', seguranca: 'Segurança', ajuda: 'Ajuda / Suporte',
+  relatorio: 'Relatório Mensal', seguranca: 'Segurança', ajuda: 'Ajuda / Suporte',
 };
 /* Cabeçalho editorial: rótulo pequeno, título grande e uma linha de apoio */
 function pageHead(kicker, title, sub) {
@@ -1352,9 +1519,24 @@ function renderPlaceholder(view, route) {
 /* =========================================================
    Roteador
    ========================================================= */
+let lastRoute = 'dashboard';
 function route() {
   const r = (location.hash || '#dashboard').slice(1);
-  if (r === 'sair') { toast('Sessão encerrada (demonstração)'); history.replaceState(null, '', '#dashboard'); return route(); }
+  if (r === 'sair') { setConfigUnlocked(false); toast('Sessão encerrada'); history.replaceState(null, '', '#dashboard'); return route(); }
+  // Configurações pedem senha: fica na página atual até a senha certa ser digitada
+  if (r.split('/')[0] === 'config' && !configUnlocked()) {
+    history.replaceState(null, '', '#' + lastRoute);
+    if (!document.querySelector('.lk')) {
+      if (!$('#view').childElementCount) route(); // primeira carga direto em #config
+      openLock('config', (ok) => {
+        if (ok !== 'hc-config-ok') return;
+        setConfigUnlocked(true);
+        location.hash = '#' + r;
+      });
+    }
+    return;
+  }
+  lastRoute = r;
   const view = $('#view');
   document.querySelectorAll('.nm, .nm-ghost').forEach((el) => el.remove());
   document.body.classList.remove('modal-open');
@@ -1368,6 +1550,16 @@ function route() {
 }
 
 window.addEventListener('hashchange', route);
+
+/* sombra um pouco mais forte na barra superior ao rolar a página */
+(() => {
+  const wrap = document.getElementById('topbar-wrap');
+  if (!wrap) return;
+  let ticking = false;
+  const update = () => { ticking = false; wrap.classList.toggle('scrolled', window.scrollY > 8); };
+  window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+  update();
+})();
 // Atalho Ctrl/⌘ + K para a busca
 window.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); $('#search').focus(); }

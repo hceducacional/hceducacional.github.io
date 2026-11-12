@@ -7,14 +7,17 @@ window.HC_CONTENT = {
       "image": "assets/conteudo/banner-b1-8f238e59.webp",
       "pill": "Notícias do Polo",
       "title": "Bem-vindo ao Semipresencial FAVENIHC",
-      "desc": "Centralize chamadas, alunos e relatórios do seu polo em um só lugar."
+      "desc": "Centralize chamadas, alunos e relatórios do seu polo em um só lugar.",
+      "linkOn": true,
+      "url": "www.google.com"
     },
     {
       "id": "b2",
       "image": "assets/conteudo/banner-b2-bab57c42.webp",
       "pill": "ConsultaEDU",
       "title": "Novas atividades regularmente",
-      "desc": "Mantenha os links das disciplinas atualizados através do ConsultaEDU"
+      "desc": "Mantenha os links das disciplinas atualizados através do ConsultaEDU",
+      "linkOn": false
     }
   ],
   "links": [
@@ -22,7 +25,7 @@ window.HC_CONTENT = {
       "id": "l1",
       "name": "UNIFAVENI",
       "url": "https://unifaveni.portaldoaluno.ai/",
-      "image": "assets/conteudo/botao-l1-e5fbd231.jpg",
+      "image": "assets/conteudo/botao-l1-0dc814e5.png",
       "c1": "#34d6ae",
       "c2": "#0e9f7e"
     },
@@ -30,7 +33,7 @@ window.HC_CONTENT = {
       "id": "l2",
       "name": "UNIABEU",
       "url": "",
-      "image": "",
+      "image": "assets/conteudo/botao-l2-878bf75e.png",
       "c1": "#0b7a9a",
       "c2": "#070f3d"
     },
@@ -38,7 +41,7 @@ window.HC_CONTENT = {
       "id": "l3",
       "name": "UNISBA",
       "url": "",
-      "image": "",
+      "image": "assets/conteudo/botao-l3-fd536bc4.png",
       "c1": "#0a3a96",
       "c2": "#1d9bf0"
     },
@@ -46,7 +49,7 @@ window.HC_CONTENT = {
       "id": "l4",
       "name": "DOM ALBERTO",
       "url": "",
-      "image": "",
+      "image": "assets/conteudo/botao-l4-c04f5a09.png",
       "c1": "#f0163a",
       "c2": "#8a0618"
     },
@@ -54,7 +57,7 @@ window.HC_CONTENT = {
       "id": "l5",
       "name": "FUTURA",
       "url": "",
-      "image": "",
+      "image": "assets/conteudo/botao-l5-d986cb6c.png",
       "c1": "#08a8f5",
       "c2": "#06237e"
     },
@@ -62,7 +65,7 @@ window.HC_CONTENT = {
       "id": "l6",
       "name": "EDUCA NEXUS",
       "url": "",
-      "image": "",
+      "image": "assets/conteudo/botao-l6-8af2fb68.png",
       "c1": "#ffe27a",
       "c2": "#f5b51f"
     }
