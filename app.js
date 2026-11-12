@@ -82,6 +82,42 @@ const DEFAULT_LINKS = [
 ];
 let links = store.get('links', PUBLISHED.links || DEFAULT_LINKS);
 const saveLinks = () => { cleanupImages(); return store.set('links', links); };
+/* Mantenha-se conectado: 4 blocos fixos (1 grande, 1 largo e 2 menores) */
+const DEFAULT_CONNECT = [
+  { id: 'c1', title: 'Siga o HC no Instagram', desc: 'Novidades, eventos e bastidores do polo em @hceducacional.', url: 'https://www.instagram.com/hceducacional/', image: '', whatsapp: '' },
+  { id: 'c2', title: 'FAVENI no Instagram', desc: 'Formaturas, entrevistas e promoções em @favenihc.', url: 'https://www.instagram.com/favenihc/', image: '' },
+  { id: 'c3', title: 'Agende seu atendimento', desc: 'Escolha o melhor horário para ser atendido no polo.', url: 'https://prova-facil-favenihc.lovable.app/', image: '' },
+  { id: 'c4', title: 'Fale conosco', desc: 'Tire dúvidas sobre matrículas, documentos e prazos.', url: '', image: '' },
+];
+const CONNECT_DESC_MAX = [320, 140, 140, 140]; // o bloco grande comporta um texto maior
+/* WhatsApp do bloco grande: aceita qualquer formatação; DDD + número (o 55 do Brasil é opcional) */
+const waDigits = (v = '') => {
+  let d = String(v).replace(/\D/g, '');
+  if (d.length === 10 || d.length === 11) d = '55' + d;
+  return /^55\d{10,11}$/.test(d) ? d : '';
+};
+const waDisplay = (d) => {
+  const n = d.slice(2);
+  return n.length === 11 ? `(${n.slice(0, 2)}) ${n[2]} ${n.slice(3, 7)}-${n.slice(7)}` : `(${n.slice(0, 2)}) ${n.slice(2, 6)}-${n.slice(6)}`;
+};
+const WA_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21l1.65-4.95A8.5 8.5 0 1 1 8 19.6Z"/><path d="M9.2 8.6c.2-.5.5-.6.8-.6h.5c.2 0 .4.1.5.4l.6 1.4c.1.2 0 .5-.1.7l-.5.6c.4.9 1.2 1.7 2.1 2.1l.6-.5c.2-.2.5-.2.7-.1l1.4.6c.3.1.4.3.4.5v.5c0 .3-.1.6-.6.8-.6.3-1.6.4-3.2-.5a8 8 0 0 1-2.8-2.8c-.9-1.6-.8-2.6-.5-3.2Z" fill="currentColor" stroke="none"/></svg>';
+/* Instagram: aceita "@conta", "conta" ou o link do perfil; até 3 contas, separadas por espaço ou vírgula */
+const igHandles = (v = '') => String(v).split(/[\s,;]+/)
+  .map((h) => h.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/[/?#].*$/, '').replace(/^@/, ''))
+  .filter((h) => /^[A-Za-z0-9._]{1,30}$/.test(h)).slice(0, 3);
+const IG_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".6" fill="currentColor"/></svg>';
+/* letras que sobem em cascata (número do WhatsApp e @ do Instagram) */
+const cascade = (text, start = 0) => [...text].map((ch, k) => `<span style="--d:${start + k}">${ch === ' ' ? '&nbsp;' : esc(ch)}</span>`).join('');
+const CONNECT_SLOTS = [
+  { name: 'Bloco grande', size: '1440 × 1080 px' },
+  { name: 'Bloco largo', size: '2000 × 440 px' },
+  { name: 'Bloco médio', size: '1200 × 600 px' },
+  { name: 'Bloco pequeno', size: '800 × 640 px' },
+];
+let connect = store.get('connect', PUBLISHED.connect || DEFAULT_CONNECT);
+connect = DEFAULT_CONNECT.map((d, i) => ({ ...d, ...(connect[i] || {}) })); // sempre 4 blocos
+const saveConnect = () => { cleanupImages(); return store.set('connect', connect); };
+
 const normalizeUrl = (u = '') => {
   u = u.trim(); if (!u) return '';
   return /^[a-z][a-z0-9+.-]*:/i.test(u) ? u : 'https://' + u;
@@ -131,7 +167,7 @@ function toast(msg) {
    As imagens enviadas ficam no IndexedDB do navegador, que comporta
    centenas de MB. Os itens guardam só uma referência "idb:<chave>".
    ========================================================= */
-const IMG_MAX_W = { banner: 2560, news: 1920, link: 1000, logo: 512 }; // largura máxima por tipo
+const IMG_MAX_W = { banner: 2560, news: 1920, link: 1000, logo: 512, connect: 2000 }; // largura máxima por tipo
 const IMG_QUALITY = 0.92;
 const imgCache = new Map(); // referência -> URL temporária para exibir
 const imgUrl = (ref = '') => imgCache.get(ref) || ref;
@@ -196,7 +232,7 @@ async function storeImage(file, kind) {
   return ref;
 }
 
-const allImageRefs = () => [...banners, ...links, ...news, ...brandList].flatMap((x) => [x.image, ...(x.gallery || [])]).filter(Boolean);
+const allImageRefs = () => [...banners, ...links, ...news, ...brandList, ...connect].flatMap((x) => [x.image, ...(x.gallery || [])]).filter(Boolean);
 async function loadImages() {
   for (const ref of allImageRefs()) {
     if (!ref.startsWith('idb:') || imgCache.has(ref)) continue;
@@ -222,7 +258,7 @@ function cleanupImages() {
 }
 /* Move imagens antigas (guardadas em texto/base64) para o IndexedDB e libera espaço */
 async function migrateDataUrls() {
-  for (const [list, save] of [[banners, saveBanners], [links, saveLinks], [news, saveNews], [brandList, saveBrand]]) {
+  for (const [list, save] of [[banners, saveBanners], [links, saveLinks], [news, saveNews], [brandList, saveBrand], [connect, saveConnect]]) {
     let changed = false;
     for (const it of list) {
       if (!it.image || !it.image.startsWith('data:')) continue;
@@ -249,7 +285,7 @@ async function exportContent() {
     if (Array.isArray(it.gallery)) out.gallery = (await Promise.all(it.gallery.map(one))).filter(Boolean);
     return out;
   }));
-  return { banners: await conv(banners), links: await conv(links), news: await conv(news), brand: await conv(brandList) };
+  return { banners: await conv(banners), links: await conv(links), news: await conv(news), brand: await conv(brandList), connect: await conv(connect) };
 }
 window.HC_exportContent = exportContent;
 
@@ -284,7 +320,7 @@ function renderDashboard(view) {
       ${banners.length > 1 ? banners.map((_, i) => `<button class="dot" data-i="${i}" aria-label="Banner ${i + 1}"><span class="dot-fill"></span></button>`).join('') : ''}
     </div>
 
-    ${links.length ? `<h2 class="shelf-title">Acesso rápido.<span> Portais das instituições parceiras, a um clique.</span></h2>` : ''}
+    ${links.length ? `<h2 class="shelf-title"><span class="ap-grad">Acesso rápido.</span><span> Portais das instituições parceiras, a um clique.</span></h2>` : ''}
     ${links.length ? `
     <nav class="quick-links" id="quick-links" aria-label="Acesso rápido">
       ${links.map((l, i) => `
@@ -298,23 +334,81 @@ function renderDashboard(view) {
 
     ${recentNews().length ? `
     <section class="rn" aria-label="Notícias recentes">
-      <h2 class="shelf-title">Notícias recentes.<span> Fique por dentro dos últimos acontecimentos.</span></h2>
+      <h2 class="shelf-title"><span class="ap-grad">Notícias recentes.</span><span> Fique por dentro dos últimos acontecimentos.</span></h2>
       <div class="rn-row" id="rn-row">${recentNews().map(recentCard).join('')}</div>
       <div class="ap-paddles rn-paddles">
         <button class="ap-paddle" data-dir="-1" aria-label="Anteriores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
         <button class="ap-paddle" data-dir="1" aria-label="Próximas">${CHEV_SVG}</button>
       </div>
     </section>` : ''}
+
+    ${connectSection()}
   </div>`;
 
   paintIcons(view);
   initCarousel();
   initRecentNews();
+  view.querySelector('.cx-grid')?.addEventListener('click', (e) => {
+    const tile = e.target.closest('.cx-tile');
+    if (!tile || e.target.closest('.cx-go')) return;
+    const go = tile.querySelector('.cx-go');
+    // com mouse, a faixa já está visível: um clique abre o link; no toque, o 1º toque revela a faixa
+    if (go && (tile.classList.contains('shown') || matchMedia('(hover: hover)').matches)) go.click();
+    view.querySelectorAll('.cx-tile.shown').forEach((t) => t !== tile && t.classList.remove('shown'));
+    tile.classList.add('shown');
+  });
+  view.querySelector('.cx-grid')?.addEventListener('keydown', (e) => {
+    const tile = e.target.closest('.cx-tile');
+    if (tile && e.target === tile && e.key === 'Enter') tile.querySelector('.cx-go')?.click();
+  });
   $('#quick-links')?.addEventListener('click', (e) => {
     const a = e.target.closest('[data-empty]'); if (!a) return;
     e.preventDefault();
     toast('Link ainda não configurado — defina em Configurações.');
   });
+}
+
+/* Mantenha-se conectado: blocos que revelam uma faixa de vidro fosco ao passar o mouse */
+function connectSection() {
+  return `
+    <section class="cx" aria-label="Mantenha-se conectado com a instituição">
+      <h2 class="shelf-title"><span class="ap-grad">Mantenha-se conectado</span><span> com a instituição.</span></h2>
+      <div class="cx-grid">
+        ${connect.map((c, i) => {
+          const wa = waDigits(c.whatsapp);
+          const url = wa ? `https://wa.me/${wa}` : normalizeUrl(c.url || '');
+          const ok = isSafeUrl(url);
+          const num = wa ? waDisplay(wa) : '';
+          const ig = igHandles(c.instagram);
+          return `
+          <article class="cx-tile cx-${i + 1} ${ok ? 'has-link' : ''}" tabindex="0" aria-label="${esc(c.title)}">
+            <div class="cx-bg" ${c.image ? `style="background-image:url('${esc(imgUrl(c.image))}')"` : ''}></div>
+            <div class="cx-glass">
+              <div class="cx-text">
+                <h3>${esc(c.title)}</h3>
+                ${c.desc ? `<p>${esc(c.desc)}</p>` : ''}
+              </div>
+              ${wa ? `
+              <div class="cx-wa">
+                <a class="cx-wa-num" href="${esc(url)}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp ${esc(num)}">
+                  <span class="cx-wa-ico">${WA_SVG}</span>
+                  <span class="cx-wa-digits" aria-hidden="true">${cascade(num)}</span>
+                </a>
+                <a class="cx-go cx-wa-go" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${WA_SVG}Conecte-se no WhatsApp</a>
+              </div>` : ig.length ? '' : ok ? `<a class="cx-go" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Acessar ${CHEV_SVG}</a>` : ''}
+              ${ig.length ? `
+              <div class="cx-ig">
+                ${ig.map((h, k) => `
+                <a class="cx-wa-num cx-ig-num" href="https://www.instagram.com/${esc(h)}/" target="_blank" rel="noopener noreferrer" aria-label="Instagram @${esc(h)}" style="--row:${k}">
+                  <span class="cx-wa-ico cx-ig-ico">${IG_SVG}</span>
+                  <span class="cx-wa-digits" aria-hidden="true">${cascade('@' + h, k * 6)}</span>
+                </a>`).join('')}
+              </div>` : ''}
+            </div>
+          </article>`;
+        }).join('')}
+      </div>
+    </section>`;
 }
 
 /* Cartão recolhido (só a imagem) que se abre ao passar o mouse */
@@ -425,13 +519,36 @@ function loopTrack(track, onChange) {
   const off = n > 1 ? 1 : 0;
   let index = 0, pending = null, snapTimer = 0;
   const setPos = (p) => { track.style.transform = `translateX(-${p * 100}%)`; };
-  const activate = (el) => all.forEach((sl) => sl.classList.toggle('active', sl === el));
+  // O item que sai mantém o zoom onde estava (classe "leaving") até terminar de sair da tela;
+  // só depois, já fora de vista, ele volta ao início para repetir o efeito na próxima vez.
+  const leaveTimers = new Map();
+  const activate = (el) => all.forEach((sl) => {
+    const on = sl === el;
+    if (!on && sl.classList.contains('active')) {
+      sl.classList.add('leaving');
+      clearTimeout(leaveTimers.get(sl));
+      leaveTimers.set(sl, setTimeout(() => sl.classList.remove('leaving'), 1400));
+    }
+    if (on) { clearTimeout(leaveTimers.get(sl)); sl.classList.remove('leaving'); }
+    sl.classList.toggle('active', on);
+  });
+  // no salto da cópia para o item verdadeiro, o zoom continua exatamente do mesmo ponto
+  const animTimes = (el) => new Map(el.getAnimations({ subtree: true }).map((a) => [a.animationName, a.currentTime]));
+  const applyTimes = (el, t) => el.getAnimations({ subtree: true }).forEach((a) => {
+    if (t.get(a.animationName) != null) a.currentTime = t.get(a.animationName);
+  });
   const instant = (fn) => { track.classList.add('jump'); fn(); void track.offsetWidth; track.classList.remove('jump'); };
   const snap = () => {
     clearTimeout(snapTimer);
     if (pending === null) return;
     const p = pending; pending = null;
-    instant(() => { setPos(p); activate(all[p]); });
+    const from = all.find((sl) => sl.classList.contains('active'));
+    const times = from ? animTimes(from) : new Map();
+    instant(() => {
+      setPos(p); activate(all[p]);
+      if (from) from.classList.remove('leaving');
+      applyTimes(all[p], times);
+    });
   };
   track.addEventListener('transitionend', (e) => { if (e.target === track && e.propertyName === 'transform') snap(); });
   return {
@@ -512,6 +629,7 @@ function renderConfig(view) {
       ${accSection('brand', 'image', 'Logo do painel', 'Imagem exibida no topo da barra lateral', '', '<div id="brand-panel"></div>')}
       ${accSection('banners', 'image', 'Banners do Dashboard', 'Imagens e textos do carrossel da tela inicial', 'count-banners', '<div id="banners-panel"></div>')}
       ${accSection('links', 'link', 'Botões de Acesso Rápido', 'Atalhos para os sites das instituições', 'count-links', '<div id="links-panel"></div>')}
+      ${accSection('connect', 'monitor', 'Mantenha-se conectado', 'Blocos com vidro fosco no fim da tela inicial', 'count-connect', '<div id="connect-panel"></div>')}
       <section class="panel acc" data-acc="news">
         <a class="acc-head acc-go" href="#config/noticias">
           <span class="acc-icon"><i data-icon="news"></i></span>
@@ -525,6 +643,7 @@ function renderConfig(view) {
     <input type="file" id="file-replace" accept="image/*" hidden>
     <input type="file" id="file-link" accept="image/*" hidden>
     <input type="file" id="file-logo" accept="image/*" hidden>
+    <input type="file" id="file-connect" accept="image/*" hidden>
   </div>`;
   paintIcons(view);
   initAccordion();
@@ -537,6 +656,7 @@ function renderConfig(view) {
   drawBannerPanel();
   initLinksPanel();
   initBrandPanel();
+  initConnectPanel();
 
   const panel = $('#banners-panel');
   let replaceIdx = -1;
@@ -594,6 +714,65 @@ function renderConfig(view) {
     if (saveBanners()) toast('Imagem atualizada'); else banners[replaceIdx].image = old;
     drawBannerPanel();
   });
+}
+
+function initConnectPanel() {
+  const panel = $('#connect-panel');
+  let imgIdx = -1;
+  drawConnectPanel();
+  panel.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-cact]'); if (!t) return;
+    const i = +t.dataset.i;
+    if (t.dataset.cact === 'img') { imgIdx = i; $('#file-connect').click(); }
+    if (t.dataset.cact === 'rmimg') { connect[i].image = ''; saveConnect(); drawConnectPanel(); toast('Imagem removida'); }
+  });
+  panel.addEventListener('input', (e) => {
+    const f = e.target.closest('[data-cfield]'); if (!f) return;
+    const i = +f.dataset.i;
+    connect[i][f.dataset.cfield] = f.value;
+    if (f.dataset.cfield === 'whatsapp') f.classList.toggle('invalid', !!f.value.trim() && !waDigits(f.value));
+    if (f.dataset.cfield === 'instagram') f.classList.toggle('invalid', !!f.value.trim() && !igHandles(f.value).length);
+    if (f.dataset.cfield === 'title') panel.querySelector(`[data-csub="${i}"]`).textContent = f.value || 'Sem título';
+    clearTimeout(panel._t); panel._t = setTimeout(saveConnect, 300);
+  });
+  $('#file-connect').addEventListener('change', async (e) => {
+    const file = e.target.files[0]; e.target.value = '';
+    if (!file || imgIdx < 0) return;
+    const old = connect[imgIdx].image;
+    connect[imgIdx].image = await storeImage(file, 'connect');
+    if (saveConnect()) toast('Imagem aplicada'); else connect[imgIdx].image = old;
+    drawConnectPanel();
+  });
+}
+
+function drawConnectPanel() {
+  const panel = $('#connect-panel');
+  $('#count-connect').textContent = connect.length;
+  panel.innerHTML = `
+    <p class="desc">Quatro blocos exibidos abaixo das Notícias recentes. Ao passar o mouse, uma faixa de vidro fosco revela o título, a descrição e o botão “Acessar” (o botão só aparece se houver link). Sem imagem, o bloco usa um degradê.</p>
+    ${connect.map((c, i) => `
+      <div class="banner-item">
+        <div class="bi-head">
+          <button class="bi-thumb cx-thumb cx-${i + 1}" data-cact="img" data-i="${i}" title="Trocar imagem" ${c.image ? `style="background-image:url('${esc(imgUrl(c.image))}')"` : ''}></button>
+          <div class="bi-meta">
+            <span class="bi-badge">${CONNECT_SLOTS[i].name.toUpperCase()} · ${CONNECT_SLOTS[i].size}</span>
+            <p data-csub="${i}">${esc(c.title) || 'Sem título'}</p>
+          </div>
+          <button class="btn-soft" data-cact="img" data-i="${i}"><i data-icon="image"></i>${c.image ? 'Trocar' : 'Imagem'}</button>
+          ${c.image ? `<button class="icon-btn" data-cact="rmimg" data-i="${i}" title="Remover imagem (volta ao degradê)"><i data-icon="x"></i></button>` : ''}
+        </div>
+        <div class="bi-fields">
+          <div class="field"><label>Título</label><input data-i="${i}" data-cfield="title" value="${esc(c.title)}" maxlength="60"></div>
+          <div class="field"><label>Número do WhatsApp <em>(com DDD, opcional)</em></label><input data-i="${i}" data-cfield="whatsapp" value="${esc(c.whatsapp || '')}" placeholder="(98) 9 8765-4321" inputmode="tel" maxlength="20"></div>
+          <div class="field full"><label>Contas do Instagram <em>(opcional, até 3, separadas por espaço)</em></label><input data-i="${i}" data-cfield="instagram" value="${esc(c.instagram || '')}" placeholder="@hceducacional @favenihc" maxlength="100" autocapitalize="off" spellcheck="false"></div>
+          ${i === 0
+            ? `<div class="field full"><label>Descrição <em>(até ${CONNECT_DESC_MAX[i]} caracteres)</em></label><textarea rows="3" data-i="${i}" data-cfield="desc" maxlength="${CONNECT_DESC_MAX[i]}">${esc(c.desc)}</textarea></div>`
+            : `<div class="field full"><label>Descrição</label><input data-i="${i}" data-cfield="desc" value="${esc(c.desc)}" maxlength="${CONNECT_DESC_MAX[i]}"></div>`}
+          <p class="cx-hint full">O número do WhatsApp e as contas do Instagram aparecem em destaque, com animação, e abrem direto a conversa ou o perfil. Com WhatsApp, o botão vira “Conecte-se no WhatsApp”; com Instagram, cada @ já é o link. Sem nenhum dos dois, o bloco usa o link abaixo.</p>
+          <div class="field full"><label>Link do botão “Acessar” <em>(usado só sem WhatsApp)</em></label><input data-i="${i}" data-cfield="url" value="${esc(c.url || '')}" placeholder="https://www.exemplo.com.br" inputmode="url"></div>
+        </div>
+      </div>`).join('')}`;
+  paintIcons(panel);
 }
 
 function drawBannerPanel() {
@@ -789,7 +968,7 @@ function newsBodyHTML() {
     ${rest.length ? `
     <section class="ap-shelf reveal">
       <div class="ap-shelf-head">
-        <h2>${newsFilter === 'Todas' ? 'Mais notícias.' : `Mais em ${esc(newsFilter)}.`}<span> Fique por dentro de tudo o que acontece no polo.</span></h2>
+        <h2><span class="ap-grad">${newsFilter === 'Todas' ? 'Mais notícias.' : `Mais em ${esc(newsFilter)}.`}</span><span> Fique por dentro de tudo o que acontece no polo.</span></h2>
       </div>
       <div class="ap-scroller">${rest.map(newsCard).join('')}</div>
       <div class="ap-paddles">

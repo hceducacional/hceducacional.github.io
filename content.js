@@ -165,5 +165,38 @@ window.HC_CONTENT = {
       "id": "logo",
       "image": "assets/conteudo/logo-logo-382b87cd.webp"
     }
+  ],
+  "connect": [
+    {
+      "id": "c1",
+      "title": "Setor Pedagógico",
+      "desc": "Receba ajuda on-line de onde estiver pelo nosso número de suporte ao aluno. Oferecemos tutoria on-line, apoio no envio de documentação, dúvidas sobre estágio, atividades e orientações de uso da plataforma. Atendemos de segunda a sábado, das 8h às 12h e das 14h às 18h.",
+      "url": "https://www.instagram.com/hceducacional/",
+      "image": "assets/conteudo/conectado-c1-2e76a435.webp",
+      "whatsapp": "98984861475"
+    },
+    {
+      "id": "c2",
+      "title": "Setor Comercial",
+      "desc": "Conheça nossos cursos e receba orientação especializada das nossas consultoras para escolher a melhor opção para você!",
+      "url": "https://www.instagram.com/favenihc/",
+      "image": "assets/conteudo/conectado-c2-a2aaea49.png",
+      "whatsapp": "98988650472"
+    },
+    {
+      "id": "c3",
+      "title": "Redes Sociais",
+      "desc": "Siga a gente no Instagram e tenha acesso a conteúdos exclusivos",
+      "url": "https://prova-facil-favenihc.lovable.app/",
+      "image": "assets/conteudo/conectado-c3-6ceda75f.png",
+      "instagram": "@hceducacional @favenihc"
+    },
+    {
+      "id": "c4",
+      "title": "Agende sua visita ao polo",
+      "desc": "Faça o agendamento em nosso site para realizar suas atividades presenciais na instituição",
+      "url": "https://prova-facil-favenihc.lovable.app/",
+      "image": "assets/conteudo/conectado-c4-0b2e323b.png"
+    }
   ]
 };
