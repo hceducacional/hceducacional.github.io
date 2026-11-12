@@ -72,75 +72,6 @@ window.HC_CONTENT = {
   ],
   "news": [
     {
-      "id": "n1",
-      "cat": "Conquistas",
-      "date": "2026-11-08",
-      "read": 4,
-      "author": "Comunicação HC",
-      "image": "assets/conteudo/noticia-n1-f84366ea.jpg",
-      "title": "HC Instituto Educacional celebra formatura de 120 alunos em noite especial",
-      "excerpt": "Cerimônia reuniu formandos, familiares e professores para celebrar a conclusão de cursos de graduação e pós-graduação.",
-      "body": [
-        "Na última sexta-feira, o HC Instituto Educacional realizou a cerimônia de colação de grau de 120 alunos dos cursos de graduação e pós-graduação semipresenciais. O evento aconteceu no auditório do polo e reuniu mais de 400 convidados entre familiares, amigos e professores.",
-        "Durante a cerimônia, a coordenação destacou a dedicação dos formandos, que conciliaram trabalho, família e estudos ao longo da jornada. \"Cada diploma entregue hoje representa uma história de persistência\", afirmou a coordenadora do polo em seu discurso.",
-        "Os alunos com melhor desempenho acadêmico receberam menção honrosa, e a turma de Pedagogia foi homenageada por alcançar 100% de aprovação no trabalho de conclusão de curso.",
-        "As fotos oficiais da formatura estarão disponíveis na secretaria do polo a partir da próxima semana."
-      ],
-      "star": true,
-      "rank": 2
-    },
-    {
-      "id": "n2",
-      "cat": "Infraestrutura",
-      "date": "2026-11-05",
-      "read": 3,
-      "author": "Coordenação do Polo",
-      "image": "assets/news/laboratorio.svg",
-      "title": "Laboratório de informática ganha 30 novos computadores",
-      "excerpt": "Equipamentos modernos e internet mais rápida chegam para apoiar aulas, provas e atividades on-line.",
-      "body": [
-        "O laboratório de informática do polo foi totalmente renovado e agora conta com 30 novos computadores, monitores maiores e uma conexão de internet três vezes mais rápida.",
-        "A modernização atende a uma demanda antiga dos alunos, que utilizam o espaço para acessar o ambiente virtual de aprendizagem, realizar avaliações e participar de aulas ao vivo.",
-        "O laboratório funciona de segunda a sexta, das 8h às 22h, e aos sábados, das 8h às 12h. Para utilizar os equipamentos fora do horário de aula, basta apresentar a carteirinha de estudante na recepção."
-      ],
-      "star": true,
-      "rank": 4
-    },
-    {
-      "id": "n3",
-      "cat": "Acadêmico",
-      "date": "2026-10-30",
-      "read": 3,
-      "author": "Comunicação HC",
-      "image": "assets/news/mec.svg",
-      "title": "Cursos parceiros alcançam nota máxima na avaliação do MEC",
-      "excerpt": "Resultado reforça a qualidade do ensino oferecido no polo e valoriza o diploma dos nossos alunos.",
-      "body": [
-        "Três cursos oferecidos pelo polo em parceria com instituições credenciadas receberam conceito 5, a nota máxima na avaliação do Ministério da Educação.",
-        "A avaliação considera critérios como organização didático-pedagógica, corpo docente e infraestrutura. O resultado coloca os cursos entre os mais bem avaliados do país na modalidade semipresencial.",
-        "Para a coordenação, a conquista é resultado do trabalho conjunto entre professores, tutores e alunos. A lista completa de cursos e notas pode ser consultada na secretaria."
-      ],
-      "star": true,
-      "rank": 1
-    },
-    {
-      "id": "n4",
-      "cat": "Eventos",
-      "date": "2026-10-27",
-      "read": 2,
-      "author": "Coordenação Acadêmica",
-      "image": "assets/news/semana.svg",
-      "title": "Semana Acadêmica 2026 terá palestras gratuitas com certificado",
-      "excerpt": "Programação inclui palestras, oficinas práticas e rodas de conversa sobre carreira e mercado de trabalho.",
-      "body": [
-        "Entre os dias 23 e 27 de novembro, o polo promove a Semana Acadêmica 2026, com programação gratuita e aberta a todos os alunos matriculados.",
-        "Serão mais de 15 atividades entre palestras, oficinas práticas e rodas de conversa sobre empreendedorismo, tecnologia na educação, saúde mental e preparação para o mercado de trabalho.",
-        "Os participantes receberão certificado de horas complementares. As inscrições podem ser feitas na recepção do polo ou com os tutores de cada curso. As vagas são limitadas."
-      ],
-      "star": true,
-      "rank": 3
-    },
-    {
       "id": "n1794500412324",
       "cat": "Conquistas",
       "date": "2026-11-12",
@@ -154,7 +85,7 @@ window.HC_CONTENT = {
         "O HC Instituto Educacional parabeniza todos os alunos por essa conquista e reforça o compromisso de acompanhar cada etapa dessa jornada. Como dizia a mensagem que estampou o cenário da noite: aqui não existem obstáculos para os seus sonhos!"
       ],
       "star": true,
-      "rank": 0,
+      "rank": 2,
       "image": "assets/conteudo/noticia-n1794500412324-e83b6bd8.jpg",
       "gallery": [
         "assets/conteudo/noticia-n1794500412324-g1-f634dfa3.jpg",
@@ -168,6 +99,64 @@ window.HC_CONTENT = {
         "47% 16%",
         "46% 14%",
         "50% 35%"
+      ]
+    },
+    {
+      "id": "n1794501465950",
+      "cat": "Eventos",
+      "date": "2026-11-12",
+      "author": "Comunicação HC",
+      "title": "Formandos fazem ensaio fotográfico e entram no clima da formatura",
+      "excerpt": "Alunos de Terapia Ocupacional, Letras Português/Inglês e Pedagogia posaram com as vestes de formatura em uma sessão especial de fotos.",
+      "body": [
+        "A contagem regressiva para a formatura já começou. Alunos dos cursos de Terapia Ocupacional, Letras Português/Inglês e Pedagogia participaram do ensaio fotográfico oficial, vestindo pela primeira vez as becas, capelos e faixas que vão usar na grande festa.",
+        "Em um cenário preparado especialmente para a ocasião, cada formando posou com o canudo nas cores do seu curso. Entre sorrisos, poses e muita emoção, a sessão registrou o orgulho de quem chegou à reta final da graduação.",
+        "As fotos ficam como lembrança de toda a dedicação ao longo do curso e antecipam a celebração que ainda está por vir. A festa de formatura será o momento de reunir familiares e amigos para comemorar essa conquista.",
+        "O HC Instituto Educacional parabeniza todos os formandos e deseja que essa nova etapa seja repleta de realizações. Em breve, mais novidades sobre a cerimônia!"
+      ],
+      "star": true,
+      "rank": 1,
+      "image": "assets/conteudo/noticia-n1794501465950-138a1216.jpg",
+      "gallery": [
+        "assets/conteudo/noticia-n1794501465950-g1-eacb0d4f.jpg",
+        "assets/conteudo/noticia-n1794501465950-g2-a3eee11f.jpg",
+        "assets/conteudo/noticia-n1794501465950-g3-cb034856.jpg",
+        "assets/conteudo/noticia-n1794501465950-g4-6215ff8d.jpg"
+      ],
+      "focus": [
+        "50% 36%",
+        "47% 13%",
+        "48% 33%",
+        "47% 37%",
+        "49% 29%"
+      ]
+    },
+    {
+      "id": "n1794502107814",
+      "cat": "Eventos",
+      "date": "2026-11-12",
+      "author": "Comunicação HC",
+      "title": "Projeto BrincaHC leva brinquedos e alegria às crianças no Dia das Crianças",
+      "excerpt": "Na 2ª edição do Universitários Solidários, alunos e equipe do HC arrecadaram e entregaram brinquedos para as crianças da comunidade.",
+      "body": [
+        "O Dia das Crianças foi ainda mais especial com a 2ª edição do Projeto BrincaHC – Universitários Solidários, ação promovida pelo HC Instituto Educacional, polo Humberto de Campos, em parceria com o Grupo Educacional FAVENI.",
+        "Durante a campanha, alunos, colaboradores e a comunidade foram convidados a doar brinquedos. No dia 12 de outubro, a equipe, vestida com as camisas amarelas do projeto, levou as doações até as crianças em um dia de muita festa, brincadeiras e sorrisos.",
+        "Bonecas, bolas, carrinhos e kits de brinquedos foram entregues um a um, e cada criança voltou para casa com um presente nas mãos. Mais do que os brinquedos, a ação deixou a mensagem de que a educação também se faz com solidariedade e cuidado com o próximo.",
+        "O HC Instituto Educacional agradece a todos os alunos e parceiros que doaram e participaram da ação. Juntos, fizemos o Dia das Crianças de muita gente ainda mais feliz!"
+      ],
+      "star": true,
+      "rank": 0,
+      "image": "assets/conteudo/noticia-n1794502107814-75a36b6b.webp",
+      "gallery": [
+        "assets/conteudo/noticia-n1794502107814-g1-d0f60fbe.jpg",
+        "assets/conteudo/noticia-n1794502107814-g2-aff2a5ab.jpg",
+        "assets/conteudo/noticia-n1794502107814-g3-1ee20de6.jpg"
+      ],
+      "focus": [
+        "50% 45%",
+        "52% 40%",
+        "53% 28%",
+        "55% 45%"
       ]
     }
   ],

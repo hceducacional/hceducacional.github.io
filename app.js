@@ -700,9 +700,11 @@ const DEFAULT_NEWS = [
 ];
 let news = store.get('news', PUBLISHED.news || DEFAULT_NEWS);
 /* Notícias recentes da tela inicial: itens marcados com estrela (star), na ordem de "rank". */
+/* mais recente primeiro; na mesma data, a cadastrada por último vem antes */
+const byNewest = (a, b) => b.date.localeCompare(a.date) || (Number(b.id.slice(1)) || 0) - (Number(a.id.slice(1)) || 0);
 const MAX_RECENT = 10;
 if (!news.some((n) => 'star' in n)) { // conteúdo antigo: destaca as mais recentes
-  [...news].sort((a, b) => b.date.localeCompare(a.date)).slice(0, MAX_RECENT).forEach((n, i) => { n.star = true; n.rank = i; });
+  [...news].sort(byNewest).slice(0, MAX_RECENT).forEach((n, i) => { n.star = true; n.rank = i; });
 }
 const recentNews = () => news.filter((n) => n.star).sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
 const renumberRecent = (list = recentNews()) => list.forEach((n, i) => { n.rank = i; });
@@ -912,7 +914,7 @@ function openNews(n, card) {
   const cardMedia = card.querySelector('.nc-media');
   const from = cardMedia.getBoundingClientRect();
   const fromRadius = getComputedStyle(card.querySelector('.nc-media')).borderTopLeftRadius;
-  const others = news.filter((x) => x.id !== n.id).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 2);
+  const others = news.filter((x) => x.id !== n.id).sort(byNewest).slice(0, 2);
   const items = newsItems(n);
   if (!items.length) items.push({ src: n.image, pos: '' });
   const imgs = items.map((it) => it.src);
@@ -1244,7 +1246,7 @@ function drawLinksPanel() {
 /* ---------- Notícias (configurações) ---------- */
 let openNewsId = null; // notícia aberta para edição
 const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-const sortedNews = () => [...news].sort((a, b) => b.date.localeCompare(a.date));
+const sortedNews = () => [...news].sort(byNewest);
 
 function initNewsPanel() {
   const panel = $('#news-panel');
