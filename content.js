@@ -154,5 +154,11 @@ window.HC_CONTENT = {
       "star": true,
       "rank": 3
     }
+  ],
+  "brand": [
+    {
+      "id": "logo",
+      "image": "assets/conteudo/logo-logo-382b87cd.webp"
+    }
   ]
 };

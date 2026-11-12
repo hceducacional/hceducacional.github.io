@@ -100,6 +100,17 @@ function linkInk(l) {
 
 let prefs = store.get('prefs', { hideSensitive: false });
 
+/* Logo da barra lateral (lista de 1 item para usar o mesmo fluxo de imagens/exportação) */
+let brandList = store.get('brand', PUBLISHED.brand || [{ id: 'logo', image: '' }]);
+const saveBrand = () => { cleanupImages(); return store.set('brand', brandList); };
+const LOGO_DEFAULT = '<span class="h">H</span><span class="c">C</span>';
+function paintLogo() {
+  const el = document.getElementById('sb-logo'); if (!el) return;
+  const img = brandList[0]?.image;
+  el.classList.toggle('has-img', !!img);
+  el.innerHTML = img ? `<img src="${esc(imgUrl(img))}" alt="Logo">` : LOGO_DEFAULT;
+}
+
 /* ---------- Utilidades ---------- */
 const $ = (sel, root = document) => root.querySelector(sel);
 const esc = (s = '') => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -115,7 +126,7 @@ function toast(msg) {
    As imagens enviadas ficam no IndexedDB do navegador, que comporta
    centenas de MB. Os itens guardam só uma referência "idb:<chave>".
    ========================================================= */
-const IMG_MAX_W = { banner: 2560, news: 1920, link: 1000 }; // largura máxima por tipo
+const IMG_MAX_W = { banner: 2560, news: 1920, link: 1000, logo: 512 }; // largura máxima por tipo
 const IMG_QUALITY = 0.92;
 const imgCache = new Map(); // referência -> URL temporária para exibir
 const imgUrl = (ref = '') => imgCache.get(ref) || ref;
@@ -180,7 +191,7 @@ async function storeImage(file, kind) {
   return ref;
 }
 
-const allImageRefs = () => [...banners, ...links, ...news].map((x) => x.image).filter(Boolean);
+const allImageRefs = () => [...banners, ...links, ...news, ...brandList].map((x) => x.image).filter(Boolean);
 async function loadImages() {
   for (const ref of allImageRefs()) {
     if (!ref.startsWith('idb:') || imgCache.has(ref)) continue;
@@ -206,7 +217,7 @@ function cleanupImages() {
 }
 /* Move imagens antigas (guardadas em texto/base64) para o IndexedDB e libera espaço */
 async function migrateDataUrls() {
-  for (const [list, save] of [[banners, saveBanners], [links, saveLinks], [news, saveNews]]) {
+  for (const [list, save] of [[banners, saveBanners], [links, saveLinks], [news, saveNews], [brandList, saveBrand]]) {
     let changed = false;
     for (const it of list) {
       if (!it.image || !it.image.startsWith('data:')) continue;
@@ -228,7 +239,7 @@ async function exportContent() {
     const blob = await idbGet(it.image.slice(4));
     return { ...it, image: blob ? await toDataUrl(blob) : '' };
   }));
-  return { banners: await conv(banners), links: await conv(links), news: await conv(news) };
+  return { banners: await conv(banners), links: await conv(links), news: await conv(news), brand: await conv(brandList) };
 }
 window.HC_exportContent = exportContent;
 
@@ -420,6 +431,7 @@ function renderConfig(view) {
           <div class="pref-text"><strong>Ocultar dados sensíveis</strong><span>CPF e telefone aparecem mascarados</span></div>
           <label class="switch"><input type="checkbox" id="pref-hide" ${prefs.hideSensitive ? 'checked' : ''}><span></span></label>
         </div>`)}
+      ${accSection('brand', 'image', 'Logo do painel', 'Imagem exibida no topo da barra lateral', '', '<div id="brand-panel"></div>')}
       ${accSection('banners', 'image', 'Banners do Dashboard', 'Imagens e textos do carrossel da tela inicial', 'count-banners', '<div id="banners-panel"></div>')}
       ${accSection('links', 'link', 'Botões de Acesso Rápido', 'Atalhos para os sites das instituições', 'count-links', '<div id="links-panel"></div>')}
       <section class="panel acc" data-acc="news">
@@ -434,6 +446,7 @@ function renderConfig(view) {
     <input type="file" id="file-add" accept="image/*" multiple hidden>
     <input type="file" id="file-replace" accept="image/*" hidden>
     <input type="file" id="file-link" accept="image/*" hidden>
+    <input type="file" id="file-logo" accept="image/*" hidden>
   </div>`;
   paintIcons(view);
   initAccordion();
@@ -445,6 +458,7 @@ function renderConfig(view) {
 
   drawBannerPanel();
   initLinksPanel();
+  initBrandPanel();
 
   const panel = $('#banners-panel');
   let replaceIdx = -1;
@@ -933,6 +947,40 @@ function initAccordion() {
   sync();
 }
 
+/* ---------- Logo do painel ---------- */
+function initBrandPanel() {
+  const panel = $('#brand-panel');
+  drawBrandPanel();
+  panel.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-bact]'); if (!t) return;
+    if (t.dataset.bact === 'img') $('#file-logo').click();
+    if (t.dataset.bact === 'rm') { brandList[0].image = ''; saveBrand(); paintLogo(); drawBrandPanel(); toast('Logo padrão restaurado'); }
+  });
+  $('#file-logo').addEventListener('change', async (e) => {
+    const file = e.target.files[0]; e.target.value = '';
+    if (!file) return;
+    const old = brandList[0].image;
+    brandList[0].image = await storeImage(file, 'logo');
+    if (saveBrand()) toast('Logo atualizado'); else brandList[0].image = old;
+    paintLogo(); drawBrandPanel();
+  });
+}
+function drawBrandPanel() {
+  const panel = $('#brand-panel');
+  const img = brandList[0].image;
+  panel.innerHTML = `
+    <p class="desc">A imagem aparece no quadrado do topo da barra lateral, em todas as páginas. Prefira uma imagem quadrada.</p>
+    <div class="brand-row">
+      <button class="sb-logo brand-preview ${img ? 'has-img' : ''}" data-bact="img" title="Trocar logo">${img ? `<img src="${esc(imgUrl(img))}" alt="">` : LOGO_DEFAULT}</button>
+      <div class="img-row">
+        <button class="btn-soft" data-bact="img"><i data-icon="image"></i>${img ? 'Trocar imagem' : 'Escolher imagem'}</button>
+        ${img ? `<button class="btn-soft danger" data-bact="rm"><i data-icon="x"></i>Voltar ao padrão</button>` : ''}
+      </div>
+    </div>
+    <div class="panel-foot"><span>Tamanho recomendado: <b>512 × 512 px</b>.</span></div>`;
+  paintIcons(panel);
+}
+
 /* ---------- Botões de acesso rápido ---------- */
 function initLinksPanel() {
   const panel = $('#links-panel');
@@ -1280,7 +1328,6 @@ function drawRecentPanel() {
    Páginas ainda não construídas
    ========================================================= */
 const TITLES = {
-  alunos: 'Alunos Cadastrados',
   atividades: 'Atividades do Dia', relatorio: 'Relatório Mensal', seguranca: 'Segurança', ajuda: 'Ajuda / Suporte',
 };
 /* Cabeçalho editorial: rótulo pequeno, título grande e uma linha de apoio */
@@ -1333,5 +1380,6 @@ paintIcons();
     cleanupImages();
     navigator.storage?.persist?.(); // pede ao navegador para não apagar as imagens
   } catch (e) { console.warn('Imagens:', e); }
+  paintLogo();
   route();
 })();
