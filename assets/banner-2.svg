@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1597 420" width="1597" height="420">
+  <defs>
+    <pattern id="stripes" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="40" height="40" fill="#1fae4b"/><rect width="20" height="40" fill="#27c159"/>
+    </pattern>
+    <linearGradient id="dark" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3a3f4a"/><stop offset="1" stop-color="#5a6070"/>
+    </linearGradient>
+  </defs>
+  <rect width="1597" height="420" fill="url(#stripes)"/>
+  <!-- área à esquerda -->
+  <path d="M0 0 H560 Q620 0 620 60 V420 H0Z" fill="url(#dark)"/>
+  <path d="M330 420 V200 Q330 150 380 150 H560 V420Z" fill="#1d3fa8"/>
+  <circle cx="470" cy="200" r="70" fill="#2a2f3a"/>
+  <rect x="400" y="260" width="160" height="160" rx="60" fill="#1b2340"/>
+  <!-- painel amarelo -->
+  <rect x="640" y="30" width="1000" height="420" rx="60" fill="#f2c230"/>
+  <rect x="820" y="40" width="560" height="56" rx="28" fill="#fff"/>
+  <text x="1100" y="78" text-anchor="middle" font-family="Arial, sans-serif" font-style="italic" font-weight="700" font-size="24" fill="#0b2a6b">Atualize os links de atividades semanalmente</text>
+  <text x="880" y="215" textLength="400" lengthAdjust="spacingAndGlyphs" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-style="italic" font-size="84" fill="#0b2a6b">Consulta<tspan fill="#d7192e">EDU</tspan></text>
+  <text x="1190" y="255" text-anchor="end" font-family="Arial, sans-serif" font-style="italic" font-weight="700" font-size="26" fill="#0b2a6b">central do Gestor</text>
+  <!-- "QR" -->
+  <g transform="translate(860 270)">
+    <rect width="120" height="120" fill="#fff"/>
+    <g fill="#111">
+      <rect x="10" y="10" width="30" height="30"/><rect x="80" y="10" width="30" height="30"/><rect x="10" y="80" width="30" height="30"/>
+      <rect x="50" y="15" width="10" height="10"/><rect x="55" y="40" width="15" height="10"/><rect x="45" y="60" width="10" height="20"/>
+      <rect x="70" y="55" width="20" height="10"/><rect x="95" y="70" width="10" height="20"/><rect x="60" y="90" width="15" height="15"/>
+      <rect x="85" y="95" width="20" height="10"/><rect x="20" y="55" width="15" height="10"/>
+    </g>
+  </g>
+  <rect x="1020" y="280" width="560" height="140" fill="#ffffff"/>
+  <text x="1040" y="320" font-family="Arial, sans-serif" font-weight="900" font-size="20" fill="#d7192e">CONHEÇA NOSSAS REDES SOCIAIS</text>
+  <text x="1040" y="356" font-family="Arial, sans-serif" font-size="22" fill="#111">@favenihc   ·   @hceducacional</text>
+  <!-- prancheta -->
+  <g transform="translate(1360 90) rotate(-8)">
+    <rect width="190" height="220" rx="24" fill="#f7f7f7" stroke="#f08a24" stroke-width="10"/>
+    <g fill="none" stroke="#1e88e5" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M30 60 l15 15 l28 -30"/><path d="M30 120 l15 15 l28 -30"/><path d="M30 180 l15 15 l28 -30"/>
+    </g>
+    <g fill="#9aa3ad"><rect x="95" y="58" width="70" height="10" rx="5"/><rect x="95" y="118" width="70" height="10" rx="5"/><rect x="95" y="178" width="70" height="10" rx="5"/></g>
+  </g>
+</svg>

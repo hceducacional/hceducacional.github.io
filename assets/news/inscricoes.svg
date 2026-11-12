@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1d4ed8"/><stop offset="1" stop-color="#db2777"/></linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e2e8f0"/></linearGradient>
+  </defs>
+  <rect width="1200" height="750" fill="url(#g)"/>
+  <circle cx="1050" cy="120" r="220" fill="#fff" opacity=".07"/>
+  <circle cx="120" cy="680" r="260" fill="#fff" opacity=".06"/>
+  <!-- calendário -->
+  <g transform="translate(250 150) rotate(-6)">
+    <rect width="380" height="420" rx="30" fill="#0b2447" opacity=".35" transform="translate(14 18)"/>
+    <rect width="380" height="420" rx="30" fill="url(#paper)"/>
+    <rect width="380" height="100" rx="30" fill="#0b2447"/><rect y="70" width="380" height="30" fill="#0b2447"/>
+    <rect x="80" y="-24" width="24" height="60" rx="12" fill="#94a3b8"/><rect x="276" y="-24" width="24" height="60" rx="12" fill="#94a3b8"/>
+    <g fill="#cbd5e1">
+      <rect x="40" y="140" width="50" height="44" rx="10"/><rect x="105" y="140" width="50" height="44" rx="10"/><rect x="170" y="140" width="50" height="44" rx="10"/><rect x="235" y="140" width="50" height="44" rx="10"/><rect x="300" y="140" width="50" height="44" rx="10"/>
+      <rect x="40" y="200" width="50" height="44" rx="10"/><rect x="105" y="200" width="50" height="44" rx="10"/><rect x="235" y="200" width="50" height="44" rx="10"/><rect x="300" y="200" width="50" height="44" rx="10"/>
+      <rect x="40" y="260" width="50" height="44" rx="10"/><rect x="105" y="260" width="50" height="44" rx="10"/><rect x="170" y="260" width="50" height="44" rx="10"/><rect x="235" y="260" width="50" height="44" rx="10"/><rect x="300" y="260" width="50" height="44" rx="10"/>
+      <rect x="40" y="320" width="50" height="44" rx="10"/><rect x="105" y="320" width="50" height="44" rx="10"/><rect x="170" y="320" width="50" height="44" rx="10"/>
+    </g>
+    <rect x="170" y="200" width="50" height="44" rx="10" fill="#db2777"/>
+  </g>
+  <!-- ficha com check -->
+  <g transform="translate(640 230) rotate(5)">
+    <rect width="300" height="360" rx="26" fill="#0b2447" opacity=".3" transform="translate(12 16)"/>
+    <rect width="300" height="360" rx="26" fill="#fff"/>
+    <g fill="#cbd5e1"><rect x="40" y="60" width="180" height="16" rx="8"/><rect x="40" y="100" width="220" height="12" rx="6"/><rect x="40" y="130" width="200" height="12" rx="6"/><rect x="40" y="160" width="160" height="12" rx="6"/></g>
+    <circle cx="150" cy="265" r="60" fill="#22c55e"/>
+    <path d="M120 265 l22 22 l40 -44" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

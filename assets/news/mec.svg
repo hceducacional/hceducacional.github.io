@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f59e0b"/><stop offset="1" stop-color="#b45309"/></linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".45" r=".55"><stop offset="0" stop-color="#fff7d6" stop-opacity=".7"/><stop offset="1" stop-color="#fff7d6" stop-opacity="0"/></radialGradient>
+    <linearGradient id="medal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset=".5" stop-color="#facc15"/><stop offset="1" stop-color="#ca8a04"/></linearGradient>
+  </defs>
+  <rect width="1200" height="750" fill="url(#g)"/>
+  <g stroke="#fff" stroke-opacity=".12" stroke-width="40">
+    <line x1="600" y1="340" x2="600" y2="-200"/><line x1="600" y1="340" x2="1100" y2="-100"/><line x1="600" y1="340" x2="100" y2="-100"/>
+    <line x1="600" y1="340" x2="1400" y2="340"/><line x1="600" y1="340" x2="-200" y2="340"/>
+    <line x1="600" y1="340" x2="1200" y2="800"/><line x1="600" y1="340" x2="0" y2="800"/>
+  </g>
+  <rect width="1200" height="750" fill="url(#glow)"/>
+  <!-- fitas -->
+  <polygon points="520,440 470,690 540,650 590,700 620,470" fill="#0b2447"/>
+  <polygon points="680,440 730,690 660,650 610,700 580,470" fill="#0f5c4a"/>
+  <!-- medalha -->
+  <circle cx="600" cy="340" r="190" fill="#92400e" opacity=".35"/>
+  <circle cx="600" cy="330" r="180" fill="url(#medal)"/>
+  <circle cx="600" cy="330" r="145" fill="none" stroke="#a16207" stroke-width="6" stroke-dasharray="4 14"/>
+  <circle cx="600" cy="330" r="120" fill="#fde68a"/>
+  <polygon points="600,235 627,295 692,300 643,342 658,406 600,372 542,406 557,342 508,300 573,295" fill="#ca8a04"/>
+  <g fill="#fff" opacity=".9">
+    <polygon points="200,180 210,205 236,208 216,224 222,250 200,236 178,250 184,224 164,208 190,205"/>
+    <polygon points="1010,520 1018,540 1040,542 1023,556 1028,578 1010,566 992,578 997,556 980,542 1002,540"/>
+    <polygon points="980,150 986,164 1002,166 990,176 994,192 980,183 966,192 970,176 958,166 974,164"/>
+  </g>
+</svg>

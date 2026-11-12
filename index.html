@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HC Instituto Educacional</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Barra lateral (expande ao passar o mouse) -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <div class="sb-logo"><span class="h">H</span><span class="c">C</span></div>
+      <div class="sb-brand-text">
+        <strong>HC INSTITUTO</strong>
+        <span>EDUCACIONAL</span>
+      </div>
+    </div>
+
+    <nav class="sb-nav">
+      <div class="sb-section">Acadêmico</div>
+      <a class="sb-item" data-route="dashboard" href="#dashboard"><i data-icon="grid"></i><span>Dashboard</span></a>
+      <a class="sb-item" data-route="noticias" href="#noticias"><i data-icon="news"></i><span>Notícias</span></a>
+      <a class="sb-item" data-route="aulas" href="#aulas"><i data-icon="calendar"></i><span>Aulas &amp; Chamada</span></a>
+      <a class="sb-item" data-route="alunos" href="#alunos"><i data-icon="users"></i><span>Alunos Cadastrados</span></a>
+      <a class="sb-item" data-route="atividades" href="#atividades"><i data-icon="link"></i><span>Atividades do Dia</span></a>
+      <a class="sb-item" data-route="relatorio" href="#relatorio"><i data-icon="report"></i><span>Relatório Mensal</span></a>
+
+      <div class="sb-section sb-section-gap">Outros</div>
+      <a class="sb-item" data-route="config" href="#config"><i data-icon="settings"></i><span>Configurações</span></a>
+      <a class="sb-item" data-route="seguranca" href="#seguranca"><i data-icon="shield"></i><span>Segurança</span></a>
+      <a class="sb-item" data-route="ajuda" href="#ajuda"><i data-icon="help"></i><span>Ajuda / Suporte</span></a>
+    </nav>
+
+    <div class="sb-footer">
+      <a class="sb-item" href="#sair" id="logout"><i data-icon="logout"></i><span>Desconectar</span></a>
+      <small>© 2026 HC Instituto Educacional</small>
+    </div>
+  </aside>
+
+  <!-- Cabeçalho -->
+  <header class="topbar">
+    <div class="tb-title">
+      <h1>HC Instituto Educacional</h1>
+      <p>Explore todas as suas possibilidades de estudo</p>
+    </div>
+    <label class="tb-search">
+      <i data-icon="search"></i>
+      <input type="search" id="search" placeholder="Localizar aluno..." />
+      <kbd>Ctrl K</kbd>
+    </label>
+    <div class="tb-user">
+      <div class="tb-user-text">
+        <strong>faveni hc</strong>
+        <span>favenihc2022@gmail.com</span>
+      </div>
+      <div class="tb-avatar">FH</div>
+    </div>
+  </header>
+
+  <main class="content" id="view"></main>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="content.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
