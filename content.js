@@ -87,7 +87,7 @@ window.HC_CONTENT = {
         "As fotos oficiais da formatura estarão disponíveis na secretaria do polo a partir da próxima semana."
       ],
       "star": true,
-      "rank": 1
+      "rank": 2
     },
     {
       "id": "n2",
@@ -121,7 +121,7 @@ window.HC_CONTENT = {
         "Para a coordenação, a conquista é resultado do trabalho conjunto entre professores, tutores e alunos. A lista completa de cursos e notas pode ser consultada na secretaria."
       ],
       "star": true,
-      "rank": 0
+      "rank": 1
     },
     {
       "id": "n4",
@@ -138,24 +138,37 @@ window.HC_CONTENT = {
         "Os participantes receberão certificado de horas complementares. As inscrições podem ser feitas na recepção do polo ou com os tutores de cada curso. As vagas são limitadas."
       ],
       "star": true,
-      "rank": 2
+      "rank": 3
     },
     {
-      "id": "n5",
-      "cat": "Comunicados",
-      "date": "2026-10-20",
-      "read": 2,
-      "author": "Secretaria",
-      "image": "assets/news/inscricoes.svg",
-      "title": "Inscrições abertas para o processo seletivo 2027.1",
-      "excerpt": "Novos alunos podem se inscrever em cursos de graduação, segunda licenciatura e pós-graduação.",
+      "id": "n1794500412324",
+      "cat": "Conquistas",
+      "date": "2026-11-12",
+      "author": "Comunicação HC",
+      "title": "Cerimônia do Jaleco marca nova etapa para alunos da UNIFAVENI",
+      "excerpt": "Estudantes de Serviço Social, Nutrição e Terapia Ocupacional receberam o jaleco em uma noite de celebração e orgulho.",
       "body": [
-        "Estão abertas as inscrições para o processo seletivo 2027.1. Os interessados podem escolher entre cursos de graduação, segunda licenciatura, formação pedagógica e pós-graduação.",
-        "O ingresso pode ser feito por prova on-line, nota do ENEM ou aproveitamento de diploma. Alunos indicados por estudantes atuais do polo têm condições especiais na matrícula.",
-        "Para mais informações, procure a secretaria do polo ou entre em contato pelos canais oficiais da instituição."
+        "A Cerimônia do Jaleco reuniu alunos dos cursos de Serviço Social, Nutrição e Terapia Ocupacional da UNIFAVENI para celebrar um dos momentos mais simbólicos da formação acadêmica: a entrega do jaleco, símbolo da responsabilidade e do compromisso com a futura profissão.",
+        "Vestindo jalecos bordados com seus nomes e o emblema de cada curso, os estudantes posaram para fotos e dividiram a emoção com familiares, colegas e professores. Para muitos, foi a confirmação de que o sonho do ensino superior está cada vez mais perto de se tornar realidade.",
+        "Mais do que uma tradição, a cerimônia marca a chegada a uma fase importante da formação, em que os alunos passam a levar para a prática o conhecimento construído ao longo do curso, sempre com ética, empatia e cuidado com as pessoas.",
+        "O HC Instituto Educacional parabeniza todos os alunos por essa conquista e reforça o compromisso de acompanhar cada etapa dessa jornada. Como dizia a mensagem que estampou o cenário da noite: aqui não existem obstáculos para os seus sonhos!"
       ],
       "star": true,
-      "rank": 3
+      "rank": 0,
+      "image": "assets/conteudo/noticia-n1794500412324-e83b6bd8.jpg",
+      "gallery": [
+        "assets/conteudo/noticia-n1794500412324-g1-f634dfa3.jpg",
+        "assets/conteudo/noticia-n1794500412324-g2-cb5556fa.jpg",
+        "assets/conteudo/noticia-n1794500412324-g3-4c60837b.jpg",
+        "assets/conteudo/noticia-n1794500412324-g4-0274865c.jpg"
+      ],
+      "focus": [
+        "56% 38%",
+        "57% 26%",
+        "47% 16%",
+        "46% 14%",
+        "50% 35%"
+      ]
     }
   ],
   "brand": [

@@ -28,22 +28,30 @@ EXT = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif
 DATA_URL = re.compile(r"^data:([\w/+.-]+);base64,(.+)$", re.S)
 
 
+def save_image(value, kind, safe_id):
+    """Salva uma imagem em base64 como arquivo e devolve o caminho novo (ou o valor original)."""
+    m = DATA_URL.match(value or "")
+    if not m:
+        return value
+    mime, payload = m.groups()
+    ext = EXT.get(mime)
+    if not ext:
+        raise ValueError(f"tipo de imagem não suportado: {mime}")
+    raw = base64.b64decode(payload)
+    digest = hashlib.sha1(raw).hexdigest()[:8]  # muda quando a imagem muda (evita cache antigo)
+    name = f"{kind}-{safe_id}-{digest}.{ext}"
+    (OUT_DIR / name).write_bytes(raw)
+    return f"assets/conteudo/{name}"
+
+
 def save_images(items, kind):
-    """Troca imagens em base64 por arquivos e devolve os itens com o caminho novo."""
+    """Troca imagens em base64 por arquivos (capa e galeria) e devolve os itens com o caminho novo."""
     for item in items:
-        m = DATA_URL.match(item.get("image") or "")
-        if not m:
-            continue
-        mime, payload = m.groups()
-        ext = EXT.get(mime)
-        if not ext:
-            raise ValueError(f"tipo de imagem não suportado: {mime}")
         safe_id = re.sub(r"[^\w-]", "", str(item.get("id", "x")))
-        raw = base64.b64decode(payload)
-        digest = hashlib.sha1(raw).hexdigest()[:8]  # muda quando a imagem muda (evita cache antigo)
-        name = f"{kind}-{safe_id}-{digest}.{ext}"
-        (OUT_DIR / name).write_bytes(raw)
-        item["image"] = f"assets/conteudo/{name}"
+        if item.get("image"):
+            item["image"] = save_image(item["image"], kind, safe_id)
+        if isinstance(item.get("gallery"), list):
+            item["gallery"] = [save_image(g, kind, f"{safe_id}-g{k + 1}") for k, g in enumerate(item["gallery"]) if g]
     return items
 
 
@@ -73,8 +81,9 @@ class Handler(BaseHTTPRequestHandler):
                 encoding="utf-8",
             )
             # apaga só as imagens exportadas antes que nenhum item usa mais
-            used = {Path(it["image"]).name for v in content.values() for it in v
-                    if str(it.get("image", "")).startswith("assets/conteudo/")}
+            used = {Path(src).name for v in content.values() for it in v
+                    for src in [it.get("image", ""), *(it.get("gallery") or [])]
+                    if str(src).startswith("assets/conteudo/")}
             for old in OUT_DIR.iterdir():
                 if old.is_file() and old.name not in used:
                     old.unlink()

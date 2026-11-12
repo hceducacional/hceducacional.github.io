@@ -30,6 +30,7 @@ const ICONS = {
   check: '<path d="M20 6 9 17l-5-5"/>',
   news: '<path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/>',
   monitor: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  focus: '<circle cx="12" cy="12" r="3"/><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/>',
   star: '<path d="M11.52 2.3a.53.53 0 0 1 .95 0l2.31 4.68a2.12 2.12 0 0 0 1.6 1.16l5.16.76a.53.53 0 0 1 .3.9l-3.74 3.64a2.12 2.12 0 0 0-.61 1.88l.88 5.14a.53.53 0 0 1-.77.56l-4.62-2.43a2.12 2.12 0 0 0-1.97 0L6.4 21.01a.53.53 0 0 1-.77-.56l.88-5.14a2.12 2.12 0 0 0-.61-1.88L2.16 9.8a.53.53 0 0 1 .3-.91l5.16-.75a2.12 2.12 0 0 0 1.6-1.16z"/>',
   grip: '<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>',
   lock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
@@ -59,6 +60,7 @@ const store = {
 const MAX_BANNERS = 5;
 const SLIDE_MS = 10000;
 const RECENT_MS = 16000; // tempo de cada notícia recente na tela inicial
+const RECENT_AUTO = 5;   // quantas notícias recentes se abrem sozinhas, em sequência
 const DEFAULT_BANNERS = [
   { id: 'b1', image: 'assets/banner-1.svg', pill: 'Notícias do Polo', title: 'Bem-vindo ao Semipresencial FAVENIHC', desc: 'Centralize chamadas, alunos e relatórios do seu polo em um só lugar.' },
   { id: 'b2', image: 'assets/banner-2.svg', pill: 'ConsultaEDU', title: 'Novas atividades regularmente', desc: 'Mantenha os links das disciplinas atualizados através do ConsultaEDU' },
@@ -194,7 +196,7 @@ async function storeImage(file, kind) {
   return ref;
 }
 
-const allImageRefs = () => [...banners, ...links, ...news, ...brandList].map((x) => x.image).filter(Boolean);
+const allImageRefs = () => [...banners, ...links, ...news, ...brandList].flatMap((x) => [x.image, ...(x.gallery || [])]).filter(Boolean);
 async function loadImages() {
   for (const ref of allImageRefs()) {
     if (!ref.startsWith('idb:') || imgCache.has(ref)) continue;
@@ -237,10 +239,15 @@ async function migrateDataUrls() {
 /* Usado na publicação: devolve o conteúdo com as imagens em base64 */
 async function exportContent() {
   const toDataUrl = (blob) => new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+  const one = async (ref) => {
+    if (!ref || !ref.startsWith('idb:')) return ref;
+    const blob = await idbGet(ref.slice(4));
+    return blob ? await toDataUrl(blob) : '';
+  };
   const conv = (list) => Promise.all(list.map(async (it) => {
-    if (!it.image || !it.image.startsWith('idb:')) return { ...it };
-    const blob = await idbGet(it.image.slice(4));
-    return { ...it, image: blob ? await toDataUrl(blob) : '' };
+    const out = { ...it, image: await one(it.image) };
+    if (Array.isArray(it.gallery)) out.gallery = (await Promise.all(it.gallery.map(one))).filter(Boolean);
+    return out;
   }));
   return { banners: await conv(banners), links: await conv(links), news: await conv(news), brand: await conv(brandList) };
 }
@@ -314,7 +321,7 @@ function renderDashboard(view) {
 function recentCard(n, i) {
   return `
   <article class="nc rn-card ${i === 0 ? 'on' : ''}" data-news="${n.id}" tabindex="0" role="button" aria-label="Abrir notícia: ${esc(n.title)}">
-    <div class="nc-media rn-media"><img src="${esc(imgUrl(n.image))}" alt="" loading="lazy"></div>
+    <div class="nc-media rn-media"><img src="${esc(imgUrl(n.image))}" alt="" loading="lazy"${objPos(coverPos(n))}></div>
     <span class="rn-prog" aria-hidden="true"><span class="rn-prog-fill"></span></span>
     <div class="rn-text">
       ${eyebrow(n, 'light')}
@@ -330,21 +337,36 @@ function initRecentNews() {
   const cards = [...row.children];
   const sec = row.closest('.rn');
   sec.style.setProperty('--rn-ms', RECENT_MS + 'ms');
-  const activate = (c) => { if (!c.classList.contains('on')) cards.forEach((x) => x.classList.toggle('on', x === c)); };
+  // só as primeiras RECENT_AUTO notícias se abrem sozinhas; as demais só ao passar o mouse
+  const auto = cards.slice(0, RECENT_AUTO);
+  cards.slice(RECENT_AUTO).forEach((c) => c.classList.add('manual'));
+  let lastAuto = auto[0];
+  const activate = (c) => {
+    if (auto.includes(c)) lastAuto = c;
+    if (!c.classList.contains('on')) cards.forEach((x) => x.classList.toggle('on', x === c));
+  };
+  // rola só a fileira (sem mexer na página) para o cartão ficar visível
+  const reveal = (c) => {
+    const left = c.offsetLeft - row.offsetLeft - 24;
+    row.scrollTo({ left: c === cards[0] ? 0 : Math.max(0, left - row.clientWidth * 0.25), behavior: 'smooth' });
+  };
 
-  // troca automática: quando a barrinha do cartão aberto termina, abre o próximo
+  // troca automática: quando a barrinha do cartão aberto termina, abre o próximo (entre os primeiros)
   row.addEventListener('animationend', (e) => {
-    if (!e.target.classList.contains('rn-prog-fill') || cards.length < 2) return;
+    if (!e.target.classList.contains('rn-prog-fill') || auto.length < 2) return;
     const cur = e.target.closest('.rn-card');
-    const next = cards[(cards.indexOf(cur) + 1) % cards.length];
+    const next = auto[(auto.indexOf(cur) + 1) % auto.length];
     activate(next);
-    // rola só a fileira (sem mexer na página) para o próximo cartão ficar visível
-    const left = next.offsetLeft - row.offsetLeft - 24;
-    row.scrollTo({ left: next === cards[0] ? 0 : Math.max(0, left - row.clientWidth * 0.25), behavior: 'smooth' });
+    reveal(next);
   });
   // pausa enquanto o mouse está sobre as notícias
   row.addEventListener('mouseenter', () => sec.classList.add('paused'));
-  row.addEventListener('mouseleave', () => sec.classList.remove('paused'));
+  row.addEventListener('mouseleave', () => {
+    sec.classList.remove('paused');
+    // saiu de uma notícia que não faz parte da troca automática: volta para a sequência
+    const cur = cards.find((c) => c.classList.contains('on'));
+    if (cur && !auto.includes(cur) && lastAuto) { activate(lastAuto); reveal(lastAuto); }
+  });
   row.addEventListener('mouseover', (e) => { const c = e.target.closest('.rn-card'); if (c) activate(c); });
   row.addEventListener('focusin', (e) => { const c = e.target.closest('.rn-card'); if (c) activate(c); });
   row.addEventListener('click', (e) => {
@@ -382,6 +404,52 @@ function bannerLink(b) {
   return isSafeUrl(u) ? u : '';
 }
 
+/* Trilho em loop contínuo (banners e imagens das notícias).
+   Há uma cópia do último item no início e do primeiro no fim: do último para o primeiro o trilho
+   anda para a esquerda até a cópia e depois "salta" sem animação para o item verdadeiro. */
+function loopTrack(track, onChange) {
+  const slides = [...track.children];
+  const n = slides.length;
+  const all = [...slides];
+  if (n > 1) {
+    const mkClone = (el) => {
+      const c = el.cloneNode(true);
+      c.classList.add('clone'); c.setAttribute('aria-hidden', 'true');
+      c.querySelectorAll('a, button').forEach((a) => a.setAttribute('tabindex', '-1'));
+      return c;
+    };
+    const head = mkClone(slides[n - 1]), tail = mkClone(slides[0]);
+    track.prepend(head); track.append(tail);
+    all.unshift(head); all.push(tail);
+  }
+  const off = n > 1 ? 1 : 0;
+  let index = 0, pending = null, snapTimer = 0;
+  const setPos = (p) => { track.style.transform = `translateX(-${p * 100}%)`; };
+  const activate = (el) => all.forEach((sl) => sl.classList.toggle('active', sl === el));
+  const instant = (fn) => { track.classList.add('jump'); fn(); void track.offsetWidth; track.classList.remove('jump'); };
+  const snap = () => {
+    clearTimeout(snapTimer);
+    if (pending === null) return;
+    const p = pending; pending = null;
+    instant(() => { setPos(p); activate(all[p]); });
+  };
+  track.addEventListener('transitionend', (e) => { if (e.target === track && e.propertyName === 'transform') snap(); });
+  return {
+    get index() { return index; },
+    go(i, first = false) {
+      snap();
+      let p;
+      if (i >= n) { index = 0; p = n + off; pending = off; }
+      else if (i < 0) { index = n - 1; p = 0; pending = n - 1 + off; }
+      else { index = i; p = i + off; }
+      if (first) instant(() => setPos(p)); else setPos(p);
+      activate(all[p]);
+      if (pending !== null) snapTimer = setTimeout(snap, 1300); // garantia caso o transitionend não chegue
+      onChange?.(index);
+    },
+  };
+}
+
 function initCarousel() {
   slideIndex = Math.min(slideIndex, Math.max(banners.length - 1, 0));
   const track = $('#track');
@@ -391,15 +459,14 @@ function initCarousel() {
   const dots = [...document.querySelectorAll('.dot')];
   document.documentElement.style.setProperty('--slide-ms', SLIDE_MS + 'ms');
 
-  const go = (i) => {
-    slideIndex = (i + banners.length) % banners.length;
-    track.style.transform = `translateX(-${slideIndex * 100}%)`;
-    slides.forEach((sl, k) => sl.classList.toggle('active', k === slideIndex));
+  const loop = loopTrack(track, (i) => {
+    slideIndex = i;
     dots.forEach((d, k) => {
       d.classList.remove('active');
-      if (k === slideIndex) { void d.offsetWidth; d.classList.add('active'); } // reinicia a barra de progresso
+      if (k === i) { void d.offsetWidth; d.classList.add('active'); } // reinicia a barra de progresso
     });
-  };
+  });
+  const go = (i, first) => loop.go(i, first);
 
   // O avanço automático acontece quando a barra de progresso do ponto ativo termina (pausa ao passar o mouse).
   $('#dots').addEventListener('animationend', (e) => {
@@ -423,7 +490,7 @@ function initCarousel() {
     if (Math.abs(dx) > 40) go(slideIndex + (dx < 0 ? 1 : -1));
   });
 
-  go(slideIndex);
+  go(slideIndex, true);
 }
 
 /* =========================================================
@@ -655,6 +722,22 @@ function fmtDate(iso, long = false) {
 const NEWS_CATS = ['Conquistas', 'Infraestrutura', 'Acadêmico', 'Eventos', 'Comunicados'];
 const NEWS_DEFAULT_IMG = 'assets/news/padrao.svg';
 const saveNews = () => { cleanupImages(); return store.set('news', news); };
+const MAX_NEWS_IMGS = 5;      // capa + até 4 imagens extras
+const NEWS_SLIDE_MS = 10000;  // troca das imagens ao abrir a notícia
+/* Imagens reais da notícia, com a capa primeiro (n.image é sempre a capa) */
+const newsImages = (n) => [n.image, ...(n.gallery || [])].filter((src) => src && src !== NEWS_DEFAULT_IMG);
+const setNewsImages = (n, imgs) => { n.image = imgs[0] || NEWS_DEFAULT_IMG; n.gallery = imgs.slice(1, MAX_NEWS_IMGS); };
+/* Enquadramento: n.focus guarda, na mesma ordem das imagens, o ponto que deve ficar visível ("x% y%") */
+const newsItems = (n) => newsImages(n).map((src, k) => ({ src, pos: (n.focus || [])[k] || '' }));
+const setNewsItems = (n, items) => {
+  setNewsImages(n, items.map((it) => it.src));
+  const f = items.slice(0, MAX_NEWS_IMGS).map((it) => it.pos || '');
+  if (f.some(Boolean)) n.focus = f; else delete n.focus;
+};
+const coverPos = (n) => (newsImages(n).length && n.focus?.[0]) || '';
+const VALID_POS = /^\d{1,3}(\.\d+)?% \d{1,3}(\.\d+)?%$/;
+const objPos = (pos) => (pos && VALID_POS.test(pos) ? ` style="object-position:${pos}"` : '');
+const bgPos = (pos) => (pos && VALID_POS.test(pos) ? `background-position:${pos};` : '');
 /* Tempo de leitura estimado (≈ 200 palavras por minuto) */
 const readTime = (n) => Math.max(1, Math.round([n.excerpt, ...n.body].join(' ').split(/\s+/).filter(Boolean).length / 200));
 const CAT_CLASS = { Conquistas: 'c-gold', Infraestrutura: 'c-teal', 'Acadêmico': 'c-green', Eventos: 'c-purple', Comunicados: 'c-blue' };
@@ -674,7 +757,7 @@ function newsCard(n) {
       <h3>${esc(n.title)}</h3>
       <p>${esc(n.excerpt)}</p>
     </div>
-    <div class="nc-media ap-card-media"><img src="${esc(imgUrl(n.image))}" alt="" loading="lazy"></div>
+    <div class="nc-media ap-card-media"><img src="${esc(imgUrl(n.image))}" alt="" loading="lazy"${objPos(coverPos(n))}></div>
     <span class="ap-plus" aria-hidden="true">${PLUS_SVG}</span>
   </article>`;
 }
@@ -683,7 +766,7 @@ function newsCard(n) {
 function featureCard(n) {
   return `
   <article class="nc ap-feature" data-news="${n.id}" tabindex="0" role="button" aria-label="Abrir notícia: ${esc(n.title)}">
-    <div class="nc-media ap-feature-media"><img src="${esc(imgUrl(n.image))}" alt=""></div>
+    <div class="nc-media ap-feature-media"><img src="${esc(imgUrl(n.image))}" alt=""${objPos(coverPos(n))}></div>
     <div class="ap-feature-text">
       ${eyebrow(n, 'light')}
       <h2>${esc(n.title)}</h2>
@@ -830,6 +913,10 @@ function openNews(n, card) {
   const from = cardMedia.getBoundingClientRect();
   const fromRadius = getComputedStyle(card.querySelector('.nc-media')).borderTopLeftRadius;
   const others = news.filter((x) => x.id !== n.id).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 2);
+  const items = newsItems(n);
+  if (!items.length) items.push({ src: n.image, pos: '' });
+  const imgs = items.map((it) => it.src);
+  const multi = items.length > 1;
 
   const wrap = document.createElement('div');
   wrap.className = 'nm';
@@ -837,8 +924,18 @@ function openNews(n, card) {
     <div class="nm-backdrop"></div>
     <div class="nm-scroll">
       <article class="nm-panel" role="dialog" aria-modal="true" aria-labelledby="nm-title">
+        <div class="nm-top">
         <button class="nm-close" aria-label="Fechar notícia"><i data-icon="x"></i></button>
-        <div class="nm-media"><img src="${esc(imgUrl(n.image))}" alt=""></div>
+        <div class="nm-media ${multi ? 'multi' : ''}">
+          ${multi ? `
+            <div class="nm-track">${items.map((it) => `<img src="${esc(imgUrl(it.src))}" alt=""${objPos(it.pos)}>`).join('')}</div>
+            <button class="nm-arrow prev" data-dir="-1" aria-label="Imagem anterior"><i data-icon="left"></i></button>
+            <button class="nm-arrow next" data-dir="1" aria-label="Próxima imagem"><i data-icon="right"></i></button>
+            <div class="nm-dots">${imgs.map((_, k) => `<button class="nm-dot" data-k="${k}" aria-label="Imagem ${k + 1} de ${imgs.length}"><span class="dot-fill"></span></button>`).join('')}</div>
+          ` : `<img src="${esc(imgUrl(items[0].src))}" alt=""${objPos(items[0].pos)}>`}
+        </div>
+        </div>
+        <div class="nm-body">
         <div class="nm-content">
           ${eyebrow(n)}
           <h2 id="nm-title">${esc(n.title)}</h2>
@@ -851,11 +948,12 @@ function openNews(n, card) {
             <div class="nm-rel-list">
               ${others.map((o) => `
                 <button class="nm-rel" data-rel="${o.id}">
-                  <span class="nm-rel-img"><img src="${esc(imgUrl(o.image))}" alt=""></span>
+                  <span class="nm-rel-img"><img src="${esc(imgUrl(o.image))}" alt=""${objPos(coverPos(o))}></span>
                   <span class="nm-rel-txt"><strong>${esc(o.title)}.</strong> ${esc(o.excerpt)}</span>
                 </button>`).join('')}
             </div>
           </div>` : ''}
+        </div>
         </div>
       </article>
     </div>`;
@@ -868,6 +966,36 @@ function openNews(n, card) {
   const content = wrap.querySelector('.nm-content');
   const backdrop = wrap.querySelector('.nm-backdrop');
   const lastFocus = document.activeElement;
+
+  // apresentação das imagens (só quando a notícia tem mais de uma)
+  let slider = null;
+  if (multi) {
+    media.style.setProperty('--nm-ms', NEWS_SLIDE_MS + 'ms');
+    const dots = [...media.querySelectorAll('.nm-dot')];
+    slider = loopTrack(media.querySelector('.nm-track'), (i) => dots.forEach((d, k) => {
+      d.classList.remove('active');
+      if (k === i) { void d.offsetWidth; d.classList.add('active'); }
+    }));
+    slider.go(0, true);
+    media.addEventListener('animationend', (e) => { if (e.target.classList.contains('dot-fill')) slider.go(slider.index + 1); });
+    media.addEventListener('click', (e) => {
+      const d = e.target.closest('.nm-dot'); if (d) slider.go(+d.dataset.k);
+      const a = e.target.closest('.nm-arrow'); if (a) slider.go(slider.index + +a.dataset.dir);
+    });
+    media.addEventListener('mouseenter', () => media.classList.add('paused'));
+    media.addEventListener('mouseleave', () => media.classList.remove('paused'));
+    let x0 = null;
+    media.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+    media.addEventListener('touchend', (e) => {
+      if (x0 === null) return;
+      const dx = e.changedTouches[0].clientX - x0; x0 = null;
+      if (Math.abs(dx) > 40) slider.go(slider.index + (dx < 0 ? 1 : -1));
+    });
+  }
+  const currentItem = () => items[slider ? slider.index : 0];
+  // ao rolar o texto, as imagens ficam fixas no topo e o texto passa por baixo delas
+  const body = wrap.querySelector('.nm-body');
+  body.addEventListener('scroll', () => panel.classList.toggle('scrolled', body.scrollTop > 4), { passive: true });
 
   let closing = false;
   const close = (then) => {
@@ -885,7 +1013,7 @@ function openNews(n, card) {
     content.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' });
     backdrop.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 380, fill: 'forwards' });
     if (onScreen) {
-      const ghost = flyImage(imgUrl(n.image), start, to, getComputedStyle(media).borderTopLeftRadius, fromRadius, 420);
+      const ghost = flyImage(imgUrl(currentItem().src), start, to, getComputedStyle(media).borderTopLeftRadius, fromRadius, 420, currentItem().pos);
       media.style.visibility = 'hidden';
       panel.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(.97)' }], { duration: 260, easing: 'ease', fill: 'forwards' });
       ghost.onfinish = () => { finish(); ghost.effect.target.remove(); };
@@ -896,6 +1024,7 @@ function openNews(n, card) {
   };
   const onKey = (e) => {
     if (e.key === 'Escape') close();
+    if (slider && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) slider.go(slider.index + (e.key === 'ArrowRight' ? 1 : -1));
     if (e.key === 'Tab') { // mantém o foco dentro do pop-up
       const f = [...panel.querySelectorAll('button')];
       if (!f.length) return;
@@ -925,15 +1054,16 @@ function openNews(n, card) {
   [...content.children].forEach((el, i) => el.animate(
     [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }],
     { duration: 500, easing: EASE_OUT, fill: 'backwards', delay: 300 + i * 70 }));
-  const ghost = flyImage(imgUrl(n.image), from, to, fromRadius, getComputedStyle(media).borderTopLeftRadius, 620);
+  const ghost = flyImage(imgUrl(items[0].src), from, to, fromRadius, getComputedStyle(media).borderTopLeftRadius, 620, items[0].pos);
   ghost.onfinish = () => { media.style.visibility = ''; ghost.effect.target.remove(); };
 }
 
 /* Cria uma cópia da imagem que se move/escala entre dois retângulos da tela */
-function flyImage(src, a, b, r1, r2, duration) {
+function flyImage(src, a, b, r1, r2, duration, pos = '') {
   const el = document.createElement('div');
   el.className = 'nm-ghost';
   el.style.backgroundImage = `url('${src}')`;
+  if (pos && VALID_POS.test(pos)) el.style.backgroundPosition = pos;
   document.body.appendChild(el);
   return el.animate([
     { left: a.left + 'px', top: a.top + 'px', width: a.width + 'px', height: a.height + 'px', borderRadius: r1 },
@@ -1131,10 +1261,36 @@ function initNewsPanel() {
     }
     if (act === 'toggle') { openNewsId = openNewsId === id ? null : id; drawNewsPanel(); }
     if (act === 'img') { imgId = id; $('#file-news').click(); }
-    if (act === 'rmimg') { n.image = NEWS_DEFAULT_IMG; saveNews(); drawNewsPanel(); drawRecentPanel(); toast('Imagem removida'); }
+    if (act === 'addimg') { imgId = id; $('#file-news-add').click(); }
+    if (act === 'cover' || act === 'rmg') {
+      const items = newsItems(n);
+      const [pick] = items.splice(+t.dataset.k, 1);
+      if (act === 'cover') items.unshift(pick);
+      setNewsItems(n, items); saveNews(); drawNewsPanel(); drawRecentPanel();
+      toast(act === 'cover' ? 'Capa da notícia atualizada' : 'Imagem removida');
+    }
+    if (act === 'focus') {
+      const k = +t.dataset.k;
+      const it = newsItems(n)[k]; if (!it) return;
+      focusEditor(it).then((pos) => {
+        if (pos === null || !news.includes(n)) return;
+        const items = newsItems(n);
+        if (!items[k] || items[k].src !== it.src) return;
+        items[k].pos = pos;
+        setNewsItems(n, items); saveNews(); drawNewsPanel(); drawRecentPanel();
+        toast('Enquadramento salvo');
+      });
+    }
     if (act === 'del') {
-      if (!confirm(`Excluir a notícia "${n.title}"?`)) return;
-      news = news.filter((x) => x.id !== id); renumberRecent(); saveNews(); drawNewsPanel(); drawRecentPanel(); toast('Notícia excluída');
+      confirmDialog({
+        title: 'Excluir esta notícia?',
+        sub: `"${n.title || 'Sem título'}" será removida do site${n.star ? ' e da tela inicial' : ''}. Essa ação não pode ser desfeita.`,
+        image: newsImages(n).length ? imgUrl(n.image) : '',
+        ok: 'Excluir notícia',
+      }).then((yes) => {
+        if (!yes || !news.includes(n)) return;
+        news = news.filter((x) => x.id !== id); renumberRecent(); saveNews(); drawNewsPanel(); drawRecentPanel(); toast('Notícia excluída');
+      });
     }
     if (act === 'add') {
       const fresh = {
@@ -1166,11 +1322,54 @@ function initNewsPanel() {
     const file = e.target.files[0]; e.target.value = '';
     const n = news.find((x) => x.id === imgId);
     if (!file || !n) return;
-    const old = n.image;
+    const old = n.image, oldFocus = n.focus;
     n.image = await storeImage(file, 'news');
-    if (saveNews()) toast('Imagem da notícia atualizada'); else n.image = old;
+    if (n.focus) { n.focus = [...n.focus]; n.focus[0] = ''; if (!n.focus.some(Boolean)) delete n.focus; } // imagem nova: enquadramento padrão
+    if (saveNews()) toast('Imagem da notícia atualizada'); else { n.image = old; n.focus = oldFocus; }
     drawNewsPanel(); drawRecentPanel();
   });
+
+  $('#file-news-add').addEventListener('change', async (e) => {
+    const files = [...e.target.files]; e.target.value = '';
+    const n = news.find((x) => x.id === imgId);
+    if (!files.length || !n) return;
+    const before = { image: n.image, gallery: n.gallery, focus: n.focus };
+    const items = newsItems(n);
+    const room = MAX_NEWS_IMGS - items.length;
+    for (const f of files.slice(0, room)) items.push({ src: await storeImage(f, 'news'), pos: '' });
+    setNewsItems(n, items);
+    if (!saveNews()) { Object.assign(n, before); return; }
+    const added = Math.min(files.length, room);
+    toast(files.length > room
+      ? `Limite de ${MAX_NEWS_IMGS} imagens por notícia: ${added ? added + ' adicionada' + (added > 1 ? 's' : '') : 'nenhuma adicionada'}`
+      : added > 1 ? `${added} imagens adicionadas` : 'Imagem adicionada');
+    drawNewsPanel(); drawRecentPanel();
+  });
+}
+
+function newsImagesField(n) {
+  const items = newsItems(n);
+  const imgs = items.map((it) => it.src);
+  const hint = imgs.length > 1
+    ? 'A capa aparece nos cartões. Ao abrir a notícia, todas passam a cada 10 segundos. Use o botão de enquadrar para manter os rostos sempre visíveis.'
+    : 'Adicione mais imagens para elas passarem como no banner ao abrir a notícia. Use o botão de enquadrar para manter os rostos sempre visíveis.';
+  return `
+          <div class="field full ni-images"><label>Imagens <em>(${imgs.length} de ${MAX_NEWS_IMGS})</em></label>
+            <div class="ng-grid">
+              ${items.map(({ src, pos }, k) => `
+                <div class="ng-item ${k === 0 ? 'is-cover' : ''}" style="background-image:url('${esc(imgUrl(src))}');${bgPos(pos)}">
+                  ${k === 0 && imgs.length > 1 ? '<span class="ng-badge"><i data-icon="star"></i>Capa</span>' : ''}
+                  <button class="ng-btn ng-focus ${pos ? 'set' : ''}" data-nact="focus" data-id="${n.id}" data-k="${k}" title="Enquadrar imagem" aria-label="Enquadrar imagem"><i data-icon="focus"></i></button>
+                  <div class="ng-actions">
+                    ${k > 0 ? `<button class="ng-btn" data-nact="cover" data-id="${n.id}" data-k="${k}"><i data-icon="star"></i>Usar como capa</button>` : ''}
+                    <button class="ng-btn ng-rm" data-nact="rmg" data-id="${n.id}" data-k="${k}" title="Remover imagem" aria-label="Remover imagem"><i data-icon="x"></i></button>
+                  </div>
+                </div>`).join('')}
+              ${imgs.length < MAX_NEWS_IMGS ? `
+                <button class="ng-add" data-nact="addimg" data-id="${n.id}"><i data-icon="plus"></i><span>${imgs.length ? 'Adicionar imagem' : 'Escolher imagem'}</span></button>` : ''}
+            </div>
+            <p class="ng-hint">${hint}</p>
+          </div>`;
 }
 
 function drawNewsPanel() {
@@ -1184,7 +1383,7 @@ function drawNewsPanel() {
       return `
       <div class="banner-item news-item ${open ? 'open' : ''}" data-id="${n.id}">
         <div class="bi-head">
-          <button class="ni-thumb" data-nact="img" data-id="${n.id}" title="Trocar imagem" style="background-image:url('${esc(imgUrl(n.image))}')"></button>
+          <button class="ni-thumb" data-nact="img" data-id="${n.id}" title="Trocar imagem" style="background-image:url('${esc(imgUrl(n.image))}');${bgPos(coverPos(n))}"></button>
           <button class="ni-main" data-nact="toggle" data-id="${n.id}" aria-expanded="${open}">
             <span class="ni-title">${esc(n.title) || 'Sem título'}</span>
             <span class="ni-sub">${catBadge(n.cat)}<span>${fmtDate(n.date)} · ${readTime(n)} min de leitura</span></span>
@@ -1203,12 +1402,7 @@ function drawNewsPanel() {
           </div>
           <div class="field"><label>Data de publicação</label><input type="date" data-id="${n.id}" data-nfield="date" value="${esc(n.date)}"></div>
           <div class="field"><label>Autor</label><input data-id="${n.id}" data-nfield="author" value="${esc(n.author)}" maxlength="60"></div>
-          <div class="field"><label>Imagem</label>
-            <div class="img-row">
-              <button class="btn-soft" data-nact="img" data-id="${n.id}"><i data-icon="image"></i>Trocar imagem</button>
-              ${n.image !== NEWS_DEFAULT_IMG ? `<button class="btn-soft danger" data-nact="rmimg" data-id="${n.id}"><i data-icon="x"></i>Remover</button>` : ''}
-            </div>
-          </div>
+          ${newsImagesField(n)}
           <div class="field full"><label>Resumo <em>(aparece no cartão)</em></label><textarea rows="2" data-id="${n.id}" data-nfield="excerpt" maxlength="260">${esc(n.excerpt)}</textarea></div>
           <div class="field full"><label>Texto completo <em>(aparece ao abrir a notícia)</em></label><textarea rows="9" data-id="${n.id}" data-nfield="body">${esc(n.body.join('\n\n'))}</textarea></div>
           <div class="ni-foot full"><a class="btn-soft" href="#noticias"><i data-icon="external"></i>Ver na página de Notícias</a></div>
@@ -1248,6 +1442,7 @@ function renderNewsAdmin(view) {
       <div class="ad-body" id="news-panel"></div>
     </section>
     <input type="file" id="file-news" accept="image/*" hidden>
+    <input type="file" id="file-news-add" accept="image/*" multiple hidden>
   </div>`;
   paintIcons(view);
   initRecentPanel();
@@ -1337,7 +1532,7 @@ function drawRecentPanel() {
       <li class="rk-item" draggable="true" data-id="${n.id}">
         <span class="rk-grip" title="Arraste para reordenar"><i data-icon="grip"></i></span>
         <span class="rk-num">${i + 1}</span>
-        <span class="rk-thumb" style="background-image:url('${esc(imgUrl(n.image))}')"></span>
+        <span class="rk-thumb" style="background-image:url('${esc(imgUrl(n.image))}');${bgPos(coverPos(n))}"></span>
         <span class="rk-text"><strong>${esc(n.title) || 'Sem título'}</strong><small>${esc(n.cat)} · ${fmtDate(n.date)}</small></span>
         <span class="bi-actions">
           <button class="icon-btn neutral rk-up" data-ract="up" title="Mover para cima" ${i === 0 ? 'disabled' : ''}><i data-icon="chevron"></i></button>
@@ -1470,6 +1665,151 @@ function openLock(id, onOk = (url) => openUnlocked(url), onCancel) {
     if (onOk(url, msg, close) !== false) close();
   });
 }
+/* Editor de enquadramento: escolhe o ponto da foto que deve ficar sempre visível.
+   Resolve com "x% y%" (ou '' para o padrão) ao salvar, ou null ao cancelar. */
+function focusEditor({ src, pos }) {
+  return new Promise((resolve) => {
+    if (document.querySelector('.lk')) return resolve(null);
+    const url = imgUrl(src);
+    const m = /^([\d.]+)% ([\d.]+)%$/.exec(pos || '');
+    let x = m ? +m[1] : 50, y = m ? +m[2] : 35;
+    const wrap = document.createElement('div');
+    wrap.className = 'lk fe';
+    wrap.innerHTML = `
+      <div class="lk-backdrop"></div>
+      <div class="lk-card fe-card" role="dialog" aria-modal="true" aria-labelledby="fe-title">
+        <h2 id="fe-title">Enquadrar imagem</h2>
+        <p class="lk-sub">Clique ou arraste o ponto até o rosto ou a parte mais importante da foto. Ela continua visível em todos os tamanhos.</p>
+        <div class="fe-grid">
+          <div class="fe-stage-wrap">
+            <div class="fe-stage" tabindex="0" role="slider" aria-label="Ponto de enquadramento (use as setas)">
+              <img src="${esc(url)}" alt="" draggable="false">
+              <span class="fe-dot" aria-hidden="true"></span>
+            </div>
+          </div>
+          <div class="fe-previews">
+            <figure><div class="fe-pv fe-wide" style="background-image:url('${esc(url)}')"></div><figcaption>Notícia aberta</figcaption></figure>
+            <figure><div class="fe-pv fe-tall" style="background-image:url('${esc(url)}')"></div><figcaption>Cartão</figcaption></figure>
+          </div>
+        </div>
+        <div class="fe-actions">
+          <button type="button" class="btn-soft fe-reset"><i data-icon="focus"></i>Centralizar</button>
+          <span class="fe-space"></span>
+          <button type="button" class="btn-soft fe-cancel">Cancelar</button>
+          <button type="button" class="btn-dark fe-save">Salvar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    paintIcons(wrap);
+    const card = wrap.querySelector('.lk-card');
+    const stage = wrap.querySelector('.fe-stage');
+    const dot = wrap.querySelector('.fe-dot');
+    const pvs = wrap.querySelectorAll('.fe-pv');
+    const lastFocus = document.activeElement;
+    const paint = () => {
+      const p = `${Math.round(x)}% ${Math.round(y)}%`;
+      dot.style.left = x + '%'; dot.style.top = y + '%';
+      pvs.forEach((el) => { el.style.backgroundPosition = p; });
+      stage.setAttribute('aria-valuetext', `horizontal ${Math.round(x)}%, vertical ${Math.round(y)}%`);
+    };
+    const setFrom = (e) => {
+      const r = stage.getBoundingClientRect();
+      x = Math.min(100, Math.max(0, ((e.clientX - r.left) / r.width) * 100));
+      y = Math.min(100, Math.max(0, ((e.clientY - r.top) / r.height) * 100));
+      paint();
+    };
+    paint();
+    requestAnimationFrame(() => wrap.classList.add('in'));
+    setTimeout(() => stage.focus({ preventScroll: true }), 60);
+
+    stage.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); stage.focus({ preventScroll: true });
+      stage.setPointerCapture(e.pointerId); stage.classList.add('dragging'); setFrom(e);
+    });
+    stage.addEventListener('pointermove', (e) => { if (stage.hasPointerCapture(e.pointerId)) setFrom(e); });
+    const stop = (e) => { if (stage.hasPointerCapture?.(e.pointerId)) stage.releasePointerCapture(e.pointerId); stage.classList.remove('dragging'); };
+    stage.addEventListener('pointerup', stop);
+    stage.addEventListener('pointercancel', stop);
+    stage.addEventListener('keydown', (e) => {
+      const d = e.shiftKey ? 10 : 2;
+      const mv = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] }[e.key];
+      if (!mv) return;
+      e.preventDefault();
+      x = Math.min(100, Math.max(0, x + mv[0])); y = Math.min(100, Math.max(0, y + mv[1])); paint();
+    });
+
+    const close = (result) => {
+      document.removeEventListener('keydown', onKey);
+      wrap.classList.remove('in');
+      setTimeout(() => wrap.remove(), 300);
+      lastFocus?.focus?.({ preventScroll: true });
+      resolve(result);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') close(null);
+      if (e.key === 'Tab') {
+        const f = [stage, ...card.querySelectorAll('button')];
+        if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+        else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    wrap.querySelector('.lk-backdrop').addEventListener('click', () => close(null));
+    wrap.querySelector('.fe-cancel').addEventListener('click', () => close(null));
+    wrap.querySelector('.fe-reset').addEventListener('click', () => { x = 50; y = 50; paint(); });
+    wrap.querySelector('.fe-save').addEventListener('click', () => close(`${Math.round(x)}% ${Math.round(y)}%`));
+  });
+}
+
+/* Pop-up de confirmação (mesmo visual do pop-up de senha). Resolve true se confirmado. */
+function confirmDialog({ title, sub = '', image = '', ok = 'Excluir', icon = 'trash' }) {
+  return new Promise((resolve) => {
+    if (document.querySelector('.lk')) return resolve(false);
+    const wrap = document.createElement('div');
+    wrap.className = 'lk lk-confirm';
+    wrap.innerHTML = `
+      <div class="lk-backdrop"></div>
+      <div class="lk-card" role="alertdialog" aria-modal="true" aria-labelledby="cf-title" aria-describedby="cf-sub">
+        ${image
+          ? `<span class="cf-thumb" style="background-image:url('${esc(image)}')"><span class="cf-badge"><i data-icon="${icon}"></i></span></span>`
+          : `<span class="lk-icon cf-icon"><i data-icon="${icon}"></i></span>`}
+        <h2 id="cf-title">${esc(title)}</h2>
+        <p class="lk-sub" id="cf-sub">${esc(sub)}</p>
+        <div class="lk-actions">
+          <button type="button" class="btn-soft cf-cancel">Cancelar</button>
+          <button type="button" class="btn-dark btn-danger cf-ok">${esc(ok)}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    paintIcons(wrap);
+    const card = wrap.querySelector('.lk-card');
+    const cancel = wrap.querySelector('.cf-cancel');
+    const lastFocus = document.activeElement;
+    requestAnimationFrame(() => wrap.classList.add('in'));
+    setTimeout(() => cancel.focus(), 60); // foco no "Cancelar": Enter não exclui por engano
+
+    const close = (result) => {
+      document.removeEventListener('keydown', onKey);
+      wrap.classList.remove('in');
+      setTimeout(() => wrap.remove(), 300);
+      lastFocus?.focus?.({ preventScroll: true });
+      resolve(result);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') close(false);
+      if (e.key === 'Tab') {
+        const f = [...card.querySelectorAll('button')];
+        if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+        else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    wrap.querySelector('.lk-backdrop').addEventListener('click', () => close(false));
+    cancel.addEventListener('click', () => close(false));
+    wrap.querySelector('.cf-ok').addEventListener('click', () => close(true));
+  });
+}
+
 /* Abre o sistema liberado em nova guia (com alternativa se o navegador bloquear) */
 function openUnlocked(url, msg, close) {
   const win = window.open(url, '_blank', 'noopener');
