@@ -29,6 +29,9 @@ const ICONS = {
   chevron: '<path d="m6 9 6 6 6-6"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
   news: '<path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/>',
+  monitor: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  star: '<path d="M11.52 2.3a.53.53 0 0 1 .95 0l2.31 4.68a2.12 2.12 0 0 0 1.6 1.16l5.16.76a.53.53 0 0 1 .3.9l-3.74 3.64a2.12 2.12 0 0 0-.61 1.88l.88 5.14a.53.53 0 0 1-.77.56l-4.62-2.43a2.12 2.12 0 0 0-1.97 0L6.4 21.01a.53.53 0 0 1-.77-.56l.88-5.14a2.12 2.12 0 0 0-.61-1.88L2.16 9.8a.53.53 0 0 1 .3-.91l5.16-.75a2.12 2.12 0 0 0 1.6-1.16z"/>',
+  grip: '<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>',
   clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
   tools: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/>',
 };
@@ -52,6 +55,7 @@ const store = {
 
 const MAX_BANNERS = 5;
 const SLIDE_MS = 10000;
+const RECENT_MS = 16000; // tempo de cada notícia recente na tela inicial
 const DEFAULT_BANNERS = [
   { id: 'b1', image: 'assets/banner-1.svg', pill: 'Notícias do Polo', title: 'Bem-vindo ao Semipresencial FAVENIHC', desc: 'Centralize chamadas, alunos e relatórios do seu polo em um só lugar.' },
   { id: 'b2', image: 'assets/banner-2.svg', pill: 'ConsultaEDU', title: 'Novas atividades regularmente', desc: 'Mantenha os links das disciplinas atualizados através do ConsultaEDU' },
@@ -269,15 +273,91 @@ function renderDashboard(view) {
           <span class="ql-go"><i data-icon="external"></i></span>
         </a>`).join('')}
     </nav>` : ''}
+
+    ${recentNews().length ? `
+    <section class="rn" aria-label="Notícias recentes">
+      <h2 class="shelf-title">Notícias recentes.<span> Fique por dentro dos últimos acontecimentos.</span></h2>
+      <div class="rn-row" id="rn-row">${recentNews().map(recentCard).join('')}</div>
+      <div class="ap-paddles rn-paddles">
+        <button class="ap-paddle" data-dir="-1" aria-label="Anteriores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+        <button class="ap-paddle" data-dir="1" aria-label="Próximas">${CHEV_SVG}</button>
+      </div>
+    </section>` : ''}
   </div>`;
 
   paintIcons(view);
   initCarousel();
+  initRecentNews();
   $('#quick-links')?.addEventListener('click', (e) => {
     const a = e.target.closest('[data-empty]'); if (!a) return;
     e.preventDefault();
     toast('Link ainda não configurado — defina em Configurações.');
   });
+}
+
+/* Cartão recolhido (só a imagem) que se abre ao passar o mouse */
+function recentCard(n, i) {
+  return `
+  <article class="nc rn-card ${i === 0 ? 'on' : ''}" data-news="${n.id}" tabindex="0" role="button" aria-label="Abrir notícia: ${esc(n.title)}">
+    <div class="nc-media rn-media"><img src="${esc(imgUrl(n.image))}" alt="" loading="lazy"></div>
+    <span class="rn-prog" aria-hidden="true"><span class="rn-prog-fill"></span></span>
+    <div class="rn-text">
+      ${eyebrow(n, 'light')}
+      <h3>${esc(n.title)}</h3>
+      <p>${esc(n.excerpt)}</p>
+    </div>
+    <span class="rn-plus" aria-hidden="true">${PLUS_SVG}</span>
+  </article>`;
+}
+
+function initRecentNews() {
+  const row = $('#rn-row'); if (!row) return;
+  const cards = [...row.children];
+  const sec = row.closest('.rn');
+  sec.style.setProperty('--rn-ms', RECENT_MS + 'ms');
+  const activate = (c) => { if (!c.classList.contains('on')) cards.forEach((x) => x.classList.toggle('on', x === c)); };
+
+  // troca automática: quando a barrinha do cartão aberto termina, abre o próximo
+  row.addEventListener('animationend', (e) => {
+    if (!e.target.classList.contains('rn-prog-fill') || cards.length < 2) return;
+    const cur = e.target.closest('.rn-card');
+    const next = cards[(cards.indexOf(cur) + 1) % cards.length];
+    activate(next);
+    // rola só a fileira (sem mexer na página) para o próximo cartão ficar visível
+    const left = next.offsetLeft - row.offsetLeft - 24;
+    row.scrollTo({ left: next === cards[0] ? 0 : Math.max(0, left - row.clientWidth * 0.25), behavior: 'smooth' });
+  });
+  // pausa enquanto o mouse está sobre as notícias
+  row.addEventListener('mouseenter', () => sec.classList.add('paused'));
+  row.addEventListener('mouseleave', () => sec.classList.remove('paused'));
+  row.addEventListener('mouseover', (e) => { const c = e.target.closest('.rn-card'); if (c) activate(c); });
+  row.addEventListener('focusin', (e) => { const c = e.target.closest('.rn-card'); if (c) activate(c); });
+  row.addEventListener('click', (e) => {
+    const c = e.target.closest('.rn-card'); if (!c) return;
+    if (!c.classList.contains('on')) return activate(c); // no toque: 1º toque abre o cartão, o 2º abre a notícia
+    openNews(news.find((n) => n.id === c.dataset.news), c);
+  });
+  row.addEventListener('keydown', (e) => {
+    const c = e.target.closest('.rn-card');
+    if (c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); activate(c); openNews(news.find((n) => n.id === c.dataset.news), c); }
+  });
+
+  // setas
+  const box = row.parentElement.querySelector('.rn-paddles');
+  const paddles = box.querySelectorAll('.ap-paddle');
+  const update = () => {
+    paddles[0].disabled = row.scrollLeft <= 4;
+    paddles[1].disabled = row.scrollLeft + row.clientWidth >= row.scrollWidth - 4;
+    box.hidden = row.scrollWidth <= row.clientWidth + 4;
+  };
+  box.addEventListener('click', (e) => {
+    const b = e.target.closest('.ap-paddle'); if (!b) return;
+    row.scrollBy({ left: row.clientWidth * 0.6 * +b.dataset.dir, behavior: 'smooth' });
+  });
+  row.addEventListener('scroll', update, { passive: true });
+  row.addEventListener('transitionend', update);
+  new ResizeObserver(update).observe(row);
+  update();
 }
 
 function initCarousel() {
@@ -342,12 +422,18 @@ function renderConfig(view) {
         </div>`)}
       ${accSection('banners', 'image', 'Banners do Dashboard', 'Imagens e textos do carrossel da tela inicial', 'count-banners', '<div id="banners-panel"></div>')}
       ${accSection('links', 'link', 'Botões de Acesso Rápido', 'Atalhos para os sites das instituições', 'count-links', '<div id="links-panel"></div>')}
-      ${accSection('news', 'news', 'Notícias', 'Publicações exibidas na página de Notícias', 'count-news', '<div id="news-panel"></div>')}
+      <section class="panel acc" data-acc="news">
+        <a class="acc-head acc-go" href="#config/noticias">
+          <span class="acc-icon"><i data-icon="news"></i></span>
+          <span class="acc-text"><strong>Notícias</strong><span>Publicações e notícias recentes da tela inicial</span></span>
+          <span class="count-badge">${news.length}</span>
+          <span class="acc-chev go"><i data-icon="right"></i></span>
+        </a>
+      </section>
     </div>
     <input type="file" id="file-add" accept="image/*" multiple hidden>
     <input type="file" id="file-replace" accept="image/*" hidden>
     <input type="file" id="file-link" accept="image/*" hidden>
-    <input type="file" id="file-news" accept="image/*" hidden>
   </div>`;
   paintIcons(view);
   initAccordion();
@@ -359,7 +445,6 @@ function renderConfig(view) {
 
   drawBannerPanel();
   initLinksPanel();
-  initNewsPanel();
 
   const panel = $('#banners-panel');
   let replaceIdx = -1;
@@ -504,6 +589,19 @@ const DEFAULT_NEWS = [
   },
 ];
 let news = store.get('news', PUBLISHED.news || DEFAULT_NEWS);
+/* Notícias recentes da tela inicial: itens marcados com estrela (star), na ordem de "rank". */
+const MAX_RECENT = 10;
+if (!news.some((n) => 'star' in n)) { // conteúdo antigo: destaca as mais recentes
+  [...news].sort((a, b) => b.date.localeCompare(a.date)).slice(0, MAX_RECENT).forEach((n, i) => { n.star = true; n.rank = i; });
+}
+const recentNews = () => news.filter((n) => n.star).sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
+const renumberRecent = (list = recentNews()) => list.forEach((n, i) => { n.rank = i; });
+/* Marca/desmarca a estrela; devolve false se o limite foi atingido */
+function toggleStar(n) {
+  if (n.star) { n.star = false; delete n.rank; renumberRecent(); return true; }
+  if (recentNews().length >= MAX_RECENT) { toast(`Limite de ${MAX_RECENT} notícias na tela inicial. Remova uma estrela antes.`); return false; }
+  n.star = true; n.rank = MAX_RECENT; renumberRecent(); return true;
+}
 let newsFilter = 'Todas';
 
 const MESES_LONG = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -685,7 +783,8 @@ const EASE_OUT = 'cubic-bezier(.2, .8, .2, 1)';
 function openNews(n, card) {
   if (!n || document.querySelector('.nm')) return;
   const cardImg = card.querySelector('.nc-media img');
-  const from = cardImg.getBoundingClientRect();
+  const cardMedia = card.querySelector('.nc-media');
+  const from = cardMedia.getBoundingClientRect();
   const fromRadius = getComputedStyle(card.querySelector('.nc-media')).borderTopLeftRadius;
   const others = news.filter((x) => x.id !== n.id).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 2);
 
@@ -737,7 +836,7 @@ function openNews(n, card) {
       if (then) then(); else lastFocus?.focus?.({ preventScroll: true });
     };
     if (reduceMotion()) return finish();
-    const to = cardImg.getBoundingClientRect();
+    const to = cardMedia.getBoundingClientRect();
     const start = media.getBoundingClientRect();
     const onScreen = to.bottom > 0 && to.top < innerHeight && to.right > 0 && to.left < innerWidth && !then;
     content.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' });
@@ -821,11 +920,12 @@ function initAccordion() {
   const sync = () => list.querySelectorAll('.acc').forEach((sec) => {
     const open = sec.dataset.acc === openSection;
     sec.classList.toggle('open', open);
+    const body = sec.querySelector('.acc-body'); if (!body) return;
     sec.querySelector('.acc-head').setAttribute('aria-expanded', open);
-    sec.querySelector('.acc-body').inert = !open;
+    body.inert = !open;
   });
   list.addEventListener('click', (e) => {
-    const head = e.target.closest('.acc-head'); if (!head) return;
+    const head = e.target.closest('.acc-head'); if (!head || head.classList.contains('acc-go')) return;
     const key = head.closest('.acc').dataset.acc;
     openSection = openSection === key ? null : key;
     sync();
@@ -949,12 +1049,15 @@ function initNewsPanel() {
     const id = t.dataset.id;
     const n = news.find((x) => x.id === id);
     const act = t.dataset.nact;
+    if (act === 'star') {
+      if (toggleStar(n)) { saveNews(); drawNewsPanel(); drawRecentPanel(); toast(n.star ? 'Notícia exibida na tela inicial' : 'Notícia removida da tela inicial'); }
+    }
     if (act === 'toggle') { openNewsId = openNewsId === id ? null : id; drawNewsPanel(); }
     if (act === 'img') { imgId = id; $('#file-news').click(); }
-    if (act === 'rmimg') { n.image = NEWS_DEFAULT_IMG; saveNews(); drawNewsPanel(); toast('Imagem removida'); }
+    if (act === 'rmimg') { n.image = NEWS_DEFAULT_IMG; saveNews(); drawNewsPanel(); drawRecentPanel(); toast('Imagem removida'); }
     if (act === 'del') {
       if (!confirm(`Excluir a notícia "${n.title}"?`)) return;
-      news = news.filter((x) => x.id !== id); saveNews(); drawNewsPanel(); toast('Notícia excluída');
+      news = news.filter((x) => x.id !== id); renumberRecent(); saveNews(); drawNewsPanel(); drawRecentPanel(); toast('Notícia excluída');
     }
     if (act === 'add') {
       const fresh = {
@@ -965,7 +1068,7 @@ function initNewsPanel() {
       news.push(fresh); openNewsId = fresh.id; saveNews(); drawNewsPanel();
       const ti = panel.querySelector(`[data-nfield="title"][data-id="${fresh.id}"]`);
       ti?.scrollIntoView({ block: 'center', behavior: 'smooth' }); ti?.select();
-      toast('Notícia criada — edite os campos abaixo');
+      toast('Notícia criada. Marque a estrela para exibi-la na tela inicial.');
     }
   });
 
@@ -979,7 +1082,7 @@ function initNewsPanel() {
     const row = panel.querySelector(`.news-item[data-id="${n.id}"]`);
     row.querySelector('.ni-title').textContent = n.title || 'Sem título';
     row.querySelector('.ni-sub').innerHTML = `${catBadge(n.cat)}<span>${n.date ? fmtDate(n.date) : '—'} · ${readTime(n)} min de leitura</span>`;
-    clearTimeout(panel._t); panel._t = setTimeout(saveNews, 300);
+    clearTimeout(panel._t); panel._t = setTimeout(() => { saveNews(); if (n.star) drawRecentPanel(); }, 300);
   });
 
   $('#file-news').addEventListener('change', async (e) => {
@@ -989,7 +1092,7 @@ function initNewsPanel() {
     const old = n.image;
     n.image = await storeImage(file, 'news');
     if (saveNews()) toast('Imagem da notícia atualizada'); else n.image = old;
-    drawNewsPanel();
+    drawNewsPanel(); drawRecentPanel();
   });
 }
 
@@ -997,7 +1100,7 @@ function drawNewsPanel() {
   const panel = $('#news-panel');
   $('#count-news').textContent = news.length;
   panel.innerHTML = `
-    <p class="desc">A notícia com a data mais recente aparece em destaque. Clique em uma notícia para editar. No texto completo, deixe uma linha em branco entre os parágrafos.</p>
+    <p class="desc">Na página de Notícias, a publicação com a data mais recente aparece em destaque. Clique em uma notícia para editar; no texto completo, deixe uma linha em branco entre os parágrafos. A estrela exibe a notícia na tela inicial.</p>
 
     ${news.length ? sortedNews().map((n) => {
       const open = n.id === openNewsId;
@@ -1010,6 +1113,7 @@ function drawNewsPanel() {
             <span class="ni-sub">${catBadge(n.cat)}<span>${fmtDate(n.date)} · ${readTime(n)} min de leitura</span></span>
           </button>
           <div class="bi-actions">
+            <button class="icon-btn star-btn ${n.star ? 'on' : ''}" data-nact="star" data-id="${n.id}" aria-pressed="${!!n.star}" title="${n.star ? 'Remover da tela inicial' : 'Exibir na tela inicial'}"><i data-icon="star"></i></button>
             <button class="icon-btn neutral ni-chev" data-nact="toggle" data-id="${n.id}" title="${open ? 'Fechar edição' : 'Editar notícia'}"><i data-icon="chevron"></i></button>
             <button class="icon-btn" data-nact="del" data-id="${n.id}" title="Excluir notícia"><i data-icon="trash"></i></button>
           </div>
@@ -1042,11 +1146,141 @@ function drawNewsPanel() {
   paintIcons(panel);
 }
 
+/* ---------- Página dedicada: Configurações › Notícias ---------- */
+function renderNewsAdmin(view) {
+  view.innerHTML = `
+  <div class="wrap news-admin">
+    <a class="back-link" href="#config"><i data-icon="left"></i>Configurações</a>
+    ${pageHead('Configurações', 'Notícias.', 'Publique e edite as notícias do polo e escolha quais aparecem na tela inicial.')}
+
+    <section class="panel ad-panel">
+      <header class="ad-head">
+        <span class="acc-icon ad-star"><i data-icon="star"></i></span>
+        <span class="acc-text"><strong>Notícias recentes da tela inicial</strong><span>Exibidas abaixo do Acesso rápido, nesta ordem</span></span>
+        <span class="count-badge" id="count-recent"></span>
+      </header>
+      <div class="ad-body" id="recent-panel"></div>
+    </section>
+
+    <section class="panel ad-panel">
+      <header class="ad-head">
+        <span class="acc-icon ad-news"><i data-icon="news"></i></span>
+        <span class="acc-text"><strong>Todas as notícias</strong><span>Publicações da página de Notícias</span></span>
+        <span class="count-badge" id="count-news"></span>
+      </header>
+      <div class="ad-body" id="news-panel"></div>
+    </section>
+    <input type="file" id="file-news" accept="image/*" hidden>
+  </div>`;
+  paintIcons(view);
+  initRecentPanel();
+  initNewsPanel();
+}
+
+function initRecentPanel() {
+  const panel = $('#recent-panel');
+  drawRecentPanel();
+
+  // anima a troca de posição dos itens (FLIP)
+  const flip = (list, change) => {
+    const items = [...list.children];
+    const before = new Map(items.map((el) => [el, el.getBoundingClientRect().top]));
+    change();
+    if (reduceMotion()) return;
+    items.forEach((el) => {
+      const d = before.get(el) - el.getBoundingClientRect().top;
+      if (d) el.animate([{ transform: `translateY(${d}px)` }, { transform: 'none' }], { duration: 280, easing: EASE_OUT });
+    });
+  };
+  const commitOrder = (list) => {
+    const order = [...list.children].map((el) => news.find((n) => n.id === el.dataset.id));
+    renumberRecent(order); saveNews();
+    list.querySelectorAll('.rk-num').forEach((el, i) => { el.textContent = i + 1; });
+    list.querySelectorAll('.rk-item').forEach((el, i, all) => {
+      el.querySelector('[data-ract="up"]').disabled = i === 0;
+      el.querySelector('[data-ract="down"]').disabled = i === all.length - 1;
+    });
+  };
+
+  panel.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-ract]'); if (!t) return;
+    const item = t.closest('.rk-item');
+    const list = item.parentElement;
+    const n = news.find((x) => x.id === item.dataset.id);
+    const act = t.dataset.ract;
+    if (act === 'up' || act === 'down') {
+      const sib = act === 'up' ? item.previousElementSibling : item.nextElementSibling;
+      if (!sib) return;
+      flip(list, () => (act === 'up' ? sib.before(item) : sib.after(item)));
+      commitOrder(list);
+      t.focus();
+    }
+    if (act === 'unstar') {
+      toggleStar(n); saveNews(); drawRecentPanel(); drawNewsPanel();
+      toast('Notícia removida da tela inicial');
+    }
+  });
+
+  // arrastar e soltar
+  let dragging = null;
+  panel.addEventListener('dragstart', (e) => {
+    dragging = e.target.closest('.rk-item'); if (!dragging) return;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', dragging.dataset.id);
+    requestAnimationFrame(() => dragging?.classList.add('dragging'));
+  });
+  panel.addEventListener('dragover', (e) => {
+    if (!dragging) return;
+    e.preventDefault();
+    const over = e.target.closest('.rk-item');
+    if (!over || over === dragging) return;
+    const r = over.getBoundingClientRect();
+    const after = e.clientY > r.top + r.height / 2;
+    if ((after && over.nextElementSibling === dragging) || (!after && over.previousElementSibling === dragging)) return;
+    flip(over.parentElement, () => (after ? over.after(dragging) : over.before(dragging)));
+  });
+  panel.addEventListener('drop', (e) => { if (dragging) e.preventDefault(); });
+  panel.addEventListener('dragend', () => {
+    if (!dragging) return;
+    dragging.classList.remove('dragging');
+    commitOrder(dragging.parentElement);
+    dragging = null;
+  });
+}
+
+function drawRecentPanel() {
+  const panel = $('#recent-panel'); if (!panel) return;
+  const list = recentNews();
+  $('#count-recent').textContent = `${list.length}/${MAX_RECENT}`;
+  panel.innerHTML = `
+    <p class="desc">Marque uma notícia com <span class="star-inline"><i data-icon="star"></i></span> na lista abaixo para exibi-la na tela inicial. Arraste os itens, ou use as setas, para mudar a ordem.</p>
+    ${list.length ? `
+    <ol class="rk-list">
+      ${list.map((n, i) => `
+      <li class="rk-item" draggable="true" data-id="${n.id}">
+        <span class="rk-grip" title="Arraste para reordenar"><i data-icon="grip"></i></span>
+        <span class="rk-num">${i + 1}</span>
+        <span class="rk-thumb" style="background-image:url('${esc(imgUrl(n.image))}')"></span>
+        <span class="rk-text"><strong>${esc(n.title) || 'Sem título'}</strong><small>${esc(n.cat)} · ${fmtDate(n.date)}</small></span>
+        <span class="bi-actions">
+          <button class="icon-btn neutral rk-up" data-ract="up" title="Mover para cima" ${i === 0 ? 'disabled' : ''}><i data-icon="chevron"></i></button>
+          <button class="icon-btn neutral" data-ract="down" title="Mover para baixo" ${i === list.length - 1 ? 'disabled' : ''}><i data-icon="chevron"></i></button>
+          <button class="icon-btn star-btn on" data-ract="unstar" title="Remover da tela inicial"><i data-icon="star"></i></button>
+        </span>
+      </li>`).join('')}
+    </ol>` : `<div class="rk-empty"><i data-icon="star"></i><strong>Nenhuma notícia na tela inicial</strong><span>Marque notícias com a estrela na lista abaixo.</span></div>`}
+    <div class="panel-foot">
+      <span>Até <b>${MAX_RECENT} notícias</b>. A primeira aparece aberta.</span>
+      <a class="btn-soft" href="#dashboard"><i data-icon="external"></i>Ver na tela inicial</a>
+    </div>`;
+  paintIcons(panel);
+}
+
 /* =========================================================
    Páginas ainda não construídas
    ========================================================= */
 const TITLES = {
-  aulas: 'Aulas & Chamada', alunos: 'Alunos Cadastrados',
+  alunos: 'Alunos Cadastrados',
   atividades: 'Atividades do Dia', relatorio: 'Relatório Mensal', seguranca: 'Segurança', ajuda: 'Ajuda / Suporte',
 };
 /* Cabeçalho editorial: rótulo pequeno, título grande e uma linha de apoio */
@@ -1077,8 +1311,9 @@ function route() {
   const view = $('#view');
   document.querySelectorAll('.nm, .nm-ghost').forEach((el) => el.remove());
   document.body.classList.remove('modal-open');
-  document.querySelectorAll('.sb-item[data-route]').forEach((a) => a.classList.toggle('active', a.dataset.route === r));
+  document.querySelectorAll('.sb-item[data-route]').forEach((a) => a.classList.toggle('active', a.dataset.route === r.split('/')[0]));
   if (r === 'config') renderConfig(view);
+  else if (r === 'config/noticias') renderNewsAdmin(view);
   else if (r === 'noticias') renderNews(view);
   else if (TITLES[r]) renderPlaceholder(view, r);
   else renderDashboard(view);

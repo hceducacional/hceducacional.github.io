@@ -4,14 +4,14 @@ window.HC_CONTENT = {
   "banners": [
     {
       "id": "b1",
-      "image": "assets/conteudo/banner-b1-320526c8.jpg",
+      "image": "assets/conteudo/banner-b1-8f238e59.webp",
       "pill": "Notícias do Polo",
       "title": "Bem-vindo ao Semipresencial FAVENIHC",
       "desc": "Centralize chamadas, alunos e relatórios do seu polo em um só lugar."
     },
     {
       "id": "b2",
-      "image": "assets/conteudo/banner-b2-f4a015f8.jpg",
+      "image": "assets/conteudo/banner-b2-bab57c42.webp",
       "pill": "ConsultaEDU",
       "title": "Novas atividades regularmente",
       "desc": "Mantenha os links das disciplinas atualizados através do ConsultaEDU"
@@ -82,7 +82,9 @@ window.HC_CONTENT = {
         "Durante a cerimônia, a coordenação destacou a dedicação dos formandos, que conciliaram trabalho, família e estudos ao longo da jornada. \"Cada diploma entregue hoje representa uma história de persistência\", afirmou a coordenadora do polo em seu discurso.",
         "Os alunos com melhor desempenho acadêmico receberam menção honrosa, e a turma de Pedagogia foi homenageada por alcançar 100% de aprovação no trabalho de conclusão de curso.",
         "As fotos oficiais da formatura estarão disponíveis na secretaria do polo a partir da próxima semana."
-      ]
+      ],
+      "star": true,
+      "rank": 1
     },
     {
       "id": "n2",
@@ -97,7 +99,9 @@ window.HC_CONTENT = {
         "O laboratório de informática do polo foi totalmente renovado e agora conta com 30 novos computadores, monitores maiores e uma conexão de internet três vezes mais rápida.",
         "A modernização atende a uma demanda antiga dos alunos, que utilizam o espaço para acessar o ambiente virtual de aprendizagem, realizar avaliações e participar de aulas ao vivo.",
         "O laboratório funciona de segunda a sexta, das 8h às 22h, e aos sábados, das 8h às 12h. Para utilizar os equipamentos fora do horário de aula, basta apresentar a carteirinha de estudante na recepção."
-      ]
+      ],
+      "star": true,
+      "rank": 4
     },
     {
       "id": "n3",
@@ -112,7 +116,9 @@ window.HC_CONTENT = {
         "Três cursos oferecidos pelo polo em parceria com instituições credenciadas receberam conceito 5, a nota máxima na avaliação do Ministério da Educação.",
         "A avaliação considera critérios como organização didático-pedagógica, corpo docente e infraestrutura. O resultado coloca os cursos entre os mais bem avaliados do país na modalidade semipresencial.",
         "Para a coordenação, a conquista é resultado do trabalho conjunto entre professores, tutores e alunos. A lista completa de cursos e notas pode ser consultada na secretaria."
-      ]
+      ],
+      "star": true,
+      "rank": 0
     },
     {
       "id": "n4",
@@ -127,7 +133,9 @@ window.HC_CONTENT = {
         "Entre os dias 23 e 27 de novembro, o polo promove a Semana Acadêmica 2026, com programação gratuita e aberta a todos os alunos matriculados.",
         "Serão mais de 15 atividades entre palestras, oficinas práticas e rodas de conversa sobre empreendedorismo, tecnologia na educação, saúde mental e preparação para o mercado de trabalho.",
         "Os participantes receberão certificado de horas complementares. As inscrições podem ser feitas na recepção do polo ou com os tutores de cada curso. As vagas são limitadas."
-      ]
+      ],
+      "star": true,
+      "rank": 2
     },
     {
       "id": "n5",
@@ -142,7 +150,9 @@ window.HC_CONTENT = {
         "Estão abertas as inscrições para o processo seletivo 2027.1. Os interessados podem escolher entre cursos de graduação, segunda licenciatura, formação pedagógica e pós-graduação.",
         "O ingresso pode ser feito por prova on-line, nota do ENEM ou aproveitamento de diploma. Alunos indicados por estudantes atuais do polo têm condições especiais na matrícula.",
         "Para mais informações, procure a secretaria do polo ou entre em contato pelos canais oficiais da instituição."
-      ]
+      ],
+      "star": true,
+      "rank": 3
     }
   ]
 };
