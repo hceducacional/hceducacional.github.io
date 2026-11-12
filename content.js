@@ -4,14 +4,14 @@ window.HC_CONTENT = {
   "banners": [
     {
       "id": "b1",
-      "image": "assets/conteudo/banner-b1.jpg",
+      "image": "assets/conteudo/banner-b1-320526c8.jpg",
       "pill": "Notícias do Polo",
       "title": "Bem-vindo ao Semipresencial FAVENIHC",
       "desc": "Centralize chamadas, alunos e relatórios do seu polo em um só lugar."
     },
     {
       "id": "b2",
-      "image": "assets/conteudo/banner-b2.jpg",
+      "image": "assets/conteudo/banner-b2-f4a015f8.jpg",
       "pill": "ConsultaEDU",
       "title": "Novas atividades regularmente",
       "desc": "Mantenha os links das disciplinas atualizados através do ConsultaEDU"
@@ -22,7 +22,7 @@ window.HC_CONTENT = {
       "id": "l1",
       "name": "UNIFAVENI",
       "url": "https://unifaveni.portaldoaluno.ai/",
-      "image": "assets/conteudo/botao-l1.jpg",
+      "image": "assets/conteudo/botao-l1-e5fbd231.jpg",
       "c1": "#34d6ae",
       "c2": "#0e9f7e"
     },
@@ -74,7 +74,7 @@ window.HC_CONTENT = {
       "date": "2026-11-08",
       "read": 4,
       "author": "Comunicação HC",
-      "image": "assets/conteudo/noticia-n1.jpg",
+      "image": "assets/conteudo/noticia-n1-f84366ea.jpg",
       "title": "HC Instituto Educacional celebra formatura de 120 alunos em noite especial",
       "excerpt": "Cerimônia reuniu formandos, familiares e professores para celebrar a conclusão de cursos de graduação e pós-graduação.",
       "body": [

@@ -4,14 +4,17 @@ para os arquivos do site, para que ele seja publicado junto.
 
 Como funciona:
   1. Rode este script: ele abre um receptor local em http://127.0.0.1:5174
-  2. Na página do site (aberta em http://localhost:5173), o conteúdo salvo no
-     navegador é enviado para esse receptor.
+  2. Na página do site (aberta em http://localhost:5173), rode no console:
+       fetch('http://127.0.0.1:5174/export', {method: 'POST',
+         headers: {'Content-Type': 'application/json'},
+         body: JSON.stringify(await HC_exportContent())})
   3. As imagens viram arquivos em assets/conteudo/ e os textos vão para content.js.
 
 Uso: python3 scripts/exportar_conteudo.py
 O receptor encerra sozinho depois de receber uma exportação.
 """
 import base64
+import hashlib
 import json
 import re
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -36,8 +39,10 @@ def save_images(items, kind):
         if not ext:
             raise ValueError(f"tipo de imagem não suportado: {mime}")
         safe_id = re.sub(r"[^\w-]", "", str(item.get("id", "x")))
-        name = f"{kind}-{safe_id}.{ext}"
-        (OUT_DIR / name).write_bytes(base64.b64decode(payload))
+        raw = base64.b64decode(payload)
+        digest = hashlib.sha1(raw).hexdigest()[:8]  # muda quando a imagem muda (evita cache antigo)
+        name = f"{kind}-{safe_id}-{digest}.{ext}"
+        (OUT_DIR / name).write_bytes(raw)
         item["image"] = f"assets/conteudo/{name}"
     return items
 
@@ -57,9 +62,6 @@ class Handler(BaseHTTPRequestHandler):
         try:
             data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             OUT_DIR.mkdir(parents=True, exist_ok=True)
-            for old in OUT_DIR.iterdir():  # limpa exportações anteriores
-                if old.is_file():
-                    old.unlink()
             content = {}
             for key, kind in (("banners", "banner"), ("links", "botao"), ("news", "noticia")):
                 if isinstance(data.get(key), list):
@@ -70,6 +72,12 @@ class Handler(BaseHTTPRequestHandler):
                 "window.HC_CONTENT = " + json.dumps(content, ensure_ascii=False, indent=2) + ";\n",
                 encoding="utf-8",
             )
+            # apaga só as imagens exportadas antes que nenhum item usa mais
+            used = {Path(it["image"]).name for v in content.values() for it in v
+                    if str(it.get("image", "")).startswith("assets/conteudo/")}
+            for old in OUT_DIR.iterdir():
+                if old.is_file() and old.name not in used:
+                    old.unlink()
             summary = {k: len(v) for k, v in content.items()}
             summary["imagens"] = len(list(OUT_DIR.iterdir()))
             body = json.dumps({"ok": True, **summary}).encode()

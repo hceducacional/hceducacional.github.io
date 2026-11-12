@@ -59,7 +59,7 @@ const DEFAULT_BANNERS = [
 /* Conteúdo publicado (content.js) tem prioridade sobre os exemplos embutidos */
 const PUBLISHED = window.HC_CONTENT || {};
 let banners = store.get('banners', PUBLISHED.banners || DEFAULT_BANNERS);
-const saveBanners = () => store.set('banners', banners);
+const saveBanners = () => { cleanupImages(); return store.set('banners', banners); };
 
 /* Botões de acesso rápido (instituições) */
 const MAX_LINKS = 12;
@@ -72,7 +72,7 @@ const DEFAULT_LINKS = [
   { id: 'l6', name: 'EDUCA NEXUS', url: '', image: '', c1: '#ffe27a', c2: '#f5b51f' },
 ];
 let links = store.get('links', PUBLISHED.links || DEFAULT_LINKS);
-const saveLinks = () => store.set('links', links);
+const saveLinks = () => { cleanupImages(); return store.set('links', links); };
 const normalizeUrl = (u = '') => {
   u = u.trim(); if (!u) return '';
   return /^[a-z][a-z0-9+.-]*:/i.test(u) ? u : 'https://' + u;
@@ -81,7 +81,7 @@ const isSafeUrl = (u) => /^(https?:|mailto:)/i.test(u);
 /* Fundo do botão: imagem (com véu escuro p/ leitura) ou degradê das cores */
 function linkBg(l) {
   return l.image
-    ? `linear-gradient(135deg, rgba(4,10,24,.55), rgba(4,10,24,.25)), url('${esc(l.image)}') center/cover`
+    ? `linear-gradient(135deg, rgba(4,10,24,.55), rgba(4,10,24,.25)), url('${esc(imgUrl(l.image))}') center/cover`
     : `radial-gradient(120% 140% at 15% 0%, rgba(255,255,255,.28), transparent 55%), linear-gradient(135deg, ${l.c1}, ${l.c2})`;
 }
 /* Cor do texto: escura em fundos claros (ex.: amarelo), branca nos demais */
@@ -107,6 +107,128 @@ function toast(msg) {
 }
 
 /* =========================================================
+   IMAGENS (IndexedDB)
+   As imagens enviadas ficam no IndexedDB do navegador, que comporta
+   centenas de MB. Os itens guardam só uma referência "idb:<chave>".
+   ========================================================= */
+const IMG_MAX_W = { banner: 2560, news: 1920, link: 1000 }; // largura máxima por tipo
+const IMG_QUALITY = 0.92;
+const imgCache = new Map(); // referência -> URL temporária para exibir
+const imgUrl = (ref = '') => imgCache.get(ref) || ref;
+const pendingKeys = new Set(); // imagens recém-enviadas ainda não ligadas a um item
+
+let imgDBPromise;
+const imgDB = () => imgDBPromise || (imgDBPromise = new Promise((res, rej) => {
+  const r = indexedDB.open('hc-imagens', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('imgs');
+  r.onsuccess = () => res(r.result);
+  r.onerror = () => rej(r.error);
+}));
+async function idb(mode, fn) {
+  const db = await imgDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('imgs', mode);
+    const req = fn(tx.objectStore('imgs'));
+    tx.oncomplete = () => res(req && req.result);
+    tx.onerror = () => rej(tx.error);
+  });
+}
+const idbGet = (k) => idb('readonly', (st) => st.get(k));
+const idbPut = (k, v) => idb('readwrite', (st) => st.put(v, k));
+const idbDel = (k) => idb('readwrite', (st) => st.delete(k));
+const idbKeys = () => idb('readonly', (st) => st.getAllKeys());
+
+/* Mantém o arquivo original quando ele já é leve e cabe no limite;
+   senão reduz para a largura máxima em WebP de alta qualidade. */
+function prepareImage(file, maxW) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const keep = ['image/jpeg', 'image/webp', 'image/png'].includes(file.type) && img.width <= maxW && file.size <= 1.5e6;
+      if (keep) return resolve(file);
+      const scale = Math.min(1, maxW / img.width);
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob((webp) => {
+        if (webp && webp.type === 'image/webp') return resolve(webp);
+        c.toBlob((jpg) => (jpg ? resolve(jpg) : reject(new Error('falha ao converter imagem'))), 'image/jpeg', IMG_QUALITY);
+      }, 'image/webp', IMG_QUALITY);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('arquivo de imagem inválido')); };
+    img.src = url;
+  });
+}
+
+async function storeImage(file, kind) {
+  const blob = await prepareImage(file, IMG_MAX_W[kind] || 1920);
+  const key = 'img-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  pendingKeys.add(key);
+  setTimeout(() => pendingKeys.delete(key), 10000);
+  await idbPut(key, blob);
+  const ref = 'idb:' + key;
+  imgCache.set(ref, URL.createObjectURL(blob));
+  return ref;
+}
+
+const allImageRefs = () => [...banners, ...links, ...news].map((x) => x.image).filter(Boolean);
+async function loadImages() {
+  for (const ref of allImageRefs()) {
+    if (!ref.startsWith('idb:') || imgCache.has(ref)) continue;
+    const blob = await idbGet(ref.slice(4));
+    if (blob) imgCache.set(ref, URL.createObjectURL(blob));
+  }
+}
+/* Apaga do IndexedDB as imagens que nenhum item usa mais */
+let cleanupTimer;
+function cleanupImages() {
+  clearTimeout(cleanupTimer);
+  cleanupTimer = setTimeout(async () => {
+    try {
+      const used = new Set(allImageRefs().filter((r) => r.startsWith('idb:')).map((r) => r.slice(4)));
+      for (const k of await idbKeys()) {
+        if (used.has(k) || pendingKeys.has(k)) continue;
+        await idbDel(k);
+        const ref = 'idb:' + k;
+        if (imgCache.has(ref)) { URL.revokeObjectURL(imgCache.get(ref)); imgCache.delete(ref); }
+      }
+    } catch (e) { console.warn('Limpeza de imagens:', e); }
+  }, 800);
+}
+/* Move imagens antigas (guardadas em texto/base64) para o IndexedDB e libera espaço */
+async function migrateDataUrls() {
+  for (const [list, save] of [[banners, saveBanners], [links, saveLinks], [news, saveNews]]) {
+    let changed = false;
+    for (const it of list) {
+      if (!it.image || !it.image.startsWith('data:')) continue;
+      const blob = await (await fetch(it.image)).blob();
+      const key = 'img-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      await idbPut(key, blob);
+      it.image = 'idb:' + key;
+      imgCache.set(it.image, URL.createObjectURL(blob));
+      changed = true;
+    }
+    if (changed) save();
+  }
+}
+/* Usado na publicação: devolve o conteúdo com as imagens em base64 */
+async function exportContent() {
+  const toDataUrl = (blob) => new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+  const conv = (list) => Promise.all(list.map(async (it) => {
+    if (!it.image || !it.image.startsWith('idb:')) return { ...it };
+    const blob = await idbGet(it.image.slice(4));
+    return { ...it, image: blob ? await toDataUrl(blob) : '' };
+  }));
+  return { banners: await conv(banners), links: await conv(links), news: await conv(news) };
+}
+window.HC_exportContent = exportContent;
+
+/* =========================================================
    DASHBOARD
    ========================================================= */
 let slideIndex = 0;
@@ -119,7 +241,7 @@ function renderDashboard(view) {
         <div class="carousel-track" id="track">
           ${banners.map((b, i) => `
             <div class="slide" aria-roledescription="slide" aria-label="${i + 1} de ${banners.length}">
-              <div class="slide-bg" style="background-image:url('${esc(b.image)}')"></div>
+              <div class="slide-bg" style="background-image:url('${esc(imgUrl(b.image))}')"></div>
               <div class="slide-text">
                 ${b.pill ? `<span class="pill">${esc(b.pill)}</span>` : ''}
                 <h2>${esc(b.title)}</h2>
@@ -271,7 +393,7 @@ function renderConfig(view) {
     e.target.value = '';
     if (!files.length) return;
     for (const file of files) {
-      const image = await fileToDataURL(file);
+      const image = await storeImage(file, 'banner');
       banners.push({ id: 'b' + Date.now() + Math.random().toString(36).slice(2, 6), image, pill: 'Novidade', title: 'Novo banner', desc: 'Descrição do banner' });
     }
     if (saveBanners()) toast(files.length > 1 ? `${files.length} banners adicionados` : 'Banner adicionado');
@@ -283,7 +405,7 @@ function renderConfig(view) {
     const file = e.target.files[0]; e.target.value = '';
     if (!file || replaceIdx < 0) return;
     const old = banners[replaceIdx].image;
-    banners[replaceIdx].image = await fileToDataURL(file);
+    banners[replaceIdx].image = await storeImage(file, 'banner');
     if (saveBanners()) toast('Imagem atualizada'); else banners[replaceIdx].image = old;
     drawBannerPanel();
   });
@@ -298,7 +420,7 @@ function drawBannerPanel() {
     ${banners.map((b, i) => `
       <div class="banner-item">
         <div class="bi-head">
-          <button class="bi-thumb" data-thumb="${i}" title="Trocar imagem" style="background-image:url('${esc(b.image)}')"></button>
+          <button class="bi-thumb" data-thumb="${i}" title="Trocar imagem" style="background-image:url('${esc(imgUrl(b.image))}')"></button>
           <div class="bi-meta">
             <span class="bi-badge">BANNER ${i + 1}</span>
             <p data-sub="${i}">${esc(b.title)}</p>
@@ -313,273 +435,12 @@ function drawBannerPanel() {
       </div>`).join('')}
 
     <div class="panel-foot">
-      <span>Tamanho recomendado: <b>1597 × 420 px</b> — até ${MAX_BANNERS} imagens.</span>
+      <span>Tamanho recomendado: <b>2560 × 673 px</b> — até ${MAX_BANNERS} imagens.</span>
       <button class="btn-dark" id="btn-add" ${banners.length >= MAX_BANNERS ? 'disabled' : ''}><i data-icon="plus"></i>Adicionar banners</button>
     </div>`;
   paintIcons(panel);
 }
 
-/* Redimensiona e comprime a imagem para caber no armazenamento local */
-/* ---------- Seções expansíveis (acordeão) ---------- */
-let openSection = null; // apenas uma seção aberta por vez
-function accSection(key, ico, title, sub, countId, body) {
-  const open = openSection === key;
-  return `
-  <section class="panel acc ${open ? 'open' : ''}" data-acc="${key}">
-    <button class="acc-head" type="button" aria-expanded="${open}" aria-controls="acc-${key}">
-      <span class="acc-icon"><i data-icon="${ico}"></i></span>
-      <span class="acc-text"><strong>${title}</strong><span>${sub}</span></span>
-      ${countId ? `<span class="count-badge" id="${countId}"></span>` : ''}
-      <span class="acc-chev"><i data-icon="chevron"></i></span>
-    </button>
-    <div class="acc-body" id="acc-${key}" role="region">
-      <div class="acc-inner"><div class="acc-content">${body}</div></div>
-    </div>
-  </section>`;
-}
-function initAccordion() {
-  const list = $('#acc-list');
-  const sync = () => list.querySelectorAll('.acc').forEach((sec) => {
-    const open = sec.dataset.acc === openSection;
-    sec.classList.toggle('open', open);
-    sec.querySelector('.acc-head').setAttribute('aria-expanded', open);
-    sec.querySelector('.acc-body').inert = !open;
-  });
-  list.addEventListener('click', (e) => {
-    const head = e.target.closest('.acc-head'); if (!head) return;
-    const key = head.closest('.acc').dataset.acc;
-    openSection = openSection === key ? null : key;
-    sync();
-  });
-  sync();
-}
-
-/* ---------- Botões de acesso rápido ---------- */
-function initLinksPanel() {
-  const panel = $('#links-panel');
-  let imgIdx = -1;
-  drawLinksPanel();
-
-  panel.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-act]'); if (!t) return;
-    const i = +t.dataset.i;
-    const act = t.dataset.act;
-    if (act === 'img') { imgIdx = i; $('#file-link').click(); }
-    if (act === 'rmimg') { links[i].image = ''; saveLinks(); drawLinksPanel(); toast('Imagem removida'); }
-    if (act === 'del') {
-      if (!confirm(`Remover o botão "${links[i].name}"?`)) return;
-      links.splice(i, 1); saveLinks(); drawLinksPanel(); toast('Botão removido');
-    }
-    if (act === 'up' || act === 'down') {
-      const j = act === 'up' ? i - 1 : i + 1;
-      if (j < 0 || j >= links.length) return;
-      [links[i], links[j]] = [links[j], links[i]]; saveLinks(); drawLinksPanel();
-    }
-    if (act === 'add') {
-      links.push({ id: 'l' + Date.now(), name: 'NOVO BOTÃO', url: '', image: '', c1: '#22c55e', c2: '#0e7490' });
-      saveLinks(); drawLinksPanel();
-      panel.querySelector(`[data-field="name"][data-i="${links.length - 1}"]`)?.select();
-    }
-  });
-
-  panel.addEventListener('input', (e) => {
-    const f = e.target.closest('[data-field]'); if (!f) return;
-    const i = +f.dataset.i;
-    links[i][f.dataset.field] = f.value;
-    const prev = panel.querySelector(`[data-preview="${i}"]`);
-    prev.style.background = linkBg(links[i]);
-    prev.style.color = linkInk(links[i]);
-    prev.querySelector('.ql-name').textContent = links[i].name;
-    panel.querySelector(`[data-sub="l${i}"]`).textContent = normalizeUrl(links[i].url) || 'Sem link configurado';
-    clearTimeout(panel._t); panel._t = setTimeout(saveLinks, 300);
-  });
-
-  $('#file-link').addEventListener('change', async (e) => {
-    const file = e.target.files[0]; e.target.value = '';
-    if (!file || imgIdx < 0) return;
-    const old = links[imgIdx].image;
-    links[imgIdx].image = await fileToDataURL(file, 700);
-    if (saveLinks()) toast('Imagem de fundo aplicada'); else links[imgIdx].image = old;
-    drawLinksPanel();
-  });
-}
-
-function drawLinksPanel() {
-  const panel = $('#links-panel');
-  $('#count-links').textContent = `${links.length}/${MAX_LINKS}`;
-  panel.innerHTML = `
-    <p class="desc">Atalhos exibidos logo abaixo do banner. Cada botão abre o site configurado em uma nova aba. Use uma imagem de fundo ou um degradê de cores.</p>
-
-    ${links.map((l, i) => `
-      <div class="banner-item">
-        <div class="bi-head">
-          <button class="ql ql-preview ${l.image ? 'has-img' : ''}" data-act="img" data-i="${i}" data-preview="${i}" title="Trocar imagem de fundo"
-                  style="background:${linkBg(l)};color:${linkInk(l)}">
-            <span class="ql-name">${esc(l.name)}</span>
-          </button>
-          <div class="bi-meta">
-            <span class="bi-badge">BOTÃO ${i + 1}</span>
-            <p data-sub="l${i}">${esc(normalizeUrl(l.url)) || 'Sem link configurado'}</p>
-          </div>
-          <div class="bi-actions">
-            <button class="icon-btn neutral" data-act="up" data-i="${i}" title="Mover para a esquerda" ${i === 0 ? 'disabled' : ''}><i data-icon="up"></i></button>
-            <button class="icon-btn neutral" data-act="down" data-i="${i}" title="Mover para a direita" ${i === links.length - 1 ? 'disabled' : ''}><i data-icon="down"></i></button>
-            <button class="icon-btn" data-act="del" data-i="${i}" title="Remover botão"><i data-icon="trash"></i></button>
-          </div>
-        </div>
-        <div class="bi-fields">
-          <div class="field"><label>Nome</label><input data-i="${i}" data-field="name" value="${esc(l.name)}" maxlength="24"></div>
-          <div class="field"><label>Link (site)</label><input data-i="${i}" data-field="url" value="${esc(l.url)}" placeholder="https://www.exemplo.com.br" inputmode="url"></div>
-          <div class="field">
-            <label>Imagem de fundo</label>
-            <div class="img-row">
-              <button class="btn-soft" data-act="img" data-i="${i}"><i data-icon="image"></i>${l.image ? 'Trocar imagem' : 'Escolher imagem'}</button>
-              ${l.image ? `<button class="btn-soft danger" data-act="rmimg" data-i="${i}"><i data-icon="x"></i>Remover</button>` : ''}
-            </div>
-          </div>
-          <div class="field">
-            <label>Cores do degradê ${l.image ? '<em>(usadas sem imagem)</em>' : ''}</label>
-            <div class="color-row">
-              <input type="color" data-i="${i}" data-field="c1" value="${esc(l.c1)}" title="Cor inicial">
-              <input type="color" data-i="${i}" data-field="c2" value="${esc(l.c2)}" title="Cor final">
-            </div>
-          </div>
-        </div>
-      </div>`).join('')}
-
-    <div class="panel-foot">
-      <span>Imagem recomendada: <b>400 × 160 px</b> — até ${MAX_LINKS} botões.</span>
-      <button class="btn-dark" data-act="add" ${links.length >= MAX_LINKS ? 'disabled' : ''}><i data-icon="plus"></i>Adicionar botão</button>
-    </div>`;
-  paintIcons(panel);
-}
-
-
-/* ---------- Notícias (configurações) ---------- */
-let openNewsId = null; // notícia aberta para edição
-const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-const sortedNews = () => [...news].sort((a, b) => b.date.localeCompare(a.date));
-
-function initNewsPanel() {
-  const panel = $('#news-panel');
-  let imgId = null;
-  drawNewsPanel();
-
-  panel.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-nact]'); if (!t) return;
-    const id = t.dataset.id;
-    const n = news.find((x) => x.id === id);
-    const act = t.dataset.nact;
-    if (act === 'toggle') { openNewsId = openNewsId === id ? null : id; drawNewsPanel(); }
-    if (act === 'img') { imgId = id; $('#file-news').click(); }
-    if (act === 'rmimg') { n.image = NEWS_DEFAULT_IMG; saveNews(); drawNewsPanel(); toast('Imagem removida'); }
-    if (act === 'del') {
-      if (!confirm(`Excluir a notícia "${n.title}"?`)) return;
-      news = news.filter((x) => x.id !== id); saveNews(); drawNewsPanel(); toast('Notícia excluída');
-    }
-    if (act === 'add') {
-      const fresh = {
-        id: 'n' + Date.now(), cat: 'Comunicados', date: todayIso(), author: 'Comunicação HC',
-        image: NEWS_DEFAULT_IMG, title: 'Nova notícia', excerpt: 'Escreva aqui um resumo curto da notícia.',
-        body: ['Escreva aqui o texto completo da notícia.'],
-      };
-      news.push(fresh); openNewsId = fresh.id; saveNews(); drawNewsPanel();
-      const ti = panel.querySelector(`[data-nfield="title"][data-id="${fresh.id}"]`);
-      ti?.scrollIntoView({ block: 'center', behavior: 'smooth' }); ti?.select();
-      toast('Notícia criada — edite os campos abaixo');
-    }
-  });
-
-  panel.addEventListener('input', (e) => {
-    const f = e.target.closest('[data-nfield]'); if (!f) return;
-    const n = news.find((x) => x.id === f.dataset.id); if (!n) return;
-    const field = f.dataset.nfield;
-    if (field === 'body') n.body = f.value.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
-    else n[field] = f.value;
-    // atualiza o resumo do cabeçalho do item
-    const row = panel.querySelector(`.news-item[data-id="${n.id}"]`);
-    row.querySelector('.ni-title').textContent = n.title || 'Sem título';
-    row.querySelector('.ni-sub').innerHTML = `${catBadge(n.cat)}<span>${n.date ? fmtDate(n.date) : '—'} · ${readTime(n)} min de leitura</span>`;
-    clearTimeout(panel._t); panel._t = setTimeout(saveNews, 300);
-  });
-
-  $('#file-news').addEventListener('change', async (e) => {
-    const file = e.target.files[0]; e.target.value = '';
-    const n = news.find((x) => x.id === imgId);
-    if (!file || !n) return;
-    const old = n.image;
-    n.image = await fileToDataURL(file, 1200);
-    if (saveNews()) toast('Imagem da notícia atualizada'); else n.image = old;
-    drawNewsPanel();
-  });
-}
-
-function drawNewsPanel() {
-  const panel = $('#news-panel');
-  $('#count-news').textContent = news.length;
-  panel.innerHTML = `
-    <p class="desc">A notícia com a data mais recente aparece em destaque. Clique em uma notícia para editar. No texto completo, deixe uma linha em branco entre os parágrafos.</p>
-
-    ${news.length ? sortedNews().map((n) => {
-      const open = n.id === openNewsId;
-      return `
-      <div class="banner-item news-item ${open ? 'open' : ''}" data-id="${n.id}">
-        <div class="bi-head">
-          <button class="ni-thumb" data-nact="img" data-id="${n.id}" title="Trocar imagem" style="background-image:url('${esc(n.image)}')"></button>
-          <button class="ni-main" data-nact="toggle" data-id="${n.id}" aria-expanded="${open}">
-            <span class="ni-title">${esc(n.title) || 'Sem título'}</span>
-            <span class="ni-sub">${catBadge(n.cat)}<span>${fmtDate(n.date)} · ${readTime(n)} min de leitura</span></span>
-          </button>
-          <div class="bi-actions">
-            <button class="icon-btn neutral ni-chev" data-nact="toggle" data-id="${n.id}" title="${open ? 'Fechar edição' : 'Editar notícia'}"><i data-icon="chevron"></i></button>
-            <button class="icon-btn" data-nact="del" data-id="${n.id}" title="Excluir notícia"><i data-icon="trash"></i></button>
-          </div>
-        </div>
-        ${open ? `
-        <div class="bi-fields ni-fields">
-          <div class="field full"><label>Título</label><input data-id="${n.id}" data-nfield="title" value="${esc(n.title)}" maxlength="140"></div>
-          <div class="field"><label>Categoria</label>
-            <select data-id="${n.id}" data-nfield="cat">${NEWS_CATS.map((c) => `<option ${c === n.cat ? 'selected' : ''}>${c}</option>`).join('')}</select>
-          </div>
-          <div class="field"><label>Data de publicação</label><input type="date" data-id="${n.id}" data-nfield="date" value="${esc(n.date)}"></div>
-          <div class="field"><label>Autor</label><input data-id="${n.id}" data-nfield="author" value="${esc(n.author)}" maxlength="60"></div>
-          <div class="field"><label>Imagem</label>
-            <div class="img-row">
-              <button class="btn-soft" data-nact="img" data-id="${n.id}"><i data-icon="image"></i>Trocar imagem</button>
-              ${n.image !== NEWS_DEFAULT_IMG ? `<button class="btn-soft danger" data-nact="rmimg" data-id="${n.id}"><i data-icon="x"></i>Remover</button>` : ''}
-            </div>
-          </div>
-          <div class="field full"><label>Resumo <em>(aparece no cartão)</em></label><textarea rows="2" data-id="${n.id}" data-nfield="excerpt" maxlength="260">${esc(n.excerpt)}</textarea></div>
-          <div class="field full"><label>Texto completo <em>(aparece ao abrir a notícia)</em></label><textarea rows="9" data-id="${n.id}" data-nfield="body">${esc(n.body.join('\n\n'))}</textarea></div>
-          <div class="ni-foot full"><a class="btn-soft" href="#noticias"><i data-icon="external"></i>Ver na página de Notícias</a></div>
-        </div>` : ''}
-      </div>`;
-    }).join('') : '<p class="desc">Nenhuma notícia cadastrada.</p>'}
-
-    <div class="panel-foot">
-      <span>Imagem recomendada: <b>1200 × 750 px</b>.</span>
-      <button class="btn-dark" data-nact="add"><i data-icon="plus"></i>Adicionar notícia</button>
-    </div>`;
-  paintIcons(panel);
-}
-
-function fileToDataURL(file, maxW = 1600) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const scale = Math.min(1, maxW / img.width);
-      const c = document.createElement('canvas');
-      c.width = Math.round(img.width * scale);
-      c.height = Math.round(img.height * scale);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      URL.revokeObjectURL(url);
-      resolve(c.toDataURL('image/jpeg', 0.85));
-    };
-    img.onerror = reject;
-    img.src = url;
-  });
-}
 
 /* =========================================================
    NOTÍCIAS
@@ -652,7 +513,7 @@ function fmtDate(iso, long = false) {
 }
 const NEWS_CATS = ['Conquistas', 'Infraestrutura', 'Acadêmico', 'Eventos', 'Comunicados'];
 const NEWS_DEFAULT_IMG = 'assets/news/padrao.svg';
-const saveNews = () => store.set('news', news);
+const saveNews = () => { cleanupImages(); return store.set('news', news); };
 /* Tempo de leitura estimado (≈ 200 palavras por minuto) */
 const readTime = (n) => Math.max(1, Math.round([n.excerpt, ...n.body].join(' ').split(/\s+/).filter(Boolean).length / 200));
 const CAT_CLASS = { Conquistas: 'c-gold', Infraestrutura: 'c-teal', 'Acadêmico': 'c-green', Eventos: 'c-purple', Comunicados: 'c-blue' };
@@ -672,7 +533,7 @@ function newsCard(n) {
       <h3>${esc(n.title)}</h3>
       <p>${esc(n.excerpt)}</p>
     </div>
-    <div class="nc-media ap-card-media"><img src="${esc(n.image)}" alt="" loading="lazy"></div>
+    <div class="nc-media ap-card-media"><img src="${esc(imgUrl(n.image))}" alt="" loading="lazy"></div>
     <span class="ap-plus" aria-hidden="true">${PLUS_SVG}</span>
   </article>`;
 }
@@ -681,7 +542,7 @@ function newsCard(n) {
 function featureCard(n) {
   return `
   <article class="nc ap-feature" data-news="${n.id}" tabindex="0" role="button" aria-label="Abrir notícia: ${esc(n.title)}">
-    <div class="nc-media ap-feature-media"><img src="${esc(n.image)}" alt=""></div>
+    <div class="nc-media ap-feature-media"><img src="${esc(imgUrl(n.image))}" alt=""></div>
     <div class="ap-feature-text">
       ${eyebrow(n, 'light')}
       <h2>${esc(n.title)}</h2>
@@ -835,7 +696,7 @@ function openNews(n, card) {
     <div class="nm-scroll">
       <article class="nm-panel" role="dialog" aria-modal="true" aria-labelledby="nm-title">
         <button class="nm-close" aria-label="Fechar notícia"><i data-icon="x"></i></button>
-        <div class="nm-media"><img src="${esc(n.image)}" alt=""></div>
+        <div class="nm-media"><img src="${esc(imgUrl(n.image))}" alt=""></div>
         <div class="nm-content">
           ${eyebrow(n)}
           <h2 id="nm-title">${esc(n.title)}</h2>
@@ -848,7 +709,7 @@ function openNews(n, card) {
             <div class="nm-rel-list">
               ${others.map((o) => `
                 <button class="nm-rel" data-rel="${o.id}">
-                  <span class="nm-rel-img"><img src="${esc(o.image)}" alt=""></span>
+                  <span class="nm-rel-img"><img src="${esc(imgUrl(o.image))}" alt=""></span>
                   <span class="nm-rel-txt"><strong>${esc(o.title)}.</strong> ${esc(o.excerpt)}</span>
                 </button>`).join('')}
             </div>
@@ -882,7 +743,7 @@ function openNews(n, card) {
     content.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' });
     backdrop.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 380, fill: 'forwards' });
     if (onScreen) {
-      const ghost = flyImage(n.image, start, to, getComputedStyle(media).borderTopLeftRadius, fromRadius, 420);
+      const ghost = flyImage(imgUrl(n.image), start, to, getComputedStyle(media).borderTopLeftRadius, fromRadius, 420);
       media.style.visibility = 'hidden';
       panel.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(.97)' }], { duration: 260, easing: 'ease', fill: 'forwards' });
       ghost.onfinish = () => { finish(); ghost.effect.target.remove(); };
@@ -922,7 +783,7 @@ function openNews(n, card) {
   [...content.children].forEach((el, i) => el.animate(
     [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }],
     { duration: 500, easing: EASE_OUT, fill: 'backwards', delay: 300 + i * 70 }));
-  const ghost = flyImage(n.image, from, to, fromRadius, getComputedStyle(media).borderTopLeftRadius, 620);
+  const ghost = flyImage(imgUrl(n.image), from, to, fromRadius, getComputedStyle(media).borderTopLeftRadius, 620);
   ghost.onfinish = () => { media.style.visibility = ''; ghost.effect.target.remove(); };
 }
 
@@ -936,6 +797,249 @@ function flyImage(src, a, b, r1, r2, duration) {
     { left: a.left + 'px', top: a.top + 'px', width: a.width + 'px', height: a.height + 'px', borderRadius: r1 },
     { left: b.left + 'px', top: b.top + 'px', width: b.width + 'px', height: b.height + 'px', borderRadius: r2 },
   ], { duration, easing: 'cubic-bezier(.3, .9, .2, 1)', fill: 'forwards' });
+}
+
+/* ---------- Seções expansíveis (acordeão) ---------- */
+let openSection = null; // apenas uma seção aberta por vez
+function accSection(key, ico, title, sub, countId, body) {
+  const open = openSection === key;
+  return `
+  <section class="panel acc ${open ? 'open' : ''}" data-acc="${key}">
+    <button class="acc-head" type="button" aria-expanded="${open}" aria-controls="acc-${key}">
+      <span class="acc-icon"><i data-icon="${ico}"></i></span>
+      <span class="acc-text"><strong>${title}</strong><span>${sub}</span></span>
+      ${countId ? `<span class="count-badge" id="${countId}"></span>` : ''}
+      <span class="acc-chev"><i data-icon="chevron"></i></span>
+    </button>
+    <div class="acc-body" id="acc-${key}" role="region">
+      <div class="acc-inner"><div class="acc-content">${body}</div></div>
+    </div>
+  </section>`;
+}
+function initAccordion() {
+  const list = $('#acc-list');
+  const sync = () => list.querySelectorAll('.acc').forEach((sec) => {
+    const open = sec.dataset.acc === openSection;
+    sec.classList.toggle('open', open);
+    sec.querySelector('.acc-head').setAttribute('aria-expanded', open);
+    sec.querySelector('.acc-body').inert = !open;
+  });
+  list.addEventListener('click', (e) => {
+    const head = e.target.closest('.acc-head'); if (!head) return;
+    const key = head.closest('.acc').dataset.acc;
+    openSection = openSection === key ? null : key;
+    sync();
+  });
+  sync();
+}
+
+/* ---------- Botões de acesso rápido ---------- */
+function initLinksPanel() {
+  const panel = $('#links-panel');
+  let imgIdx = -1;
+  drawLinksPanel();
+
+  panel.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-act]'); if (!t) return;
+    const i = +t.dataset.i;
+    const act = t.dataset.act;
+    if (act === 'img') { imgIdx = i; $('#file-link').click(); }
+    if (act === 'rmimg') { links[i].image = ''; saveLinks(); drawLinksPanel(); toast('Imagem removida'); }
+    if (act === 'del') {
+      if (!confirm(`Remover o botão "${links[i].name}"?`)) return;
+      links.splice(i, 1); saveLinks(); drawLinksPanel(); toast('Botão removido');
+    }
+    if (act === 'up' || act === 'down') {
+      const j = act === 'up' ? i - 1 : i + 1;
+      if (j < 0 || j >= links.length) return;
+      [links[i], links[j]] = [links[j], links[i]]; saveLinks(); drawLinksPanel();
+    }
+    if (act === 'add') {
+      links.push({ id: 'l' + Date.now(), name: 'NOVO BOTÃO', url: '', image: '', c1: '#22c55e', c2: '#0e7490' });
+      saveLinks(); drawLinksPanel();
+      panel.querySelector(`[data-field="name"][data-i="${links.length - 1}"]`)?.select();
+    }
+  });
+
+  panel.addEventListener('input', (e) => {
+    const f = e.target.closest('[data-field]'); if (!f) return;
+    const i = +f.dataset.i;
+    links[i][f.dataset.field] = f.value;
+    const prev = panel.querySelector(`[data-preview="${i}"]`);
+    prev.style.background = linkBg(links[i]);
+    prev.style.color = linkInk(links[i]);
+    prev.querySelector('.ql-name').textContent = links[i].name;
+    panel.querySelector(`[data-sub="l${i}"]`).textContent = normalizeUrl(links[i].url) || 'Sem link configurado';
+    clearTimeout(panel._t); panel._t = setTimeout(saveLinks, 300);
+  });
+
+  $('#file-link').addEventListener('change', async (e) => {
+    const file = e.target.files[0]; e.target.value = '';
+    if (!file || imgIdx < 0) return;
+    const old = links[imgIdx].image;
+    links[imgIdx].image = await storeImage(file, 'link');
+    if (saveLinks()) toast('Imagem de fundo aplicada'); else links[imgIdx].image = old;
+    drawLinksPanel();
+  });
+}
+
+function drawLinksPanel() {
+  const panel = $('#links-panel');
+  $('#count-links').textContent = `${links.length}/${MAX_LINKS}`;
+  panel.innerHTML = `
+    <p class="desc">Atalhos exibidos logo abaixo do banner. Cada botão abre o site configurado em uma nova aba. Use uma imagem de fundo ou um degradê de cores.</p>
+
+    ${links.map((l, i) => `
+      <div class="banner-item">
+        <div class="bi-head">
+          <button class="ql ql-preview ${l.image ? 'has-img' : ''}" data-act="img" data-i="${i}" data-preview="${i}" title="Trocar imagem de fundo"
+                  style="background:${linkBg(l)};color:${linkInk(l)}">
+            <span class="ql-name">${esc(l.name)}</span>
+          </button>
+          <div class="bi-meta">
+            <span class="bi-badge">BOTÃO ${i + 1}</span>
+            <p data-sub="l${i}">${esc(normalizeUrl(l.url)) || 'Sem link configurado'}</p>
+          </div>
+          <div class="bi-actions">
+            <button class="icon-btn neutral" data-act="up" data-i="${i}" title="Mover para a esquerda" ${i === 0 ? 'disabled' : ''}><i data-icon="up"></i></button>
+            <button class="icon-btn neutral" data-act="down" data-i="${i}" title="Mover para a direita" ${i === links.length - 1 ? 'disabled' : ''}><i data-icon="down"></i></button>
+            <button class="icon-btn" data-act="del" data-i="${i}" title="Remover botão"><i data-icon="trash"></i></button>
+          </div>
+        </div>
+        <div class="bi-fields">
+          <div class="field"><label>Nome</label><input data-i="${i}" data-field="name" value="${esc(l.name)}" maxlength="24"></div>
+          <div class="field"><label>Link (site)</label><input data-i="${i}" data-field="url" value="${esc(l.url)}" placeholder="https://www.exemplo.com.br" inputmode="url"></div>
+          <div class="field">
+            <label>Imagem de fundo</label>
+            <div class="img-row">
+              <button class="btn-soft" data-act="img" data-i="${i}"><i data-icon="image"></i>${l.image ? 'Trocar imagem' : 'Escolher imagem'}</button>
+              ${l.image ? `<button class="btn-soft danger" data-act="rmimg" data-i="${i}"><i data-icon="x"></i>Remover</button>` : ''}
+            </div>
+          </div>
+          <div class="field">
+            <label>Cores do degradê ${l.image ? '<em>(usadas sem imagem)</em>' : ''}</label>
+            <div class="color-row">
+              <input type="color" data-i="${i}" data-field="c1" value="${esc(l.c1)}" title="Cor inicial">
+              <input type="color" data-i="${i}" data-field="c2" value="${esc(l.c2)}" title="Cor final">
+            </div>
+          </div>
+        </div>
+      </div>`).join('')}
+
+    <div class="panel-foot">
+      <span>Imagem recomendada: <b>800 × 320 px</b> — até ${MAX_LINKS} botões.</span>
+      <button class="btn-dark" data-act="add" ${links.length >= MAX_LINKS ? 'disabled' : ''}><i data-icon="plus"></i>Adicionar botão</button>
+    </div>`;
+  paintIcons(panel);
+}
+
+
+/* ---------- Notícias (configurações) ---------- */
+let openNewsId = null; // notícia aberta para edição
+const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const sortedNews = () => [...news].sort((a, b) => b.date.localeCompare(a.date));
+
+function initNewsPanel() {
+  const panel = $('#news-panel');
+  let imgId = null;
+  drawNewsPanel();
+
+  panel.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-nact]'); if (!t) return;
+    const id = t.dataset.id;
+    const n = news.find((x) => x.id === id);
+    const act = t.dataset.nact;
+    if (act === 'toggle') { openNewsId = openNewsId === id ? null : id; drawNewsPanel(); }
+    if (act === 'img') { imgId = id; $('#file-news').click(); }
+    if (act === 'rmimg') { n.image = NEWS_DEFAULT_IMG; saveNews(); drawNewsPanel(); toast('Imagem removida'); }
+    if (act === 'del') {
+      if (!confirm(`Excluir a notícia "${n.title}"?`)) return;
+      news = news.filter((x) => x.id !== id); saveNews(); drawNewsPanel(); toast('Notícia excluída');
+    }
+    if (act === 'add') {
+      const fresh = {
+        id: 'n' + Date.now(), cat: 'Comunicados', date: todayIso(), author: 'Comunicação HC',
+        image: NEWS_DEFAULT_IMG, title: 'Nova notícia', excerpt: 'Escreva aqui um resumo curto da notícia.',
+        body: ['Escreva aqui o texto completo da notícia.'],
+      };
+      news.push(fresh); openNewsId = fresh.id; saveNews(); drawNewsPanel();
+      const ti = panel.querySelector(`[data-nfield="title"][data-id="${fresh.id}"]`);
+      ti?.scrollIntoView({ block: 'center', behavior: 'smooth' }); ti?.select();
+      toast('Notícia criada — edite os campos abaixo');
+    }
+  });
+
+  panel.addEventListener('input', (e) => {
+    const f = e.target.closest('[data-nfield]'); if (!f) return;
+    const n = news.find((x) => x.id === f.dataset.id); if (!n) return;
+    const field = f.dataset.nfield;
+    if (field === 'body') n.body = f.value.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+    else n[field] = f.value;
+    // atualiza o resumo do cabeçalho do item
+    const row = panel.querySelector(`.news-item[data-id="${n.id}"]`);
+    row.querySelector('.ni-title').textContent = n.title || 'Sem título';
+    row.querySelector('.ni-sub').innerHTML = `${catBadge(n.cat)}<span>${n.date ? fmtDate(n.date) : '—'} · ${readTime(n)} min de leitura</span>`;
+    clearTimeout(panel._t); panel._t = setTimeout(saveNews, 300);
+  });
+
+  $('#file-news').addEventListener('change', async (e) => {
+    const file = e.target.files[0]; e.target.value = '';
+    const n = news.find((x) => x.id === imgId);
+    if (!file || !n) return;
+    const old = n.image;
+    n.image = await storeImage(file, 'news');
+    if (saveNews()) toast('Imagem da notícia atualizada'); else n.image = old;
+    drawNewsPanel();
+  });
+}
+
+function drawNewsPanel() {
+  const panel = $('#news-panel');
+  $('#count-news').textContent = news.length;
+  panel.innerHTML = `
+    <p class="desc">A notícia com a data mais recente aparece em destaque. Clique em uma notícia para editar. No texto completo, deixe uma linha em branco entre os parágrafos.</p>
+
+    ${news.length ? sortedNews().map((n) => {
+      const open = n.id === openNewsId;
+      return `
+      <div class="banner-item news-item ${open ? 'open' : ''}" data-id="${n.id}">
+        <div class="bi-head">
+          <button class="ni-thumb" data-nact="img" data-id="${n.id}" title="Trocar imagem" style="background-image:url('${esc(imgUrl(n.image))}')"></button>
+          <button class="ni-main" data-nact="toggle" data-id="${n.id}" aria-expanded="${open}">
+            <span class="ni-title">${esc(n.title) || 'Sem título'}</span>
+            <span class="ni-sub">${catBadge(n.cat)}<span>${fmtDate(n.date)} · ${readTime(n)} min de leitura</span></span>
+          </button>
+          <div class="bi-actions">
+            <button class="icon-btn neutral ni-chev" data-nact="toggle" data-id="${n.id}" title="${open ? 'Fechar edição' : 'Editar notícia'}"><i data-icon="chevron"></i></button>
+            <button class="icon-btn" data-nact="del" data-id="${n.id}" title="Excluir notícia"><i data-icon="trash"></i></button>
+          </div>
+        </div>
+        ${open ? `
+        <div class="bi-fields ni-fields">
+          <div class="field full"><label>Título</label><input data-id="${n.id}" data-nfield="title" value="${esc(n.title)}" maxlength="140"></div>
+          <div class="field"><label>Categoria</label>
+            <select data-id="${n.id}" data-nfield="cat">${NEWS_CATS.map((c) => `<option ${c === n.cat ? 'selected' : ''}>${c}</option>`).join('')}</select>
+          </div>
+          <div class="field"><label>Data de publicação</label><input type="date" data-id="${n.id}" data-nfield="date" value="${esc(n.date)}"></div>
+          <div class="field"><label>Autor</label><input data-id="${n.id}" data-nfield="author" value="${esc(n.author)}" maxlength="60"></div>
+          <div class="field"><label>Imagem</label>
+            <div class="img-row">
+              <button class="btn-soft" data-nact="img" data-id="${n.id}"><i data-icon="image"></i>Trocar imagem</button>
+              ${n.image !== NEWS_DEFAULT_IMG ? `<button class="btn-soft danger" data-nact="rmimg" data-id="${n.id}"><i data-icon="x"></i>Remover</button>` : ''}
+            </div>
+          </div>
+          <div class="field full"><label>Resumo <em>(aparece no cartão)</em></label><textarea rows="2" data-id="${n.id}" data-nfield="excerpt" maxlength="260">${esc(n.excerpt)}</textarea></div>
+          <div class="field full"><label>Texto completo <em>(aparece ao abrir a notícia)</em></label><textarea rows="9" data-id="${n.id}" data-nfield="body">${esc(n.body.join('\n\n'))}</textarea></div>
+          <div class="ni-foot full"><a class="btn-soft" href="#noticias"><i data-icon="external"></i>Ver na página de Notícias</a></div>
+        </div>` : ''}
+      </div>`;
+    }).join('') : '<p class="desc">Nenhuma notícia cadastrada.</p>'}
+
+    <div class="panel-foot">
+      <span>Imagem recomendada: <b>1920 × 1200 px</b>.</span>
+      <button class="btn-dark" data-nact="add"><i data-icon="plus"></i>Adicionar notícia</button>
+    </div>`;
+  paintIcons(panel);
 }
 
 /* =========================================================
@@ -987,4 +1091,12 @@ window.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); $('#search').focus(); }
 });
 paintIcons();
-route();
+(async () => {
+  try {
+    await migrateDataUrls();
+    await loadImages();
+    cleanupImages();
+    navigator.storage?.persist?.(); // pede ao navegador para não apagar as imagens
+  } catch (e) { console.warn('Imagens:', e); }
+  route();
+})();
