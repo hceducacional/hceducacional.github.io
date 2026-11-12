@@ -71,7 +71,7 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             OUT_DIR.mkdir(parents=True, exist_ok=True)
             content = {}
-            for key, kind in (("banners", "banner"), ("links", "botao"), ("news", "noticia"), ("brand", "logo"), ("connect", "conectado")):
+            for key, kind in (("banners", "banner"), ("exclusive", "exclusivo"), ("links", "botao"), ("news", "noticia"), ("brand", "logo"), ("connect", "conectado")):
                 if isinstance(data.get(key), list):
                     content[key] = save_images(data[key], kind)
             CONTENT_JS.write_text(

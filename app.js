@@ -70,6 +70,14 @@ const PUBLISHED = window.HC_CONTENT || {};
 let banners = store.get('banners', PUBLISHED.banners || DEFAULT_BANNERS);
 const saveBanners = () => { cleanupImages(); return store.set('banners', banners); };
 
+/* Somente no HC Instituto Educacional: segundo carrossel (jogos, materiais de estudo...) */
+const DEFAULT_EXCLUSIVE = [
+  { id: 'x1', image: 'assets/hc-exclusivo.svg', pill: 'Exclusivo HC', title: 'Criado aqui, pensado para você',
+    desc: 'Jogos, materiais de estudo e projetos feitos pela nossa equipe para turbinar o seu aprendizado.' },
+];
+let exclusive = store.get('exclusive', PUBLISHED.exclusive || DEFAULT_EXCLUSIVE);
+const saveExclusive = () => { cleanupImages(); return store.set('exclusive', exclusive); };
+
 /* Botões de acesso rápido (instituições) */
 const MAX_LINKS = 12;
 const DEFAULT_LINKS = [
@@ -232,7 +240,7 @@ async function storeImage(file, kind) {
   return ref;
 }
 
-const allImageRefs = () => [...banners, ...links, ...news, ...brandList, ...connect].flatMap((x) => [x.image, ...(x.gallery || [])]).filter(Boolean);
+const allImageRefs = () => [...banners, ...exclusive, ...links, ...news, ...brandList, ...connect].flatMap((x) => [x.image, ...(x.gallery || [])]).filter(Boolean);
 async function loadImages() {
   for (const ref of allImageRefs()) {
     if (!ref.startsWith('idb:') || imgCache.has(ref)) continue;
@@ -258,7 +266,7 @@ function cleanupImages() {
 }
 /* Move imagens antigas (guardadas em texto/base64) para o IndexedDB e libera espaço */
 async function migrateDataUrls() {
-  for (const [list, save] of [[banners, saveBanners], [links, saveLinks], [news, saveNews], [brandList, saveBrand], [connect, saveConnect]]) {
+  for (const [list, save] of [[banners, saveBanners], [exclusive, saveExclusive], [links, saveLinks], [news, saveNews], [brandList, saveBrand], [connect, saveConnect]]) {
     let changed = false;
     for (const it of list) {
       if (!it.image || !it.image.startsWith('data:')) continue;
@@ -285,23 +293,24 @@ async function exportContent() {
     if (Array.isArray(it.gallery)) out.gallery = (await Promise.all(it.gallery.map(one))).filter(Boolean);
     return out;
   }));
-  return { banners: await conv(banners), links: await conv(links), news: await conv(news), brand: await conv(brandList), connect: await conv(connect) };
+  return { banners: await conv(banners), exclusive: await conv(exclusive), links: await conv(links), news: await conv(news), brand: await conv(brandList), connect: await conv(connect) };
 }
 window.HC_exportContent = exportContent;
 
 /* =========================================================
    DASHBOARD
    ========================================================= */
-let slideIndex = 0;
+const carIndex = { top: 0, hc: 0 }; // banner atual de cada carrossel (mantido ao voltar para a tela inicial)
 
-function renderDashboard(view) {
-  view.innerHTML = `
-  <div class="wrap">
-    <section class="carousel" id="carousel" aria-roledescription="carrossel">
-      ${banners.length ? `
-        <div class="carousel-track" id="track">
-          ${banners.map((b, i) => `
-            <div class="slide" aria-roledescription="slide" aria-label="${i + 1} de ${banners.length}">
+/* Carrossel de banners (usado no topo e em "Somente no HC") */
+function carouselHTML(list, key) {
+  return `
+    <div class="car-box" data-car="${key}">
+    <section class="carousel" aria-roledescription="carrossel">
+      ${list.length ? `
+        <div class="carousel-track">
+          ${list.map((b, i) => `
+            <div class="slide" aria-roledescription="slide" aria-label="${i + 1} de ${list.length}">
               <div class="slide-bg" style="background-image:url('${esc(imgUrl(b.image))}')"></div>
               <div class="slide-text">
                 ${b.pill ? `<span class="pill">${esc(b.pill)}</span>` : ''}
@@ -311,14 +320,21 @@ function renderDashboard(view) {
               </div>
             </div>`).join('')}
         </div>
-        ${banners.length > 1 ? `
+        ${list.length > 1 ? `
           <button class="car-arrow prev" data-dir="-1" aria-label="Banner anterior"><i data-icon="left"></i></button>
           <button class="car-arrow next" data-dir="1" aria-label="Próximo banner"><i data-icon="right"></i></button>` : ''}
       ` : `<div class="carousel-empty"><div><i data-icon="image"></i><strong>Nenhum banner cadastrado</strong><a href="#config">Adicionar banners em Configurações</a></div></div>`}
     </section>
-    <div class="dots" id="dots">
-      ${banners.length > 1 ? banners.map((_, i) => `<button class="dot" data-i="${i}" aria-label="Banner ${i + 1}"><span class="dot-fill"></span></button>`).join('') : ''}
+    <div class="dots">
+      ${list.length > 1 ? list.map((_, i) => `<button class="dot" data-i="${i}" aria-label="Banner ${i + 1}"><span class="dot-fill"></span></button>`).join('') : ''}
     </div>
+    </div>`;
+}
+
+function renderDashboard(view) {
+  view.innerHTML = `
+  <div class="wrap">
+    ${carouselHTML(banners, 'top')}
 
     ${links.length ? `<h2 class="shelf-title"><span class="ap-grad">Acesso rápido.</span><span> Portais das instituições parceiras, a um clique.</span></h2>` : ''}
     ${links.length ? `
@@ -343,10 +359,16 @@ function renderDashboard(view) {
     </section>` : ''}
 
     ${connectSection()}
+
+    <section class="hcx" aria-label="Somente no HC Instituto Educacional">
+      <h2 class="shelf-title"><span class="ap-grad">Somente no HC Instituto Educacional.</span></h2>
+      <p class="shelf-sub">Jogos, materiais de estudo e projetos criados pela nossa equipe para deixar o seu aprendizado mais leve, criativo e divertido. Conteúdos que você só encontra aqui.</p>
+      ${carouselHTML(exclusive, 'hc')}
+    </section>
   </div>`;
 
   paintIcons(view);
-  initCarousel();
+  view.querySelectorAll('.car-box').forEach((box) => initCarousel(box, box.dataset.car === 'hc' ? exclusive : banners, box.dataset.car));
   initRecentNews();
   view.querySelector('.cx-grid')?.addEventListener('click', (e) => {
     const tile = e.target.closest('.cx-tile');
@@ -567,17 +589,17 @@ function loopTrack(track, onChange) {
   };
 }
 
-function initCarousel() {
-  slideIndex = Math.min(slideIndex, Math.max(banners.length - 1, 0));
-  const track = $('#track');
+function initCarousel(box, list, key) {
+  carIndex[key] = Math.min(carIndex[key] || 0, Math.max(list.length - 1, 0));
+  const track = box.querySelector('.carousel-track');
   if (!track) return;
-  const car = $('#carousel');
-  const slides = [...track.children];
-  const dots = [...document.querySelectorAll('.dot')];
+  const car = box.querySelector('.carousel');
+  const dotsBox = box.querySelector('.dots');
+  const dots = [...dotsBox.querySelectorAll('.dot')];
   document.documentElement.style.setProperty('--slide-ms', SLIDE_MS + 'ms');
 
   const loop = loopTrack(track, (i) => {
-    slideIndex = i;
+    carIndex[key] = i;
     dots.forEach((d, k) => {
       d.classList.remove('active');
       if (k === i) { void d.offsetWidth; d.classList.add('active'); } // reinicia a barra de progresso
@@ -586,17 +608,17 @@ function initCarousel() {
   const go = (i, first) => loop.go(i, first);
 
   // O avanço automático acontece quando a barra de progresso do ponto ativo termina (pausa ao passar o mouse).
-  $('#dots').addEventListener('animationend', (e) => {
-    if (e.target.classList.contains('dot-fill')) go(slideIndex + 1);
+  dotsBox.addEventListener('animationend', (e) => {
+    if (e.target.classList.contains('dot-fill')) go(carIndex[key] + 1);
   });
-  $('#dots').addEventListener('click', (e) => {
+  dotsBox.addEventListener('click', (e) => {
     const b = e.target.closest('.dot'); if (b) go(+b.dataset.i);
   });
   car.addEventListener('click', (e) => {
-    const b = e.target.closest('.car-arrow'); if (b) go(slideIndex + +b.dataset.dir);
+    const b = e.target.closest('.car-arrow'); if (b) go(carIndex[key] + +b.dataset.dir);
   });
-  car.addEventListener('mouseenter', () => car.parentElement.classList.add('paused'));
-  car.addEventListener('mouseleave', () => car.parentElement.classList.remove('paused'));
+  car.addEventListener('mouseenter', () => box.classList.add('paused'));
+  car.addEventListener('mouseleave', () => box.classList.remove('paused'));
 
   // deslizar no toque
   let x0 = null;
@@ -604,10 +626,10 @@ function initCarousel() {
   car.addEventListener('touchend', (e) => {
     if (x0 === null) return;
     const dx = e.changedTouches[0].clientX - x0; x0 = null;
-    if (Math.abs(dx) > 40) go(slideIndex + (dx < 0 ? 1 : -1));
+    if (Math.abs(dx) > 40) go(carIndex[key] + (dx < 0 ? 1 : -1));
   });
 
-  go(slideIndex, true);
+  go(carIndex[key], true);
 }
 
 /* =========================================================
@@ -616,31 +638,28 @@ function initCarousel() {
 function renderConfig(view) {
   view.innerHTML = `
   <div class="wrap">
-    ${pageHead('Configurações', 'Personalize o seu polo.', 'Banners, atalhos, notícias e preferências, tudo em um só lugar.')}
+    ${pageHead('Configurações', 'Personalize o seu polo.', 'Escolha o que deseja editar. Cada ajuste abre em uma janela e é salvo automaticamente.')}
 
-    <div class="acc-list" id="acc-list">
-      ${accSection('prefs', 'shield', 'Preferências', 'Exibição e privacidade dos dados', '', `
+    <div class="cfg-grid" id="acc-list">
+      ${accSection('banners', 'image', 'Banners do topo', 'O carrossel de destaque da tela inicial: imagens, textos e botão “Acessar”.', 'count-banners', '<div id="banners-panel"></div>')}
+      <a class="cfg-w" data-acc="news" href="#config/noticias">
+        <span class="cfg-top"><span class="acc-icon cfg-ico"><i data-icon="news"></i></span><span class="count-badge">${news.length}</span></span>
+        <strong class="cfg-title">Notícias</strong>
+        <span class="cfg-sub">Publique e edite notícias e escolha quais aparecem na tela inicial.</span>
+        <span class="cfg-open">Abrir página ${CHEV_SVG}</span>
+      </a>
+      ${accSection('exclusive', 'star', 'Somente no HC', 'Banners com as criações do instituto: jogos, materiais de estudo e muito mais.', 'count-exclusive', '<div id="exclusive-panel"></div>')}
+      ${accSection('connect', 'monitor', 'Mantenha-se conectado', 'Os blocos de vidro fosco com WhatsApp, Instagram e links de atendimento.', 'count-connect', '<div id="connect-panel"></div>')}
+      ${accSection('links', 'link', 'Acesso rápido', 'Atalhos para os portais das instituições parceiras, com imagem ou degradê.', 'count-links', '<div id="links-panel"></div>')}
+      ${accSection('brand', 'image', 'Logo do painel', 'A imagem exibida no topo da barra lateral, em todas as páginas.', '', '<div id="brand-panel"></div>')}
+      ${accSection('prefs', 'shield', 'Preferências', 'Ajustes de exibição e privacidade, como ocultar CPF e telefone.', '', `
         <p class="desc">Ajustes de exibição aplicados neste navegador.</p>
         <div class="pref">
           <span class="pref-icon"><i data-icon="shield"></i></span>
           <div class="pref-text"><strong>Ocultar dados sensíveis</strong><span>CPF e telefone aparecem mascarados</span></div>
           <label class="switch"><input type="checkbox" id="pref-hide" ${prefs.hideSensitive ? 'checked' : ''}><span></span></label>
         </div>`)}
-      ${accSection('brand', 'image', 'Logo do painel', 'Imagem exibida no topo da barra lateral', '', '<div id="brand-panel"></div>')}
-      ${accSection('banners', 'image', 'Banners do Dashboard', 'Imagens e textos do carrossel da tela inicial', 'count-banners', '<div id="banners-panel"></div>')}
-      ${accSection('links', 'link', 'Botões de Acesso Rápido', 'Atalhos para os sites das instituições', 'count-links', '<div id="links-panel"></div>')}
-      ${accSection('connect', 'monitor', 'Mantenha-se conectado', 'Blocos com vidro fosco no fim da tela inicial', 'count-connect', '<div id="connect-panel"></div>')}
-      <section class="panel acc" data-acc="news">
-        <a class="acc-head acc-go" href="#config/noticias">
-          <span class="acc-icon"><i data-icon="news"></i></span>
-          <span class="acc-text"><strong>Notícias</strong><span>Publicações e notícias recentes da tela inicial</span></span>
-          <span class="count-badge">${news.length}</span>
-          <span class="acc-chev go"><i data-icon="right"></i></span>
-        </a>
-      </section>
     </div>
-    <input type="file" id="file-add" accept="image/*" multiple hidden>
-    <input type="file" id="file-replace" accept="image/*" hidden>
     <input type="file" id="file-link" accept="image/*" hidden>
     <input type="file" id="file-logo" accept="image/*" hidden>
     <input type="file" id="file-connect" accept="image/*" hidden>
@@ -653,66 +672,95 @@ function renderConfig(view) {
     toast('Preferência salva');
   });
 
-  drawBannerPanel();
+  initBannerEditor('top');
+  initBannerEditor('hc');
   initLinksPanel();
   initBrandPanel();
   initConnectPanel();
+}
 
-  const panel = $('#banners-panel');
+/* Os dois carrosséis usam o mesmo editor */
+const BANNER_SETS = {
+  top: { list: () => banners, save: () => saveBanners(), panel: 'banners-panel', count: 'count-banners',
+    intro: 'Imagens que se alternam a cada 10 segundos no topo da tela inicial. Os textos aparecem sobre a imagem.',
+    fresh: { pill: 'Novidade', title: 'Novo banner', desc: 'Descrição do banner' } },
+  hc: { list: () => exclusive, save: () => saveExclusive(), panel: 'exclusive-panel', count: 'count-exclusive',
+    intro: 'Banners da seção “Somente no HC Instituto Educacional”, no fim da tela inicial: jogos, materiais de estudo e outras criações do instituto. Funcionam como os banners do topo.',
+    fresh: { pill: 'Exclusivo HC', title: 'Nova criação do HC', desc: 'Descreva aqui o jogo, material ou projeto.' } },
+};
+
+function initBannerEditor(key) {
+  const set = BANNER_SETS[key];
+  const panel = $('#' + set.panel);
+  // cada editor tem seus próprios seletores de arquivo
+  const fileAdd = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*', multiple: true, hidden: true });
+  const fileReplace = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*', hidden: true });
+  panel.after(fileAdd, fileReplace);
   let replaceIdx = -1;
+  drawBannerPanel(key);
 
   panel.addEventListener('click', (e) => {
+    const list = set.list();
     const del = e.target.closest('[data-del]');
     const thumb = e.target.closest('[data-thumb]');
-    const add = e.target.closest('#btn-add');
+    const add = e.target.closest('[data-badd]');
     if (del) {
       const i = +del.dataset.del;
-      if (!confirm(`Remover o Banner ${i + 1}?`)) return;
-      banners.splice(i, 1); saveBanners(); drawBannerPanel(); toast('Banner removido');
+      confirmDialog({
+        title: 'Remover este banner?',
+        sub: `"${list[i].title || 'Sem título'}" sairá do carrossel. Essa ação não pode ser desfeita.`,
+        image: imgUrl(list[i].image), ok: 'Remover banner',
+      }).then((yes) => {
+        if (!yes || !list[i]) return;
+        list.splice(i, 1); set.save(); drawBannerPanel(key); toast('Banner removido');
+      });
     } else if (thumb) {
-      replaceIdx = +thumb.dataset.thumb; $('#file-replace').click();
+      replaceIdx = +thumb.dataset.thumb; fileReplace.click();
     } else if (add) {
-      $('#file-add').click();
+      fileAdd.click();
     }
   });
 
   // edição de textos (salva automaticamente)
   panel.addEventListener('input', (e) => {
+    const list = set.list();
     const f = e.target.closest('[data-field]'); if (!f) return;
     const i = +f.dataset.i;
     if (f.type === 'checkbox') {
-      banners[i][f.dataset.field] = f.checked;
+      list[i][f.dataset.field] = f.checked;
       const box = f.closest('.bi-link');
       box.classList.toggle('on', f.checked);
       const url = box.querySelector('[data-field="url"]');
       if (f.checked) { url.removeAttribute('tabindex'); setTimeout(() => url.focus(), 250); } else url.setAttribute('tabindex', '-1');
-      saveBanners(); return;
+      set.save(); return;
     }
-    banners[i][f.dataset.field] = f.value;
+    list[i][f.dataset.field] = f.value;
     if (f.dataset.field === 'title') panel.querySelector(`[data-sub="${i}"]`).textContent = f.value;
-    clearTimeout(panel._t); panel._t = setTimeout(saveBanners, 300);
+    clearTimeout(panel._t); panel._t = setTimeout(set.save, 300);
   });
 
-  $('#file-add').addEventListener('change', async (e) => {
-    const files = [...e.target.files].slice(0, MAX_BANNERS - banners.length);
+  fileAdd.addEventListener('change', async (e) => {
+    const list = set.list();
+    const files = [...e.target.files].slice(0, MAX_BANNERS - list.length);
     e.target.value = '';
     if (!files.length) return;
     for (const file of files) {
       const image = await storeImage(file, 'banner');
-      banners.push({ id: 'b' + Date.now() + Math.random().toString(36).slice(2, 6), image, pill: 'Novidade', title: 'Novo banner', desc: 'Descrição do banner' });
+      list.push({ id: key[0] + Date.now() + Math.random().toString(36).slice(2, 6), image, ...set.fresh });
     }
-    if (saveBanners()) toast(files.length > 1 ? `${files.length} banners adicionados` : 'Banner adicionado');
-    else banners.splice(banners.length - files.length, files.length);
-    drawBannerPanel();
+    if (set.save()) toast(files.length > 1 ? `${files.length} banners adicionados` : 'Banner adicionado');
+    else list.splice(list.length - files.length, files.length);
+    drawBannerPanel(key);
   });
 
-  $('#file-replace').addEventListener('change', async (e) => {
+  fileReplace.addEventListener('change', async (e) => {
+    const list = set.list();
     const file = e.target.files[0]; e.target.value = '';
-    if (!file || replaceIdx < 0) return;
-    const old = banners[replaceIdx].image;
-    banners[replaceIdx].image = await storeImage(file, 'banner');
-    if (saveBanners()) toast('Imagem atualizada'); else banners[replaceIdx].image = old;
-    drawBannerPanel();
+    if (!file || replaceIdx < 0 || !list[replaceIdx]) return;
+    const old = list[replaceIdx].image;
+    list[replaceIdx].image = await storeImage(file, 'banner');
+    if (set.save()) toast('Imagem atualizada'); else list[replaceIdx].image = old;
+    drawBannerPanel(key);
   });
 }
 
@@ -775,11 +823,13 @@ function drawConnectPanel() {
   paintIcons(panel);
 }
 
-function drawBannerPanel() {
-  const panel = $('#banners-panel');
-  $('#count-banners').textContent = `${banners.length}/${MAX_BANNERS}`;
+function drawBannerPanel(key = 'top') {
+  const set = BANNER_SETS[key];
+  const banners = set.list();
+  const panel = $('#' + set.panel);
+  $('#' + set.count).textContent = `${banners.length}/${MAX_BANNERS}`;
   panel.innerHTML = `
-    <p class="desc">Imagens que se alternam a cada 10 segundos no topo da tela inicial. Os textos aparecem sobre a imagem.</p>
+    <p class="desc">${set.intro}</p>
 
     ${banners.map((b, i) => `
       <div class="banner-item">
@@ -810,7 +860,7 @@ function drawBannerPanel() {
 
     <div class="panel-foot">
       <span>Tamanho recomendado: <b>2560 × 673 px</b> — até ${MAX_BANNERS} imagens.</span>
-      <button class="btn-dark" id="btn-add" ${banners.length >= MAX_BANNERS ? 'disabled' : ''}><i data-icon="plus"></i>Adicionar banners</button>
+      <button class="btn-dark" data-badd="1" ${banners.length >= MAX_BANNERS ? 'disabled' : ''}><i data-icon="plus"></i>Adicionar banners</button>
     </div>`;
   paintIcons(panel);
 }
@@ -920,7 +970,9 @@ const VALID_POS = /^\d{1,3}(\.\d+)?% \d{1,3}(\.\d+)?%$/;
 const objPos = (pos) => (pos && VALID_POS.test(pos) ? ` style="object-position:${pos}"` : '');
 const bgPos = (pos) => (pos && VALID_POS.test(pos) ? `background-position:${pos};` : '');
 /* Tempo de leitura estimado (≈ 200 palavras por minuto) */
-const readTime = (n) => Math.max(1, Math.round([n.excerpt, ...n.body].join(' ').split(/\s+/).filter(Boolean).length / 200));
+/* Um parágrafo só com "[imagem 2]" mostra essa imagem da notícia inteira (sem cortes) no meio do texto */
+const BODY_IMG = /^\[imagem(?:\s+(\d+))?\]$/i;
+const readTime = (n) => Math.max(1, Math.round([n.excerpt, ...n.body.filter((p) => !BODY_IMG.test(p.trim()))].join(' ').split(/\s+/).filter(Boolean).length / 200));
 const CAT_CLASS = { Conquistas: 'c-gold', Infraestrutura: 'c-teal', 'Acadêmico': 'c-green', Eventos: 'c-purple', Comunicados: 'c-blue' };
 const catBadge = (c) => `<span class="cat ${CAT_CLASS[c] || 'c-green'}">${esc(c)}</span>`;
 const MESES_ABBR = ['jan.', 'fev.', 'mar.', 'abr.', 'maio', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'];
@@ -1094,8 +1146,11 @@ function openNews(n, card) {
   const from = cardMedia.getBoundingClientRect();
   const fromRadius = getComputedStyle(card.querySelector('.nc-media')).borderTopLeftRadius;
   const others = news.filter((x) => x.id !== n.id).sort(byNewest).slice(0, 2);
-  const items = newsItems(n);
-  if (!items.length) items.push({ src: n.image, pos: '' });
+  const allItems = newsItems(n);
+  if (!allItems.length) allItems.push({ src: n.image, pos: '' });
+  // imagens usadas no meio do texto ([imagem N]) não entram na troca do topo (a capa sempre entra)
+  const inText = new Set(n.body.map((p) => BODY_IMG.exec(p.trim())).filter(Boolean).map((m) => (+m[1] || 1) - 1));
+  const items = allItems.filter((_, k) => k === 0 || !inText.has(k));
   const imgs = items.map((it) => it.src);
   const multi = items.length > 1;
 
@@ -1122,7 +1177,12 @@ function openNews(n, card) {
           <h2 id="nm-title">${esc(n.title)}</h2>
           <p class="nm-lead">${esc(n.excerpt)}</p>
           <p class="nm-byline">Por <strong>${esc(n.author)}</strong><span class="ap-sep">·</span>${fmtDate(n.date, true)}<span class="ap-sep">·</span>${readTime(n)} min de leitura</p>
-          <div class="nm-text">${n.body.map((p) => `<p>${esc(p)}</p>`).join('')}</div>
+          <div class="nm-text">${n.body.map((p) => {
+            const m = BODY_IMG.exec(p.trim());
+            if (!m) return `<p>${esc(p)}</p>`;
+            const it = allItems[(+m[1] || 1) - 1];
+            return it ? `<figure class="nm-fig"><img src="${esc(imgUrl(it.src))}" alt="" loading="lazy"></figure>` : '';
+          }).join('')}</div>
           ${others.length ? `
           <div class="nm-related">
             <h4>Leia também.</h4>
@@ -1252,39 +1312,84 @@ function flyImage(src, a, b, r1, r2, duration, pos = '') {
   ], { duration, easing: 'cubic-bezier(.3, .9, .2, 1)', fill: 'forwards' });
 }
 
-/* ---------- Seções expansíveis (acordeão) ---------- */
-let openSection = null; // apenas uma seção aberta por vez
+/* ---------- Configurações: widgets que abrem a edição em um pop-up ---------- */
+let openSection = null; // seção com a janela de edição aberta
 function accSection(key, ico, title, sub, countId, body) {
-  const open = openSection === key;
   return `
-  <section class="panel acc ${open ? 'open' : ''}" data-acc="${key}">
-    <button class="acc-head" type="button" aria-expanded="${open}" aria-controls="acc-${key}">
-      <span class="acc-icon"><i data-icon="${ico}"></i></span>
-      <span class="acc-text"><strong>${title}</strong><span>${sub}</span></span>
+  <button class="cfg-w" type="button" data-acc="${key}" aria-haspopup="dialog">
+    <span class="cfg-top">
+      <span class="acc-icon cfg-ico"><i data-icon="${ico}"></i></span>
       ${countId ? `<span class="count-badge" id="${countId}"></span>` : ''}
-      <span class="acc-chev"><i data-icon="chevron"></i></span>
-    </button>
-    <div class="acc-body" id="acc-${key}" role="region">
-      <div class="acc-inner"><div class="acc-content">${body}</div></div>
+    </span>
+    <strong class="cfg-title">${title}</strong>
+    <span class="cfg-sub">${sub}</span>
+    <span class="cfg-open">Editar ${CHEV_SVG}</span>
+  </button>
+  <div class="cfg-modal" data-acc="${key}" data-modal="${key}" hidden>
+    <div class="cfg-backdrop"></div>
+    <div class="cfg-dialog panel" role="dialog" aria-modal="true" aria-labelledby="cfg-t-${key}">
+      <header class="cfg-head">
+        <span class="acc-icon cfg-ico"><i data-icon="${ico}"></i></span>
+        <span class="acc-text"><strong id="cfg-t-${key}">${title}</strong><span>${sub}</span></span>
+        <button class="cfg-close" type="button" aria-label="Fechar"><i data-icon="x"></i></button>
+      </header>
+      <div class="cfg-body">${body}</div>
     </div>
-  </section>`;
+  </div>`;
 }
 function initAccordion() {
-  const list = $('#acc-list');
-  const sync = () => list.querySelectorAll('.acc').forEach((sec) => {
-    const open = sec.dataset.acc === openSection;
-    sec.classList.toggle('open', open);
-    const body = sec.querySelector('.acc-body'); if (!body) return;
-    sec.querySelector('.acc-head').setAttribute('aria-expanded', open);
-    body.inert = !open;
+  const grid = $('#acc-list');
+  // as janelas vão para o <body>: assim cobrem a tela toda (a página tem animação de entrada com transform)
+  const modals = [...grid.querySelectorAll('.cfg-modal')];
+  document.querySelectorAll('body > .cfg-modal').forEach((m) => m.remove());
+  modals.forEach((m) => document.body.appendChild(m));
+  let current = null, lastFocus = null;
+  const onKey = (e) => {
+    if (!current || document.querySelector('.lk')) return; // pop-ups de confirmação ficam por cima
+    if (e.key === 'Escape') close();
+    if (e.key === 'Tab') { // mantém o foco dentro da janela
+      const f = [...current.querySelectorAll('button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])')]
+        .filter((el) => !el.disabled && el.offsetParent !== null);
+      if (!f.length) return;
+      if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+      else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+    }
+  };
+  function open(key, instant = false) {
+    const m = modals.find((x) => x.dataset.modal === key); if (!m || m === current) return;
+    if (current) close();
+    current = m; openSection = key;
+    lastFocus = document.activeElement;
+    m.hidden = false;
+    document.body.classList.add('modal-open');
+    if (instant) m.classList.add('in'); else requestAnimationFrame(() => requestAnimationFrame(() => m.classList.add('in')));
+    m.querySelector('.cfg-body').scrollTop = 0;
+    setTimeout(() => m.querySelector('.cfg-close').focus({ preventScroll: true }), 60);
+    document.addEventListener('keydown', onKey);
+  }
+  function close() {
+    const m = current; if (!m) return;
+    current = null; openSection = null;
+    document.removeEventListener('keydown', onKey);
+    m.classList.remove('in');
+    document.body.classList.remove('modal-open');
+    setTimeout(() => { if (!m.classList.contains('in')) m.hidden = true; }, 320);
+    lastFocus?.focus?.({ preventScroll: true });
+  }
+  grid.addEventListener('click', (e) => {
+    const w = e.target.closest('button.cfg-w'); if (w) open(w.dataset.acc);
   });
-  list.addEventListener('click', (e) => {
-    const head = e.target.closest('.acc-head'); if (!head || head.classList.contains('acc-go')) return;
-    const key = head.closest('.acc').dataset.acc;
-    openSection = openSection === key ? null : key;
-    sync();
-  });
-  sync();
+  modals.forEach((m) => m.addEventListener('click', (e) => {
+    if (e.target.closest('.cfg-close') || e.target.classList.contains('cfg-backdrop')) close();
+  }));
+  // ao sair de Configurações, as janelas são removidas e a rolagem da página volta ao normal
+  window.addEventListener('hashchange', () => {
+    document.removeEventListener('keydown', onKey);
+    if (current) document.body.classList.remove('modal-open');
+    current = null;
+    modals.forEach((m) => m.remove());
+  }, { once: true });
+  openSection = null;
 }
 
 /* ---------- Logo do painel ---------- */
@@ -1443,6 +1548,19 @@ function initNewsPanel() {
     if (act === 'toggle') { openNewsId = openNewsId === id ? null : id; drawNewsPanel(); }
     if (act === 'img') { imgId = id; $('#file-news').click(); }
     if (act === 'addimg') { imgId = id; $('#file-news-add').click(); }
+    if (act === 'bodyimg') { // insere "[imagem 1]" como parágrafo próprio, onde está o cursor
+      const ta = panel.querySelector(`[data-nfield="body"][data-id="${id}"]`); if (!ta) return;
+      // nunca corta um parágrafo ao meio: insere depois do parágrafo onde está o cursor
+      const cur = ta.selectionEnd ?? ta.value.length;
+      const brk = ta.value.slice(cur).search(/\n\s*\n/);
+      const at = brk < 0 ? ta.value.length : cur + brk;
+      const before = ta.value.slice(0, at).replace(/\s*$/, ''), after = ta.value.slice(at).replace(/^\s*/, '');
+      const tag = `[imagem ${Math.max(1, newsImages(n).length)}]`; // por padrão, a última imagem adicionada
+      ta.value = [before, tag, after].filter(Boolean).join('\n\n');
+      const pos = (before ? before.length + 2 : 0) + tag.length;
+      ta.focus(); ta.setSelectionRange(pos - 2, pos - 1); // seleciona o número para trocar, se quiser
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
     if (act === 'cover' || act === 'rmg') {
       const items = newsItems(n);
       const [pick] = items.splice(+t.dataset.k, 1);
@@ -1585,7 +1703,12 @@ function drawNewsPanel() {
           <div class="field"><label>Autor</label><input data-id="${n.id}" data-nfield="author" value="${esc(n.author)}" maxlength="60"></div>
           ${newsImagesField(n)}
           <div class="field full"><label>Resumo <em>(aparece no cartão)</em></label><textarea rows="2" data-id="${n.id}" data-nfield="excerpt" maxlength="260">${esc(n.excerpt)}</textarea></div>
-          <div class="field full"><label>Texto completo <em>(aparece ao abrir a notícia)</em></label><textarea rows="9" data-id="${n.id}" data-nfield="body">${esc(n.body.join('\n\n'))}</textarea></div>
+          <div class="field full"><label>Texto completo <em>(aparece ao abrir a notícia)</em></label><textarea rows="9" data-id="${n.id}" data-nfield="body">${esc(n.body.join('\n\n'))}</textarea>
+            <div class="ni-bodytools">
+              <button class="btn-soft" type="button" data-nact="bodyimg" data-id="${n.id}"><i data-icon="image"></i>Inserir imagem inteira no texto</button>
+              <span>Escreva <b>[imagem 2]</b> sozinho em um parágrafo para mostrar a imagem completa, sem cortes. O número é a ordem da imagem (1 = capa). Imagens usadas no texto não entram na troca de imagens do topo.</span>
+            </div>
+          </div>
           <div class="ni-foot full"><a class="btn-soft" href="#noticias"><i data-icon="external"></i>Ver na página de Notícias</a></div>
         </div>` : ''}
       </div>`;
