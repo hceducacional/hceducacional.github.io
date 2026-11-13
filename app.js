@@ -2747,6 +2747,10 @@ paintIcons();
     await window.HC_loadRemote?.();
     await loadImages();
     cleanupImages();
+    // celular, primeira vez que a pessoa abre o site: o banner do topo desce com uma animação
+    let heroSeen = false;
+    try { heroSeen = sessionStorage.getItem('hc-hero-intro') === '1'; sessionStorage.setItem('hc-hero-intro', '1'); } catch {}
+    if (!heroSeen && PHONE()) { document.body.classList.add('hero-intro'); setTimeout(() => document.body.classList.remove('hero-intro'), 2200); }
     navigator.storage?.persist?.(); // pede ao navegador para não apagar as imagens
   } catch (e) { console.warn('Imagens:', e); }
   paintLogo();

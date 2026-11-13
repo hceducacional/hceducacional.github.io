@@ -1481,7 +1481,11 @@ body.modal-open { overflow: hidden; }
      passando por trás da barra de cima e da área da hora do celular */
   .carousel { height: auto; aspect-ratio: 4 / 5; border-radius: 24px; }
   .car-box[data-car="top"] { margin: calc(-1 * (var(--tb-top) + 56px + 20px)) -16px 0; }
-  .car-box[data-car="top"] .carousel { border-radius: 0 0 28px 28px; box-shadow: 0 18px 40px -26px rgba(0, 0, 0, .5); }
+  .car-box[data-car="top"] .carousel { border-radius: 0; box-shadow: 0 18px 40px -26px rgba(0, 0, 0, .5); }
+  /* primeira visita: o banner desce do topo, como uma cortina, e a imagem acomoda com um leve zoom */
+  body.hero-intro .car-box[data-car="top"] .carousel { animation: heroDrop 1.25s cubic-bezier(.22, 1, .36, 1) both; }
+  body.hero-intro .car-box[data-car="top"] .carousel-track { animation: heroSettle 1.6s cubic-bezier(.22, 1, .36, 1) both; }
+  body.hero-intro .car-box[data-car="top"] .dots { animation: heroDots .6s ease .9s both; }
   .slide-bg { background-image: var(--img-m, var(--img)); background-position: var(--pos-m, center); }
   .slide::before {
     background:
@@ -2151,3 +2155,8 @@ body:not(.is-admin) .admin-only { display: none !important; }
 }
 .bi-mthumb:not(.has) .bi-tag { background: none; color: inherit; }
 .bi-mtools { display: flex; flex-direction: column; gap: 2px; }
+
+@keyframes heroDrop { from { clip-path: inset(0 0 100% 0); transform: translateY(-36px); } to { clip-path: inset(0 0 0 0); transform: none; } }
+@keyframes heroSettle { from { scale: 1.12; filter: brightness(.7); } to { scale: 1; filter: none; } }
+@keyframes heroDots { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { body.hero-intro .car-box * , body.hero-intro .car-box .carousel { animation: none !important; } }
