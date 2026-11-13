@@ -1341,7 +1341,10 @@ body.modal-open { overflow: hidden; }
   /* barra de cima compacta, com o logo. Ela flutua um pouco abaixo do topo (e da área da hora/bateria),
      sem encostar na borda: assim o iPhone deixa o conteúdo passar por trás da barra de status ao rolar */
   .topbar-wrap {
-    top: calc(10px + env(safe-area-inset-top)); margin-top: calc(10px + env(safe-area-inset-top));
+    /* no iPhone o próprio sistema desfoca a área da hora/bateria e um pouco abaixo dela;
+       a barra desce um pouco mais (≈ 20px além dessa área) para ficar livre desse desfoque */
+    --tb-top: calc(10px + env(safe-area-inset-top) * 1.2);
+    top: var(--tb-top); margin-top: var(--tb-top);
     padding: 0 max(12px, env(safe-area-inset-left)) 0 max(12px, env(safe-area-inset-right));
   }
   .topbar { height: 56px; padding: 0 8px 0 8px; gap: 10px; }
