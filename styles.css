@@ -1898,7 +1898,12 @@ body.modal-open { overflow: hidden; }
 .ref { max-width: 1120px; animation: none; overflow-x: clip; }
 .ref-hero { position: relative; isolation: isolate; text-align: center; padding: 24px 0 56px; }
 /* luzes coloridas que respiram por trás */
-.ref-glow { position: absolute; inset: -40px 0 0; z-index: -1; pointer-events: none; filter: blur(60px); opacity: 0; animation: refFade 1.6s ease .1s forwards; }
+.ref-glow {
+  position: absolute; inset: -100px 0 0; z-index: -1; pointer-events: none; filter: blur(60px); opacity: 0; animation: refFade 1.6s ease .1s forwards;
+  /* as bordas se dissolvem antes de chegar ao limite da área, sem recorte visível */
+  -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 35%, transparent 100%);
+  mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 35%, transparent 100%);
+}
 .ref-glow span { position: absolute; width: 340px; height: 340px; border-radius: 50%; opacity: .5; animation: refDrift 14s ease-in-out infinite alternate; }
 .ref-glow span:nth-child(1) { left: 12%; top: 0; background: #34d399; }
 .ref-glow span:nth-child(2) { right: 10%; top: 30px; background: #60a5fa; animation-delay: -5s; }
