@@ -23,6 +23,11 @@ const ICONS = {
   mail: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/>',
   shieldOff: '<path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 1.6-.25 3-.9 4.2-1.85M19.6 15.4c.27-1.1.4-2.2.4-3.4V6l-8-3-3.6 1.35"/><path d="m3 3 18 18"/>',
   alert: '<path d="M12 3 2 20h20Z"/><path d="M12 10v4M12 17.2v.1"/>',
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0Z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20.5h7M10 17h4l.5 3.5h-5Z"/>',
+  building: '<path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6M3 21h18M9 10h.01M15 10h.01"/>',
+  cap: '<path d="m2 9 10-5 10 5-10 5Z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5M22 9v6"/>',
+  party: '<path d="M4 20 9 6l9 9Z"/><path d="M13 3v2M19 9h2M16.5 5.5 18 4M15 2.5l.5.5M21 13l.5.5"/>',
+  megaphone: '<path d="M3 11v2a1 1 0 0 0 1 1h3l8 5V5L7 10H4a1 1 0 0 0-1 1Z"/><path d="M18.5 9a4 4 0 0 1 0 6M7 14l1 6h3l-1-5.5"/>',
   arrow: '<path d="M7 17 17 7M8 7h9v9"/>',
   left: '<path d="m15 18-6-6 6-6"/>',
   right: '<path d="m9 18 6-6-6-6"/>',
@@ -1016,6 +1021,15 @@ const bgPos = (pos) => (pos && VALID_POS.test(pos) ? `background-position:${pos}
 const BODY_IMG = /^\[imagem(?:\s+(\d+))?\]$/i;
 const readTime = (n) => Math.max(1, Math.round([n.excerpt, ...n.body.filter((p) => !BODY_IMG.test(p.trim()))].join(' ').split(/\s+/).filter(Boolean).length / 200));
 const CAT_CLASS = { Conquistas: 'c-gold', Infraestrutura: 'c-teal', 'Acadêmico': 'c-green', Eventos: 'c-purple', Comunicados: 'c-blue' };
+// ícone e cores de cada categoria nos cartões de escolha (estilo Apple Store)
+const CAT_TILE = {
+  Todas: ['grid', '#3a3a3c', '#1d1d1f'],
+  Conquistas: ['trophy', '#fbbf24', '#f59e0b'],
+  Infraestrutura: ['building', '#2dd4bf', '#0d9488'],
+  'Acadêmico': ['cap', '#34d399', '#059669'],
+  Eventos: ['party', '#a78bfa', '#7c3aed'],
+  Comunicados: ['megaphone', '#60a5fa', '#2563eb'],
+};
 const catBadge = (c) => `<span class="cat ${CAT_CLASS[c] || 'c-green'}">${esc(c)}</span>`;
 const MESES_ABBR = ['jan.', 'fev.', 'mar.', 'abr.', 'maio', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'];
 const fmtShort = (iso) => { const [y, m, d] = iso.split('-').map(Number); return `${d} ${MESES_ABBR[m - 1]} ${y}`; };
@@ -1082,31 +1096,31 @@ function renderNews(view) {
       <p class="ap-kicker">Notícias</p>
       <h1>Acontece no <span class="ap-grad">HC</span>.</h1>
       <p class="ap-sub">Conquistas, eventos e comunicados do HC Instituto Educacional, reunidos em um só lugar.</p>
-      <div class="ap-seg" role="tablist" aria-label="Categorias">
-        <span class="ap-seg-ind" aria-hidden="true"></span>
-        ${cats.map((c) => `<button class="${c === newsFilter ? 'on' : ''}" data-cat="${esc(c)}" role="tab" aria-selected="${c === newsFilter}">${esc(c)}</button>`).join('')}
-      </div>
     </header>
+    <nav class="ap-cats reveal" role="tablist" aria-label="Categorias">
+      ${cats.map((c, k) => {
+        const n = c === 'Todas' ? news.length : news.filter((x) => x.cat === c).length;
+        const m = CAT_TILE[c] || CAT_TILE.Todas;
+        return `<button class="ap-cat ${c === newsFilter ? 'on' : ''}" data-cat="${esc(c)}" role="tab" aria-selected="${c === newsFilter}" style="--a:${m[1]};--b:${m[2]};--k:${k}">
+          <span class="ap-cat-ico"><i data-icon="${m[0]}"></i></span>
+          <span class="ap-cat-name">${esc(c)}</span>
+          <span class="ap-cat-count">${n} ${n === 1 ? 'notícia' : 'notícias'}</span>
+        </button>`;
+      }).join('')}
+    </nav>
     <div class="news-body" id="news-body">${newsBodyHTML()}</div>
   </div>`;
 
   const page = view.querySelector('.news-page');
   const body = page.querySelector('#news-body');
-  const seg = page.querySelector('.ap-seg');
-  const ind = seg.querySelector('.ap-seg-ind');
-
-  // indicador que desliza até a categoria escolhida
-  const moveIndicator = (instant) => {
-    const on = seg.querySelector('button.on'); if (!on) return;
-    if (instant) ind.style.transition = 'none';
-    ind.style.width = on.offsetWidth + 'px';
-    ind.style.height = on.offsetHeight + 'px';
-    ind.style.transform = `translate(${on.offsetLeft}px, ${on.offsetTop}px)`;
-    if (instant) { void ind.offsetWidth; ind.style.transition = ''; }
+  const seg = page.querySelector('.ap-cats');
+  paintIcons(seg);
+  // no celular a fileira rola de lado: mantém a categoria escolhida à vista
+  const showOn = (smooth) => {
+    const on = seg.querySelector('.on'); if (!on || seg.scrollWidth <= seg.clientWidth) return;
+    seg.scrollTo({ left: on.offsetLeft - (seg.clientWidth - on.offsetWidth) / 2, behavior: smooth ? 'smooth' : 'auto' });
   };
-  moveIndicator(true);
-  new ResizeObserver(() => moveIndicator(true)).observe(seg);
-  document.fonts?.ready.then(() => moveIndicator(true));
+  showOn(false);
 
   // troca de categoria: só o conteúdo abaixo muda, com transição suave
   let swapping = null;
@@ -1116,7 +1130,7 @@ function renderNews(view) {
     seg.querySelectorAll('button').forEach((x) => {
       const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on);
     });
-    moveIndicator();
+    showOn(true);
     swapBody();
   });
 
@@ -1151,7 +1165,7 @@ function renderNews(view) {
   const io = new IntersectionObserver((entries) => entries.forEach((en) => {
     if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
   }), { threshold: 0.12 });
-  page.querySelectorAll('.ap-hero.reveal').forEach((el) => io.observe(el));
+  page.querySelectorAll('.ap-hero.reveal, .ap-cats.reveal').forEach((el) => io.observe(el));
 
   // prepara a vitrine (setas) e as animações de entrada do conteúdo
   function setupBody(shown) {
@@ -2415,14 +2429,21 @@ window.addEventListener('hashchange', route);
 (() => {
   const more = document.getElementById('more'), btn = document.getElementById('tab-more');
   if (!more || !btn) return;
+  const bar = document.getElementById('tabbar');
   const open = () => {
+    bar?.classList.remove('compact'); bar?.classList.add('menu-open');
     more.hidden = false; btn.setAttribute('aria-expanded', 'true');
     requestAnimationFrame(() => requestAnimationFrame(() => more.classList.add('in')));
   };
   const close = () => {
     if (more.hidden) return;
     more.classList.remove('in'); btn.setAttribute('aria-expanded', 'false');
-    setTimeout(() => { if (!more.classList.contains('in')) more.hidden = true; }, 320);
+    // a barra recupera o próprio fundo antes de o cartão sumir, sem piscar
+    setTimeout(() => {
+      if (more.classList.contains('in')) return;
+      bar?.classList.remove('menu-open');
+      setTimeout(() => { if (!more.classList.contains('in')) more.hidden = true; }, 320);
+    }, 450);
   };
   btn.addEventListener('click', () => (more.hidden ? open() : close()));
   more.addEventListener('click', (e) => { if (e.target.closest('[data-more-close], .more-item')) close(); });
@@ -2438,6 +2459,7 @@ window.addEventListener('hashchange', route);
   const update = () => {
     ticking = false;
     const y = Math.max(0, window.scrollY), dy = y - last;
+    if (bar.classList.contains('menu-open')) { last = y; return; } // menu "Mais" aberto: não mexe
     if (y < 60) bar.classList.remove('compact');            // perto do topo: sempre aberta
     else if (dy > 6) bar.classList.add('compact');          // descendo
     else if (dy < -6) bar.classList.remove('compact');      // subindo
@@ -2562,7 +2584,8 @@ function hoursState(now = new Date()) {
     el.querySelector('.hw-wd').textContent = DIAS_CURTO[now.getDay()];
     el.querySelector('.hw-day').textContent = now.getDate();
     el.querySelector('.hw-time').textContent = hhmm(now.getHours() * 60 + now.getMinutes());
-    el.querySelector('.hw-end small').textContent = st.endSmall;
+    // no celular o espaço é curto: rótulos longos ("amanhã", "aulas até") viram "abre"/"até"
+    el.querySelector('.hw-end small').textContent = PHONE() && st.endSmall.length > 5 ? (st.mode === 'closed' ? 'abre' : 'até') : st.endSmall;
     el.querySelector('.hw-end b').textContent = st.endLabel;
     el.style.setProperty('--p', Math.min(1, Math.max(0, st.progress)).toFixed(4));
     if (st.icon !== lastIcon) { el.querySelector('.hw-ico').innerHTML = st.icon === 'moon' ? MOON : SUN; lastIcon = st.icon; }
