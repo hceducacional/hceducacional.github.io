@@ -1336,7 +1336,7 @@ body.modal-open { overflow: hidden; }
   /* barra lateral sai; o conteúdo usa a largura toda */
   .sidebar { display: none; }
   :root { --sb-collapsed: 0px; }
-  .content { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+  .content { padding-bottom: calc(106px + env(safe-area-inset-bottom)); }
 
   /* barra de cima compacta, com o logo */
   .topbar-wrap { padding: 10px 12px 0; }
@@ -1348,23 +1348,29 @@ body.modal-open { overflow: hidden; }
 
   /* barra de abas */
   .tabbar {
-    position: fixed; z-index: 60; left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom));
+    position: fixed; z-index: 60; left: 22px; right: 22px; bottom: calc(20px + env(safe-area-inset-bottom));
     display: grid; grid-template-columns: repeat(5, 1fr); align-items: center;
-    height: 64px; padding: 0 6px; border-radius: 26px;
+    height: 64px; padding: 0 6px; border-radius: 28px;
     background: rgba(22, 22, 23, .88);
     -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
     border: 1px solid rgba(255, 255, 255, .08);
     box-shadow: 0 12px 34px -12px rgba(0, 0, 0, .55);
+    transition: left .5s var(--ease), right .5s var(--ease), height .5s var(--ease), border-radius .5s var(--ease), bottom .5s var(--ease);
   }
   .tab {
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
     height: 52px; border: 0; border-radius: 18px; background: none; color: #a1a1a6;
     font: 600 10.5px/1 "Inter", sans-serif; letter-spacing: -.01em; text-decoration: none;
-    -webkit-tap-highlight-color: transparent; transition: color .2s, background .2s;
+    -webkit-tap-highlight-color: transparent; transition: color .2s, background .2s, height .5s var(--ease), gap .5s var(--ease), border-radius .5s var(--ease);
   }
+  .tab span { display: block; max-height: 12px; overflow: hidden; transition: max-height .45s var(--ease), opacity .25s ease, transform .45s var(--ease); }
   .tab i { width: 22px; height: 22px; display: grid; }
   .tab.active { color: #fff; background: rgba(255, 255, 255, .1); }
   .tab.active i { color: var(--mint); }
+  /* ao descer a página a barra encolhe e mostra só os ícones; ao subir, volta com as legendas */
+  .tabbar.compact { left: 52px; right: 52px; height: 50px; border-radius: 25px; bottom: calc(16px + env(safe-area-inset-bottom)); }
+  .tabbar.compact .tab { height: 38px; gap: 0; border-radius: 19px; }
+  .tabbar.compact .tab span { max-height: 0; opacity: 0; transform: scale(.8); }
   .tab:active { transform: scale(.94); }
 
   /* folha "Mais" */
@@ -1372,7 +1378,7 @@ body.modal-open { overflow: hidden; }
   .more[hidden] { display: none; }
   .more-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, .4); opacity: 0; transition: opacity .3s ease; }
   .more-sheet {
-    position: absolute; left: 12px; right: 12px; bottom: calc(84px + env(safe-area-inset-bottom));
+    position: absolute; left: 12px; right: 12px; bottom: calc(94px + env(safe-area-inset-bottom));
     padding: 8px 8px 10px; border-radius: 24px; background: rgba(255, 255, 255, .96);
     -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
     box-shadow: 0 24px 60px -20px rgba(0, 0, 0, .5);
@@ -1392,7 +1398,7 @@ body.modal-open { overflow: hidden; }
   .more-ico i { width: 18px; height: 18px; display: grid; }
 
   /* o aviso (toast) fica acima da barra de abas */
-  .toast { bottom: calc(92px + env(safe-area-inset-bottom)); }
+  .toast { bottom: calc(100px + env(safe-area-inset-bottom)); }
 
   /* banners em formato de cartão: arte inteira em cima, texto embaixo */
   .carousel { height: auto; aspect-ratio: auto; border-radius: 22px; background: var(--card); }

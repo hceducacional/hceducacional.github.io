@@ -391,6 +391,15 @@ function renderDashboard(view) {
     if (!e.target.closest('.cx-tile')) view.querySelectorAll('.cx-tile.shown').forEach((t) => t.classList.remove('shown'));
   };
   document.addEventListener('click', closeCx);
+  // no toque (celular), a faixa sobe sozinha quando o bloco passa pelo centro da tela e recolhe quando ele sai
+  if (matchMedia('(hover: none)').matches && 'IntersectionObserver' in window) {
+    const grid = view.querySelector('.cx-grid');
+    const cxIO = new IntersectionObserver((entries) => {
+      if (!document.body.contains(grid)) return cxIO.disconnect();
+      entries.forEach((en) => en.target.classList.toggle('shown', en.isIntersecting));
+    }, { rootMargin: '-45% 0px -45% 0px' }); // faixa de 10% no meio da tela
+    grid?.querySelectorAll('.cx-tile').forEach((t) => cxIO.observe(t));
+  }
   view.querySelector('.cx-grid')?.addEventListener('keydown', (e) => {
     const tile = e.target.closest('.cx-tile');
     if (tile && e.target === tile && e.key === 'Enter') tile.querySelector('.cx-go')?.click();
@@ -2375,6 +2384,24 @@ window.addEventListener('hashchange', route);
   more.addEventListener('click', (e) => { if (e.target.closest('[data-more-close], .more-item')) close(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !document.querySelector('.lk')) close(); });
   window.addEventListener('hashchange', close);
+})();
+
+/* Celular: barra de abas encolhe (só ícones) ao descer a página e volta com as legendas ao subir */
+(() => {
+  const bar = document.getElementById('tabbar');
+  if (!bar) return;
+  let last = window.scrollY, ticking = false;
+  const update = () => {
+    ticking = false;
+    const y = Math.max(0, window.scrollY), dy = y - last;
+    if (y < 60) bar.classList.remove('compact');            // perto do topo: sempre aberta
+    else if (dy > 6) bar.classList.add('compact');          // descendo
+    else if (dy < -6) bar.classList.remove('compact');      // subindo
+    else return;                                            // movimento pequeno: espera acumular
+    last = y;
+  };
+  window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+  window.addEventListener('hashchange', () => { bar.classList.remove('compact'); last = 0; });
 })();
 
 /* sombra um pouco mais forte na barra superior ao rolar a página */
