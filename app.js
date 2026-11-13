@@ -27,6 +27,7 @@ const ICONS = {
   building: '<path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6M3 21h18M9 10h.01M15 10h.01"/>',
   cap: '<path d="m2 9 10-5 10 5-10 5Z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5M22 9v6"/>',
   party: '<path d="M4 20 9 6l9 9Z"/><path d="M13 3v2M19 9h2M16.5 5.5 18 4M15 2.5l.5.5M21 13l.5.5"/>',
+  smartphone: '<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/>',
   megaphone: '<path d="M3 11v2a1 1 0 0 0 1 1h3l8 5V5L7 10H4a1 1 0 0 0-1 1Z"/><path d="M18.5 9a4 4 0 0 1 0 6M7 14l1 6h3l-1-5.5"/>',
   arrow: '<path d="M7 17 17 7M8 7h9v9"/>',
   left: '<path d="m15 18-6-6 6-6"/>',
@@ -264,7 +265,7 @@ async function storeImage(file, kind) {
   return ref;
 }
 
-const allImageRefs = () => [...banners, ...exclusive, ...links, ...news, ...brandList, ...connect, ...authors, ...radar].flatMap((x) => [x.image, ...(x.gallery || [])]).filter(Boolean);
+const allImageRefs = () => [...banners, ...exclusive, ...links, ...news, ...brandList, ...connect, ...authors, ...radar].flatMap((x) => [x.image, x.imageMobile, ...(x.gallery || [])]).filter(Boolean);
 async function loadImages() {
   for (const ref of allImageRefs()) {
     if (!ref.startsWith('idb:') || imgCache.has(ref)) continue;
@@ -314,6 +315,7 @@ async function exportContent() {
   };
   const conv = (list) => Promise.all(list.map(async (it) => {
     const out = { ...it, image: await one(it.image) };
+    if (it.imageMobile) out.imageMobile = await one(it.imageMobile);
     if (Array.isArray(it.gallery)) out.gallery = (await Promise.all(it.gallery.map(one))).filter(Boolean);
     return out;
   }));
@@ -335,7 +337,7 @@ function carouselHTML(list, key) {
         <div class="carousel-track">
           ${list.map((b, i) => `
             <div class="slide" aria-roledescription="slide" aria-label="${i + 1} de ${list.length}">
-              <div class="slide-bg" style="background-image:url('${esc(imgUrl(b.image))}')"></div>
+              <div class="slide-bg" style="--img:url('${esc(imgUrl(b.image))}')${b.imageMobile ? `;--img-m:url('${esc(imgUrl(b.imageMobile))}')` : ''}${b.imageMobile && VALID_POS.test(b.focusMobile || '') ? `;--pos-m:${b.focusMobile}` : ''}"></div>
               <div class="slide-text">
                 ${b.pill ? `<span class="pill">${esc(b.pill)}</span>` : ''}
                 <h2>${esc(b.title)}</h2>
@@ -797,8 +799,9 @@ function initBannerEditor(key) {
   // cada editor tem seus próprios seletores de arquivo
   const fileAdd = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*', multiple: true, hidden: true });
   const fileReplace = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*', hidden: true });
-  panel.after(fileAdd, fileReplace);
-  let replaceIdx = -1;
+  const fileMobile = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*', hidden: true });
+  panel.after(fileAdd, fileReplace, fileMobile);
+  let replaceIdx = -1, mobileIdx = -1;
   drawBannerPanel(key);
 
   panel.addEventListener('click', (e) => {
@@ -806,6 +809,20 @@ function initBannerEditor(key) {
     const del = e.target.closest('[data-del]');
     const thumb = e.target.closest('[data-thumb]');
     const add = e.target.closest('[data-badd]');
+    const mthumb = e.target.closest('[data-mthumb]'), mdel = e.target.closest('[data-mdel]'), mfocus = e.target.closest('[data-mfocus]');
+    if (mthumb) { mobileIdx = +mthumb.dataset.mthumb; fileMobile.click(); return; }
+    if (mdel) {
+      const b = list[+mdel.dataset.mdel]; delete b.imageMobile; delete b.focusMobile;
+      set.save(); drawBannerPanel(key); toast('No celular, este banner volta a usar a imagem do computador'); return;
+    }
+    if (mfocus) {
+      const b = list[+mfocus.dataset.mfocus];
+      focusEditor({ src: b.imageMobile, pos: b.focusMobile }).then((pos) => {
+        if (pos === null || !list.includes(b)) return;
+        b.focusMobile = pos; set.save(); drawBannerPanel(key); toast('Enquadramento salvo');
+      });
+      return;
+    }
     if (del) {
       const i = +del.dataset.del;
       confirmDialog({
@@ -852,6 +869,17 @@ function initBannerEditor(key) {
     }
     if (set.save()) toast(files.length > 1 ? `${files.length} banners adicionados` : 'Banner adicionado');
     else list.splice(list.length - files.length, files.length);
+    drawBannerPanel(key);
+  });
+
+  fileMobile.addEventListener('change', async (e) => {
+    const list = set.list();
+    const file = e.target.files[0]; e.target.value = '';
+    const b = list[mobileIdx];
+    if (!file || !b) return;
+    const old = b.imageMobile, oldFocus = b.focusMobile;
+    b.imageMobile = await storeImage(file, 'banner'); delete b.focusMobile;
+    if (set.save()) toast('Imagem do celular salva'); else { b.imageMobile = old; b.focusMobile = oldFocus; }
     drawBannerPanel(key);
   });
 
@@ -936,7 +964,9 @@ function drawBannerPanel(key = 'top') {
     ${banners.map((b, i) => `
       <div class="banner-item">
         <div class="bi-head">
-          <button class="bi-thumb" data-thumb="${i}" title="Trocar imagem" style="background-image:url('${esc(imgUrl(b.image))}')"></button>
+          <button class="bi-thumb" data-thumb="${i}" title="Trocar imagem do computador" style="background-image:url('${esc(imgUrl(b.image))}')"><span class="bi-tag">Computador</span></button>
+          <button class="bi-mthumb ${b.imageMobile ? 'has' : ''}" data-mthumb="${i}" title="${b.imageMobile ? 'Trocar imagem do celular' : 'Adicionar imagem só para celular (opcional)'}" ${b.imageMobile ? `style="background-image:url('${esc(imgUrl(b.imageMobile))}');${bgPos(b.focusMobile)}"` : ''}>${b.imageMobile ? '' : '<i data-icon="smartphone"></i>'}<span class="bi-tag">Celular</span></button>
+          ${b.imageMobile ? `<span class="bi-mtools"><button class="icon-btn neutral" data-mfocus="${i}" title="Enquadrar imagem do celular"><i data-icon="focus"></i></button><button class="icon-btn" data-mdel="${i}" title="Remover imagem do celular (volta a usar a do computador)"><i data-icon="x"></i></button></span>` : ''}
           <div class="bi-meta">
             <span class="bi-badge">BANNER ${i + 1}</span>
             <p data-sub="${i}">${esc(b.title)}</p>
@@ -961,7 +991,7 @@ function drawBannerPanel(key = 'top') {
       </div>`).join('')}
 
     <div class="panel-foot">
-      <span>Tamanho recomendado: <b>2560 × 673 px</b> — até ${MAX_BANNERS} imagens.</span>
+      <span>Computador: <b>2560 × 673 px</b> · Celular (opcional): <b>1080 × 1350 px</b> — até ${MAX_BANNERS} banners.</span>
       <button class="btn-dark" data-badd="1" ${banners.length >= MAX_BANNERS ? 'disabled' : ''}><i data-icon="plus"></i>Adicionar banners</button>
     </div>`;
   paintIcons(panel);

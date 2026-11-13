@@ -246,7 +246,7 @@ html { scrollbar-color: #c7c7cc transparent; scrollbar-width: thin; }
 .slide { position: relative; flex: 0 0 100%; height: 100%; overflow: hidden; }
 .slide-bg {
   position: absolute; inset: 0;
-  background-size: cover; background-position: center;
+  background-image: var(--img); background-size: cover; background-position: center;
   transform: scale(1.05);
 }
 .slide.active .slide-bg,
@@ -1369,19 +1369,19 @@ body.modal-open { overflow: hidden; }
   :root { --sb-collapsed: 0px; }
   .content { padding-bottom: calc(106px + env(safe-area-inset-bottom)); }
 
+  :root { --tb-top: calc(10px + env(safe-area-inset-top) * 1.2); }
   /* barra de cima compacta, com o logo. Ela flutua um pouco abaixo do topo (e da área da hora/bateria),
      sem encostar na borda: assim o iPhone deixa o conteúdo passar por trás da barra de status ao rolar */
   .topbar-wrap {
     /* no iPhone o próprio sistema desfoca a área da hora/bateria e um pouco abaixo dela;
        a barra desce um pouco mais (≈ 20px além dessa área) para ficar livre desse desfoque */
-    --tb-top: calc(10px + env(safe-area-inset-top) * 1.2);
     top: var(--tb-top); margin-top: var(--tb-top);
     padding: 0 max(12px, env(safe-area-inset-left)) 0 max(12px, env(safe-area-inset-right));
   }
   /* site instalado na tela de início (app): ali o iPhone desfoca uma faixa bem maior no topo,
      então a barra desce mais para ficar inteira abaixo dele */
   @media (display-mode: standalone) {
-    .topbar-wrap { --tb-top: calc(10px + env(safe-area-inset-top) + env(safe-area-inset-top) * .45); }
+    :root { --tb-top: calc(10px + env(safe-area-inset-top) + env(safe-area-inset-top) * .45); }
   }
   .topbar { height: 56px; padding: 0 8px 0 8px; gap: 10px; }
   .tb-logo { display: flex; width: 40px; height: 40px; border-radius: 50%; font-size: 14px; overflow: hidden; }
@@ -1477,19 +1477,23 @@ body.modal-open { overflow: hidden; }
   /* o aviso (toast) fica acima da barra de abas */
   .toast { bottom: calc(100px + env(safe-area-inset-bottom)); }
 
-  /* banners em formato de cartão: arte inteira em cima, texto embaixo */
-  .carousel { height: auto; aspect-ratio: auto; border-radius: 22px; background: var(--card); }
-  .carousel-track { height: auto; align-items: stretch; }
-  .slide { height: auto; display: flex; flex-direction: column; background: var(--card); }
-  .slide::before { display: none; }
-  .slide-bg { position: relative; inset: auto; flex: none; aspect-ratio: 1597 / 420; transform: none !important; animation: none !important; }
-  .slide-text { position: static; transform: none; max-width: none; padding: 16px 18px 20px; color: var(--ink); }
-  .slide-text .pill { color: var(--accent); font-size: 13px; }
-  .slide-text h2 { margin: 4px 0 8px; font-size: 22px; }
-  .slide-text p { font-size: 15px; color: var(--ink-2); }
-  .slide-cta { margin-top: 14px; height: 38px; font-size: 14px; background: var(--ink); color: #fff; box-shadow: none; }
-  .slide-cta:hover { background: #000; }
-  .dots { margin-top: 14px; }
+  /* banners grandes: imagem alta com o texto por cima. O do topo ocupa a tela de ponta a ponta,
+     passando por trás da barra de cima e da área da hora do celular */
+  .carousel { height: auto; aspect-ratio: 4 / 5; border-radius: 24px; }
+  .car-box[data-car="top"] { margin: calc(-1 * (var(--tb-top) + 56px + 20px)) -16px 0; }
+  .car-box[data-car="top"] .carousel { border-radius: 0 0 28px 28px; box-shadow: 0 18px 40px -26px rgba(0, 0, 0, .5); }
+  .slide-bg { background-image: var(--img-m, var(--img)); background-position: var(--pos-m, center); }
+  .slide::before {
+    background:
+      linear-gradient(to bottom, rgba(0, 0, 0, .38) 0%, rgba(0, 0, 0, 0) 24%),
+      linear-gradient(to top, rgba(0, 0, 0, .82) 0%, rgba(0, 0, 0, .55) 26%, rgba(0, 0, 0, .12) 50%, rgba(0, 0, 0, 0) 62%);
+  }
+  .slide-text { left: 22px; right: 22px; top: auto; bottom: 26px; transform: none; max-width: none; }
+  .slide-text .pill { font-size: 13px; }
+  .slide-text h2 { margin: 4px 0 8px; font-size: 32px; letter-spacing: -.03em; }
+  .slide-text p { font-size: 15px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .slide-cta { margin-top: 16px; height: 38px; font-size: 14.5px; }
+  .dots { margin-top: 16px; }
 
   /* notícias recentes: cartões grandes, lado a lado, passando com o dedo */
   .rn { --rn-h: 380px; --rn-open: 80vw; --rn-closed: 80vw; }
@@ -2131,3 +2135,19 @@ body.modal-open { overflow: hidden; }
 
 /* itens do menu que só administradores veem (Configurações, Sistema Semipresencial) */
 body:not(.is-admin) .admin-only { display: none !important; }
+
+/* editor de banners: imagem do computador e (opcional) do celular */
+.bi-thumb, .bi-mthumb { position: relative; }
+.bi-mthumb {
+  flex: none; width: 52px; height: 64px; border-radius: 10px; border: 1.5px dashed var(--line); cursor: pointer;
+  display: grid; place-items: center; color: var(--faint); background: #fff center / cover no-repeat;
+}
+.bi-mthumb.has { border: 0; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08); }
+.bi-mthumb i { width: 18px; height: 18px; display: grid; margin-bottom: 12px; }
+.bi-mthumb:hover { border-color: var(--accent); color: var(--accent); }
+.bi-tag {
+  position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); padding: 2px 6px; border-radius: 999px;
+  background: rgba(0, 0, 0, .62); color: #fff; font-size: 9.5px; font-weight: 700; white-space: nowrap; pointer-events: none;
+}
+.bi-mthumb:not(.has) .bi-tag { background: none; color: inherit; }
+.bi-mtools { display: flex; flex-direction: column; gap: 2px; }

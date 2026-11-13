@@ -50,6 +50,8 @@ def save_images(items, kind):
         safe_id = re.sub(r"[^\w-]", "", str(item.get("id", "x")))
         if item.get("image"):
             item["image"] = save_image(item["image"], kind, safe_id)
+        if item.get("imageMobile"):
+            item["imageMobile"] = save_image(item["imageMobile"], kind, f"{safe_id}-m")
         if isinstance(item.get("gallery"), list):
             item["gallery"] = [save_image(g, kind, f"{safe_id}-g{k + 1}") for k, g in enumerate(item["gallery"]) if g]
     return items
@@ -82,7 +84,7 @@ class Handler(BaseHTTPRequestHandler):
             )
             # apaga só as imagens exportadas antes que nenhum item usa mais
             used = {Path(src).name for v in content.values() for it in v
-                    for src in [it.get("image", ""), *(it.get("gallery") or [])]
+                    for src in [it.get("image", ""), it.get("imageMobile", ""), *(it.get("gallery") or [])]
                     if str(src).startswith("assets/conteudo/")}
             for old in OUT_DIR.iterdir():
                 if old.is_file() and old.name not in used:

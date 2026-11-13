@@ -650,6 +650,7 @@ async function pushContent(key) {
   try {
     for (const it of list) {
       if (it.image) it.image = await uploadRef(it.image);
+      if (it.imageMobile) it.imageMobile = await uploadRef(it.imageMobile);
       if (Array.isArray(it.gallery)) it.gallery = (await Promise.all(it.gallery.map(uploadRef))).filter(Boolean);
     }
     store.set(key, list);
