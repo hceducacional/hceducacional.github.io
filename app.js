@@ -2454,7 +2454,12 @@ window.addEventListener('hashchange', route);
   const wrap = document.getElementById('topbar-wrap');
   if (!wrap) return;
   let ticking = false;
-  const update = () => { ticking = false; wrap.classList.toggle('scrolled', window.scrollY > 8); };
+  const update = () => {
+    ticking = false;
+    wrap.classList.toggle('scrolled', window.scrollY > 8);
+    // celular: longe do topo, a barra se recolhe (só pesquisa e foto); no topo, volta inteira
+    wrap.classList.toggle('mini', PHONE() && window.scrollY > 40);
+  };
   window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
   update();
 })();

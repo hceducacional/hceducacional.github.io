@@ -2160,3 +2160,26 @@ body:not(.is-admin) .admin-only { display: none !important; }
 @keyframes heroSettle { from { scale: 1.12; filter: brightness(.7); } to { scale: 1; filter: none; } }
 @keyframes heroDots { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { body.hero-intro .car-box * , body.hero-intro .car-box .carousel { animation: none !important; } }
+
+/* =========================================================
+   CELULAR — ao rolar, a barra de cima se recolhe para a direita,
+   ficando só a pesquisa e a foto de perfil
+   ========================================================= */
+@media (max-width: 860px) {
+  .topbar {
+    width: 100%; margin-left: auto; margin-right: 0; gap: 0; /* encostada à direita: recolhe da esquerda para a direita */
+    transition: width .6s cubic-bezier(.32, .72, 0, 1), box-shadow .35s var(--ease);
+  }
+  .topbar > * + * { margin-left: 10px; transition: margin .6s cubic-bezier(.32, .72, 0, 1); }
+  .tb-logo, .tb-title, .hw { transition: width .6s cubic-bezier(.32, .72, 0, 1), flex-grow .6s cubic-bezier(.32, .72, 0, 1), opacity .3s ease, transform .6s cubic-bezier(.32, .72, 0, 1); }
+  .tb-title, .hw { flex: 1 1 0; }
+  .topbar-wrap.mini .topbar:not(.searching) { width: 106px; }
+  .topbar-wrap.mini .topbar:not(.searching) :is(.tb-logo, .tb-title, .hw) {
+    flex-grow: 0; width: 0; min-width: 0; margin: 0; opacity: 0; overflow: hidden; pointer-events: none; transform: translateX(24px);
+  }
+  .topbar-wrap.mini .topbar:not(.searching) .tb-search-btn { margin-left: 0; }
+  .topbar-wrap.mini .topbar:not(.searching) .hw.open .hw-card { display: none; }
+  /* menu da conta com a barra recolhida: usa a largura da tela, alinhado à direita */
+  .topbar-wrap.mini .um { left: auto; right: -8px; width: calc(100vw - 24px); }
+}
+@media (max-width: 860px) and (prefers-reduced-motion: reduce) { .topbar, .topbar > * { transition: none !important; } }
