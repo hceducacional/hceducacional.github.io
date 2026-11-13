@@ -93,7 +93,7 @@ window.HC_CONTENT = {
       "id": "n1794500412324",
       "cat": "Conquistas",
       "date": "2026-10-20",
-      "author": "Comunicação HC",
+      "author": "Mateus Sousa",
       "title": "Cerimônia do Jaleco marca nova etapa para alunos da UNIFAVENI",
       "excerpt": "Estudantes de Serviço Social, Nutrição e Terapia Ocupacional receberam o jaleco em uma noite de celebração e orgulho.",
       "body": [
@@ -117,7 +117,8 @@ window.HC_CONTENT = {
         "47% 16%",
         "46% 14%",
         "50% 35%"
-      ]
+      ],
+      "authorId": "amwew9xh2"
     },
     {
       "id": "n1794501465950",
@@ -147,7 +148,8 @@ window.HC_CONTENT = {
         "48% 33%",
         "47% 37%",
         "49% 29%"
-      ]
+      ],
+      "authorId": "a1"
     },
     {
       "id": "n1794502107814",
@@ -175,7 +177,8 @@ window.HC_CONTENT = {
         "52% 40%",
         "53% 28%",
         "55% 45%"
-      ]
+      ],
+      "authorId": "a1"
     },
     {
       "id": "n1794526157679",
@@ -205,7 +208,8 @@ window.HC_CONTENT = {
         "47% 22%",
         "50% 45%",
         "48% 22%"
-      ]
+      ],
+      "authorId": "a1"
     },
     {
       "id": "n1794526690080",
@@ -231,7 +235,8 @@ window.HC_CONTENT = {
       "focus": [
         "82% 14%",
         "50% 12%"
-      ]
+      ],
+      "authorId": "a1"
     },
     {
       "id": "n1794527770981",
@@ -264,7 +269,8 @@ window.HC_CONTENT = {
         "50% 56%",
         "50% 50%",
         "50% 50%"
-      ]
+      ],
+      "authorId": "a1"
     }
   ],
   "brand": [
@@ -304,6 +310,18 @@ window.HC_CONTENT = {
       "desc": "Faça o agendamento pelo nosso site para realizar suas atividades presenciais na instituição.",
       "url": "https://prova-facil-favenihc.lovable.app/",
       "image": "assets/conteudo/conectado-c4-0b2e323b.png"
+    }
+  ],
+  "authors": [
+    {
+      "id": "a1",
+      "name": "Comunicação HC",
+      "image": ""
+    },
+    {
+      "id": "amwew9xh2",
+      "name": "Mateus Sousa",
+      "image": "assets/conteudo/autor-amwew9xh2-07437452.webp"
     }
   ]
 };

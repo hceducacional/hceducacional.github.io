@@ -179,7 +179,7 @@ function toast(msg) {
    As imagens enviadas ficam no IndexedDB do navegador, que comporta
    centenas de MB. Os itens guardam só uma referência "idb:<chave>".
    ========================================================= */
-const IMG_MAX_W = { banner: 2560, news: 1920, link: 1000, logo: 512, connect: 2000 }; // largura máxima por tipo
+const IMG_MAX_W = { banner: 2560, news: 1920, link: 1000, logo: 512, connect: 2000, author: 400 }; // largura máxima por tipo
 const IMG_QUALITY = 0.92;
 const imgCache = new Map(); // referência -> URL temporária para exibir
 const imgUrl = (ref = '') => imgCache.get(ref) || ref;
@@ -244,7 +244,7 @@ async function storeImage(file, kind) {
   return ref;
 }
 
-const allImageRefs = () => [...banners, ...exclusive, ...links, ...news, ...brandList, ...connect].flatMap((x) => [x.image, ...(x.gallery || [])]).filter(Boolean);
+const allImageRefs = () => [...banners, ...exclusive, ...links, ...news, ...brandList, ...connect, ...authors].flatMap((x) => [x.image, ...(x.gallery || [])]).filter(Boolean);
 async function loadImages() {
   for (const ref of allImageRefs()) {
     if (!ref.startsWith('idb:') || imgCache.has(ref)) continue;
@@ -270,7 +270,7 @@ function cleanupImages() {
 }
 /* Move imagens antigas (guardadas em texto/base64) para o IndexedDB e libera espaço */
 async function migrateDataUrls() {
-  for (const [list, save] of [[banners, saveBanners], [exclusive, saveExclusive], [links, saveLinks], [news, saveNews], [brandList, saveBrand], [connect, saveConnect]]) {
+  for (const [list, save] of [[banners, saveBanners], [exclusive, saveExclusive], [links, saveLinks], [news, saveNews], [brandList, saveBrand], [connect, saveConnect], [authors, saveAuthors]]) {
     let changed = false;
     for (const it of list) {
       if (!it.image || !it.image.startsWith('data:')) continue;
@@ -297,7 +297,7 @@ async function exportContent() {
     if (Array.isArray(it.gallery)) out.gallery = (await Promise.all(it.gallery.map(one))).filter(Boolean);
     return out;
   }));
-  return { banners: await conv(banners), exclusive: await conv(exclusive), links: await conv(links), news: await conv(news), brand: await conv(brandList), connect: await conv(connect) };
+  return { banners: await conv(banners), exclusive: await conv(exclusive), links: await conv(links), news: await conv(news), brand: await conv(brandList), connect: await conv(connect), authors: await conv(authors) };
 }
 window.HC_exportContent = exportContent;
 
@@ -966,6 +966,20 @@ function fmtDate(iso, long = false) {
 const NEWS_CATS = ['Conquistas', 'Infraestrutura', 'Acadêmico', 'Eventos', 'Comunicados'];
 const NEWS_DEFAULT_IMG = 'assets/news/padrao.svg';
 const saveNews = () => { cleanupImages(); return store.set('news', news); };
+
+/* Autores das notícias: foto de perfil e nome; cada notícia escolhe quem a publicou */
+const DEFAULT_AUTHORS = [{ id: 'a1', name: 'Comunicação HC', image: '' }];
+let authors = store.get('authors', PUBLISHED.authors || DEFAULT_AUTHORS);
+const saveAuthors = () => { cleanupImages(); return store.set('authors', authors); };
+// notícias antigas guardavam só o nome: liga ao autor com o mesmo nome
+news.forEach((n) => { if (!n.authorId) { const a = authors.find((x) => x.name === n.author); if (a) n.authorId = a.id; } });
+const newsAuthor = (n) => authors.find((a) => a.id === n.authorId) || { name: n.author || 'Comunicação HC', image: '' };
+const initials = (name = '') => { // "Comunicação HC" → "CH" (ignora "de", "da", "do"...)
+  const w = name.trim().split(/\s+/).filter(Boolean);
+  const main = w.filter((x) => !/^(de|da|do|das|dos|e)$/i.test(x));
+  return ((main.length ? main : w).slice(0, 2).map((x) => x[0]).join('') || '?').toUpperCase();
+};
+const avatarHTML = (a, cls = '') => `<span class="avatar ${cls}" aria-hidden="true">${a.image ? `<img src="${esc(imgUrl(a.image))}" alt=""${objPos(a.focus)}>` : `<span>${esc(initials(a.name))}</span>`}</span>`;
 const MAX_NEWS_IMGS = 5;      // capa + até 4 imagens extras
 const NEWS_SLIDE_MS = 10000;  // troca das imagens ao abrir a notícia
 /* Imagens reais da notícia, com a capa primeiro (n.image é sempre a capa) */
@@ -1189,7 +1203,10 @@ function openNews(n, card) {
           ${eyebrow(n)}
           <h2 id="nm-title">${esc(n.title)}</h2>
           <p class="nm-lead">${esc(n.excerpt)}</p>
-          <p class="nm-byline">Por <strong>${esc(n.author)}</strong><span class="ap-sep">·</span>${fmtDate(n.date, true)}<span class="ap-sep">·</span>${readTime(n)} min de leitura</p>
+          <div class="nm-byline">
+            ${avatarHTML(newsAuthor(n), 'nm-avatar')}
+            <span class="nm-by"><span>Por <strong>${esc(newsAuthor(n).name)}</strong></span><span>${fmtDate(n.date, true)}<span class="ap-sep">·</span>${readTime(n)} min de leitura</span></span>
+          </div>
           <div class="nm-text">${n.body.map((p) => {
             const m = BODY_IMG.exec(p.trim());
             if (!m) return `<p>${esc(p)}</p>`;
@@ -1606,7 +1623,7 @@ function initNewsPanel() {
     }
     if (act === 'add') {
       const fresh = {
-        id: 'n' + Date.now(), cat: 'Comunicados', date: todayIso(), author: 'Comunicação HC',
+        id: 'n' + Date.now(), cat: 'Comunicados', date: todayIso(), author: authors[0]?.name || 'Comunicação HC', authorId: authors[0]?.id,
         image: NEWS_DEFAULT_IMG, title: 'Nova notícia', excerpt: 'Escreva aqui um resumo curto da notícia.',
         body: ['Escreva aqui o texto completo da notícia.'],
       };
@@ -1622,7 +1639,13 @@ function initNewsPanel() {
     const n = news.find((x) => x.id === f.dataset.id); if (!n) return;
     const field = f.dataset.nfield;
     if (field === 'body') n.body = f.value.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
-    else n[field] = f.value;
+    else if (field === 'authorId') { // guarda também o nome (compatível com o conteúdo antigo)
+      const a = authors.find((x) => x.id === f.value);
+      if (a) { n.authorId = a.id; n.author = a.name; }
+      const av = f.closest('.ni-author')?.querySelector('.avatar');
+      if (av && a) av.outerHTML = avatarHTML(a, 'ni-avatar');
+      if ($('#authors-panel')) setTimeout(drawAuthorsPanel, 350); // atualiza a contagem de notícias de cada autor
+    } else n[field] = f.value;
     // atualiza o resumo do cabeçalho do item
     const row = panel.querySelector(`.news-item[data-id="${n.id}"]`);
     row.querySelector('.ni-title').textContent = n.title || 'Sem título';
@@ -1713,7 +1736,15 @@ function drawNewsPanel() {
             <select data-id="${n.id}" data-nfield="cat">${NEWS_CATS.map((c) => `<option ${c === n.cat ? 'selected' : ''}>${c}</option>`).join('')}</select>
           </div>
           <div class="field"><label>Data de publicação</label><input type="date" data-id="${n.id}" data-nfield="date" value="${esc(n.date)}"></div>
-          <div class="field"><label>Autor</label><input data-id="${n.id}" data-nfield="author" value="${esc(n.author)}" maxlength="60"></div>
+          <div class="field"><label>Autor <em>(cadastre em “Autores”, acima)</em></label>
+            <div class="ni-author">
+              ${avatarHTML(newsAuthor(n), 'ni-avatar')}
+              <select data-id="${n.id}" data-nfield="authorId">
+                ${authors.map((a) => `<option value="${esc(a.id)}" ${a.id === newsAuthor(n).id ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}
+                ${!authors.some((a) => a.id === n.authorId) ? `<option value="" selected>${esc(n.author || 'Escolha um autor')}</option>` : ''}
+              </select>
+            </div>
+          </div>
           ${newsImagesField(n)}
           <div class="field full"><label>Resumo <em>(aparece no cartão)</em></label><textarea rows="2" data-id="${n.id}" data-nfield="excerpt" maxlength="260">${esc(n.excerpt)}</textarea></div>
           <div class="field full"><label>Texto completo <em>(aparece ao abrir a notícia)</em></label><textarea rows="9" data-id="${n.id}" data-nfield="body">${esc(n.body.join('\n\n'))}</textarea>
@@ -1752,6 +1783,15 @@ function renderNewsAdmin(view) {
 
     <section class="panel ad-panel">
       <header class="ad-head">
+        <span class="acc-icon ad-authors"><i data-icon="users"></i></span>
+        <span class="acc-text"><strong>Autores</strong><span>Quem assina as notícias: foto de perfil e nome</span></span>
+        <span class="count-badge" id="count-authors"></span>
+      </header>
+      <div class="ad-body" id="authors-panel"></div>
+    </section>
+
+    <section class="panel ad-panel">
+      <header class="ad-head">
         <span class="acc-icon ad-news"><i data-icon="news"></i></span>
         <span class="acc-text"><strong>Todas as notícias</strong><span>Publicações da página de Notícias</span></span>
         <span class="count-badge" id="count-news"></span>
@@ -1760,10 +1800,115 @@ function renderNewsAdmin(view) {
     </section>
     <input type="file" id="file-news" accept="image/*" hidden>
     <input type="file" id="file-news-add" accept="image/*" multiple hidden>
+    <input type="file" id="file-author" accept="image/*" hidden>
   </div>`;
   paintIcons(view);
   initRecentPanel();
+  initAuthorsPanel();
   initNewsPanel();
+}
+
+function initAuthorsPanel() {
+  const panel = $('#authors-panel');
+  let photoId = null;
+  drawAuthorsPanel();
+  const refresh = () => { drawAuthorsPanel(); if ($('#news-panel')?.childElementCount) drawNewsPanel(); };
+
+  panel.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-aact]'); if (!t) return;
+    const a = authors.find((x) => x.id === t.dataset.id);
+    const act = t.dataset.aact;
+    if (act === 'photo') { photoId = a.id; $('#file-author').click(); }
+    if (act === 'rmphoto') { a.image = ''; delete a.focus; saveAuthors(); refresh(); toast('Foto removida'); }
+    if (act === 'focus') {
+      focusEditor({ src: a.image, pos: a.focus, round: true }).then((pos) => {
+        if (pos === null || !authors.includes(a)) return;
+        a.focus = pos; saveAuthors(); refresh(); toast('Enquadramento salvo');
+      });
+    }
+    if (act === 'add') {
+      const fresh = { id: 'a' + Date.now().toString(36), name: 'Novo autor', image: '' };
+      authors.push(fresh); saveAuthors(); refresh();
+      const inp = panel.querySelector(`[data-afield="name"][data-id="${fresh.id}"]`);
+      inp?.focus(); inp?.select();
+      toast('Autor adicionado. Escreva o nome e escolha uma foto.');
+    }
+    if (act === 'del') {
+      if (authors.length <= 1) { toast('Mantenha pelo menos um autor'); return; }
+      const used = news.filter((n) => n.authorId === a.id);
+      const other = authors.find((x) => x.id !== a.id);
+      confirmDialog({
+        title: 'Remover este autor?',
+        sub: used.length
+          ? `${used.length} notícia${used.length > 1 ? 's' : ''} de “${a.name}” passa${used.length > 1 ? 'm' : ''} a ser assinada${used.length > 1 ? 's' : ''} por “${other.name}”.`
+          : `“${a.name}” não assina nenhuma notícia.`,
+        image: a.image ? imgUrl(a.image) : '', ok: 'Remover autor',
+      }).then((yes) => {
+        if (!yes || !authors.includes(a)) return;
+        used.forEach((n) => { n.authorId = other.id; n.author = other.name; });
+        authors = authors.filter((x) => x !== a);
+        saveAuthors(); saveNews(); refresh(); toast('Autor removido');
+      });
+    }
+  });
+
+  panel.addEventListener('input', (e) => {
+    const f = e.target.closest('[data-afield]'); if (!f) return;
+    const a = authors.find((x) => x.id === f.dataset.id); if (!a) return;
+    a.name = f.value;
+    news.forEach((n) => { if (n.authorId === a.id) n.author = a.name; });
+    const av = panel.querySelector(`[data-aact="photo"][data-id="${a.id}"] .avatar`);
+    if (av && !a.image) av.innerHTML = `<span>${esc(initials(a.name))}</span>`;
+    clearTimeout(panel._t);
+    panel._t = setTimeout(() => {
+      saveAuthors(); saveNews();
+      if ($('#news-panel')?.childElementCount) drawNewsPanel();
+    }, 400);
+  });
+
+  $('#file-author').addEventListener('change', async (e) => {
+    const file = e.target.files[0]; e.target.value = '';
+    const a = authors.find((x) => x.id === photoId);
+    if (!file || !a) return;
+    const old = a.image;
+    const oldFocus = a.focus;
+    a.image = await storeImage(file, 'author'); delete a.focus;
+    if (saveAuthors()) toast('Foto de perfil atualizada. Use o botão de enquadrar para centralizar o rosto.'); else { a.image = old; a.focus = oldFocus; }
+    refresh();
+  });
+}
+
+function drawAuthorsPanel() {
+  const panel = $('#authors-panel');
+  $('#count-authors').textContent = authors.length;
+  panel.innerHTML = `
+    <p class="desc">Cadastre quem publica as notícias. Na edição de cada notícia, escolha o autor: o nome e a foto aparecem, em um círculo, quando a notícia é aberta.</p>
+    <div class="au-list">
+      ${authors.map((a) => {
+        const count = news.filter((n) => n.authorId === a.id).length;
+        return `
+        <div class="au-item">
+          <button class="au-photo" type="button" data-aact="photo" data-id="${esc(a.id)}" title="Trocar foto de perfil">
+            ${avatarHTML(a, 'au-avatar')}
+            <span class="au-cam"><i data-icon="image"></i></span>
+          </button>
+          <div class="au-main">
+            <input data-afield="name" data-id="${esc(a.id)}" value="${esc(a.name)}" maxlength="60" aria-label="Nome do autor" placeholder="Nome do autor">
+            <span class="au-sub">${count ? `${count} notícia${count > 1 ? 's' : ''}` : 'Nenhuma notícia ainda'}</span>
+          </div>
+          <div class="au-actions">
+            ${a.image ? `<button class="icon-btn ${a.focus ? 'au-focus-set' : ''}" type="button" data-aact="focus" data-id="${esc(a.id)}" title="Enquadrar foto"><i data-icon="focus"></i></button>
+            <button class="icon-btn" type="button" data-aact="rmphoto" data-id="${esc(a.id)}" title="Remover foto"><i data-icon="x"></i></button>` : ''}
+            <button class="icon-btn" type="button" data-aact="del" data-id="${esc(a.id)}" title="Remover autor" ${authors.length <= 1 ? 'disabled' : ''}><i data-icon="trash"></i></button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="panel-foot">
+      <span>Foto recomendada: <b>quadrada</b>, a partir de <b>400 × 400 px</b>.</span>
+      <button class="btn-dark" type="button" data-aact="add"><i data-icon="plus"></i>Adicionar autor</button>
+    </div>`;
+  paintIcons(panel);
 }
 
 function initRecentPanel() {
@@ -1984,7 +2129,7 @@ function openLock(id, onOk = (url) => openUnlocked(url), onCancel) {
 }
 /* Editor de enquadramento: escolhe o ponto da foto que deve ficar sempre visível.
    Resolve com "x% y%" (ou '' para o padrão) ao salvar, ou null ao cancelar. */
-function focusEditor({ src, pos }) {
+function focusEditor({ src, pos, round = false }) { // round: prévias em círculo (foto de perfil)
   return new Promise((resolve) => {
     if (document.querySelector('.lk')) return resolve(null);
     const url = imgUrl(src);
@@ -2005,8 +2150,11 @@ function focusEditor({ src, pos }) {
             </div>
           </div>
           <div class="fe-previews">
+            ${round ? `
+            <figure><div class="fe-pv fe-round" style="background-image:url('${esc(url)}')"></div><figcaption>Foto de perfil</figcaption></figure>
+            <figure><div class="fe-pv fe-round fe-round-sm" style="background-image:url('${esc(url)}')"></div><figcaption>Na notícia</figcaption></figure>` : `
             <figure><div class="fe-pv fe-wide" style="background-image:url('${esc(url)}')"></div><figcaption>Notícia aberta</figcaption></figure>
-            <figure><div class="fe-pv fe-tall" style="background-image:url('${esc(url)}')"></div><figcaption>Cartão</figcaption></figure>
+            <figure><div class="fe-pv fe-tall" style="background-image:url('${esc(url)}')"></div><figcaption>Cartão</figcaption></figure>`}
           </div>
         </div>
         <div class="fe-actions">
@@ -2238,10 +2386,259 @@ window.addEventListener('hashchange', route);
   window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
   update();
 })();
-// Atalho Ctrl/⌘ + K para a busca
-window.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); $('#search').focus(); }
-});
+/* =========================================================
+   HORÁRIO DE ATENDIMENTO (widget da barra de cima)
+   Segunda a sexta: 8h30–11h30 e 14h30–17h30 · Sábado: 8h30–11h30 · Domingo: fechado
+   ========================================================= */
+const HOURS = { 0: [], 1: [[510, 690], [870, 1050]], 2: [[510, 690], [870, 1050]], 3: [[510, 690], [870, 1050]],
+  4: [[510, 690], [870, 1050]], 5: [[510, 690], [870, 1050]], 6: [[510, 690]] }; // minutos desde 0h
+const DIAS = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+const DIAS_CURTO = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const hhmm = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+const hFala = (m) => `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, '0') : ''}`; // 510 → "8h30"
+const dur = (m) => { m = Math.max(0, Math.round(m)); const h = Math.floor(m / 60), r = m % 60; return h ? `${h}h${r ? String(r).padStart(2, '0') : ''}` : `${r} min`; };
+
+/* Situação do atendimento em um instante */
+function hoursState(now = new Date()) {
+  const dow = now.getDay();
+  const min = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+  const today = HOURS[dow];
+  const cur = today.find(([a, b]) => min >= a && min < b);
+  // próximo turno a começar (hoje ou nos próximos dias)
+  let next = null;
+  for (let d = 0; d < 8 && !next; d++) {
+    const day = (dow + d) % 7;
+    const sh = HOURS[day].find(([a]) => d > 0 || a > min);
+    if (sh) next = { d, day, start: sh[0], end: sh[1], at: d * 1440 + sh[0] };
+  }
+  // último encerramento (hoje ou nos dias anteriores), para medir o avanço até a reabertura
+  let prev = null;
+  for (let d = 0; d < 8 && !prev; d++) {
+    const day = (dow - d + 7) % 7;
+    const sh = [...HOURS[day]].reverse().find(([, b]) => d > 0 || b <= min);
+    if (sh) prev = { at: -d * 1440 + sh[1] };
+  }
+  const hour = now.getHours();
+  const night = hour >= 18 || hour < 6;
+  const when = !next ? '' : next.d === 0 ? 'hoje' : next.d === 1 ? 'amanhã' : `na ${DIAS[next.day].toLowerCase()}`;
+  const whenShort = !next ? '' : next.d === 0 ? '' : next.d === 1 ? 'amanhã' : DIAS_CURTO[next.day].toLowerCase();
+  if (cur) {
+    const [a, b] = cur;
+    const morning = a < 720;
+    const saturday = dow === 6;
+    const afterLunch = today.find(([x]) => x > b);
+    return {
+      mode: 'open', tone: morning ? 'morning' : 'afternoon', icon: 'sun',
+      progress: (min - a) / (b - a), endLabel: hhmm(b), endSmall: 'até',
+      status: 'Aberto agora', statusTone: 'ok',
+      remaining: `Faltam ${dur(b - min)} para encerrar este turno`,
+      message: morning
+        ? (afterLunch ? `Pela manhã, nosso atendimento vai até as ${hFala(b)}. Retornamos às ${hFala(afterLunch[0])} e ficamos até as ${hFala(afterLunch[1])}.`
+          : saturday ? `Aos sábados atendemos só pela manhã, até as ${hFala(b)}. Venha nos visitar!` : `Atendimento pela manhã até as ${hFala(b)}.`)
+        : `À tarde, nosso atendimento vai até as ${hFala(b)}. Aproveite para tirar suas dúvidas com a nossa equipe!`,
+    };
+  }
+  const span = next && prev ? next.at - prev.at : 1;
+  const progress = next && prev ? (min - prev.at) / span : 0;
+  const lunch = next && next.d === 0 && today.some(([, b]) => b <= min);
+  if (lunch) {
+    return {
+      mode: 'break', tone: 'break', icon: 'sun', progress, endLabel: hhmm(next.start), endSmall: 'volta',
+      status: 'Intervalo de almoço', statusTone: 'wait',
+      remaining: `Retornamos em ${dur(next.start - min)}`,
+      message: `Estamos no intervalo do almoço. Retornamos às ${hFala(next.start)} e ficamos até as ${hFala(next.end)}.`,
+    };
+  }
+  const tone = night ? 'night' : hour < 9 ? 'dawn' : 'closed';
+  return {
+    mode: 'closed', tone, icon: night ? 'moon' : 'sun', progress, endLabel: next ? hhmm(next.start) : '--:--', endSmall: whenShort || 'abre',
+    status: next && next.d === 0 ? 'Ainda não abrimos' : 'Fechado agora', statusTone: next && next.d === 0 ? 'wait' : 'off',
+    remaining: next ? (next.d === 0 ? `Abrimos em ${dur(next.start - min)}` : `Voltamos ${when} às ${hFala(next.start)}`) : '',
+    message: !next ? 'Atendimento indisponível no momento.'
+      : !today.length ? `Hoje, ${DIAS[dow].toLowerCase()}, não temos atendimento. Voltamos ${when} às ${hFala(next.start)}. Bom descanso!`
+      : next.d === 0 ? `${hour >= 5 ? 'Bom dia! ' : ''}Abrimos hoje às ${hFala(next.start)}. Estamos esperando por você.`
+      : next.day === 6 ? `Encerramos o atendimento de hoje. Voltamos ${when} às ${hFala(next.start)}, apenas pela manhã, até as ${hFala(next.end)}.`
+      : `Encerramos o atendimento de hoje. Voltamos ${when} às ${hFala(next.start)}. Até lá!`,
+  };
+}
+
+(() => {
+  const el = $('#hours'); if (!el) return;
+  const SUN = `<svg class="hw-sun" viewBox="0 0 32 32" aria-hidden="true"><g class="hw-rays">${Array.from({ length: 8 }, (_, i) => `<rect x="15" y="2" width="2" height="6" rx="1" transform="rotate(${i * 45} 16 16)"/>`).join('')}</g><circle class="hw-core" cx="16" cy="16" r="6.5"/></svg>`;
+  const MOON = `<svg class="hw-moon" viewBox="0 0 32 32" aria-hidden="true"><path class="hw-crescent" d="M20.5 5.5a11 11 0 1 0 6 18.8A9.5 9.5 0 0 1 20.5 5.5z"/><circle class="hw-star s1" cx="9" cy="8" r="1.1"/><circle class="hw-star s2" cx="6" cy="15" r=".8"/></svg>`;
+  const card = el.querySelector('.hw-card');
+  let lastIcon = '';
+
+  function paint() {
+    const now = new Date();
+    const st = hoursState(now);
+    el.dataset.tone = st.tone; el.dataset.mode = st.mode;
+    el.querySelector('.hw-wd').textContent = DIAS_CURTO[now.getDay()];
+    el.querySelector('.hw-day').textContent = now.getDate();
+    el.querySelector('.hw-time').textContent = hhmm(now.getHours() * 60 + now.getMinutes());
+    el.querySelector('.hw-end small').textContent = st.endSmall;
+    el.querySelector('.hw-end b').textContent = st.endLabel;
+    el.style.setProperty('--p', Math.min(1, Math.max(0, st.progress)).toFixed(4));
+    if (st.icon !== lastIcon) { el.querySelector('.hw-ico').innerHTML = st.icon === 'moon' ? MOON : SUN; lastIcon = st.icon; }
+    el.setAttribute('aria-label', `Horário de atendimento: ${st.status}. ${st.remaining}`);
+
+    // linha do dia: 7h às 19h, com os turnos de hoje e o "agora"
+    const min = now.getHours() * 60 + now.getMinutes();
+    const from = 420, to = 1140, pos = (m) => ((Math.min(Math.max(m, from), to) - from) / (to - from)) * 100;
+    const today = HOURS[now.getDay()];
+    card.innerHTML = `
+      <div class="hwc-top">
+        <div class="hwc-cal"><span>${DIAS_CURTO[now.getDay()]}</span><b>${now.getDate()}</b></div>
+        <div class="hwc-date"><strong>${DIAS[now.getDay()]}</strong><span>${now.getDate()} de ${MESES[now.getMonth()]} de ${now.getFullYear()}</span></div>
+      </div>
+      <div class="hwc-status ${st.statusTone}"><i></i>${st.status}${st.remaining ? `<span>· ${st.remaining}</span>` : ''}</div>
+      <p class="hwc-msg">${st.message}</p>
+      <div class="hwc-line" aria-hidden="true">
+        <div class="hwc-bar">
+          ${today.map(([a, b]) => `<span class="hwc-seg ${min >= b ? 'past' : min >= a ? 'now' : ''}" style="left:${pos(a)}%;width:${pos(b) - pos(a)}%"></span>`).join('')}
+          ${min >= from && min <= to ? `<span class="hwc-dot" style="left:${pos(min)}%"></span>` : ''}
+        </div>
+        <div class="hwc-ticks"><span>7h</span><span>11h</span><span>15h</span><span>19h</span></div>
+      </div>
+      <ul class="hwc-week">
+        <li class="${[1, 2, 3, 4, 5].includes(now.getDay()) ? 'today' : ''}"><span>Segunda a sexta</span><b>8h30–11h30 · 14h30–17h30</b></li>
+        <li class="${now.getDay() === 6 ? 'today' : ''}"><span>Sábado</span><b>8h30–11h30</b></li>
+        <li class="${now.getDay() === 0 ? 'today' : ''}"><span>Domingo</span><b>Fechado</b></li>
+      </ul>`;
+  }
+  paint();
+  setInterval(paint, 20000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) paint(); });
+
+  // toque/clique abre e fecha o cartão (no computador, ele abre ao passar o mouse)
+  el.addEventListener('click', (e) => { if (!e.target.closest('.hw-card')) el.classList.toggle('open'); });
+  el.addEventListener('keydown', (e) => { if (e.key === 'Escape') { el.classList.remove('open'); el.blur(); } });
+  document.addEventListener('pointerdown', (e) => { if (!el.contains(e.target)) el.classList.remove('open'); });
+  window.HC_hoursPreview = (h, m = 0, dow) => { // para testar outros horários pelo console
+    const d = new Date(); d.setHours(h, m, 0, 0); if (dow != null) d.setDate(d.getDate() + ((dow - d.getDay() + 7) % 7));
+    return hoursState(d);
+  };
+})();
+
+/* =========================================================
+   PESQUISA DE NOTÍCIAS (barra de cima)
+   ========================================================= */
+(() => {
+  const input = $('#search'), box = $('#search-results'), wrap = $('#search-wrap'), topbar = document.querySelector('.topbar');
+  if (!input || !box) return;
+  // compara sem acentos e sem maiúsculas ("noticia" encontra "Notícia")
+  const fold = (str = '') => [...String(str)].map((ch) => ch.normalize('NFD')[0].toLowerCase()).join('');
+  let results = [], active = -1;
+
+  const highlight = (text, terms) => { // destaca os termos sem perder os acentos do texto original
+    const f = fold(text), marks = new Array(text.length).fill(false);
+    terms.forEach((t) => { let i = f.indexOf(t); while (t && i >= 0) { for (let k = i; k < i + t.length; k++) marks[k] = true; i = f.indexOf(t, i + t.length); } });
+    let out = '', on = false;
+    [...text].forEach((ch, k) => {
+      if (marks[k] && !on) { out += '<mark>'; on = true; }
+      if (!marks[k] && on) { out += '</mark>'; on = false; }
+      out += esc(ch);
+    });
+    return out + (on ? '</mark>' : '');
+  };
+
+  function search(q) {
+    const terms = fold(q).split(/\s+/).filter(Boolean);
+    if (!terms.length) return { terms, list: [...news].sort(byNewest).slice(0, 4), recent: true };
+    const scored = news.map((n) => {
+      const fields = [[n.title, 5], [n.excerpt, 3], [n.cat, 3], [newsAuthor(n).name, 2], [n.body.join(' '), 1]].map(([v, w]) => [fold(v), w]);
+      let score = 0;
+      for (const t of terms) {
+        const hit = fields.filter(([v]) => v.includes(t));
+        if (!hit.length) return null; // todas as palavras precisam aparecer
+        score += hit.reduce((a, [, w]) => a + w, 0);
+      }
+      return { n, score };
+    }).filter(Boolean).sort((a, b) => b.score - a.score || byNewest(a.n, b.n));
+    return { terms, list: scored.slice(0, 6).map((x) => x.n), total: scored.length };
+  }
+
+  function render() {
+    const q = input.value.trim();
+    const { terms, list, recent, total } = search(q);
+    results = list; active = list.length ? 0 : -1;
+    box.innerHTML = `
+      <div class="sr-head">${recent ? 'Notícias mais recentes' : list.length ? `${total} resultado${total > 1 ? 's' : ''} para “${esc(q)}”` : ''}</div>
+      ${list.length ? `<div class="sr-list">${list.map((n, i) => `
+        <button class="sr-item nc ${i === active ? 'on' : ''}" type="button" role="option" data-i="${i}" data-news="${esc(n.id)}" aria-selected="${i === active}">
+          <span class="nc-media sr-thumb"><img src="${esc(imgUrl(n.image))}" alt=""${objPos(coverPos(n))}></span>
+          <span class="sr-text">
+            <span class="sr-meta">${esc(n.cat)}<span class="ap-sep">·</span>${fmtDate(n.date)}</span>
+            <span class="sr-title">${highlight(n.title, terms)}</span>
+            <span class="sr-excerpt">${highlight(n.excerpt, terms)}</span>
+          </span>
+          <span class="sr-go">${CHEV_SVG}</span>
+        </button>`).join('')}</div>` : `
+        <div class="sr-empty"><i data-icon="search"></i><strong>Nenhuma notícia encontrada</strong><span>Tente outra palavra, como o nome de um curso ou evento.</span></div>`}
+      <a class="sr-all" href="#noticias">Ver todas as notícias ${CHEV_SVG}</a>`;
+    paintIcons(box);
+    open();
+  }
+  function setActive(i) {
+    if (!results.length) return;
+    active = (i + results.length) % results.length;
+    box.querySelectorAll('.sr-item').forEach((el, k) => { el.classList.toggle('on', k === active); el.setAttribute('aria-selected', k === active); });
+    box.querySelector('.sr-item.on')?.scrollIntoView({ block: 'nearest' });
+  }
+  function open() {
+    if (!box.hidden) return;
+    box.hidden = false; input.setAttribute('aria-expanded', 'true');
+    requestAnimationFrame(() => box.classList.add('in'));
+  }
+  function close() {
+    if (box.hidden) return;
+    box.classList.remove('in'); input.setAttribute('aria-expanded', 'false');
+    setTimeout(() => { if (!box.classList.contains('in')) box.hidden = true; }, 220);
+  }
+  function choose(i) {
+    const n = results[i]; if (!n) return;
+    const el = box.querySelector(`.sr-item[data-i="${i}"]`);
+    openNews(n, el);
+    setTimeout(() => { close(); input.blur(); topbar.classList.remove('searching'); }, 30);
+  }
+
+  let t;
+  input.addEventListener('input', () => { clearTimeout(t); t = setTimeout(render, 90); });
+  input.addEventListener('focus', render);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActive(active + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(active - 1); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (active >= 0) choose(active); }
+    else if (e.key === 'Escape') { if (input.value) { input.value = ''; render(); } else { close(); input.blur(); topbar.classList.remove('searching'); } }
+  });
+  box.addEventListener('mousedown', (e) => { if (e.target.closest('.sr-item, .sr-all')) e.preventDefault(); }); // não perde o foco antes do clique
+  box.addEventListener('mousemove', (e) => { const it = e.target.closest('.sr-item'); if (it && +it.dataset.i !== active) setActive(+it.dataset.i); });
+  box.addEventListener('click', (e) => {
+    const it = e.target.closest('.sr-item'); if (it) return choose(+it.dataset.i);
+    if (e.target.closest('.sr-all')) { close(); input.blur(); topbar.classList.remove('searching'); }
+  });
+  document.addEventListener('pointerdown', (e) => {
+    if (!wrap.contains(e.target) && !e.target.closest('#search-btn')) { close(); if (!input.value) topbar.classList.remove('searching'); }
+  });
+  window.addEventListener('hashchange', close);
+
+  // celular: o botão de lupa abre o campo de pesquisa na própria barra
+  $('#search-btn')?.addEventListener('click', () => {
+    const on = !topbar.classList.contains('searching');
+    topbar.classList.toggle('searching', on);
+    if (on) setTimeout(() => input.focus(), 50); else { close(); input.blur(); }
+  });
+
+  // Atalho Ctrl/⌘ + K para a pesquisa
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      if (PHONE()) topbar.classList.add('searching');
+      input.focus(); input.select();
+    }
+  });
+})();
 paintIcons();
 (async () => {
   try {

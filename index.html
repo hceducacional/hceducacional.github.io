@@ -49,11 +49,27 @@
       <h1>HC Instituto Educacional</h1>
       <p>Explore todas as suas possibilidades de estudo</p>
     </div>
-    <label class="tb-search">
-      <i data-icon="search"></i>
-      <input type="search" id="search" placeholder="Localizar aluno..." />
-      <kbd>Ctrl K</kbd>
-    </label>
+    <!-- Horário de atendimento (widget) -->
+    <div class="hw" id="hours" tabindex="0" role="group" aria-label="Horário de atendimento">
+      <div class="hw-pill">
+        <span class="hw-cal" aria-hidden="true"><span class="hw-wd"></span><span class="hw-day"></span></span>
+        <span class="hw-track">
+          <span class="hw-fill"><span class="hw-time"></span><span class="hw-ico"></span></span>
+          <span class="hw-end"><small></small><b></b></span>
+        </span>
+      </div>
+      <div class="hw-card" role="status" aria-live="polite"></div>
+    </div>
+    <div class="tb-search-wrap" id="search-wrap">
+      <label class="tb-search">
+        <i data-icon="search"></i>
+        <input type="search" id="search" placeholder="Pesquisar notícias..." autocomplete="off" spellcheck="false"
+               role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list" />
+        <kbd>Ctrl K</kbd>
+      </label>
+      <div class="sr" id="search-results" role="listbox" aria-label="Resultados da pesquisa" hidden></div>
+    </div>
+    <button class="tb-search-btn" id="search-btn" type="button" aria-label="Pesquisar notícias"><i data-icon="search"></i></button>
     <div class="tb-user">
       <div class="tb-user-text">
         <strong>faveni hc</strong>
