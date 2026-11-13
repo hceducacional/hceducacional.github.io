@@ -44,6 +44,7 @@
   <!-- Cabeçalho -->
   <div class="topbar-wrap" id="topbar-wrap">
   <header class="topbar">
+    <div class="sb-logo tb-logo" id="tb-logo" aria-hidden="true"><span class="h">H</span><span class="c">C</span></div>
     <div class="tb-title">
       <h1>HC Instituto Educacional</h1>
       <p>Explore todas as suas possibilidades de estudo</p>
@@ -64,6 +65,27 @@
   </div>
 
   <main class="content" id="view"></main>
+
+  <!-- Celular: barra de abas embaixo (substitui a barra lateral) -->
+  <nav class="tabbar" id="tabbar" aria-label="Navegação principal">
+    <a class="tab" data-route="dashboard" href="#dashboard"><i data-icon="grid"></i><span>Início</span></a>
+    <a class="tab" data-route="noticias" href="#noticias"><i data-icon="news"></i><span>Notícias</span></a>
+    <a class="tab" href="https://inforhc.my.canva.site/home" target="_blank" rel="noopener"><i data-icon="monitor"></i><span>Informática</span></a>
+    <a class="tab" href="https://prova-facil-favenihc.lovable.app/" target="_blank" rel="noopener"><i data-icon="calendar"></i><span>Agendar</span></a>
+    <button class="tab" type="button" id="tab-more" aria-haspopup="dialog" aria-expanded="false"><i data-icon="more"></i><span>Mais</span></button>
+  </nav>
+  <div class="more" id="more" hidden>
+    <div class="more-backdrop" data-more-close></div>
+    <div class="more-sheet" role="dialog" aria-modal="true" aria-label="Mais opções">
+      <span class="more-grab" aria-hidden="true"></span>
+      <a class="more-item" href="#" data-locked="semipresencial"><span class="more-ico" style="--c:#5e5ce6"><i data-icon="lock"></i></span>Sistema Semipresencial</a>
+      <a class="more-item" data-route="relatorio" href="#relatorio"><span class="more-ico" style="--c:#0a84ff"><i data-icon="report"></i></span>Relatório Mensal</a>
+      <a class="more-item" data-route="config" href="#config"><span class="more-ico" style="--c:#8e8e93"><i data-icon="settings"></i></span>Configurações</a>
+      <a class="more-item" data-route="seguranca" href="#seguranca"><span class="more-ico" style="--c:#34c759"><i data-icon="shield"></i></span>Segurança</a>
+      <a class="more-item" data-route="ajuda" href="#ajuda"><span class="more-ico" style="--c:#ff9f0a"><i data-icon="help"></i></span>Ajuda / Suporte</a>
+      <a class="more-item danger" href="#sair"><span class="more-ico" style="--c:#ff3b30"><i data-icon="logout"></i></span>Desconectar</a>
+    </div>
+  </div>
 
   <div class="toast" id="toast"></div>
 

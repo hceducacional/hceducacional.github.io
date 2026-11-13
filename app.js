@@ -37,6 +37,7 @@ const ICONS = {
   eye: '<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/>',
   eyeoff: '<path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c4.84 0 8.66 3.08 9.94 6.65a1 1 0 0 1 0 .7 10.75 10.75 0 0 1-1.44 2.49M14.08 14.16a3 3 0 0 1-4.24-4.24M17.48 17.5a10.75 10.75 0 0 1-15.42-5.15 1 1 0 0 1 0-.7 10.75 10.75 0 0 1 4.45-5.14M2 2l20 20"/>',
   clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  more: '<circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/>',
   tools: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/>',
 };
 const icon = (name) =>
@@ -61,6 +62,7 @@ const MAX_BANNERS = 5;
 const SLIDE_MS = 10000;
 const RECENT_MS = 16000; // tempo de cada notícia recente na tela inicial
 const RECENT_AUTO = 5;   // quantas notícias recentes se abrem sozinhas, em sequência
+const PHONE = () => matchMedia("(max-width: 860px)").matches; // celular (barra de abas embaixo)
 const DEFAULT_BANNERS = [
   { id: 'b1', image: 'assets/banner-1.svg', pill: 'Notícias do Polo', title: 'Bem-vindo ao Semipresencial FAVENIHC', desc: 'Centralize chamadas, alunos e relatórios do seu polo em um só lugar.' },
   { id: 'b2', image: 'assets/banner-2.svg', pill: 'ConsultaEDU', title: 'Novas atividades regularmente', desc: 'Mantenha os links das disciplinas atualizados através do ConsultaEDU' },
@@ -153,11 +155,13 @@ let prefs = store.get('prefs', { hideSensitive: false });
 let brandList = store.get('brand', PUBLISHED.brand || [{ id: 'logo', image: '' }]);
 const saveBrand = () => { cleanupImages(); return store.set('brand', brandList); };
 const LOGO_DEFAULT = '<span class="h">H</span><span class="c">C</span>';
-function paintLogo() {
-  const el = document.getElementById('sb-logo'); if (!el) return;
+function paintLogo() { // barra lateral e (no celular) barra de cima
   const img = brandList[0]?.image;
-  el.classList.toggle('has-img', !!img);
-  el.innerHTML = img ? `<img src="${esc(imgUrl(img))}" alt="Logo">` : LOGO_DEFAULT;
+  ['sb-logo', 'tb-logo'].forEach((id) => {
+    const el = document.getElementById(id); if (!el) return;
+    el.classList.toggle('has-img', !!img);
+    el.innerHTML = img ? `<img src="${esc(imgUrl(img))}" alt="Logo">` : LOGO_DEFAULT;
+  });
 }
 
 /* ---------- Utilidades ---------- */
@@ -487,7 +491,8 @@ function initRecentNews() {
   row.addEventListener('focusin', (e) => { const c = e.target.closest('.rn-card'); if (c) activate(c); });
   row.addEventListener('click', (e) => {
     const c = e.target.closest('.rn-card'); if (!c) return;
-    if (!c.classList.contains('on')) return activate(c); // no toque: 1º toque abre o cartão, o 2º abre a notícia
+    // no celular os cartões já mostram o texto: um toque abre a notícia
+    if (!c.classList.contains('on') && !PHONE()) return activate(c); // no toque em telas maiores: 1º toque abre o cartão, o 2º abre a notícia
     openNews(news.find((n) => n.id === c.dataset.news), c);
   });
   row.addEventListener('keydown', (e) => {
@@ -2184,7 +2189,9 @@ function route() {
   const view = $('#view');
   document.querySelectorAll('.nm, .nm-ghost').forEach((el) => el.remove());
   document.body.classList.remove('modal-open');
-  document.querySelectorAll('.sb-item[data-route]').forEach((a) => a.classList.toggle('active', a.dataset.route === r.split('/')[0]));
+  document.querySelectorAll('.sb-item[data-route], .tab[data-route], .more-item[data-route]').forEach((a) => a.classList.toggle('active', a.dataset.route === r.split('/')[0]));
+  // "Mais" fica destacado quando a página atual está dentro dele
+  document.getElementById('tab-more')?.classList.toggle('active', !!document.querySelector('.more-item.active'));
   if (r === 'config') renderConfig(view);
   else if (r === 'config/noticias') renderNewsAdmin(view);
   else if (r === 'noticias') renderNews(view);
@@ -2194,6 +2201,25 @@ function route() {
 }
 
 window.addEventListener('hashchange', route);
+
+/* Celular: folha "Mais" da barra de abas */
+(() => {
+  const more = document.getElementById('more'), btn = document.getElementById('tab-more');
+  if (!more || !btn) return;
+  const open = () => {
+    more.hidden = false; btn.setAttribute('aria-expanded', 'true');
+    requestAnimationFrame(() => requestAnimationFrame(() => more.classList.add('in')));
+  };
+  const close = () => {
+    if (more.hidden) return;
+    more.classList.remove('in'); btn.setAttribute('aria-expanded', 'false');
+    setTimeout(() => { if (!more.classList.contains('in')) more.hidden = true; }, 320);
+  };
+  btn.addEventListener('click', () => (more.hidden ? open() : close()));
+  more.addEventListener('click', (e) => { if (e.target.closest('[data-more-close], .more-item')) close(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !document.querySelector('.lk')) close(); });
+  window.addEventListener('hashchange', close);
+})();
 
 /* sombra um pouco mais forte na barra superior ao rolar a página */
 (() => {
