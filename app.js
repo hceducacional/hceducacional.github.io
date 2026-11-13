@@ -2559,6 +2559,15 @@ function hoursState(now = new Date()) {
   el.addEventListener('click', (e) => { if (!e.target.closest('.hw-card')) el.classList.toggle('open'); });
   el.addEventListener('keydown', (e) => { if (e.key === 'Escape') { el.classList.remove('open'); el.blur(); } });
   document.addEventListener('pointerdown', (e) => { if (!el.contains(e.target)) el.classList.remove('open'); });
+  // celular: ao abrir o site, o nome do instituto fica 3 s e depois dá lugar ao relógio
+  const bar = el.closest('.topbar');
+  const showClock = () => {
+    bar.classList.add('hw-out');
+    setTimeout(() => { bar.classList.remove('hw-out'); bar.classList.add('hw-in'); }, 380);
+  };
+  let seen = false;
+  try { seen = sessionStorage.getItem('hc-hw-intro') === '1'; sessionStorage.setItem('hc-hw-intro', '1'); } catch (e) {}
+  if (seen) bar.classList.add('hw-in'); else setTimeout(showClock, 3000);
   window.HC_hoursPreview = (h, m = 0, dow) => { // para testar outros horários pelo console
     const d = new Date(); d.setHours(h, m, 0, 0); if (dow != null) d.setDate(d.getDate() + ((dow - d.getDay() + 7) % 7));
     return hoursState(d);
