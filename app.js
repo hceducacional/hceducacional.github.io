@@ -376,13 +376,21 @@ function renderDashboard(view) {
   initRecentNews();
   view.querySelector('.cx-grid')?.addEventListener('click', (e) => {
     const tile = e.target.closest('.cx-tile');
-    if (!tile || e.target.closest('.cx-go')) return;
-    const go = tile.querySelector('.cx-go');
-    // com mouse, a faixa já está visível: um clique abre o link; no toque, o 1º toque revela a faixa
-    if (go && (tile.classList.contains('shown') || matchMedia('(hover: hover)').matches)) go.click();
-    view.querySelectorAll('.cx-tile.shown').forEach((t) => t !== tile && t.classList.remove('shown'));
-    tile.classList.add('shown');
+    if (!tile || e.target.closest('a')) return; // botões, número e @ abrem o próprio link
+    // com mouse, a faixa já está visível: um clique abre o link
+    if (matchMedia('(hover: hover)').matches) { tile.querySelector('.cx-go')?.click(); return; }
+    // no toque, cada toque mostra/esconde a faixa (deslizar o dedo por cima não faz nada)
+    const show = !tile.classList.contains('shown');
+    view.querySelectorAll('.cx-tile.shown').forEach((t) => t.classList.remove('shown'));
+    tile.classList.toggle('shown', show);
+    if (!show) tile.blur();
   });
+  // no toque, tocar fora dos blocos fecha a faixa aberta
+  const closeCx = (e) => {
+    if (!document.body.contains(view.querySelector('.cx-grid'))) return document.removeEventListener('click', closeCx);
+    if (!e.target.closest('.cx-tile')) view.querySelectorAll('.cx-tile.shown').forEach((t) => t.classList.remove('shown'));
+  };
+  document.addEventListener('click', closeCx);
   view.querySelector('.cx-grid')?.addEventListener('keydown', (e) => {
     const tile = e.target.closest('.cx-tile');
     if (tile && e.target === tile && e.key === 'Enter') tile.querySelector('.cx-go')?.click();
