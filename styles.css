@@ -1338,8 +1338,12 @@ body.modal-open { overflow: hidden; }
   :root { --sb-collapsed: 0px; }
   .content { padding-bottom: calc(106px + env(safe-area-inset-bottom)); }
 
-  /* barra de cima compacta, com o logo */
-  .topbar-wrap { padding: 10px 12px 0; }
+  /* barra de cima compacta, com o logo. Ela flutua um pouco abaixo do topo (e da área da hora/bateria),
+     sem encostar na borda: assim o iPhone deixa o conteúdo passar por trás da barra de status ao rolar */
+  .topbar-wrap {
+    top: calc(10px + env(safe-area-inset-top)); margin-top: calc(10px + env(safe-area-inset-top));
+    padding: 0 max(12px, env(safe-area-inset-left)) 0 max(12px, env(safe-area-inset-right));
+  }
   .topbar { height: 56px; padding: 0 8px 0 8px; gap: 10px; }
   .tb-logo { display: flex; width: 40px; height: 40px; border-radius: 50%; font-size: 14px; overflow: hidden; }
   .tb-title h1 { font-size: 15px; }
