@@ -1590,6 +1590,7 @@ body.modal-open { overflow: hidden; }
 .hw[data-tone="break"]     { --hw-grad: linear-gradient(90deg, #8b5cf6, #c084fc); --hw-glow: rgba(167, 139, 250, .5); }
 .hw[data-tone="dawn"]      { --hw-grad: linear-gradient(90deg, #f472b6, #fb923c); --hw-glow: rgba(251, 146, 60, .45); }
 .hw[data-tone="closed"]    { --hw-grad: linear-gradient(90deg, #64748b, #94a3b8); --hw-glow: rgba(148, 163, 184, .35); }
+.hw[data-tone="evening"]   { --hw-grad: linear-gradient(90deg, #4338ca, #a855f7); --hw-glow: rgba(168, 85, 247, .55); }
 .hw[data-tone="night"]     { --hw-grad: linear-gradient(90deg, #312e81, #6366f1); --hw-glow: rgba(99, 102, 241, .55); }
 
 /* sol animado: raios girando e brilho pulsando */
@@ -1636,6 +1637,7 @@ body.modal-open { overflow: hidden; }
 .hwc-status { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 16px; font-size: 13.5px; font-weight: 600; }
 .hwc-status i { width: 8px; height: 8px; border-radius: 50%; background: #8e8e93; }
 .hwc-status.ok i { background: #34c759; box-shadow: 0 0 0 4px rgba(52, 199, 89, .18); animation: hwDot 2s ease-in-out infinite; }
+.hwc-status.class i { background: #8b5cf6; box-shadow: 0 0 0 4px rgba(139, 92, 246, .2); }
 .hwc-status.wait i { background: #ff9f0a; box-shadow: 0 0 0 4px rgba(255, 159, 10, .18); }
 .hwc-status span { font-weight: 500; color: var(--muted); }
 @keyframes hwDot { 50% { box-shadow: 0 0 0 7px rgba(52, 199, 89, 0); } }
@@ -1659,3 +1661,15 @@ body.modal-open { overflow: hidden; }
 @media (max-width: 1000px) { .tb-search kbd { display: none; } .hw-track { width: 210px; } .hw-fill { --min: 100px; } }
 @media (max-width: 860px) { .hw { display: none; } }
 @media (prefers-reduced-motion: reduce) { .hw-rays, .hw-core, .hw-moon, .hw-star { animation: none !important; } }
+
+/* aulas da noite na linha do dia e na tabela */
+.hwc-seg.cls { background: repeating-linear-gradient(135deg, #c4b5fd 0 4px, #ddd6fe 4px 8px); }
+.hwc-seg.cls.now { background: linear-gradient(90deg, #4338ca, #a855f7); }
+.hwc-seg.cls.past { background: #c7c2e0; }
+.hwc-legend { display: flex; gap: 14px; margin-top: 8px; font-size: 11.5px; color: var(--muted); }
+.hwc-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.hwc-legend i { width: 14px; height: 6px; border-radius: 999px; }
+.lg-att { background: #c7c7cc; }
+.lg-cls { background: repeating-linear-gradient(135deg, #a78bfa 0 3px, #ddd6fe 3px 6px); }
+.hwc-week li.cls b { color: #6d28d9; }
+.hwc-week li em { font-style: normal; color: var(--faint); font-weight: 500; }

@@ -2392,6 +2392,8 @@ window.addEventListener('hashchange', route);
    ========================================================= */
 const HOURS = { 0: [], 1: [[510, 690], [870, 1050]], 2: [[510, 690], [870, 1050]], 3: [[510, 690], [870, 1050]],
   4: [[510, 690], [870, 1050]], 5: [[510, 690], [870, 1050]], 6: [[510, 690]] }; // minutos desde 0h
+// À noite (segunda a sexta, 18h–21h) há aulas dos cursos técnicos e de Informática, sem atendimento ao público
+const CLASSES = { 1: [1080, 1260], 2: [1080, 1260], 3: [1080, 1260], 4: [1080, 1260], 5: [1080, 1260] };
 const DIAS = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 const DIAS_CURTO = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -2421,6 +2423,17 @@ function hoursState(now = new Date()) {
   }
   const hour = now.getHours();
   const night = hour >= 18 || hour < 6;
+  const cls = CLASSES[dow];
+  const backMsg = next ? `Voltamos ${!next ? '' : next.d === 0 ? 'hoje' : next.d === 1 ? 'amanhã' : `na ${DIAS[next.day].toLowerCase()}`} às ${hFala(next.start)}.` : '';
+  if (cls && min >= cls[0] && min < cls[1]) {
+    return {
+      mode: 'classes', tone: 'evening', icon: 'moon',
+      progress: (min - cls[0]) / (cls[1] - cls[0]), endLabel: hhmm(cls[1]), endSmall: 'aulas até',
+      status: 'Aulas em andamento', statusTone: 'class',
+      remaining: `Atendimento ao público encerrado`,
+      message: `Agora estamos no horário das aulas dos cursos técnicos e de Informática, das ${hFala(cls[0])} às ${hFala(cls[1])}. Neste período não há atendimento ao público. ${backMsg}`,
+    };
+  }
   const when = !next ? '' : next.d === 0 ? 'hoje' : next.d === 1 ? 'amanhã' : `na ${DIAS[next.day].toLowerCase()}`;
   const whenShort = !next ? '' : next.d === 0 ? '' : next.d === 1 ? 'amanhã' : DIAS_CURTO[next.day].toLowerCase();
   if (cur) {
@@ -2458,6 +2471,7 @@ function hoursState(now = new Date()) {
     message: !next ? 'Atendimento indisponível no momento.'
       : !today.length ? `Hoje, ${DIAS[dow].toLowerCase()}, não temos atendimento. Voltamos ${when} às ${hFala(next.start)}. Bom descanso!`
       : next.d === 0 ? `${hour >= 5 ? 'Bom dia! ' : ''}Abrimos hoje às ${hFala(next.start)}. Estamos esperando por você.`
+      : cls && min < cls[0] ? `Encerramos o atendimento ao público de hoje. Às ${hFala(cls[0])} começam as aulas da noite (cursos técnicos e Informática). Voltamos ${when} às ${hFala(next.start)}.`
       : next.day === 6 ? `Encerramos o atendimento de hoje. Voltamos ${when} às ${hFala(next.start)}, apenas pela manhã, até as ${hFala(next.end)}.`
       : `Encerramos o atendimento de hoje. Voltamos ${when} às ${hFala(next.start)}. Até lá!`,
   };
@@ -2485,7 +2499,7 @@ function hoursState(now = new Date()) {
 
     // linha do dia: 7h às 19h, com os turnos de hoje e o "agora"
     const min = now.getHours() * 60 + now.getMinutes();
-    const from = 420, to = 1140, pos = (m) => ((Math.min(Math.max(m, from), to) - from) / (to - from)) * 100;
+    const from = 420, to = 1320, pos = (m) => ((Math.min(Math.max(m, from), to) - from) / (to - from)) * 100;
     const today = HOURS[now.getDay()];
     card.innerHTML = `
       <div class="hwc-top">
@@ -2497,12 +2511,15 @@ function hoursState(now = new Date()) {
       <div class="hwc-line" aria-hidden="true">
         <div class="hwc-bar">
           ${today.map(([a, b]) => `<span class="hwc-seg ${min >= b ? 'past' : min >= a ? 'now' : ''}" style="left:${pos(a)}%;width:${pos(b) - pos(a)}%"></span>`).join('')}
+          ${CLASSES[now.getDay()] ? (([a, b]) => `<span class="hwc-seg cls ${min >= b ? 'past' : min >= a ? 'now' : ''}" style="left:${pos(a)}%;width:${pos(b) - pos(a)}%" title="Aulas da noite"></span>`)(CLASSES[now.getDay()]) : ''}
           ${min >= from && min <= to ? `<span class="hwc-dot" style="left:${pos(min)}%"></span>` : ''}
         </div>
-        <div class="hwc-ticks"><span>7h</span><span>11h</span><span>15h</span><span>19h</span></div>
+        <div class="hwc-ticks"><span>7h</span><span>12h</span><span>17h</span><span>22h</span></div>
+        <div class="hwc-legend"><span><i class="lg-att"></i>Atendimento</span><span><i class="lg-cls"></i>Aulas da noite</span></div>
       </div>
       <ul class="hwc-week">
         <li class="${[1, 2, 3, 4, 5].includes(now.getDay()) ? 'today' : ''}"><span>Segunda a sexta</span><b>8h30–11h30 · 14h30–17h30</b></li>
+        <li class="cls ${[1, 2, 3, 4, 5].includes(now.getDay()) && (now.getHours() >= 18 && now.getHours() < 21) ? 'today' : ''}"><span>Noite <em>(seg. a sex.)</em></span><b>18h–21h · só aulas</b></li>
         <li class="${now.getDay() === 6 ? 'today' : ''}"><span>Sábado</span><b>8h30–11h30</b></li>
         <li class="${now.getDay() === 0 ? 'today' : ''}"><span>Domingo</span><b>Fechado</b></li>
       </ul>`;
