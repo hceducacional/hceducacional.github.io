@@ -1217,7 +1217,7 @@ function openNews(n, card) {
     <div class="nm-scroll">
       <article class="nm-panel" role="dialog" aria-modal="true" aria-labelledby="nm-title">
         <div class="nm-top">
-        <button class="nm-close" aria-label="Fechar notícia"><i data-icon="x"></i></button>
+        <button class="nm-close" aria-label="Fechar notícia"><i data-icon="x"></i><span>Fechar</span></button>
         <div class="nm-media ${multi ? 'multi' : ''}">
           ${multi ? `
             <div class="nm-track">${items.map((it) => `<img src="${esc(imgUrl(it.src))}" alt=""${objPos(it.pos)}>`).join('')}</div>
