@@ -1347,6 +1347,11 @@ body.modal-open { overflow: hidden; }
     top: var(--tb-top); margin-top: var(--tb-top);
     padding: 0 max(12px, env(safe-area-inset-left)) 0 max(12px, env(safe-area-inset-right));
   }
+  /* site instalado na tela de início (app): ali o iPhone desfoca uma faixa bem maior no topo,
+     então a barra desce mais para ficar inteira abaixo dele */
+  @media (display-mode: standalone) {
+    .topbar-wrap { --tb-top: calc(10px + env(safe-area-inset-top) + env(safe-area-inset-top) * .45); }
+  }
   .topbar { height: 56px; padding: 0 8px 0 8px; gap: 10px; }
   .tb-logo { display: flex; width: 40px; height: 40px; border-radius: 50%; font-size: 14px; overflow: hidden; }
   .tb-title h1 { font-size: 15px; }
