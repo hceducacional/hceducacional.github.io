@@ -25,6 +25,15 @@ window.HC_CONTENT = {
       "pill": "Novidade",
       "title": "Nova turma de Informática",
       "desc": "Já estão abertas as inscrições para a nova turma de Informática Básica. Entre em contato com o nosso time comercial e saiba mais!"
+    },
+    {
+      "id": "t17945765183277fhc",
+      "image": "assets/conteudo/banner-t17945765183277fhc-4d4a558b.png",
+      "pill": "Curso de Informática",
+      "title": "Continue seu treinamento",
+      "desc": "Acesse a plataforma de digitação do curso de Informática Básica com seu usuário e senha para continuar progredindo",
+      "linkOn": true,
+      "url": "https://www.typing.com/br/student/login"
     }
   ],
   "exclusive": [
