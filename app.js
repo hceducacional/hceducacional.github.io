@@ -1086,6 +1086,25 @@ function newsBodyHTML() {
     </section>` : ''}`;
 }
 
+/* Radar decorativo atrás do título de Notícias: ondas que pulsam e "usuários conectados" em órbita */
+function newsRadar() {
+  const people = [
+    ['AL', '#a78bfa', '#7c3aed', 1, 0], ['MC', '#fbbf24', '#f97316', 1, 72], ['JP', '#38bdf8', '#2563eb', 1, 144],
+    ['RS', '#f472b6', '#db2777', 1, 216], ['BF', '#34d399', '#059669', 1, 288],
+  ];
+  // nas órbitas de dentro só pontinhos de luz, para não atrapalhar a leitura do título
+  const sparks = [[2, 40], [2, 220], [3, 120], [3, 300]];
+  return `
+  <div class="nr" aria-hidden="true">
+    <span class="nr-glow"></span>
+    <span class="nr-ring"></span><span class="nr-ring"></span><span class="nr-ring"></span>
+    <span class="nr-wave"></span><span class="nr-wave"></span><span class="nr-wave"></span>
+    ${[1, 2, 3].map((o) => `<span class="nr-orbit o${o}">${people.filter((p) => p[3] === o).map(([t, a, b, , deg]) =>
+      `<span class="nr-arm" style="--deg:${deg}deg"><span class="nr-user" style="--a:${a};--b:${b}">${t}<i></i></span></span>`).join('')}${
+      sparks.filter((p) => p[0] === o).map(([, deg]) => `<span class="nr-arm" style="--deg:${deg}deg"><span class="nr-spark"></span></span>`).join('')}</span>`).join('')}
+  </div>`;
+}
+
 function renderNews(view) {
   const cats = ['Todas', ...NEWS_CATS.filter((c) => news.some((n) => n.cat === c))];
   if (!cats.includes(newsFilter)) newsFilter = 'Todas';
@@ -1093,6 +1112,7 @@ function renderNews(view) {
   view.innerHTML = `
   <div class="wrap news-page">
     <header class="ap-hero reveal">
+      ${newsRadar()}
       <p class="ap-kicker">Notícias</p>
       <h1>Acontece no <span class="ap-grad">HC</span>.</h1>
       <p class="ap-sub">Conquistas, eventos e comunicados do HC Instituto Educacional, reunidos em um só lugar.</p>
