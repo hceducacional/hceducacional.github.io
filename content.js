@@ -285,7 +285,7 @@ window.HC_CONTENT = {
   "brand": [
     {
       "id": "logo",
-      "image": "assets/conteudo/logo-logo-382b87cd.webp"
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/6cd829eb-9b86-48b4-b57c-07a5dae74e0e.png"
     }
   ],
   "connect": [
