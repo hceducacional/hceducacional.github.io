@@ -17,6 +17,12 @@ const ICONS = {
   logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
   search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  plusCircle: '<circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8"/>',
+  userPlus: '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M19 8v6M16 11h6"/>',
+  key: '<circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2.5 2.5"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/>',
+  shieldOff: '<path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 1.6-.25 3-.9 4.2-1.85M19.6 15.4c.27-1.1.4-2.2.4-3.4V6l-8-3-3.6 1.35"/><path d="m3 3 18 18"/>',
+  alert: '<path d="M12 3 2 20h20Z"/><path d="M12 10v4M12 17.2v.1"/>',
   arrow: '<path d="M7 17 17 7M8 7h9v9"/>',
   left: '<path d="m15 18-6-6 6-6"/>',
   right: '<path d="m9 18 6-6-6-6"/>',
@@ -2336,7 +2342,7 @@ function renderPlaceholder(view, route) {
 let lastRoute = 'dashboard';
 function route() {
   const r = (location.hash || '#dashboard').slice(1);
-  if (r === 'sair') { setConfigUnlocked(false); toast('Sessão encerrada'); history.replaceState(null, '', '#dashboard'); return route(); }
+  if (r === 'sair') { setConfigUnlocked(false); if (window.HC_signOut) window.HC_signOut(); else toast('Sessão encerrada'); history.replaceState(null, '', '#dashboard'); return route(); }
   // Configurações pedem senha: fica na página atual até a senha certa ser digitada
   if (r.split('/')[0] === 'config' && !configUnlocked()) {
     history.replaceState(null, '', '#' + lastRoute);
@@ -2360,6 +2366,7 @@ function route() {
   if (r === 'config') renderConfig(view);
   else if (r === 'config/noticias') renderNewsAdmin(view);
   else if (r === 'noticias') renderNews(view);
+  else if (window.HC_ROUTES?.[r]) window.HC_ROUTES[r](view);
   else if (TITLES[r]) renderPlaceholder(view, r);
   else renderDashboard(view);
   window.scrollTo(0, 0);
