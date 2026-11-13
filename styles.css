@@ -1377,8 +1377,15 @@ body.modal-open { overflow: hidden; }
   }
   .tab span { display: block; max-height: 12px; overflow: hidden; transition: max-height .45s var(--ease), opacity .25s ease, transform .45s var(--ease); }
   .tab i { width: 22px; height: 22px; display: grid; }
-  .tab.active { color: #fff; background: rgba(255, 255, 255, .1); }
-  .tab.active i { color: var(--mint); }
+  /* cada aba tem a sua cor (tons que já aparecem no site): o ícone sempre colorido; a aba ativa ganha fundo e brilho da cor */
+  .tab { --tc: 52, 211, 153; }
+  .tab:nth-child(2) { --tc: 167, 139, 250; } /* Notícias: roxo */
+  .tab:nth-child(3) { --tc: 251, 191, 36; }  /* Indicar: âmbar */
+  .tab:nth-child(4) { --tc: 56, 189, 248; }  /* Agendar: azul-céu */
+  .tab:nth-child(5) { --tc: 244, 114, 182; } /* Mais: rosa */
+  .tab.active { color: #fff; background: rgba(var(--tc), .16); }
+  .tab.active i { color: rgb(var(--tc)); filter: drop-shadow(0 0 6px rgba(var(--tc), .55)); }
+  .tab i { color: rgba(var(--tc), .85); transition: color .2s, filter .2s; }
   /* ao descer a página a barra encolhe e mostra só os ícones; ao subir, volta com as legendas */
   .tabbar.compact { left: 52px; right: 52px; height: 50px; border-radius: 25px; bottom: calc(16px + env(safe-area-inset-bottom)); }
   .tabbar.compact .tab { height: 38px; gap: 0; border-radius: 19px; }
@@ -1883,4 +1890,104 @@ body.modal-open { overflow: hidden; }
   .us-filters button { flex: none; }
   .pv-text { font-size: 16px; }
   .au-card { padding: 26px 20px 20px; }
+}
+
+/* =========================================================
+   INDICAR — página "em breve" com entrada no estilo Apple
+   ========================================================= */
+.ref { max-width: 1120px; animation: none; overflow-x: clip; }
+.ref-hero { position: relative; isolation: isolate; text-align: center; padding: 24px 0 56px; }
+/* luzes coloridas que respiram por trás */
+.ref-glow { position: absolute; inset: -40px 0 0; z-index: -1; pointer-events: none; filter: blur(60px); opacity: 0; animation: refFade 1.6s ease .1s forwards; }
+.ref-glow span { position: absolute; width: 340px; height: 340px; border-radius: 50%; opacity: .5; animation: refDrift 14s ease-in-out infinite alternate; }
+.ref-glow span:nth-child(1) { left: 12%; top: 0; background: #34d399; }
+.ref-glow span:nth-child(2) { right: 10%; top: 30px; background: #60a5fa; animation-delay: -5s; }
+.ref-glow span:nth-child(3) { left: 40%; top: 120px; background: #fbbf24; opacity: .35; animation-delay: -9s; }
+
+/* ícone central com anéis e as iniciais dos amigos em órbita */
+.ref-orb { position: relative; width: 220px; height: 220px; margin: 0 auto 26px; display: grid; place-items: center; }
+.ref-ring { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(6, 122, 87, .18); opacity: 0; transform: scale(.6); animation: refRing 1.2s var(--ease) forwards; }
+.ref-ring.r2 { inset: 30px; border-color: rgba(6, 122, 87, .26); animation-delay: .12s; }
+.ref-ring.r3 { inset: 60px; border-color: rgba(6, 122, 87, .34); animation-delay: .24s; }
+.ref-core {
+  position: relative; width: 84px; height: 84px; border-radius: 28px; display: grid; place-items: center; color: #fff;
+  background: linear-gradient(150deg, #34d399, #0f9b6c 45%, #2563eb);
+  box-shadow: 0 20px 44px -14px rgba(6, 122, 87, .65), inset 0 1px 0 rgba(255, 255, 255, .35);
+  opacity: 0; transform: scale(.4) rotate(-25deg);
+  animation: refPop .9s cubic-bezier(.34, 1.56, .64, 1) .2s forwards, refFloat 5s ease-in-out 1.4s infinite;
+}
+.ref-core svg { width: 40px; height: 40px; }
+.ref-av {
+  position: absolute; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+  color: #fff; font-size: 14px; font-weight: 700; box-shadow: 0 0 0 3px var(--bg), 0 8px 20px -8px rgba(0, 0, 0, .4);
+  opacity: 0; animation: refPop .7s cubic-bezier(.34, 1.56, .64, 1) forwards, refFloat 6s ease-in-out infinite;
+}
+.ref-av.a1 { left: 4px; top: 54px; background: linear-gradient(160deg, #a78bfa, #7c3aed); animation-delay: .55s, 1.6s; }
+.ref-av.a2 { right: 0; top: 30px; background: linear-gradient(160deg, #38bdf8, #2563eb); animation-delay: .7s, 2.2s; }
+.ref-av.a3 { right: 26px; bottom: 6px; background: linear-gradient(160deg, #fbbf24, #f97316); animation-delay: .85s, 2.8s; }
+
+.ref-badge {
+  display: inline-flex; align-items: center; gap: 8px; margin: 0 0 18px; padding: 7px 14px; border-radius: 999px;
+  background: rgba(6, 122, 87, .1); color: var(--accent); font-size: 14px; font-weight: 700; letter-spacing: .02em;
+  opacity: 0; animation: refUp .8s var(--ease) .45s forwards;
+}
+.ref-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: refBlink 1.8s ease-in-out infinite; }
+/* título surge palavra a palavra, saindo do desfoque */
+.ref-title { margin: 0; font-size: clamp(40px, 6.6vw, 84px); line-height: 1.04; font-weight: 700; letter-spacing: -.04em; }
+.ref-title > span { display: inline-block; opacity: 0; filter: blur(12px); transform: translateY(24px); animation: refWord 1s var(--ease) forwards; }
+.ref-title > span:nth-child(1) { animation-delay: .6s; }
+.ref-title > span:nth-child(2) { animation-delay: .8s; }
+.ref-title > span:nth-child(3) { animation-delay: 1s; }
+.ref-sub { max-width: 640px; margin: 22px auto 0; font-size: 21px; line-height: 1.45; font-weight: 500; color: var(--ink-2); opacity: 0; animation: refUp .9s var(--ease) 1.25s forwards; }
+
+/* os três passos sobem em sequência */
+.ref-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.ref-step {
+  position: relative; padding: 28px 26px 30px; border-radius: 28px; background: var(--card);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 18px 40px -24px rgba(0, 0, 0, .3);
+  opacity: 0; transform: translateY(40px) scale(.97);
+  animation: refCard 1s var(--ease) calc(1.45s + var(--k) * .14s) forwards;
+  transition: transform .5s var(--ease), box-shadow .5s var(--ease);
+}
+.ref-step:hover { transform: translateY(-6px); box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 30px 60px -28px rgba(0, 0, 0, .4); }
+.ref-num { position: absolute; top: 24px; right: 26px; font-size: 15px; font-weight: 700; color: var(--line); font-variant-numeric: tabular-nums; }
+.ref-ico { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; color: #fff; margin-bottom: 20px; }
+.ref-step:nth-child(1) .ref-ico { background: linear-gradient(160deg, #34d399, #0f9b6c); }
+.ref-step:nth-child(2) .ref-ico { background: linear-gradient(160deg, #60a5fa, #2563eb); }
+.ref-step:nth-child(3) .ref-ico { background: linear-gradient(160deg, #fbbf24, #f97316); }
+.ref-ico i { width: 26px; height: 26px; display: grid; }
+.ref-step h3 { margin: 0 0 8px; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.ref-step p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--muted); }
+.ref-note { margin: 36px 0 0; text-align: center; font-size: 15px; color: var(--faint); opacity: 0; animation: refFade 1s ease 2.1s forwards; }
+
+@keyframes refFade { to { opacity: 1; } }
+@keyframes refUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes refWord { to { opacity: 1; filter: blur(0); transform: none; } }
+@keyframes refCard { to { opacity: 1; transform: none; } }
+@keyframes refRing { to { opacity: 1; transform: none; } }
+@keyframes refPop { to { opacity: 1; transform: none; } }
+@keyframes refFloat { 50% { translate: 0 -8px; } }
+@keyframes refBlink { 50% { opacity: .35; } }
+@keyframes refDrift { to { transform: translate(60px, 30px) scale(1.15); } }
+
+@media (max-width: 860px) {
+  .ref-hero { padding: 8px 0 36px; }
+  .ref-orb { width: 180px; height: 180px; margin-bottom: 20px; }
+  .ref-ring.r2 { inset: 24px; } .ref-ring.r3 { inset: 48px; }
+  .ref-core { width: 70px; height: 70px; border-radius: 22px; }
+  .ref-core svg { width: 34px; height: 34px; }
+  .ref-av { width: 38px; height: 38px; font-size: 12.5px; }
+  .ref-av.a1 { top: 44px; }
+  .ref-title { font-size: 36px; }
+  .ref-sub { font-size: 16.5px; margin-top: 16px; }
+  .ref-glow span { width: 220px; height: 220px; }
+  .ref-steps { grid-template-columns: 1fr; gap: 14px; }
+  .ref-step { padding: 22px 22px 24px; border-radius: 24px; }
+  .ref-ico { width: 46px; height: 46px; border-radius: 14px; margin-bottom: 14px; }
+  .ref-step h3 { font-size: 19px; }
+  .ref-step p { font-size: 15px; }
+  .ref-note { font-size: 13.5px; margin-top: 26px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ref *, .ref *::before { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; }
 }

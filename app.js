@@ -2312,6 +2312,42 @@ document.addEventListener('click', (e) => {
 });
 
 /* =========================================================
+   INDICAR (em breve): alunos indicam amigos e ganham desconto
+   ========================================================= */
+function renderReferral(view) {
+  const steps = [
+    ['userPlus', 'Convide', 'Indique amigos, familiares e colegas que querem estudar. É só informar o nome e o contato de quem você conhece.'],
+    ['users', 'Estudem juntos', 'Quando a pessoa indicada faz a matrícula, a secretaria do polo confirma a indicação.'],
+    ['star', 'Ganhe desconto', 'Cada indicação válida vira desconto nas mensalidades do seu curso. Quanto mais amigos, mais você economiza.'],
+  ];
+  view.innerHTML = `
+  <div class="wrap ref">
+    <section class="ref-hero">
+      <div class="ref-glow" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="ref-orb" aria-hidden="true">
+        <span class="ref-ring r1"></span><span class="ref-ring r2"></span><span class="ref-ring r3"></span>
+        <span class="ref-core"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+        <span class="ref-av a1">${initials('Ana Lima')}</span><span class="ref-av a2">${initials('João Pedro')}</span><span class="ref-av a3">${initials('Maria Clara')}</span>
+      </div>
+      <p class="ref-badge"><span class="ref-dot"></span>Em breve</p>
+      <h1 class="ref-title"><span>Indique.</span> <span>Estudem juntos.</span> <span class="ap-grad">Ganhe desconto.</span></h1>
+      <p class="ref-sub">Em breve, um espaço só seu para convidar quem você conhece a estudar no HC Instituto Educacional. A cada indicação válida, você ganha desconto na mensalidade do seu curso.</p>
+    </section>
+    <section class="ref-steps">
+      ${steps.map(([ico, t, d], k) => `
+      <article class="ref-step" style="--k:${k}">
+        <span class="ref-num">0${k + 1}</span>
+        <span class="ref-ico"><i data-icon="${ico}"></i></span>
+        <h3>${t}</h3>
+        <p>${d}</p>
+      </article>`).join('')}
+    </section>
+    <p class="ref-note">Estamos preparando tudo com cuidado. Assim que estiver no ar, avisamos por aqui.</p>
+  </div>`;
+  paintIcons(view);
+}
+
+/* =========================================================
    Páginas ainda não construídas
    ========================================================= */
 const TITLES = {
@@ -2366,6 +2402,7 @@ function route() {
   if (r === 'config') renderConfig(view);
   else if (r === 'config/noticias') renderNewsAdmin(view);
   else if (r === 'noticias') renderNews(view);
+  else if (r === 'indicar') renderReferral(view);
   else if (window.HC_ROUTES?.[r]) window.HC_ROUTES[r](view);
   else if (TITLES[r]) renderPlaceholder(view, r);
   else renderDashboard(view);
