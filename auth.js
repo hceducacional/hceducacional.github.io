@@ -62,6 +62,7 @@ async function setUser(user) {
   const first = !auth.ready;
   auth.ready = true;
   paintUser();
+  if (isAdmin() && pending.size) [...pending].forEach((k) => queuePush(k)); // termina envios que ficaram pendentes
   const r = (location.hash || '').slice(1);
   if ((changed || first) && (r === 'perfil' || r === 'usuarios' || r.startsWith('config'))) route(); // a página depende de quem entrou
 }
@@ -590,6 +591,84 @@ function renderPrivacy(view) {
     </article>
   </div>`;
 }
+
+/* ---------- Conteúdo do site compartilhado ----------
+   Tudo o que se edita em Configurações fica na tabela site_content (todos leem, só
+   administradores gravam) e as imagens no bucket público "site". Assim, uma troca feita
+   por um administrador aparece para todo mundo, sem precisar publicar no GitHub. */
+const CONTENT = {
+  banners: [() => banners, (v) => { banners = v; }], exclusive: [() => exclusive, (v) => { exclusive = v; }],
+  links: [() => links, (v) => { links = v; }], news: [() => news, (v) => { news = v; }],
+  brand: [() => brandList, (v) => { brandList = v; }], connect: [() => connect, (v) => { connect = v; }],
+  authors: [() => authors, (v) => { authors = v; }], radar: [() => radar, (v) => { radar = v; }],
+};
+// alterações que ainda não chegaram ao banco (sem internet, por exemplo): não são sobrescritas
+const pending = new Set(store.get('pending', []));
+const setPending = (key, on) => { on ? pending.add(key) : pending.delete(key); store.set('pending', [...pending]); };
+
+async function loadRemote() {
+  if (!sb) return false;
+  try {
+    const res = await Promise.race([
+      sb.from('site_content').select('key, data'),
+      new Promise((r) => setTimeout(() => r({ timeout: true }), 4000)), // sem resposta: usa o que já tem
+    ]);
+    if (res.timeout || res.error || !res.data) return false;
+    res.data.forEach(({ key, data }) => {
+      if (!CONTENT[key] || !Array.isArray(data) || pending.has(key)) return;
+      CONTENT[key][1](data);
+      store.set(key, data);
+    });
+    return true;
+  } catch { return false; }
+}
+
+const EXT_OF = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/svg+xml': 'svg' };
+async function uploadRef(ref) {
+  if (!ref || !ref.startsWith('idb:')) return ref; // já é um endereço (Supabase ou arquivo do site)
+  const blob = await idbGet(ref.slice(4));
+  if (!blob) return '';
+  const path = `${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}.${EXT_OF[blob.type] || 'jpg'}`;
+  const up = await sb.storage.from('site').upload(path, blob, { contentType: blob.type || 'image/jpeg', cacheControl: '31536000' });
+  if (up.error) throw up.error;
+  const url = sb.storage.from('site').getPublicUrl(path).data.publicUrl;
+  if (imgCache.has(ref)) imgCache.set(url, imgCache.get(ref)); // continua exibindo sem baixar de novo
+  return url;
+}
+
+const pushTimers = {}, pushChain = {};
+let pushToastTimer;
+function queuePush(key) {
+  if (!CONTENT[key] || !isAdmin()) return;
+  setPending(key, true);
+  clearTimeout(pushTimers[key]);
+  pushTimers[key] = setTimeout(() => { pushChain[key] = (pushChain[key] || Promise.resolve()).then(() => pushContent(key)); }, 1200);
+}
+async function pushContent(key) {
+  if (!isAdmin()) return;
+  const list = CONTENT[key][0]();
+  try {
+    for (const it of list) {
+      if (it.image) it.image = await uploadRef(it.image);
+      if (Array.isArray(it.gallery)) it.gallery = (await Promise.all(it.gallery.map(uploadRef))).filter(Boolean);
+    }
+    store.set(key, list);
+    const { error } = await sb.from('site_content').upsert({ key, data: list });
+    if (error) throw error;
+    setPending(key, false);
+    clearTimeout(pushToastTimer);
+    pushToastTimer = setTimeout(() => toast('Salvo. A alteração já aparece para todos.'), 300);
+  } catch (err) {
+    toast('Salvo só neste computador: ' + authError(err) + ' Vamos tentar de novo.');
+    setTimeout(() => queuePush(key), 15000);
+  }
+}
+// envia de uma vez todo o conteúdo atual (usado na primeira vez)
+async function pushAll() { for (const k of Object.keys(CONTENT)) await pushContent(k); return 'ok'; }
+
+window.HC_loadRemote = loadRemote;
+window.HC_queuePush = queuePush;
+window.HC_pushAll = pushAll;
 
 /* ---------- Áreas só de administradores ---------- */
 function adminOnly(view, title) {

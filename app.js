@@ -69,6 +69,15 @@ const store = {
   },
 };
 
+/* Conteúdo do site (banners, notícias...): salvo neste navegador e, quando quem edita é
+   administrador, enviado ao Supabase para aparecer para todos (veja auth.js) */
+function saveShared(key, value) {
+  cleanupImages();
+  const ok = store.set(key, value);
+  if (ok) window.HC_queuePush?.(key);
+  return ok;
+}
+
 const MAX_BANNERS = 5;
 const SLIDE_MS = 10000;
 const RECENT_MS = 16000; // tempo de cada notícia recente na tela inicial
@@ -81,7 +90,7 @@ const DEFAULT_BANNERS = [
 /* Conteúdo publicado (content.js) tem prioridade sobre os exemplos embutidos */
 const PUBLISHED = window.HC_CONTENT || {};
 let banners = store.get('banners', PUBLISHED.banners || DEFAULT_BANNERS);
-const saveBanners = () => { cleanupImages(); return store.set('banners', banners); };
+const saveBanners = () => saveShared('banners', banners);
 
 /* Somente no HC Instituto Educacional: segundo carrossel (jogos, materiais de estudo...) */
 const DEFAULT_EXCLUSIVE = [
@@ -89,7 +98,7 @@ const DEFAULT_EXCLUSIVE = [
     desc: 'Jogos, materiais de estudo e projetos feitos pela nossa equipe para turbinar o seu aprendizado.' },
 ];
 let exclusive = store.get('exclusive', PUBLISHED.exclusive || DEFAULT_EXCLUSIVE);
-const saveExclusive = () => { cleanupImages(); return store.set('exclusive', exclusive); };
+const saveExclusive = () => saveShared('exclusive', exclusive);
 
 /* Botões de acesso rápido (instituições) */
 const MAX_LINKS = 12;
@@ -102,7 +111,7 @@ const DEFAULT_LINKS = [
   { id: 'l6', name: 'EDUCA NEXUS', url: '', image: '', c1: '#ffe27a', c2: '#f5b51f' },
 ];
 let links = store.get('links', PUBLISHED.links || DEFAULT_LINKS);
-const saveLinks = () => { cleanupImages(); return store.set('links', links); };
+const saveLinks = () => saveShared('links', links);
 /* Mantenha-se conectado: 4 blocos fixos (1 grande, 1 largo e 2 menores) */
 const DEFAULT_CONNECT = [
   { id: 'c1', title: 'Siga o HC no Instagram', desc: 'Novidades, eventos e bastidores do polo em @hceducacional.', url: 'https://www.instagram.com/hceducacional/', image: '', whatsapp: '' },
@@ -137,7 +146,7 @@ const CONNECT_SLOTS = [
 ];
 let connect = store.get('connect', PUBLISHED.connect || DEFAULT_CONNECT);
 connect = DEFAULT_CONNECT.map((d, i) => ({ ...d, ...(connect[i] || {}) })); // sempre 4 blocos
-const saveConnect = () => { cleanupImages(); return store.set('connect', connect); };
+const saveConnect = () => saveShared('connect', connect);
 
 const normalizeUrl = (u = '') => {
   u = u.trim(); if (!u) return '';
@@ -164,7 +173,7 @@ let prefs = store.get('prefs', { hideSensitive: false });
 
 /* Logo da barra lateral (lista de 1 item para usar o mesmo fluxo de imagens/exportação) */
 let brandList = store.get('brand', PUBLISHED.brand || [{ id: 'logo', image: '' }]);
-const saveBrand = () => { cleanupImages(); return store.set('brand', brandList); };
+const saveBrand = () => saveShared('brand', brandList);
 const LOGO_DEFAULT = '<span class="h">H</span><span class="c">C</span>';
 function paintLogo() { // barra lateral e (no celular) barra de cima
   const img = brandList[0]?.image;
@@ -671,7 +680,7 @@ function initCarousel(box, list, key) {
 function renderConfig(view) {
   view.innerHTML = `
   <div class="wrap">
-    ${pageHead('Configurações', 'Personalize o seu polo.', 'Escolha o que deseja editar. Cada ajuste abre em uma janela e é salvo automaticamente.')}
+    ${pageHead('Configurações', 'Personalize o seu polo.', 'Escolha o que deseja editar. Cada ajuste abre em uma janela, é salvo automaticamente e aparece para todos que acessam o site.')}
 
     <div class="cfg-grid" id="acc-list">
       ${accSection('banners', 'image', 'Banners do topo', 'O carrossel de destaque da tela inicial: imagens, textos e botão “Acessar”.', 'count-banners', '<div id="banners-panel"></div>')}
@@ -1045,7 +1054,7 @@ function fmtDate(iso, long = false) {
 }
 const NEWS_CATS = ['Conquistas', 'Infraestrutura', 'Acadêmico', 'Eventos', 'Comunicados'];
 const NEWS_DEFAULT_IMG = 'assets/news/padrao.svg';
-const saveNews = () => { cleanupImages(); return store.set('news', news); };
+const saveNews = () => saveShared('news', news);
 
 /* Autores das notícias: foto de perfil e nome; cada notícia escolhe quem a publicou */
 /* Pessoas do radar da página de Notícias (as bolinhas que giram em volta do título) */
@@ -1055,10 +1064,10 @@ const DEFAULT_RADAR = [
   { id: 'r4', name: 'Rita Sousa', image: '' }, { id: 'r5', name: 'Bruno Ferreira', image: '' },
 ];
 let radar = store.get('radar', PUBLISHED.radar || DEFAULT_RADAR);
-const saveRadar = () => { cleanupImages(); return store.set('radar', radar); };
+const saveRadar = () => saveShared('radar', radar);
 const DEFAULT_AUTHORS = [{ id: 'a1', name: 'Comunicação HC', image: '' }];
 let authors = store.get('authors', PUBLISHED.authors || DEFAULT_AUTHORS);
-const saveAuthors = () => { cleanupImages(); return store.set('authors', authors); };
+const saveAuthors = () => saveShared('authors', authors);
 // notícias antigas guardavam só o nome: liga ao autor com o mesmo nome
 news.forEach((n) => { if (!n.authorId) { const a = authors.find((x) => x.name === n.author); if (a) n.authorId = a.id; } });
 const newsAuthor = (n) => authors.find((a) => a.id === n.authorId) || { name: n.author || 'Comunicação HC', image: '' };
@@ -2667,6 +2676,9 @@ paintIcons();
 (async () => {
   try {
     await migrateDataUrls();
+    // espera o auth.js (carregado depois deste arquivo) e busca o conteúdo publicado pelos administradores
+    if (document.readyState === 'loading') await new Promise((r) => document.addEventListener('DOMContentLoaded', r, { once: true }));
+    await window.HC_loadRemote?.();
     await loadImages();
     cleanupImages();
     navigator.storage?.persist?.(); // pede ao navegador para não apagar as imagens
