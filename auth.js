@@ -46,7 +46,11 @@ async function loadProfile() {
   if (error) console.warn('Perfil:', error.message);
   auth.profile = data || null;
   auth.pending = 0;
+  auth.links = {};
   if (isAdmin()) {
+    // links restritos (ex.: Sistema Semipresencial): ficam só no banco e só administradores leem
+    const { data: links } = await sb.from('admin_links').select('id, url');
+    (links || []).forEach((l) => { auth.links[l.id] = l.url; });
     const { count } = await sb.from('profiles').select('id', { count: 'exact', head: true }).eq('status', 'pending');
     auth.pending = count || 0;
   }
@@ -59,12 +63,13 @@ async function setUser(user) {
   auth.ready = true;
   paintUser();
   const r = (location.hash || '').slice(1);
-  if ((changed || first) && (r === 'perfil' || r === 'usuarios')) route(); // a página depende de quem entrou
+  if ((changed || first) && (r === 'perfil' || r === 'usuarios' || r.startsWith('config'))) route(); // a página depende de quem entrou
 }
 async function refreshMe() { await loadProfile(); paintUser(); }
 
 /* ---------- Barra de cima: nome, e-mail e foto ---------- */
 function paintUser() {
+  document.body.classList.toggle('is-admin', isAdmin()); // mostra os itens só de administradores
   const box = $('#tb-user'); if (!box) return;
   if (!sb) { box.innerHTML = ''; return; }
   if (!auth.user) {
@@ -586,7 +591,33 @@ function renderPrivacy(view) {
   </div>`;
 }
 
+/* ---------- Áreas só de administradores ---------- */
+function adminOnly(view, title) {
+  waitAuth(view, () => {
+    if (!auth.user) return needLogin(view, title);
+    view.innerHTML = `<div class="wrap"><section class="soon">${pageHead(esc(title), 'Acesso restrito.', 'Esta área é só para administradores do site. Se você precisa de acesso, fale com a secretaria do polo.')}<a class="btn-dark" href="#dashboard">Voltar ao Dashboard</a></section></div>`;
+  });
+}
+const ADMIN_LINK_TITLES = { semipresencial: 'Sistema Semipresencial' };
+document.addEventListener('click', async (e) => {
+  const a = e.target.closest('[data-locked]'); if (!a) return;
+  e.preventDefault();
+  const id = a.dataset.locked, title = ADMIN_LINK_TITLES[id] || 'Área restrita';
+  if (!sb) return toast('Não foi possível verificar o acesso. Verifique a internet.');
+  if (!auth.user) { toast(`${title}: entre com uma conta de administrador.`); return openAuth('login'); }
+  if (!isAdmin()) return openAuth('info', { title: 'Acesso restrito', icon: 'lock', tone: 'warn', text: `O ${esc(title)} é só para administradores do site.` });
+  const url = auth.links?.[id];
+  if (url) return void window.open(url, '_blank', 'noopener');
+  // ainda não carregou: busca e mostra um link para abrir (o navegador bloqueia abrir guia depois de esperar)
+  const { data } = await sb.from('admin_links').select('url').eq('id', id).maybeSingle();
+  if (!data?.url) return toast('Esse link ainda não foi cadastrado.');
+  auth.links[id] = data.url;
+  if (!window.open(data.url, '_blank', 'noopener')) toast('Toque de novo para abrir.');
+});
+
 window.HC_ROUTES = { perfil: renderProfile, usuarios: renderUsers, privacidade: renderPrivacy };
+window.HC_isAdmin = isAdmin;
+window.HC_adminOnly = adminOnly;
 window.HC_signOut = signOut;
 
 /* ---------- Início ---------- */

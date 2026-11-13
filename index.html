@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>HC Instituto Educacional</title>
   <!-- Ícones e instalação como app -->
   <link rel="icon" href="favicon.ico" sizes="48x48" />
@@ -35,11 +35,11 @@
       <a class="sb-item" data-route="noticias" href="#noticias"><i data-icon="news"></i><span>Notícias</span></a>
       <a class="sb-item" data-route="indicar" href="#indicar"><i data-icon="plusCircle"></i><span>Indicar</span></a>
       <a class="sb-item" href="https://prova-facil-favenihc.lovable.app/" target="_blank" rel="noopener"><i data-icon="calendar"></i><span>Agendar Atendimento</span></a>
-      <a class="sb-item" href="#" data-locked="semipresencial"><i data-icon="lock"></i><span>Sistema Semipresencial</span></a>
+      <a class="sb-item admin-only" href="#" data-locked="semipresencial"><i data-icon="lock"></i><span>Sistema Semipresencial</span></a>
       <a class="sb-item" data-route="relatorio" href="#relatorio"><i data-icon="report"></i><span>Relatório Mensal</span></a>
 
       <div class="sb-section sb-section-gap">Outros</div>
-      <a class="sb-item" data-route="config" href="#config"><i data-icon="settings"></i><span>Configurações</span></a>
+      <a class="sb-item admin-only" data-route="config" href="#config"><i data-icon="settings"></i><span>Configurações</span></a>
       <a class="sb-item" data-route="seguranca" href="#seguranca"><i data-icon="shield"></i><span>Segurança</span></a>
       <a class="sb-item" data-route="ajuda" href="#ajuda"><i data-icon="help"></i><span>Ajuda / Suporte</span></a>
     </nav>
@@ -98,9 +98,9 @@
     <div class="more-backdrop" data-more-close></div>
     <div class="more-sheet" role="dialog" aria-modal="true" aria-label="Mais opções">
       <span class="more-grab" aria-hidden="true"></span>
-      <a class="more-item" href="#" data-locked="semipresencial"><span class="more-ico" style="--c:#5e5ce6"><i data-icon="lock"></i></span>Sistema Semipresencial</a>
+      <a class="more-item admin-only" href="#" data-locked="semipresencial"><span class="more-ico" style="--c:#5e5ce6"><i data-icon="lock"></i></span>Sistema Semipresencial</a>
       <a class="more-item" data-route="relatorio" href="#relatorio"><span class="more-ico" style="--c:#0a84ff"><i data-icon="report"></i></span>Relatório Mensal</a>
-      <a class="more-item" data-route="config" href="#config"><span class="more-ico" style="--c:#8e8e93"><i data-icon="settings"></i></span>Configurações</a>
+      <a class="more-item admin-only" data-route="config" href="#config"><span class="more-ico" style="--c:#8e8e93"><i data-icon="settings"></i></span>Configurações</a>
       <a class="more-item" data-route="seguranca" href="#seguranca"><span class="more-ico" style="--c:#34c759"><i data-icon="shield"></i></span>Segurança</a>
       <a class="more-item" data-route="ajuda" href="#ajuda"><span class="more-ico" style="--c:#ff9f0a"><i data-icon="help"></i></span>Ajuda / Suporte</a>
       <a class="more-item danger" href="#sair"><span class="more-ico" style="--c:#ff3b30"><i data-icon="logout"></i></span>Desconectar</a>

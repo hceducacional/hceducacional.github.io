@@ -255,7 +255,7 @@ async function storeImage(file, kind) {
   return ref;
 }
 
-const allImageRefs = () => [...banners, ...exclusive, ...links, ...news, ...brandList, ...connect, ...authors].flatMap((x) => [x.image, ...(x.gallery || [])]).filter(Boolean);
+const allImageRefs = () => [...banners, ...exclusive, ...links, ...news, ...brandList, ...connect, ...authors, ...radar].flatMap((x) => [x.image, ...(x.gallery || [])]).filter(Boolean);
 async function loadImages() {
   for (const ref of allImageRefs()) {
     if (!ref.startsWith('idb:') || imgCache.has(ref)) continue;
@@ -308,7 +308,7 @@ async function exportContent() {
     if (Array.isArray(it.gallery)) out.gallery = (await Promise.all(it.gallery.map(one))).filter(Boolean);
     return out;
   }));
-  return { banners: await conv(banners), exclusive: await conv(exclusive), links: await conv(links), news: await conv(news), brand: await conv(brandList), connect: await conv(connect), authors: await conv(authors) };
+  return { banners: await conv(banners), exclusive: await conv(exclusive), links: await conv(links), news: await conv(news), brand: await conv(brandList), connect: await conv(connect), authors: await conv(authors), radar: await conv(radar) };
 }
 window.HC_exportContent = exportContent;
 
@@ -685,17 +685,21 @@ function renderConfig(view) {
       ${accSection('connect', 'monitor', 'Mantenha-se conectado', 'Os blocos de vidro fosco com WhatsApp, Instagram e links de atendimento.', 'count-connect', '<div id="connect-panel"></div>')}
       ${accSection('links', 'link', 'Acesso rápido', 'Atalhos para os portais das instituições parceiras, com imagem ou degradê.', 'count-links', '<div id="links-panel"></div>')}
       ${accSection('brand', 'image', 'Logo do painel', 'A imagem exibida no topo da barra lateral, em todas as páginas.', '', '<div id="brand-panel"></div>')}
-      ${accSection('prefs', 'shield', 'Preferências', 'Ajustes de exibição e privacidade, como ocultar CPF e telefone.', '', `
+      ${accSection('prefs', 'shield', 'Preferências', 'Ajustes de exibição e privacidade, e as fotos do radar da página de Notícias.', '', `
         <p class="desc">Ajustes de exibição aplicados neste navegador.</p>
         <div class="pref">
           <span class="pref-icon"><i data-icon="shield"></i></span>
           <div class="pref-text"><strong>Ocultar dados sensíveis</strong><span>CPF e telefone aparecem mascarados</span></div>
           <label class="switch"><input type="checkbox" id="pref-hide" ${prefs.hideSensitive ? 'checked' : ''}><span></span></label>
-        </div>`)}
+        </div>
+        <h4 class="pref-h">Radar da página de Notícias</h4>
+        <p class="desc">As 5 bolinhas que giram em volta do título "Acontece no HC". Toque na foto para trocar; sem foto, aparecem as iniciais do nome.</p>
+        <div id="radar-panel"></div>`)}
     </div>
     <input type="file" id="file-link" accept="image/*" hidden>
     <input type="file" id="file-logo" accept="image/*" hidden>
     <input type="file" id="file-connect" accept="image/*" hidden>
+    <input type="file" id="file-radar" accept="image/*" hidden>
   </div>`;
   paintIcons(view);
   initAccordion();
@@ -710,6 +714,62 @@ function renderConfig(view) {
   initLinksPanel();
   initBrandPanel();
   initConnectPanel();
+  initRadarPanel();
+}
+
+/* Preferências: pessoas do radar de Notícias (foto, enquadramento e nome) */
+function drawRadarPanel() {
+  const panel = $('#radar-panel'); if (!panel) return;
+  panel.innerHTML = `<div class="au-list">${radar.map((r, k) => `
+    <div class="au-item">
+      <button class="au-photo" type="button" data-ract="photo" data-id="${esc(r.id)}" title="Trocar foto" style="--a:${RADAR_COLORS[k][0]};--b:${RADAR_COLORS[k][1]}">
+        ${avatarHTML(r, 'au-avatar rd-avatar')}
+        <span class="au-cam"><i data-icon="image"></i></span>
+      </button>
+      <div class="au-main">
+        <input data-rfield="name" data-id="${esc(r.id)}" value="${esc(r.name)}" maxlength="40" aria-label="Nome da pessoa ${k + 1} do radar" placeholder="Nome">
+        <span class="au-sub">${r.image ? 'Com foto' : 'Mostrando as iniciais'}</span>
+      </div>
+      <div class="au-actions">
+        ${r.image ? `<button class="icon-btn neutral ${r.focus ? 'au-focus-set' : ''}" type="button" data-ract="focus" data-id="${esc(r.id)}" title="Enquadrar foto"><i data-icon="focus"></i></button>
+        <button class="icon-btn" type="button" data-ract="rmphoto" data-id="${esc(r.id)}" title="Remover foto"><i data-icon="x"></i></button>` : ''}
+      </div>
+    </div>`).join('')}</div>`;
+  paintIcons(panel);
+}
+function initRadarPanel() {
+  const panel = $('#radar-panel'); if (!panel) return;
+  let photoId = null;
+  drawRadarPanel();
+  panel.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-ract]'); if (!t) return;
+    const r = radar.find((x) => x.id === t.dataset.id); if (!r) return;
+    if (t.dataset.ract === 'photo') { photoId = r.id; $('#file-radar').click(); }
+    if (t.dataset.ract === 'rmphoto') { r.image = ''; delete r.focus; saveRadar(); drawRadarPanel(); toast('Foto removida'); }
+    if (t.dataset.ract === 'focus') {
+      focusEditor({ src: r.image, pos: r.focus, round: true }).then((pos) => {
+        if (pos === null) return;
+        r.focus = pos; saveRadar(); drawRadarPanel(); toast('Enquadramento salvo');
+      });
+    }
+  });
+  panel.addEventListener('input', (e) => {
+    const f = e.target.closest('[data-rfield]'); if (!f) return;
+    const r = radar.find((x) => x.id === f.dataset.id); if (!r) return;
+    r.name = f.value;
+    const av = panel.querySelector(`[data-ract="photo"][data-id="${r.id}"] .avatar`);
+    if (av && !r.image) av.innerHTML = `<span>${esc(initials(r.name))}</span>`;
+    clearTimeout(panel._t); panel._t = setTimeout(saveRadar, 400);
+  });
+  $('#file-radar').addEventListener('change', async (e) => {
+    const file = e.target.files[0]; e.target.value = '';
+    const r = radar.find((x) => x.id === photoId);
+    if (!file || !r) return;
+    const old = r.image, oldFocus = r.focus;
+    r.image = await storeImage(file, 'author'); delete r.focus;
+    if (saveRadar()) toast('Foto atualizada. Use o botão de enquadrar para centralizar o rosto.'); else { r.image = old; r.focus = oldFocus; }
+    drawRadarPanel();
+  });
 }
 
 /* Os dois carrosséis usam o mesmo editor */
@@ -988,6 +1048,14 @@ const NEWS_DEFAULT_IMG = 'assets/news/padrao.svg';
 const saveNews = () => { cleanupImages(); return store.set('news', news); };
 
 /* Autores das notícias: foto de perfil e nome; cada notícia escolhe quem a publicou */
+/* Pessoas do radar da página de Notícias (as bolinhas que giram em volta do título) */
+const RADAR_COLORS = [['#a78bfa', '#7c3aed'], ['#fbbf24', '#f97316'], ['#38bdf8', '#2563eb'], ['#f472b6', '#db2777'], ['#34d399', '#059669']];
+const DEFAULT_RADAR = [
+  { id: 'r1', name: 'Ana Lima', image: '' }, { id: 'r2', name: 'Maria Clara', image: '' }, { id: 'r3', name: 'João Pedro', image: '' },
+  { id: 'r4', name: 'Rita Sousa', image: '' }, { id: 'r5', name: 'Bruno Ferreira', image: '' },
+];
+let radar = store.get('radar', PUBLISHED.radar || DEFAULT_RADAR);
+const saveRadar = () => { cleanupImages(); return store.set('radar', radar); };
 const DEFAULT_AUTHORS = [{ id: 'a1', name: 'Comunicação HC', image: '' }];
 let authors = store.get('authors', PUBLISHED.authors || DEFAULT_AUTHORS);
 const saveAuthors = () => { cleanupImages(); return store.set('authors', authors); };
@@ -1088,10 +1156,7 @@ function newsBodyHTML() {
 
 /* Radar decorativo atrás do título de Notícias: ondas que pulsam e "usuários conectados" em órbita */
 function newsRadar() {
-  const people = [
-    ['AL', '#a78bfa', '#7c3aed', 1, 0], ['MC', '#fbbf24', '#f97316', 1, 72], ['JP', '#38bdf8', '#2563eb', 1, 144],
-    ['RS', '#f472b6', '#db2777', 1, 216], ['BF', '#34d399', '#059669', 1, 288],
-  ];
+  const people = radar.slice(0, 5).map((r, k) => [r, RADAR_COLORS[k][0], RADAR_COLORS[k][1], 1, k * 72]);
   // nas órbitas de dentro só pontinhos de luz, para não atrapalhar a leitura do título
   const sparks = [[2, 40], [2, 220], [3, 120], [3, 300]];
   return `
@@ -1100,7 +1165,7 @@ function newsRadar() {
     <span class="nr-ring"></span><span class="nr-ring"></span><span class="nr-ring"></span>
     <span class="nr-wave"></span><span class="nr-wave"></span><span class="nr-wave"></span>
     ${[1, 2, 3].map((o) => `<span class="nr-orbit o${o}">${people.filter((p) => p[3] === o).map(([t, a, b, , deg]) =>
-      `<span class="nr-arm" style="--deg:${deg}deg"><span class="nr-user" style="--a:${a};--b:${b}">${t}<i></i></span></span>`).join('')}${
+      `<span class="nr-arm" style="--deg:${deg}deg"><span class="nr-user" style="--a:${a};--b:${b}">${t.image ? `<img src="${esc(imgUrl(t.image))}" alt=""${objPos(t.focus)}>` : esc(initials(t.name))}<i></i></span></span>`).join('')}${
       sparks.filter((p) => p[0] === o).map(([, deg]) => `<span class="nr-arm" style="--deg:${deg}deg"><span class="nr-spark"></span></span>`).join('')}</span>`).join('')}
   </div>`;
 }
@@ -2059,123 +2124,6 @@ function drawRecentPanel() {
   paintIcons(panel);
 }
 
-/* =========================================================
-   ACESSO RESTRITO (senha antes de abrir um sistema)
-   O endereço de destino fica criptografado com a própria senha (AES-GCM,
-   chave derivada por PBKDF2): sem a senha certa não é possível descobri-lo.
-   Para trocar senha ou link, gere um novo bloco com HC_lockLink(url, senha).
-   ========================================================= */
-const LOCKED_LINKS = {
-  semipresencial: {
-    title: 'Sistema Semipresencial',
-    salt: 'wAQLLGsqFsD+BVg1T/Kf/g==', iv: 'IE3/lY3FB/J56sKA',
-    data: '84SrvteffUlK0qls1NGAv0E23ShnamX1cJvecZqLe9Kur1gYuQkHZOqlwrHK',
-  },
-  // Configurações: o conteúdo cifrado é só uma confirmação ("hc-config-ok")
-  config: {
-    title: 'Configurações',
-    sub: 'Área restrita à equipe do polo. Digite a senha para continuar.',
-    salt: 'uPiwFtLM7Gqma51QN/H2xQ==', iv: 'ZJXH826ONPxbj/Mt',
-    data: '0auLW64GLet+bn0wWjFywQuGUHMjxjq7WfbmRA==',
-  },
-};
-const LOCK_ITER = 250000;
-const fromB64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-async function lockKey(pass, salt, usage) {
-  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
-  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: LOCK_ITER, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, [usage]);
-}
-async function unlockLink(item, pass) {
-  try {
-    const key = await lockKey(pass, fromB64(item.salt), 'decrypt');
-    const out = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(item.iv) }, key, fromB64(item.data));
-    return new TextDecoder().decode(out);
-  } catch { return null; } // senha errada
-}
-window.HC_lockLink = async (url, pass) => {
-  const b64 = (u) => btoa(String.fromCharCode(...new Uint8Array(u)));
-  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await lockKey(pass, salt, 'encrypt'), new TextEncoder().encode(url));
-  return { salt: b64(salt), iv: b64(iv), data: b64(ct) };
-};
-
-/* Pop-up de senha. onOk recebe o conteúdo decifrado; onCancel é chamado ao fechar sem entrar. */
-function openLock(id, onOk = (url) => openUnlocked(url), onCancel) {
-  const item = LOCKED_LINKS[id];
-  if (!item || document.querySelector('.lk')) return;
-  const wrap = document.createElement('div');
-  wrap.className = 'lk';
-  wrap.innerHTML = `
-    <div class="lk-backdrop"></div>
-    <form class="lk-card" role="dialog" aria-modal="true" aria-labelledby="lk-title" autocomplete="off">
-      <span class="lk-icon"><i data-icon="lock"></i></span>
-      <h2 id="lk-title">${esc(item.title)}</h2>
-      <p class="lk-sub">${esc(item.sub || 'Acesso restrito a pessoas autorizadas. Digite a senha para continuar.')}</p>
-      <div class="lk-field">
-        <input type="password" id="lk-pass" placeholder="Senha de acesso" aria-label="Senha de acesso" autocomplete="off" spellcheck="false">
-        <button type="button" class="lk-eye" aria-label="Mostrar senha"><i data-icon="eye"></i></button>
-      </div>
-      <p class="lk-msg" role="alert"></p>
-      <div class="lk-actions">
-        <button type="button" class="btn-soft lk-cancel">Cancelar</button>
-        <button type="submit" class="btn-dark lk-go">Entrar</button>
-      </div>
-    </form>`;
-  document.body.appendChild(wrap);
-  paintIcons(wrap);
-  const card = wrap.querySelector('.lk-card');
-  const input = wrap.querySelector('#lk-pass');
-  const msg = wrap.querySelector('.lk-msg');
-  const go = wrap.querySelector('.lk-go');
-  const eye = wrap.querySelector('.lk-eye');
-  const lastFocus = document.activeElement;
-  requestAnimationFrame(() => wrap.classList.add('in'));
-  setTimeout(() => input.focus(), 60);
-
-  let done = false;
-  const close = () => {
-    if (!done) onCancel?.();
-    document.removeEventListener('keydown', onKey);
-    wrap.classList.remove('in');
-    setTimeout(() => wrap.remove(), 300);
-    lastFocus?.focus?.({ preventScroll: true });
-  };
-  const onKey = (e) => {
-    if (e.key === 'Escape') close();
-    if (e.key === 'Tab') {
-      const f = [...card.querySelectorAll('input, button')];
-      if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
-      else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
-    }
-  };
-  document.addEventListener('keydown', onKey);
-  wrap.querySelector('.lk-backdrop').addEventListener('click', close);
-  wrap.querySelector('.lk-cancel').addEventListener('click', close);
-  eye.addEventListener('click', () => {
-    const show = input.type === 'password';
-    input.type = show ? 'text' : 'password';
-    eye.setAttribute('aria-label', show ? 'Ocultar senha' : 'Mostrar senha');
-    eye.innerHTML = `<i data-icon="${show ? 'eyeoff' : 'eye'}"></i>`; paintIcons(eye);
-    input.focus();
-  });
-  input.addEventListener('input', () => { msg.textContent = ''; card.classList.remove('error'); });
-
-  card.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!input.value) { input.focus(); return; }
-    go.disabled = true; go.textContent = 'Verificando…';
-    const url = await unlockLink(item, input.value);
-    go.disabled = false; go.textContent = 'Entrar';
-    if (!url) {
-      msg.textContent = 'Senha incorreta. Tente novamente.';
-      card.classList.remove('error'); void card.offsetWidth; card.classList.add('error');
-      input.select();
-      return;
-    }
-    done = true;
-    if (onOk(url, msg, close) !== false) close();
-  });
-}
 /* Editor de enquadramento: escolhe o ponto da foto que deve ficar sempre visível.
    Resolve com "x% y%" (ou '' para o padrão) ao salvar, ou null ao cancelar. */
 function focusEditor({ src, pos, round = false }) { // round: prévias em círculo (foto de perfil)
@@ -2324,63 +2272,6 @@ function confirmDialog({ title, sub = '', image = '', ok = 'Excluir', icon = 'tr
   });
 }
 
-/* Abre o sistema liberado em nova guia (com alternativa se o navegador bloquear) */
-function openUnlocked(url, msg, close) {
-  const win = window.open(url, '_blank', 'noopener');
-  if (win === null && !document.hidden) {
-    msg.innerHTML = `<a class="lk-open" href="${esc(url)}" target="_blank" rel="noopener">Abrir o sistema</a>`;
-    msg.classList.add('ok');
-    msg.querySelector('a').addEventListener('click', () => setTimeout(close, 100));
-    return false;
-  }
-}
-
-/* Configurações: liberadas só nesta guia, até ela ser fechada ou a sessão ser encerrada */
-const CONFIG_FLAG = 'hc:config-ok';
-const configUnlocked = () => { try { return sessionStorage.getItem(CONFIG_FLAG) === '1'; } catch { return false; } };
-const setConfigUnlocked = (on) => { try { on ? sessionStorage.setItem(CONFIG_FLAG, '1') : sessionStorage.removeItem(CONFIG_FLAG); } catch {} };
-document.addEventListener('click', (e) => {
-  const a = e.target.closest('[data-locked]'); if (!a) return;
-  e.preventDefault();
-  openLock(a.dataset.locked);
-});
-
-/* =========================================================
-   INDICAR (em breve): alunos indicam amigos e ganham desconto
-   ========================================================= */
-function renderReferral(view) {
-  const steps = [
-    ['userPlus', 'Convide', 'Indique amigos, familiares e colegas que querem estudar. É só informar o nome e o contato de quem você conhece.'],
-    ['users', 'Estudem juntos', 'Quando a pessoa indicada faz a matrícula, a secretaria do polo confirma a indicação.'],
-    ['star', 'Ganhe desconto', 'Cada indicação válida vira desconto nas mensalidades do seu curso. Quanto mais amigos, mais você economiza.'],
-  ];
-  view.innerHTML = `
-  <div class="wrap ref">
-    <section class="ref-hero">
-      <div class="ref-glow" aria-hidden="true"><span></span><span></span><span></span></div>
-      <div class="ref-orb" aria-hidden="true">
-        <span class="ref-ring r1"></span><span class="ref-ring r2"></span><span class="ref-ring r3"></span>
-        <span class="ref-core"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
-        <span class="ref-av a1">${initials('Ana Lima')}</span><span class="ref-av a2">${initials('João Pedro')}</span><span class="ref-av a3">${initials('Maria Clara')}</span>
-      </div>
-      <p class="ref-badge"><span class="ref-dot"></span>Em breve</p>
-      <h1 class="ref-title"><span>Indique.</span> <span>Estudem juntos.</span> <span class="ap-grad">Ganhe desconto.</span></h1>
-      <p class="ref-sub">Em breve, um espaço só seu para convidar quem você conhece a estudar no HC Instituto Educacional. A cada indicação válida, você ganha desconto na mensalidade do seu curso.</p>
-    </section>
-    <section class="ref-steps">
-      ${steps.map(([ico, t, d], k) => `
-      <article class="ref-step" style="--k:${k}">
-        <span class="ref-num">0${k + 1}</span>
-        <span class="ref-ico"><i data-icon="${ico}"></i></span>
-        <h3>${t}</h3>
-        <p>${d}</p>
-      </article>`).join('')}
-    </section>
-    <p class="ref-note">Estamos preparando tudo com cuidado. Assim que estiver no ar, avisamos por aqui.</p>
-  </div>`;
-  paintIcons(view);
-}
-
 /* =========================================================
    Páginas ainda não construídas
    ========================================================= */
@@ -2412,20 +2303,7 @@ function renderPlaceholder(view, route) {
 let lastRoute = 'dashboard';
 function route() {
   const r = (location.hash || '#dashboard').slice(1);
-  if (r === 'sair') { setConfigUnlocked(false); if (window.HC_signOut) window.HC_signOut(); else toast('Sessão encerrada'); history.replaceState(null, '', '#dashboard'); return route(); }
-  // Configurações pedem senha: fica na página atual até a senha certa ser digitada
-  if (r.split('/')[0] === 'config' && !configUnlocked()) {
-    history.replaceState(null, '', '#' + lastRoute);
-    if (!document.querySelector('.lk')) {
-      if (!$('#view').childElementCount) route(); // primeira carga direto em #config
-      openLock('config', (ok) => {
-        if (ok !== 'hc-config-ok') return;
-        setConfigUnlocked(true);
-        location.hash = '#' + r;
-      });
-    }
-    return;
-  }
+  if (r === 'sair') { if (window.HC_signOut) window.HC_signOut(); else toast('Sessão encerrada'); history.replaceState(null, '', '#dashboard'); return route(); }
   lastRoute = r;
   const view = $('#view');
   document.querySelectorAll('.nm, .nm-ghost').forEach((el) => el.remove());
@@ -2433,7 +2311,9 @@ function route() {
   document.querySelectorAll('.sb-item[data-route], .tab[data-route], .more-item[data-route]').forEach((a) => a.classList.toggle('active', a.dataset.route === r.split('/')[0]));
   // "Mais" fica destacado quando a página atual está dentro dele
   document.getElementById('tab-more')?.classList.toggle('active', !!document.querySelector('.more-item.active'));
-  if (r === 'config') renderConfig(view);
+  // Configurações: só para administradores (conta do site, verificada pelo banco)
+  if (r.split('/')[0] === 'config' && !window.HC_isAdmin?.()) window.HC_adminOnly?.(view, 'Configurações');
+  else if (r === 'config') renderConfig(view);
   else if (r === 'config/noticias') renderNewsAdmin(view);
   else if (r === 'noticias') renderNews(view);
   else if (r === 'indicar') renderReferral(view);
@@ -2489,6 +2369,10 @@ window.addEventListener('hashchange', route);
   window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
   window.addEventListener('hashchange', () => { bar.classList.remove('compact'); last = 0; });
 })();
+
+/* iPhone: o Safari ignora o "sem zoom" do cabeçalho; aqui o gesto de pinça é cancelado */
+['gesturestart', 'gesturechange'].forEach((t) => document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
+// (o toque duplo já não dá zoom por causa do touch-action no CSS)
 
 /* sombra um pouco mais forte na barra superior ao rolar a página */
 (() => {

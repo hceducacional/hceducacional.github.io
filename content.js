@@ -332,5 +332,32 @@ window.HC_CONTENT = {
       "name": "Mateus Sousa",
       "image": "assets/conteudo/autor-amwew9xh2-07437452.webp"
     }
+  ],
+  "radar": [
+    {
+      "id": "r1",
+      "name": "Ana Lima",
+      "image": ""
+    },
+    {
+      "id": "r2",
+      "name": "Maria Clara",
+      "image": ""
+    },
+    {
+      "id": "r3",
+      "name": "João Pedro",
+      "image": ""
+    },
+    {
+      "id": "r4",
+      "name": "Rita Sousa",
+      "image": ""
+    },
+    {
+      "id": "r5",
+      "name": "Bruno Ferreira",
+      "image": ""
+    }
   ]
 };

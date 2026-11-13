@@ -38,6 +38,9 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
+/* celular: sem zoom de pinça e sem arrastar a página para os lados */
+html { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html, body { overflow-x: clip; }
 body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
   font-feature-settings: "cv11", "ss01";
@@ -2076,14 +2079,15 @@ body.modal-open { overflow: hidden; }
 /* uma onda nova a cada 3,5 s (duas ondas revezando num ciclo de 7 s) */
 .nr-wave:nth-of-type(6) { animation-delay: 3.5s; }
 .nr-wave:nth-of-type(7) { display: none; }
-/* órbitas girando com os "usuários conectados" */
-.nr-orbit { inset: 0; animation: nrSpin var(--t) linear infinite; }
-.nr-orbit.o1 { --t: 46s; }
-.nr-orbit.o2 { inset: 17%; --t: 34s; animation-direction: reverse; }
-.nr-orbit.o3 { inset: 33%; --t: 26s; }
-.nr-arm { position: absolute; inset: 0; transform: rotate(var(--deg)); }
+/* órbitas girando com os "usuários conectados". Órbitas e braços são pontos sem tamanho no centro:
+   assim, ao girar, nada ocupa espaço extra e a página nunca fica mais larga que a tela */
+.nr-orbit { left: 50%; top: 50%; width: 0; height: 0; animation: nrSpin var(--t) linear infinite; }
+.nr-orbit.o1 { --t: 46s; --r: calc(var(--size) / 2); }
+.nr-orbit.o2 { --t: 34s; --r: calc(var(--size) * .33); animation-direction: reverse; }
+.nr-orbit.o3 { --t: 26s; --r: calc(var(--size) * .17); }
+.nr-arm { position: absolute; left: 0; top: 0; width: 0; height: 0; transform: rotate(var(--deg)); }
 .nr-user {
-  position: absolute; left: 50%; top: 0; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%;
+  position: absolute; left: 0; top: calc(var(--r) * -1); width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%;
   display: grid; place-items: center; color: #fff; font: 700 11.5px/1 "Inter", sans-serif;
   background: linear-gradient(160deg, var(--a), var(--b));
   box-shadow: 0 0 0 3px var(--bg), 0 8px 18px -8px var(--b);
@@ -2096,7 +2100,7 @@ body.modal-open { overflow: hidden; }
 .nr-user i { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; background: #34c759; box-shadow: 0 0 0 2px var(--bg); animation: nrOnline 2.4s ease-in-out infinite; }
 .nr-arm:nth-child(2n) .nr-user i { animation-delay: .8s; }
 .nr-arm:nth-child(3n) .nr-user i { animation-delay: 1.6s; }
-.nr-spark { position: absolute; left: 50%; top: 0; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: #34d399; box-shadow: 0 0 0 3px rgba(52, 211, 153, .2), 0 0 12px 2px rgba(52, 211, 153, .6); }
+.nr-spark { position: absolute; left: 0; top: calc(var(--r) * -1); width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: #34d399; box-shadow: 0 0 0 3px rgba(52, 211, 153, .2), 0 0 12px 2px rgba(52, 211, 153, .6); }
 .nr-orbit.o3 .nr-spark { background: #60a5fa; box-shadow: 0 0 0 3px rgba(96, 165, 250, .2), 0 0 12px 2px rgba(96, 165, 250, .6); }
 
 @keyframes nrIn { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
@@ -2118,3 +2122,12 @@ body.modal-open { overflow: hidden; }
 }
 /* os cartões de categoria ficam na frente do radar (as bolinhas passam por trás deles) */
 .news-page .ap-cats { position: relative; z-index: 1; }
+
+/* fotos no radar e no editor das Preferências */
+.nr-user { overflow: visible; }
+.nr-user img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.avatar.rd-avatar { background: linear-gradient(160deg, var(--a), var(--b)); }
+.pref-h { margin: 28px 0 4px; font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+
+/* itens do menu que só administradores veem (Configurações, Sistema Semipresencial) */
+body:not(.is-admin) .admin-only { display: none !important; }
