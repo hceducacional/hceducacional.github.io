@@ -2445,6 +2445,63 @@ window.addEventListener('hashchange', route);
   window.addEventListener('hashchange', () => { bar.classList.remove('compact'); last = 0; });
 })();
 
+/* Celular: escolher a aba arrastando o dedo pela barra, como nos apps da Apple.
+   Uma lente de vidro segue o dedo; ao soltar, abre a aba que estiver embaixo dele. */
+(() => {
+  const bar = document.getElementById('tabbar');
+  if (!bar) return;
+  const lens = document.createElement('span');
+  lens.className = 'tab-lens'; lens.setAttribute('aria-hidden', 'true');
+  bar.append(lens); // no fim, para não mudar a ordem das abas (cada aba tem sua cor pela posição)
+  const tabs = () => [...bar.querySelectorAll('.tab')];
+  let drag = null;
+  const tabAt = (x) => tabs().find((t) => { const r = t.getBoundingClientRect(); return x >= r.left && x <= r.right; });
+  const place = (x, snap) => {
+    const br = bar.getBoundingClientRect();
+    const t = tabAt(x) || drag.cur;
+    const tr = t.getBoundingClientRect();
+    const w = tr.width + 8;
+    const left = snap ? tr.left - br.left - 4 : Math.min(Math.max(x - br.left - w / 2, 2), br.width - w - 2);
+    lens.style.width = w + 'px';
+    lens.style.transform = `translateX(${left}px)`;
+    if (t !== drag.cur) { drag.cur?.classList.remove('pressing'); t.classList.add('pressing'); drag.cur = t; drag.moved = true; navigator.vibrate?.(8); }
+  };
+  bar.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' || bar.classList.contains('menu-open')) return;
+    const t = e.target.closest('.tab'); if (!t) return;
+    drag = { id: e.pointerId, start: t, cur: null, moved: false, x0: e.clientX };
+    try { bar.setPointerCapture(e.pointerId); } catch {}
+    bar.classList.add('dragging');
+    lens.style.transition = 'none';
+    place(e.clientX, true);
+    drag.moved = false;
+    void lens.offsetWidth; lens.style.transition = '';
+  });
+  bar.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (Math.abs(e.clientX - drag.x0) > 6) drag.slid = true;
+    if (drag.slid) place(e.clientX, false);
+  });
+  let suppressUntil = 0, synthetic = false;
+  const end = (e, cancel) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const { cur } = drag;
+    if (cur) place(cur.getBoundingClientRect().left + 1, true); // a lente assenta sobre a aba escolhida e some
+    drag = null;
+    bar.classList.remove('dragging');
+    tabs().forEach((t) => t.classList.remove('pressing'));
+    if (cancel || !cur) return;
+    // abre a aba que está embaixo do dedo ao soltar (toque simples ou arrastando)
+    suppressUntil = Date.now() + 600; // o clique automático do navegador que vem depois é ignorado
+    synthetic = true; cur.click(); synthetic = false;
+  };
+  bar.addEventListener('pointerup', (e) => end(e, false));
+  bar.addEventListener('pointercancel', (e) => end(e, true));
+  bar.addEventListener('click', (e) => {
+    if (!synthetic && Date.now() < suppressUntil) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+})();
+
 /* iPhone: o Safari ignora o "sem zoom" do cabeçalho; aqui o gesto de pinça é cancelado */
 ['gesturestart', 'gesturechange'].forEach((t) => document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
 // (o toque duplo já não dá zoom por causa do touch-action no CSS)

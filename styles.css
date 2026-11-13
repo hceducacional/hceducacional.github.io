@@ -1370,6 +1370,8 @@ body.modal-open { overflow: hidden; }
   .content { padding-bottom: calc(106px + env(safe-area-inset-bottom)); }
 
   :root { --tb-top: calc(10px + env(safe-area-inset-top) * 1.2); }
+  /* altura da barra de abas: no iPhone fica dentro da área do traço de início, como no Instagram */
+  :root { --tab-b: max(16px, calc(env(safe-area-inset-bottom) - 12px)); --tab-b-mini: max(20px, calc(env(safe-area-inset-bottom) - 6px)); }
   /* barra de cima compacta, com o logo. Ela flutua um pouco abaixo do topo (e da área da hora/bateria),
      sem encostar na borda: assim o iPhone deixa o conteúdo passar por trás da barra de status ao rolar */
   .topbar-wrap {
@@ -1391,9 +1393,10 @@ body.modal-open { overflow: hidden; }
 
   /* barra de abas */
   .tabbar {
-    position: fixed; z-index: 60; left: 22px; right: 22px; bottom: calc(20px + env(safe-area-inset-bottom));
+    /* mesma posição da barra do Instagram no iPhone: mais perto da borda de baixo */
+    position: fixed; z-index: 60; left: 20px; right: 20px; bottom: var(--tab-b);
     display: grid; grid-template-columns: repeat(5, 1fr); align-items: center;
-    height: 64px; padding: 0 6px; border-radius: 28px;
+    height: 60px; padding: 0 6px; border-radius: 30px;
     background: rgba(22, 22, 23, .88);
     -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
     border: 1px solid rgba(255, 255, 255, .08);
@@ -1402,7 +1405,7 @@ body.modal-open { overflow: hidden; }
   }
   .tab {
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-    height: 52px; border: 0; border-radius: 18px; background: none; color: #a1a1a6;
+    height: 50px; border: 0; border-radius: 18px; background: none; color: #a1a1a6;
     font: 600 10.5px/1 "Inter", sans-serif; letter-spacing: -.01em; text-decoration: none;
     -webkit-tap-highlight-color: transparent; transition: color .2s, background .2s, height .5s var(--ease), gap .5s var(--ease), border-radius .5s var(--ease);
   }
@@ -1418,7 +1421,7 @@ body.modal-open { overflow: hidden; }
   .tab.active i { color: rgb(var(--tc)); filter: drop-shadow(0 0 6px rgba(var(--tc), .55)); }
   .tab i { color: rgba(var(--tc), .85); transition: color .2s, filter .2s; }
   /* ao descer a página a barra encolhe e mostra só os ícones; ao subir, volta com as legendas */
-  .tabbar.compact { left: 52px; right: 52px; height: 50px; border-radius: 25px; bottom: calc(16px + env(safe-area-inset-bottom)); }
+  .tabbar.compact { left: 50px; right: 50px; height: 48px; border-radius: 24px; bottom: var(--tab-b-mini); }
   .tabbar.compact .tab { height: 38px; gap: 0; border-radius: 19px; }
   .tabbar.compact .tab span { max-height: 0; opacity: 0; transform: scale(.8); }
   .tab:active { transform: scale(.94); }
@@ -1432,20 +1435,20 @@ body.modal-open { overflow: hidden; }
     -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); opacity: 0; transition: opacity .35s ease;
   }
   .more-sheet {
-    position: absolute; left: 22px; right: 22px; bottom: calc(20px + env(safe-area-inset-bottom));
-    padding: 12px 8px 72px; border-radius: 28px; color: #f5f5f7;
+    position: absolute; left: 20px; right: 20px; bottom: var(--tab-b);
+    padding: 12px 8px 68px; border-radius: 30px; color: #f5f5f7;
     background: rgba(22, 22, 23, .94);
     -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
     border: 1px solid rgba(255, 255, 255, .08);
     box-shadow: 0 24px 60px -18px rgba(0, 0, 0, .6);
     /* fechado: só a faixa da barra aparece; aberto: o cartão inteiro, crescendo para cima */
-    clip-path: inset(calc(100% - 64px) 0 0 0 round 28px);
+    clip-path: inset(calc(100% - 60px) 0 0 0 round 30px);
     transition: clip-path .55s cubic-bezier(.32, .72, 0, 1);
   }
   .more.in .more-backdrop { opacity: 1; }
-  .more.in .more-sheet { clip-path: inset(0 0 0 0 round 28px); }
+  .more.in .more-sheet { clip-path: inset(0 0 0 0 round 30px); }
   .more-sheet::after { /* linha discreta separando as opções das abas */
-    content: ""; position: absolute; left: 18px; right: 18px; bottom: 64px; height: 1px; background: rgba(255, 255, 255, .09);
+    content: ""; position: absolute; left: 18px; right: 18px; bottom: 60px; height: 1px; background: rgba(255, 255, 255, .09);
     opacity: 0; transition: opacity .3s ease;
   }
   .more.in .more-sheet::after { opacity: 1; transition-delay: .2s; }
@@ -2163,23 +2166,54 @@ body:not(.is-admin) .admin-only { display: none !important; }
 
 /* =========================================================
    CELULAR — ao rolar, a barra de cima se recolhe para a direita,
-   ficando só a pesquisa e a foto de perfil
+   ficando só a pesquisa e a foto de perfil.
+   Os itens não mudam de tamanho (nada "pula"): só o fundo escuro desliza
+   da esquerda para a direita, enquanto logo e relógio somem suavemente.
    ========================================================= */
 @media (max-width: 860px) {
-  .topbar {
-    width: 100%; margin-left: auto; margin-right: 0; gap: 0; /* encostada à direita: recolhe da esquerda para a direita */
-    transition: width .6s cubic-bezier(.32, .72, 0, 1), box-shadow .35s var(--ease);
+  .topbar { isolation: isolate; background: transparent; border-color: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .topbar::before {
+    content: ""; position: absolute; z-index: -1; top: 0; bottom: 0; left: 0; right: 0; border-radius: 999px;
+    background: rgba(22, 22, 23, .9);
+    -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+    border: 1px solid rgba(255, 255, 255, .08);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .08), 0 10px 30px -14px rgba(0, 0, 0, .35);
+    transition: left .9s cubic-bezier(.45, 0, .15, 1), box-shadow .35s var(--ease);
   }
-  .topbar > * + * { margin-left: 10px; transition: margin .6s cubic-bezier(.32, .72, 0, 1); }
-  .tb-logo, .tb-title, .hw { transition: width .6s cubic-bezier(.32, .72, 0, 1), flex-grow .6s cubic-bezier(.32, .72, 0, 1), opacity .3s ease, transform .6s cubic-bezier(.32, .72, 0, 1); }
-  .tb-title, .hw { flex: 1 1 0; }
-  .topbar-wrap.mini .topbar:not(.searching) { width: 106px; }
+  .topbar-wrap.scrolled .topbar { box-shadow: none; }
+  .topbar-wrap.scrolled .topbar::before { box-shadow: 0 1px 2px rgba(0, 0, 0, .1), 0 16px 40px -16px rgba(0, 0, 0, .45); }
+  .topbar :is(.tb-logo, .tb-title, .hw) {
+    transition: opacity .45s ease .18s, transform .9s cubic-bezier(.45, 0, .15, 1), filter .45s ease .18s;
+  }
+  /* recolhida */
+  .topbar-wrap.mini .topbar:not(.searching) { pointer-events: none; }
+  .topbar-wrap.mini .topbar:not(.searching) :is(.tb-search-btn, .tb-user) { pointer-events: auto; }
+  .topbar-wrap.mini .topbar:not(.searching)::before { left: calc(100% - 106px); }
   .topbar-wrap.mini .topbar:not(.searching) :is(.tb-logo, .tb-title, .hw) {
-    flex-grow: 0; width: 0; min-width: 0; margin: 0; opacity: 0; overflow: hidden; pointer-events: none; transform: translateX(24px);
+    opacity: 0; transform: translateX(36px) scale(.96); filter: blur(4px);
+    transition: opacity .3s ease, transform .9s cubic-bezier(.45, 0, .15, 1), filter .3s ease;
   }
-  .topbar-wrap.mini .topbar:not(.searching) .tb-search-btn { margin-left: 0; }
-  .topbar-wrap.mini .topbar:not(.searching) .hw.open .hw-card { display: none; }
-  /* menu da conta com a barra recolhida: usa a largura da tela, alinhado à direita */
-  .topbar-wrap.mini .um { left: auto; right: -8px; width: calc(100vw - 24px); }
+  .topbar-wrap.mini .topbar:not(.searching) .hw-card { display: none; }
 }
-@media (max-width: 860px) and (prefers-reduced-motion: reduce) { .topbar, .topbar > * { transition: none !important; } }
+@media (max-width: 860px) and (prefers-reduced-motion: reduce) { .topbar::before, .topbar > * { transition: none !important; } }
+
+/* =========================================================
+   CELULAR — escolher a aba arrastando o dedo (lente de vidro)
+   ========================================================= */
+@media (max-width: 860px) {
+  .tabbar { touch-action: none; -webkit-user-select: none; user-select: none; }
+  .tab { position: relative; z-index: 1; -webkit-touch-callout: none; }
+  .tab i { transition: color .2s, filter .2s, transform .35s cubic-bezier(.34, 1.56, .64, 1); }
+  .tab-lens {
+    position: absolute; z-index: 0; left: 0; top: 5px; bottom: 5px; width: 60px; border-radius: 22px; pointer-events: none;
+    background: rgba(255, 255, 255, .15);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2), inset 0 1px 0 rgba(255, 255, 255, .25), 0 8px 20px -8px rgba(0, 0, 0, .6);
+    opacity: 0; transform: translateX(0);
+    transition: transform .45s cubic-bezier(.34, 1.4, .64, 1), width .3s ease, opacity .35s ease .12s;
+  }
+  /* enquanto o dedo arrasta: a lente acompanha rápido e o ícone embaixo dela cresce */
+  .tabbar.dragging .tab-lens { opacity: 1; transition: transform .14s ease-out, width .2s ease, opacity .15s ease; }
+  .tabbar.dragging .tab.pressing { color: #fff; }
+  .tabbar.dragging .tab.pressing i { transform: scale(1.2); color: rgb(var(--tc)); }
+  .tabbar.compact .tab-lens { top: 4px; bottom: 4px; border-radius: 18px; }
+}
