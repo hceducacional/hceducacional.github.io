@@ -1,0 +1,17 @@
+{
+  "name": "HC Instituto Educacional",
+  "short_name": "HC Instituto",
+  "description": "Painel do polo: banners, acesso rápido às instituições parceiras e notícias.",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["tabbed", "standalone"],
+  "background_color": "#f5f5f7",
+  "theme_color": "#161617",
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
