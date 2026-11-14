@@ -2426,7 +2426,11 @@ function renderReferral(view) {
       <div class="ref-orb" aria-hidden="true">
         <span class="ref-ring r1"></span><span class="ref-ring r2"></span><span class="ref-ring r3"></span>
         <span class="ref-core"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
-        <span class="ref-av a1">${initials('Ana Lima')}</span><span class="ref-av a2">${initials('João Pedro')}</span><span class="ref-av a3">${initials('Maria Clara')}</span>
+        <span class="orb-spin" style="--r:98px;--t:32s">
+          <span class="orb-arm" style="--deg:-70deg"><span class="orb-up"><span class="ref-av a1">${initials('Ana Lima')}</span></span></span>
+          <span class="orb-arm" style="--deg:50deg"><span class="orb-up"><span class="ref-av a2">${initials('João Pedro')}</span></span></span>
+          <span class="orb-arm" style="--deg:170deg"><span class="orb-up"><span class="ref-av a3">${initials('Maria Clara')}</span></span></span>
+        </span>
       </div>
       <p class="ref-badge"><span class="ref-dot"></span>Em breve</p>
       <h1 class="ref-title"><span>Indique.</span> <span>Estudem juntos.</span> <span class="ap-grad">Ganhe desconto.</span></h1>

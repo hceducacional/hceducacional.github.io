@@ -421,7 +421,14 @@ function renderProfile(view) {
           <div class="lk-field"><input id="me-name" maxlength="60" value="${esc(p.name || '')}" placeholder="Seu nome" autocomplete="name"></div>
           <label class="au-label" for="me-email">E-mail</label>
           <div class="lk-field"><input id="me-email" value="${esc(auth.user.email || '')}" disabled></div>
-          <div class="me-foot"><button class="btn-dark" type="submit">Salvar nome</button></div>
+          <p class="me-hint">Dados do curso: preenchem o agendamento de provas e tutorias sozinhos.</p>
+          <label class="au-label" for="me-cpf">CPF</label>
+          <div class="lk-field"><input id="me-cpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" value="${esc(p.cpf ? cpfMask(p.cpf) : '')}" autocomplete="off"></div>
+          <label class="au-label" for="me-course">Curso</label>
+          <div class="lk-field"><input id="me-course" maxlength="80" placeholder="Ex.: Pedagogia" value="${esc(p.course || '')}"></div>
+          <label class="au-label" for="me-college">Faculdade</label>
+          <div class="lk-field"><select id="me-college" class="ag-select"><option value="">Selecione</option>${AG.colleges.map((c) => `<option ${p.college === c ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+          <div class="me-foot"><button class="btn-dark" type="submit">Salvar dados</button></div>
         </form>
         <form class="me-card" id="me-pass">
           <h3>Trocar senha</h3>
@@ -439,10 +446,13 @@ function renderProfile(view) {
       e.preventDefault();
       const name = $('#me-name').value.trim().slice(0, 60);
       if (name.length < 2) return toast('Digite o seu nome.');
-      const { error } = await sb.from('profiles').update({ name }).eq('id', auth.user.id);
-      if (error) return toast(authError(error));
-      await refreshMe(); toast('Nome salvo.');
+      const cpf = cpfDigits($('#me-cpf').value), course = $('#me-course').value.trim().slice(0, 80), college = $('#me-college').value;
+      if (cpf && !cpfOk(cpf)) { $('#me-cpf').focus(); return toast('CPF inválido. Confira os números.'); }
+      const { error } = await sb.from('profiles').update({ name, cpf: cpf || null, course: course || null, college: college || null }).eq('id', auth.user.id);
+      if (error) return toast(/column|schema cache/i.test(error.message) ? 'Falta atualizar o banco para salvar CPF, curso e faculdade.' : authError(error));
+      await refreshMe(); toast('Dados salvos.');
     });
+    $('#me-cpf').addEventListener('input', (e) => { e.target.value = cpfMask(e.target.value); });
     $('#me-pass').addEventListener('submit', async (e) => {
       e.preventDefault();
       const a = $('#me-p1').value, b = $('#me-p2').value;
@@ -747,7 +757,11 @@ window.HC_signOut = signOut;
   sb.auth.onAuthStateChange((event, session) => {
     setTimeout(async () => { // fora do callback do Supabase, como a documentação recomenda
       if (event === 'PASSWORD_RECOVERY') { await setUser(session?.user); return openAuth('newpass'); }
-      if (event === 'SIGNED_OUT') { auth.user = null; auth.profile = null; auth.pending = 0; paintUser(); return; }
+      if (event === 'SIGNED_OUT') {
+        auth.user = null; auth.profile = null; auth.pending = 0; paintUser();
+        if (typeof agForm !== 'undefined') Object.assign(agForm, { name: '', cpf: '', course: '', college: '' }); // não deixa dados no agendamento
+        return;
+      }
       if (['INITIAL_SESSION', 'SIGNED_IN', 'USER_UPDATED', 'TOKEN_REFRESHED'].includes(event)) {
         await setUser(session?.user);
         if (event === 'SIGNED_IN' && fromEmail) {

@@ -79,7 +79,14 @@ const AG_STEPS = [
 const agLongDate = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
 
 function renderAgenda(view) {
-  if (auth.user && !agForm.name) agForm.name = auth.profile?.name || '';
+  // aluno logado: os dados do perfil já vêm preenchidos (ele ainda pode mudar no agendamento)
+  if (auth.user && auth.profile) {
+    const p = auth.profile;
+    if (!agForm.name) agForm.name = p.name || '';
+    if (!agForm.cpf && p.cpf) agForm.cpf = cpfMask(p.cpf);
+    if (!agForm.course && p.course) agForm.course = p.course;
+    if (!agForm.college && p.college) agForm.college = p.college;
+  }
   view.innerHTML = `
   <div class="wrap ag-page">
     <header class="ag-hero">
@@ -92,10 +99,12 @@ function renderAgenda(view) {
           <small>${new Date().toLocaleDateString('pt-BR', { month: 'short', timeZone: 'America/Fortaleza' }).replace('.', '')}</small>
           <span class="ag-core-check"><svg viewBox="0 0 24 24"><path d="m6 12.5 4 4 8-9"/></svg></span>
         </span>
-        <span class="ag-chip c1"><i data-icon="report"></i>Prova</span>
-        <span class="ag-chip c2"><i data-icon="users"></i>Tutoria</span>
-        <span class="ag-chip c3"><i data-icon="clock"></i>08h30</span>
-        <span class="ag-chip c4"><i data-icon="news"></i>Atividades</span>
+        <span class="orb-spin" style="--r:88px;--t:40s">
+          <span class="orb-arm" style="--deg:-60deg"><span class="orb-up"><span class="ag-chip c1"><i data-icon="report"></i>Prova</span></span></span>
+          <span class="orb-arm" style="--deg:30deg"><span class="orb-up"><span class="ag-chip c2"><i data-icon="users"></i>Tutoria</span></span></span>
+          <span class="orb-arm" style="--deg:120deg"><span class="orb-up"><span class="ag-chip c3"><i data-icon="clock"></i>08h30</span></span></span>
+          <span class="orb-arm" style="--deg:210deg"><span class="orb-up"><span class="ag-chip c4"><i data-icon="news"></i>Atividades</span></span></span>
+        </span>
       </div>
       <p class="ag-kicker ag-in" style="--d:.55s"><i data-icon="calendar"></i>Polo Humberto de Campos</p>
       <h1 class="ag-words"><span style="--d:.7s">Agende</span> <span style="--d:.78s">sua</span> <span class="ap-grad" style="--d:.86s">prova</span> <span style="--d:.94s">ou</span> <span class="ap-grad" style="--d:1.02s">tutoria</span> <span style="--d:1.1s">presencial.</span></h1>

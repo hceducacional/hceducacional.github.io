@@ -3060,3 +3060,32 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
 .aa-side .ag-desc { max-width: 280px; }
 .aa-block-form { gap: 14px 10px; }
 .aa-block-form .ag-field > span { margin-bottom: 2px; }
+.me-hint { margin: 18px 0 2px; padding-top: 14px; border-top: 1px solid var(--line-soft); font-size: 13px; color: var(--muted); }
+
+/* =========================================================
+   ÓRBITAS (Agendar e Indicar): etiquetas e amigos girando em volta
+   do centro, como no radar de Notícias. Só rotação (leve, na GPU).
+   ========================================================= */
+.orb-spin { position: absolute; left: 50%; top: 50%; width: 0; height: 0; z-index: 2; animation: nrSpin var(--t) linear infinite; }
+.orb-arm { position: absolute; left: 0; top: 0; width: 0; height: 0; transform: rotate(var(--deg)); }
+.orb-up { position: absolute; left: 0; top: calc(var(--r) * -1); width: 0; height: 0; rotate: calc(var(--deg) * -1); animation: nrUpright var(--t) linear infinite; }
+.orb-up > .ag-chip, .orb-up > .ref-av { left: 0 !important; top: 0 !important; right: auto !important; bottom: auto !important; translate: -50% -50%; }
+@media (max-width: 860px) { .ag-orb .orb-spin { --r: 88px !important; } .ref-orb .orb-spin, .ref-hero .orb-spin { --r: 82px !important; } }
+@media (prefers-reduced-motion: reduce) { .orb-spin, .orb-up { animation: none !important; } }
+/* em órbita, cada item só "salta" ao aparecer (sem flutuar, que usaria a mesma propriedade da centralização) */
+.orb-up > .ag-chip { animation: agPop .6s cubic-bezier(.34, 1.4, .64, 1) forwards !important; }
+.orb-up > .ag-chip.c1 { animation-delay: .5s !important; } .orb-up > .ag-chip.c2 { animation-delay: .62s !important; }
+.orb-up > .ag-chip.c3 { animation-delay: .74s !important; } .orb-up > .ag-chip.c4 { animation-delay: .86s !important; }
+.orb-up > .ref-av { animation: refPop .6s cubic-bezier(.34, 1.4, .64, 1) forwards !important; }
+.orb-up > .ref-av.a1 { animation-delay: .55s !important; } .orb-up > .ref-av.a2 { animation-delay: .7s !important; } .orb-up > .ref-av.a3 { animation-delay: .85s !important; }
+/* Indicar no celular: as luzes de fundo viram degradês que terminam transparentes antes da
+   borda da tela (sem os círculos que eram cortados nas laterais) */
+@media (max-width: 860px) {
+  .ref { overflow-x: visible; }
+  .ref-glow { inset: -150px -16px -40px; overflow: visible;
+    background:
+      radial-gradient(ellipse closest-side at 30% 42%, rgba(52, 211, 153, .3), rgba(52, 211, 153, 0)),
+      radial-gradient(ellipse closest-side at 74% 36%, rgba(96, 165, 250, .24), rgba(96, 165, 250, 0)),
+      radial-gradient(ellipse closest-side at 60% 68%, rgba(251, 191, 36, .2), rgba(251, 191, 36, 0)); }
+  .ref-glow span { display: none; }
+}
