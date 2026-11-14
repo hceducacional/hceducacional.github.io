@@ -2728,3 +2728,50 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
   .tabbar.compact .tab i { transform: translateY(7px) scale(1.12); }
   .tabbar.dragging.compact .tab.pressing i { transform: translateY(7px) scale(1.3); }
 }
+
+/* =========================================================
+   AGENDAR — MODO LEVE NO CELULAR
+   Sombras grandes e desfocadas são caras para desenhar no iPhone (ainda mais
+   coloridas e em elementos que se movem). Aqui elas viram sombras curtas ou
+   contornos finos, as órbitas param de flutuar e o fundo vira um degradê simples.
+   ========================================================= */
+@media (max-width: 860px), (hover: none) {
+  /* fundo: degradê simples, sem máscara e sem círculos sobrepostos */
+  .ag-hero-glow { -webkit-mask-image: none; mask-image: none; inset: -140px -16px -120px;
+    background: radial-gradient(120% 70% at 30% 0%, rgba(52, 211, 153, .2), transparent 60%), radial-gradient(90% 60% at 95% 10%, rgba(96, 165, 250, .16), transparent 60%); }
+  .ag-hero-glow span { display: none; }
+
+  /* peça central: entra uma vez e fica parada (sem flutuar sem parar) */
+  .ag-core { animation: agDrop .8s cubic-bezier(.34, 1.4, .64, 1) .1s forwards; box-shadow: 0 6px 14px -8px rgba(6, 122, 87, .5), 0 0 0 1px rgba(0, 0, 0, .05); will-change: auto; }
+  .ag-chip { animation: agPop .5s cubic-bezier(.34, 1.4, .64, 1) forwards; box-shadow: none; will-change: auto; }
+  .ag-chip.c1 { animation-delay: .4s; } .ag-chip.c2 { animation-delay: .48s; } .ag-chip.c3 { animation-delay: .56s; } .ag-chip.c4 { animation-delay: .64s; }
+  .ag-core-check { box-shadow: 0 0 0 2px #fff; }
+
+  /* cartões e botões: sombras curtas ou só contorno */
+  .ag-card { box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 0 0 1px rgba(0, 0, 0, .04); }
+  .ag-wiz.expanded { box-shadow: 0 10px 30px -14px rgba(0, 0, 0, .45); }
+  .ag-pane-ico { box-shadow: none; }
+  .ag-tile { box-shadow: none; transition: transform .3s var(--ease); }
+  .ag-tile::before { display: none; }
+  .ag-tile:hover { transform: none; box-shadow: none; }
+  .ag-tile.on { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--b); }
+  .ag-tile-ico { background: rgba(255, 255, 255, .24); }
+  .ag-submit { box-shadow: none; }
+  .ag-info div { box-shadow: 0 0 0 1px rgba(0, 0, 0, .06); }
+  .ag-day.on { box-shadow: none; transform: none; }
+  .ag-opt.on { box-shadow: 0 0 0 3px rgba(6, 122, 87, .14); }
+  .ag-check circle { fill: var(--accent-soft); }
+
+  /* entradas mais curtas e só com movimento/transparência */
+  .ag-words > span { animation-duration: .6s; transform: translateY(10px); }
+  .ag-pane > *, .ag-big2 > *, .ag-big4 > * { animation-duration: .4s; }
+  .ag-pane.from-r, .ag-pane.from-l { animation-duration: .4s; }
+  .ag-rise { animation-duration: .6s; animation-delay: .9s; }
+  .ag-pane.first > *, .ag-pane.first .ag-big2 > * { animation-delay: calc(1.05s + var(--i, 0) * .06s); }
+  .ag-reveal { transition-duration: .5s; }
+}
+/* cartão do agendamento no celular: abre como uma folha que sobe (só transform/opacidade) */
+.ag-wiz.sheet-in { animation: agSheetIn .5s cubic-bezier(.32, .72, 0, 1) both; }
+.ag-wiz.sheet-out { animation: agSheetOut .36s cubic-bezier(.4, 0, 1, 1) both; }
+@keyframes agSheetIn { from { opacity: 0; transform: translateY(40px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes agSheetOut { to { opacity: 0; transform: translateY(30px) scale(.98); } }

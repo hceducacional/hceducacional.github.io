@@ -187,38 +187,32 @@ function agGo(n, dir = 1) {
 let agPh = null;
 function agExpand(on, instant) {
   const box = $('#ag-box'); if (!box) return;
-  const ease = 'cubic-bezier(.32, .72, 0, 1)';
   if (on) {
     if (box.classList.contains('expanded') || !PHONE()) return; // no computador o cartão fica no lugar
     box.classList.remove('ag-rise'); // a subida de entrada não deve se repetir ao recolher
-    const r = box.getBoundingClientRect();
-    agPh = document.createElement('div'); agPh.className = 'ag-ph'; agPh.style.height = r.height + 'px';
+    agPh = document.createElement('div'); agPh.className = 'ag-ph'; agPh.style.height = box.offsetHeight + 'px';
     box.before(agPh);
     const bd = document.createElement('div'); bd.className = 'ag-backdrop'; bd.dataset.close = '1';
     document.body.append(bd, box);
     document.body.classList.add('modal-open');
-    Object.assign(box.style, { top: r.top + 'px', left: r.left + 'px', width: r.width + 'px', height: r.height + 'px', transition: 'none' });
-    box.classList.add('expanded');
-    void box.offsetWidth;
-    box.style.transition = `top .6s ${ease}, left .6s ${ease}, width .6s ${ease}, height .6s ${ease}, border-radius .6s ${ease}`;
-    Object.assign(box.style, { top: '', left: '', width: '', height: '' });
+    // leve: o cartão já assume o tamanho final e só sobe/aparece (transform + opacidade)
+    box.classList.add('expanded', 'sheet-in');
+    setTimeout(() => box.classList.remove('sheet-in'), 520);
     requestAnimationFrame(() => bd.classList.add('in'));
   } else {
     if (!box.classList.contains('expanded')) return;
     const bd = document.querySelector('.ag-backdrop');
     const done = () => {
-      box.classList.remove('expanded', 'closing');
+      box.classList.remove('expanded', 'sheet-out', 'sheet-in');
       box.removeAttribute('style');
       if (agPh?.isConnected) agPh.replaceWith(box); else box.remove(); // a página mudou: o cartão não volta
       agPh = null; bd?.remove();
       document.body.classList.remove('modal-open');
     };
     if (instant || !agPh?.isConnected) return done();
-    const r = agPh.getBoundingClientRect();
-    box.classList.add('closing');
-    Object.assign(box.style, { top: r.top + 'px', left: r.left + 'px', width: r.width + 'px', height: r.height + 'px' });
+    box.classList.add('sheet-out');
     bd?.classList.remove('in');
-    setTimeout(done, 560);
+    setTimeout(done, 380);
   }
 }
 window.addEventListener('hashchange', () => agExpand(false, true));
@@ -288,11 +282,11 @@ function agStepHTML(id) {
 
 /* cliques do assistente (um único ouvinte para todas as etapas) */
 document.addEventListener('click', async (e) => {
-  if (e.target.closest('.ag-backdrop')) { agExpand(false); return setTimeout(() => agGo(0, 0), 560); }
+  if (e.target.closest('.ag-backdrop')) { agExpand(false); return setTimeout(() => agGo(0, 0), 400); }
   const box = e.target.closest('.ag-wiz'); if (!box) return;
   const t = (sel) => e.target.closest(sel);
   const next = (n) => setTimeout(() => agGo(n, 1), 220); // pequena pausa para ver a escolha marcada
-  if (t('[data-close]')) { agExpand(false); return setTimeout(() => agGo(0, 0), 560); }
+  if (t('[data-close]')) { agExpand(false); return setTimeout(() => agGo(0, 0), 400); }
   if (t('[data-back]')) return agGo(Math.max(0, agForm.step - 1), -1);
   if (t('[data-goto]')) return agGo(+t('[data-goto]').dataset.goto, -1);
   const k = t('[data-kind]');
