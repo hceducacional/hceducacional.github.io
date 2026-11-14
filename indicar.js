@@ -30,101 +30,113 @@ const refSteps = () => `
     </article>`).join('')}
   </section>`;
 
-/* ---------- Página do aluno ---------- */
+/* ---------- Página do aluno ----------
+   A animação (círculo, órbita e título) aparece na hora; os dados chegam
+   depois e surgem abaixo dela, sem tela de "carregando". */
+let refLoadId = 0;
+function refHeroHTML(out) {
+  const first = (auth.user && meName() || '').split(' ')[0];
+  return `
+  <section class="ref-hero rf-hero" data-mode="${out ? 'out' : 'in'}">
+    <div class="ref-glow" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="ref-orb" aria-hidden="true">
+      <span class="ref-ring r1"></span><span class="ref-ring r2"></span><span class="ref-ring r3"></span>
+      ${out
+        ? '<span class="ref-core"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>'
+        : '<span class="ref-core rf-core"><b id="rf-num">0</b><small id="rf-numl">confirmadas</small></span>'}
+      ${refOrbit([])}
+    </div>
+    <p class="ref-badge"><span class="ref-dot"></span>Indicações</p>
+    ${out
+      ? '<h1 class="ref-title"><span>Indique.</span> <span class="ap-grad">Estudem juntos.</span></h1>'
+      : `<h1 class="ref-title" id="rf-title"><span>${first ? esc(first) + ',' : 'Suas'}</span> <span class="ap-grad">${first ? 'suas indicações.' : 'indicações.'}</span></h1>`}
+    <p class="ref-sub">${out
+      ? 'Convide quem você conhece para estudar no HC Instituto Educacional e acompanhe aqui cada indicação. Entre na sua conta para ver as suas.'
+      : 'Acompanhe aqui quem você indicou para estudar no HC Instituto Educacional.'}</p>
+    ${out ? '<div class="me-cta rf-cta"><button class="btn-dark" type="button" data-auth="login">Entrar</button><button class="btn-soft" type="button" data-auth="signup">Criar conta</button></div>' : ''}
+  </section>`;
+}
 function renderReferral(view) {
-  waitAuth(view, async () => {
-    if (!auth.user) {
-      view.innerHTML = `
-      <div class="wrap ref">
-        <section class="ref-hero">
-          <div class="ref-glow" aria-hidden="true"><span></span><span></span><span></span></div>
-          <div class="ref-orb" aria-hidden="true">
-            <span class="ref-ring r1"></span><span class="ref-ring r2"></span><span class="ref-ring r3"></span>
-            <span class="ref-core"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
-            ${refOrbit([])}
-          </div>
-          <p class="ref-badge"><span class="ref-dot"></span>Indicações</p>
-          <h1 class="ref-title"><span>Indique.</span> <span class="ap-grad">Estudem juntos.</span></h1>
-          <p class="ref-sub">Convide quem você conhece para estudar no HC Instituto Educacional e acompanhe aqui cada indicação. Entre na sua conta para ver as suas.</p>
-          <div class="me-cta rf-cta"><button class="btn-dark" type="button" data-auth="login">Entrar</button><button class="btn-soft" type="button" data-auth="signup">Criar conta</button></div>
-        </section>
-        ${refSteps()}
-      </div>`;
-      return paintIcons(view);
-    }
-
-    view.innerHTML = `<div class="wrap ref"><p class="me-loading">Carregando suas indicações…</p></div>`;
-    const { data, error } = await sb.rpc('my_referrals');
-    if ((location.hash || '').slice(1) !== 'indicar') return; // a pessoa já saiu da página
-    if (error) {
-      view.innerHTML = `<div class="wrap"><section class="soon">${pageHead('Indicar', 'Não foi possível carregar.', esc(/my_referrals|schema cache/i.test(error.message || '') ? 'As indicações ainda estão sendo preparadas. Tente de novo mais tarde.' : authError(error)))}<button class="btn-dark" type="button" onclick="route()">Tentar de novo</button></section></div>`;
-      return;
-    }
-    const list = data || [];
-    const conf = list.filter((r) => r.status === 'confirmada').length;
-    const pend = list.length - conf;
-    const done = conf >= REF_GOAL;
-    const pct = Math.min(1, conf / REF_GOAL);
-    const first = (meName() || '').split(' ')[0];
-
-    view.innerHTML = `
-    <div class="wrap ref">
-      <section class="ref-hero rf-hero">
-        <div class="ref-glow" aria-hidden="true"><span></span><span></span><span></span></div>
-        <div class="ref-orb" aria-hidden="true">
-          <span class="ref-ring r1"></span><span class="ref-ring r2"></span><span class="ref-ring r3"></span>
-          <span class="ref-core rf-core"><b>${conf}</b><small>${conf === 1 ? 'confirmada' : 'confirmadas'}</small></span>
-          ${refOrbit(list.map((r) => r.name))}
-        </div>
-        <p class="ref-badge"><span class="ref-dot"></span>Indicações</p>
-        <h1 class="ref-title"><span>${first ? esc(first) + ',' : 'Suas'}</span> <span class="ap-grad">${first ? 'suas indicações.' : 'indicações.'}</span></h1>
-        <p class="ref-sub">Acompanhe aqui quem você indicou para estudar no HC Instituto Educacional.</p>      </section>
-
-      ${done ? `
-      <section class="rf-goal">
-        <span class="rf-goal-ico"><i data-icon="star"></i></span>
-        <div class="rf-goal-txt">
-          <h2>Você chegou a ${REF_GOAL} indicações confirmadas!</h2>
-          <p>Procure a secretaria do polo para saber como prosseguir.</p>
-          <small>${esc(AG.address)}</small>
-        </div>
-        <a class="btn-dark rf-goal-btn" href="https://wa.me/${AG.phone}?text=${encodeURIComponent(`Olá! Sou ${meName()} e cheguei a ${REF_GOAL} indicações confirmadas no site do HC Instituto Educacional. Como faço para prosseguir?`)}" target="_blank" rel="noopener"><i data-icon="chat"></i>Falar com a secretaria</a>
-      </section>` : ''}
-
-      <section class="rf-card">
-        <div class="rf-progress">
-          <div class="rf-prog-head">
-            <span><b>${Math.min(conf, REF_GOAL)}</b> de ${REF_GOAL} confirmadas</span>
-            <small>${done ? 'Meta alcançada' : `Faltam ${REF_GOAL - conf}`}</small>
-          </div>
-          <span class="rf-meter ${done ? 'full' : ''}"><i style="--p:${pct}"></i></span>
-          <div class="rf-counts">
-            <span><b>${list.length}</b>${list.length === 1 ? 'indicação' : 'indicações'}</span>
-            <span class="c-pend"><b>${pend}</b>${pend === 1 ? 'pendente' : 'pendentes'}</span>
-            <span class="c-conf"><b>${conf}</b>${conf === 1 ? 'confirmada' : 'confirmadas'}</span>
-          </div>
-        </div>
-
-        <h3 class="rf-list-title">Quem você indicou</h3>
-        <div class="rf-list">
-          ${list.length ? list.map((r) => `
-          <div class="rf-row">
-            <span class="aa-av" style="--a:${r.status === 'confirmada' ? '#34d399' : '#fbbf24'};--b:${r.status === 'confirmada' ? '#059669' : '#f97316'}">${esc(initials(r.name))}</span>
-            <span class="rf-who"><strong>${esc(r.name)}</strong><small>${esc(r.course)}</small></span>
-            ${refStatusPill(r.status)}
-          </div>`).join('') : `
-          <div class="rf-empty">
-            <span class="rf-empty-ico"><i data-icon="userPlus"></i></span>
-            <strong>Nenhuma indicação ainda</strong>
-            <p>Quando alguém que você indicou fizer a matrícula, a secretaria do polo registra e ela aparece aqui.</p>
-          </div>`}
-        </div>
-      </section>
-
-      ${refSteps()}
-    </div>`;
+  const out = auth.ready && !auth.user;
+  const hero = view.querySelector('.rf-hero');
+  // a sessão terminou de carregar com a página já aberta: só ajusta o título, sem reiniciar a animação
+  if (hero && hero.dataset.mode === 'in' && !out) {
+    const first = (meName() || '').split(' ')[0], t = $('#rf-title');
+    if (t && first) t.innerHTML = `<span>${esc(first)},</span> <span class="ap-grad">suas indicações.</span>`;
+  } else {
+    view.innerHTML = `<div class="wrap ref">${refHeroHTML(out)}<div class="rf-body" id="rf-body">${out ? refSteps() : ''}</div></div>`;
     paintIcons(view);
-  });
+  }
+  if (out || !auth.ready) return; // sem conta: só a apresentação; sessão carregando: o roteador chama de novo
+  refLoadMine(++refLoadId);
+}
+async function refLoadMine(id) {
+  const { data, error } = await sb.rpc('my_referrals');
+  const body = $('#rf-body');
+  if (id !== refLoadId || !body || (location.hash || '').slice(1) !== 'indicar') return; // a pessoa já saiu ou a página foi redesenhada
+  if (error) {
+    body.innerHTML = `<section class="rf-card rf-in rf-err"><p>${esc(/my_referrals|schema cache/i.test(error.message || '') ? 'As indicações ainda estão sendo preparadas. Tente de novo mais tarde.' : authError(error))}</p><button class="btn-soft" type="button" onclick="route()"><i data-icon="refresh"></i>Tentar de novo</button></section>`;
+    return paintIcons(body);
+  }
+  const list = data || [];
+  const conf = list.filter((r) => r.status === 'confirmada').length;
+  const pend = list.length - conf;
+  const done = conf >= REF_GOAL;
+  const pct = Math.min(1, conf / REF_GOAL);
+
+  // círculo: conta até o número; órbita: iniciais de quem foi indicado
+  const num = $('#rf-num');
+  if (num) {
+    $('#rf-numl').textContent = conf === 1 ? 'confirmada' : 'confirmadas';
+    const t0 = performance.now(), dur = Math.min(900, 120 * conf);
+    const tick = (t) => { const k = Math.min(1, (t - t0) / dur); num.textContent = Math.round(conf * (1 - (1 - k) ** 3)); if (k < 1) requestAnimationFrame(tick); };
+    if (conf) requestAnimationFrame(tick);
+  }
+  list.slice(0, 3).forEach((r, k) => { const av = document.querySelector(`.rf-hero .ref-av.a${k + 1}`); if (av) av.textContent = initials(r.name); });
+
+  body.innerHTML = `
+    ${done ? `
+    <section class="rf-goal rf-in">
+      <span class="rf-goal-ico"><i data-icon="star"></i></span>
+      <div class="rf-goal-txt">
+        <h2>Você chegou a ${REF_GOAL} indicações confirmadas!</h2>
+        <p>Procure a secretaria do polo para saber como prosseguir.</p>
+        <small>${esc(AG.address)}</small>
+      </div>
+      <a class="btn-dark rf-goal-btn" href="https://wa.me/${AG.phone}?text=${encodeURIComponent(`Olá! Sou ${meName()} e cheguei a ${REF_GOAL} indicações confirmadas no site do HC Instituto Educacional. Como faço para prosseguir?`)}" target="_blank" rel="noopener"><i data-icon="chat"></i>Falar com a secretaria</a>
+    </section>` : ''}
+
+    <section class="rf-card rf-in" style="--d:${done ? 1 : 0}">
+      <div class="rf-progress">
+        <div class="rf-prog-head">
+          <span><b>${Math.min(conf, REF_GOAL)}</b> de ${REF_GOAL} confirmadas</span>
+          <small>${done ? 'Meta alcançada' : `Faltam ${REF_GOAL - conf}`}</small>
+        </div>
+        <span class="rf-meter ${done ? 'full' : ''}"><i style="--p:${pct}"></i></span>
+        <div class="rf-counts">
+          <span><b>${list.length}</b>${list.length === 1 ? 'indicação' : 'indicações'}</span>
+          <span class="c-pend"><b>${pend}</b>${pend === 1 ? 'pendente' : 'pendentes'}</span>
+          <span class="c-conf"><b>${conf}</b>${conf === 1 ? 'confirmada' : 'confirmadas'}</span>
+        </div>
+      </div>
+
+      <h3 class="rf-list-title">Quem você indicou</h3>
+      <div class="rf-list">
+        ${list.length ? list.map((r) => `
+        <div class="rf-row">
+          <span class="aa-av" style="--a:${r.status === 'confirmada' ? '#34d399' : '#fbbf24'};--b:${r.status === 'confirmada' ? '#059669' : '#f97316'}">${esc(initials(r.name))}</span>
+          <span class="rf-who"><strong>${esc(r.name)}</strong><small>${esc(r.course)}</small></span>
+          ${refStatusPill(r.status)}
+        </div>`).join('') : `
+        <div class="rf-empty">
+          <span class="rf-empty-ico"><i data-icon="userPlus"></i></span>
+          <strong>Nenhuma indicação ainda</strong>
+          <p>Quando alguém que você indicou fizer a matrícula, a secretaria do polo registra e ela aparece aqui.</p>
+        </div>`}
+      </div>
+    </section>
+    <div class="rf-in" style="--d:${done ? 2 : 1}">${refSteps()}</div>`;
+  paintIcons(body);
 }
 
 /* ---------- Painel dos administradores ---------- */
