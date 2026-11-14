@@ -662,6 +662,7 @@ async function loadRemote() {
       CONTENT[key][1](data);
       store.set(key, data);
     });
+    scheduleSweep(); // administrador abriu o site: limpa o que sobrou de trocas antigas
     return true;
   } catch { return false; }
 }
@@ -701,6 +702,7 @@ async function pushContent(key) {
     const { error } = await sb.from('site_content').upsert({ key, data: list });
     if (error) throw error;
     setPending(key, false);
+    scheduleSweep();
     clearTimeout(pushToastTimer);
     pushToastTimer = setTimeout(() => toast('Salvo. A alteração já aparece para todos.'), 300);
   } catch (err) {
@@ -708,6 +710,50 @@ async function pushContent(key) {
     setTimeout(() => queuePush(key), 15000);
   }
 }
+/* Limpeza do bucket "site": depois de salvar, apaga as imagens que não aparecem em mais
+   nenhum lugar — nem no banco (todas as chaves), nem neste navegador, nem no content.js
+   publicado (essas só saem depois da próxima publicação). Arquivos com menos de 1 hora
+   ficam, para não apagar o envio de outro administrador que ainda está salvando. */
+let sweepTimer, sweepRunning = false;
+function scheduleSweep() {
+  clearTimeout(sweepTimer);
+  sweepTimer = setTimeout(sweepSiteImages, 8000);
+}
+async function sweepSiteImages() {
+  if (!sb || !isAdmin() || sweepRunning || pending.size) return;
+  sweepRunning = true;
+  try {
+    const { data: rows, error } = await sb.from('site_content').select('data');
+    if (error || !rows?.length) return; // sem a lista completa, não apaga nada
+    const used = JSON.stringify(rows) + JSON.stringify(window.HC_CONTENT || {})
+      + JSON.stringify(Object.values(CONTENT).map(([get]) => get()));
+    const bucket = sb.storage.from('site');
+    const listAll = async (prefix) => {
+      const out = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error: e } = await bucket.list(prefix, { limit: 1000, offset });
+        if (e) throw e;
+        out.push(...data);
+        if (data.length < 1000) return out;
+      }
+    };
+    const cutoff = Date.now() - 3600e3, gone = [];
+    for (const dir of await listAll('')) {
+      if (dir.id) continue; // só pastas (AAAA-MM) na raiz
+      for (const f of await listAll(dir.name)) {
+        if (!f.id || f.name.startsWith('.')) continue;
+        const path = `${dir.name}/${f.name}`;
+        if (new Date(f.created_at).getTime() > cutoff) continue;
+        if (!used.includes(path)) gone.push(path);
+      }
+    }
+    for (let i = 0; i < gone.length; i += 100) await bucket.remove(gone.slice(i, i + 100));
+    if (gone.length) console.info(`[HC] ${gone.length} imagem(ns) sem uso apagada(s) do Supabase.`);
+  } catch (err) { console.warn('[HC] limpeza de imagens:', err); }
+  finally { sweepRunning = false; }
+}
+window.HC_sweepImages = sweepSiteImages;
+
 // envia de uma vez todo o conteúdo atual (usado na primeira vez)
 async function pushAll() { for (const k of Object.keys(CONTENT)) await pushContent(k); return 'ok'; }
 

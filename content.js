@@ -18,7 +18,8 @@ window.HC_CONTENT = {
       "pill": "Em 2027",
       "image": "assets/conteudo/banner-b2-d7cd48a9.webp",
       "title": "Conquiste seus sonhos",
-      "linkOn": false
+      "linkOn": false,
+      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/90f8507b-dd4e-4f75-94cf-544254784523.webp"
     },
     {
       "id": "t1794523998603oldn",
