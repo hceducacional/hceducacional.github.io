@@ -504,11 +504,14 @@ async function agReload() {
   agDraw();
 }
 const agTabOf = (a) => (a.status === 'confirmado' ? 'agendados' : a.status === 'cancelado' ? 'cancelados' : 'realizados');
-function agFiltered() {
+/* alunos de uma aba, com os filtros: "Agendados" segue o período escolhido; "Realizados" e
+   "Cancelados" mostram também os dias passados (a não ser que um dia ou datas estejam escolhidos).
+   Cada aba é contada com a sua própria regra, então os números batem com o que aparece ao abri-la. */
+function agFiltered(tab = agAdm.tab) {
   const f = agAdm.f, q = fold(f.q.trim()), qd = cpfDigits(f.q);
   const [d1, d2] = agAdm.day ? [agAdm.day, agAdm.day] : agRange();
-  const realizadoAntes = agAdm.tab !== 'agendados'; // realizados/cancelados: mostra também o passado
-  return agAdm.list.filter((a) => (realizadoAntes && !agAdm.day && !f.d1 && !f.d2 ? true : a.date >= d1 && a.date <= d2)
+  const todasAsDatas = tab !== 'agendados' && !agAdm.day && !f.d1 && !f.d2;
+  return agAdm.list.filter((a) => agTabOf(a) === tab && (todasAsDatas ? true : a.date >= d1 && a.date <= d2)
     && (!f.kind || a.kind === f.kind) && (!f.shift || a.shift === f.shift)
     && (!q || fold(a.name).includes(q) || (qd.length >= 3 && a.cpf.includes(qd))));
 }
@@ -560,11 +563,10 @@ function agDraw() {
   }).join('') || '<p class="ag-desc">Nenhuma data bloqueada.</p>';
 
   // lista de alunos, agrupada por dia
-  const rows = agFiltered();
-  const count = (t) => rows.filter((a) => agTabOf(a) === t).length;
+  const count = (t) => agFiltered(t).length;
   $('#ag-tabs').innerHTML = [['agendados', 'Agendados'], ['realizados', 'Realizados'], ['cancelados', 'Cancelados']].map(([t, l]) => `<button type="button" data-tab="${t}" class="${agAdm.tab === t ? 'on' : ''}">${l} <b>${count(t)}</b></button>`).join('');
   $('#aa-dayfilter').innerHTML = agAdm.day ? `<span class="aa-chip">${agDayLong(agAdm.day)}<button type="button" data-clearday aria-label="Ver todos os dias"><i data-icon="x"></i></button></span>` : '';
-  const list = rows.filter((a) => agTabOf(a) === agAdm.tab);
+  const list = agFiltered(agAdm.tab);
   if (agAdm.tab !== 'agendados') list.reverse();
   const groups = [];
   list.forEach((a) => { const g = groups.at(-1); if (g && g.date === a.date) g.items.push(a); else groups.push({ date: a.date, items: [a] }); });
