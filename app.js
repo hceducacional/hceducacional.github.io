@@ -2549,7 +2549,7 @@ window.addEventListener('hashchange', route);
     ticking = false;
     wrap.classList.toggle('scrolled', window.scrollY > 8);
     // celular: longe do topo, a barra se recolhe (só pesquisa e foto); no topo, volta inteira
-    wrap.classList.toggle('mini', PHONE() && window.scrollY > 40);
+    wrap.classList.toggle('mini', PHONE() && window.scrollY > 40 && !wrap.classList.contains('menu-open'));
   };
   window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
   update();

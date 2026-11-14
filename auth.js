@@ -100,8 +100,14 @@ function paintUser() {
 function toggleMenu(open) {
   const menu = $('#um'), btn = $('.tb-me'); if (!menu || !btn) return;
   const show = open ?? menu.hidden;
-  if (show) { menu.hidden = false; requestAnimationFrame(() => menu.classList.add('in')); }
-  else { menu.classList.remove('in'); setTimeout(() => { if (!menu.classList.contains('in')) menu.hidden = true; }, 220); }
+  const wrap = $('#topbar-wrap');
+  if (show) {
+    wrap?.classList.add('menu-open'); wrap?.classList.remove('mini'); // no celular a barra se abre e o menu "cresce" dela
+    menu.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => menu.classList.add('in')));
+  } else {
+    menu.classList.remove('in');
+    setTimeout(() => { if (!menu.classList.contains('in')) { menu.hidden = true; wrap?.classList.remove('menu-open'); } }, 520);
+  }
   btn.setAttribute('aria-expanded', String(show));
 }
 document.addEventListener('click', (e) => {
