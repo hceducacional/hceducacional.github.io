@@ -76,7 +76,6 @@ function renderAgenda(view) {
       <p class="ag-kicker"><i data-icon="calendar"></i>Polo Humberto de Campos</p>
       <h1>Agende sua <span class="ap-grad">prova</span> ou <span class="ap-grad">tutoria</span> presencial.</h1>
       <p class="ag-lead">O agendamento é obrigatório para as provas presenciais e a tutoria presencial dos cursos de graduação. Escolha o tipo, a data e o turno disponíveis e compareça ao polo no horário marcado.</p>
-      ${isAdmin() ? `<a class="btn-dark ag-admin-link" href="#agendar/painel"><i data-icon="report"></i>Painel de agendamentos</a>` : ''}
     </header>
 
     <section class="ag-card" id="ag-box">
