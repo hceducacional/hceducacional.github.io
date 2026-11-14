@@ -2518,6 +2518,22 @@ window.addEventListener('hashchange', route);
   }, true);
 })();
 
+/* Desempenho: só anima o que a pessoa está vendo.
+   - Ao trocar de aba do site, a página anterior é removida, então nada dela continua rodando.
+   - Dentro da página, cada bloco que sai da tela pausa as suas animações (carrosséis, radar,
+     luzes, órbitas...) e volta de onde parou quando reaparece.
+   - Com o navegador minimizado ou em outra guia, tudo fica pausado. */
+(() => {
+  const view = document.getElementById('view');
+  if (!view || !('IntersectionObserver' in window)) return;
+  const io = new IntersectionObserver((entries) => entries.forEach((e) => e.target.classList.toggle('offscreen', !e.isIntersecting)), { rootMargin: '120px 0px' });
+  const watch = () => { io.disconnect(); view.querySelectorAll('.wrap > *').forEach((el) => io.observe(el)); };
+  new MutationObserver(watch).observe(view, { childList: true });
+  watch();
+  const hidden = () => document.documentElement.classList.toggle('tab-hidden', document.hidden);
+  document.addEventListener('visibilitychange', hidden); hidden();
+})();
+
 /* iPhone: o Safari ignora o "sem zoom" do cabeçalho; aqui o gesto de pinça é cancelado */
 ['gesturestart', 'gesturechange'].forEach((t) => document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
 // (o toque duplo já não dá zoom por causa do touch-action no CSS)

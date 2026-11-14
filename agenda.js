@@ -138,6 +138,22 @@ function renderAgenda(view) {
 }
 
 /* mostra a etapa n (dir: 1 avança, -1 volta, 0 sem animação de lado) */
+/* Troca o conteúdo de um elemento animando a altura (o cartão cresce ou encolhe suavemente,
+   e o que está abaixo dele acompanha, sem "pulo") */
+function agMorph(el, render) {
+  const h0 = el.offsetHeight;
+  render();
+  if (!h0 || reduceMotion() || el.closest('.expanded')) return;
+  const h1 = el.offsetHeight;
+  if (Math.abs(h1 - h0) < 2) return;
+  clearTimeout(el._morph);
+  el.style.transition = 'none'; el.style.height = h0 + 'px'; el.style.overflow = 'hidden';
+  void el.offsetHeight;
+  el.style.transition = 'height .6s cubic-bezier(.32, .72, 0, 1)';
+  el.style.height = h1 + 'px';
+  el._morph = setTimeout(() => { el.style.height = ''; el.style.transition = ''; el.style.overflow = ''; }, 650);
+}
+
 function agGo(n, dir = 1) {
   const stage = $('#ag-stage'); if (!stage) return;
   agForm.step = n;
@@ -148,7 +164,7 @@ function agGo(n, dir = 1) {
     <span class="ag-count">${n + 1} de ${AG_STEPS.length}</span>
     <button type="button" class="ag-closebtn" data-close aria-label="Fechar"><i data-icon="x"></i></button>`;
   const sub = st.id === 'turno' && agForm.date ? agLongDate(agForm.date) : st.sub;
-  stage.innerHTML = `
+  agMorph(stage, () => { stage.innerHTML = `
     <div class="ag-pane ${dir > 0 ? 'from-r' : dir < 0 ? 'from-l' : ''}" style="--a:${st.c[0]};--b:${st.c[1]}">
       <span class="ag-pane-ico"><i data-icon="${['report', 'user', 'building', 'calendar', 'clock', 'check'][n]}"></i></span>
       <h2>${st.title}</h2>
@@ -156,7 +172,7 @@ function agGo(n, dir = 1) {
       <div class="ag-pane-body">${agStepHTML(st.id)}</div>
       <p class="ag-msg" id="ag-msg" role="alert"></p>
       ${['dados', 'revisao'].includes(st.id) ? `<button class="ag-submit" type="button" data-next>${st.id === 'revisao' ? 'Confirmar agendamento' : 'Continuar'}</button>` : ''}
-    </div>`;
+    </div>`; });
   paintIcons($('#ag-box'));
   if (st.id === 'dados') {
     $('#ag-cpf').addEventListener('input', (e) => { e.target.value = cpfMask(e.target.value); agMsg(); });
@@ -173,7 +189,7 @@ function agExpand(on, instant) {
   const box = $('#ag-box'); if (!box) return;
   const ease = 'cubic-bezier(.32, .72, 0, 1)';
   if (on) {
-    if (box.classList.contains('expanded')) return;
+    if (box.classList.contains('expanded') || !PHONE()) return; // no computador o cartão fica no lugar
     box.classList.remove('ag-rise'); // a subida de entrada não deve se repetir ao recolher
     const r = box.getBoundingClientRect();
     agPh = document.createElement('div'); agPh.className = 'ag-ph'; agPh.style.height = r.height + 'px';
@@ -339,7 +355,7 @@ function agSuccess(a) {
   const k = AG.kinds[a.kind], s = AG.shifts[a.shift];
   const wa = `https://wa.me/${AG.phone}?text=${encodeURIComponent(agWhatsText(a))}`;
   const box = $('#ag-box');
-  box.innerHTML = `
+  agMorph(box, () => { box.innerHTML = `
     <div class="ag-done">
       <span class="ag-check"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="m15 27 7 7 15-16"/></svg></span>
       <h2>Agendamento confirmado!</h2>
@@ -358,7 +374,7 @@ function agSuccess(a) {
         <a class="ag-submit ag-wa" href="${esc(wa)}" target="_blank" rel="noopener">${WA_SVG}Enviar para o suporte no WhatsApp</a>
         <button class="btn-soft" type="button" id="ag-new">Novo agendamento</button>
       </div>
-    </div>`;
+    </div>`; });
   if (box.classList.contains('expanded')) box.scrollTo({ top: 0, behavior: 'smooth' }); else box.scrollIntoView({ behavior: 'smooth', block: 'start' });
   $('#ag-new').addEventListener('click', () => { agExpand(false, true); route(); }); // recomeça o assistente na etapa 1
   window.open(wa, '_blank', 'noopener'); // tenta abrir o WhatsApp sozinho; se o navegador bloquear, fica o botão

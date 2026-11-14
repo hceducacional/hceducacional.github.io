@@ -2487,7 +2487,7 @@ body:not(.is-admin) .admin-only { display: none !important; }
 .ag-bars span.now::after { animation: agBarIn .7s var(--ease); }
 @keyframes agBarIn { from { transform: translateX(-101%); } }
 .ag-count { flex: none; font-size: 13px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
-.ag-stage { position: relative; }
+.ag-stage { position: relative; display: flow-root; } /* as margens internas não "escapam": nada pula quando a animação de altura termina */
 .ag-pane { text-align: center; }
 .ag-pane.from-r { animation: agInR .55s var(--ease) both; }
 .ag-pane.from-l { animation: agInL .55s var(--ease) both; }
@@ -2641,3 +2641,27 @@ body:not(.is-admin) .admin-only { display: none !important; }
   }
   .ag-wiz.expanded .ag-prog { top: -16px; margin: -16px -14px 14px; padding: 14px 14px 10px; }
 }
+
+/* =========================================================
+   AGENDAR — no computador: título à esquerda, agendamento à direita
+   ========================================================= */
+@media (min-width: 1100px) {
+  .ag-page { max-width: 1320px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 640px); column-gap: 56px; align-items: start; }
+  .ag-hero { grid-column: 1; grid-row: 1; align-self: center; text-align: left; padding: 24px 0 0; }
+  .ag-hero .ag-orb { margin: 0 0 18px -6px; }
+  .ag-hero h1 { font-size: clamp(42px, 4.2vw, 64px); }
+  .ag-lead { margin-left: 0; margin-right: 0; max-width: 520px; }
+  .ag-hero-glow { inset: -140px -80px -200px -120px; }
+  #ag-box, .ag-ph { grid-column: 2; grid-row: 1; margin: 24px 0 0; width: 100%; max-width: none; }
+  .ag-polo { grid-column: 1 / -1; }
+}
+
+/* =========================================================
+   DESEMPENHO — pausa animações fora da tela, com a guia escondida
+   e o relógio escondido na barra recolhida do celular
+   ========================================================= */
+.offscreen, .offscreen *, .offscreen *::before, .offscreen *::after,
+html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
+.topbar-wrap.mini .hw * { animation-play-state: paused !important; }
+/* o cartão do horário, fechado, não precisa animar a bolinha de "aberto agora" */
+.hw:not(.open):not(:hover):not(:focus-within) .hw-card * { animation-play-state: paused !important; }
