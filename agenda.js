@@ -375,63 +375,103 @@ function agSuccess(a) {
 }
 
 /* ---------- painel dos administradores ---------- */
-const agAdm = { list: [], tab: 'agendados', f: { d1: '', d2: '', kind: '', shift: '', q: '' } };
+const agAdm = { list: [], blocked: [], tab: 'agendados', f: { range: 'hoje', d1: '', d2: '', kind: '', shift: '', q: '' }, day: '' };
+const AG_WD = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+const AG_MS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const agDayLong = (iso) => { const t = new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }); return t[0].toUpperCase() + t.slice(1); };
+/* período em uso: datas escolhidas à mão ou o atalho (hoje, 7, 14, 30 dias, tudo) */
+function agRange() {
+  const f = agAdm.f, now = agNow().date;
+  if (f.d1 || f.d2) return [f.d1 || '0000-01-01', f.d2 || '9999-12-31'];
+  if (f.range === 'hoje') return [now, now];
+  if (f.range === 'tudo') return ['0000-01-01', '9999-12-31'];
+  return [now, isoAdd(now, +f.range - 1)];
+}
+
 function renderAgendaAdmin(view) {
   waitAuth(view, async () => {
     if (!isAdmin()) return adminOnly(view, 'Agendamentos');
+    // sempre que o painel abre, começa em "Hoje", sem filtros
+    Object.assign(agAdm, { tab: 'agendados', day: '', f: { range: 'hoje', d1: '', d2: '', kind: '', shift: '', q: '' } });
     const now = agNow().date, m1 = now.slice(0, 8) + '01';
     const mEnd = isoAdd(isoAdd(m1, 32).slice(0, 8) + '01', -1);
     view.innerHTML = `
     <div class="wrap ag-adm">
       <a class="ag-back" href="#agendar"><i data-icon="left"></i>Página de agendamento</a>
-      ${pageHead('Painel', 'Agendamentos.', 'Acompanhe as vagas, marque presença, remarque e gere relatórios das provas e tutorias presenciais.')}
+      <header class="aa-head">
+        <div><p class="page-kicker">Painel</p><h1 class="page-title">Agendamentos.</h1></div>
+        <div class="aa-head-btns">
+          <button class="btn-soft" type="button" id="f-reload"><i data-icon="refresh"></i>Atualizar</button>
+          <button class="btn-dark" type="button" id="rp-open"><i data-icon="report"></i>Relatório PDF</button>
+        </div>
+      </header>
 
-      <section class="ag-panel">
-        <h3><i data-icon="report"></i>Relatório em PDF</h3>
-        <div class="ag-row">
+      <div class="aa-kpis" id="aa-kpis"></div>
+
+      <section class="aa-bar">
+        <div class="aa-seg" id="aa-range" role="tablist">${[['hoje', 'Hoje'], ['7', '7 dias'], ['14', '14 dias'], ['30', '30 dias'], ['tudo', 'Tudo']].map(([k, t]) => `<button type="button" data-range="${k}" class="${agAdm.f.range === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+        <div class="aa-seg" id="aa-kind">${[['', 'Todos'], ['prova', 'Provas'], ['tutoria', 'Tutorias']].map(([k, t]) => `<button type="button" data-kindf="${k}" class="${agAdm.f.kind === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+        <label class="us-search aa-search"><i data-icon="search"></i><input type="search" data-f="q" placeholder="Buscar aluno ou CPF"></label>
+        <details class="aa-more">
+          <summary><i data-icon="calendar"></i>Datas</summary>
+          <div class="aa-more-box">
+            <label class="ag-field"><span>De</span><input type="date" data-f="d1"></label>
+            <label class="ag-field"><span>Até</span><input type="date" data-f="d2"></label>
+            <label class="ag-field"><span>Turno</span><select data-f="shift"><option value="">Todos</option><option value="manha">Manhã</option><option value="tarde">Tarde</option></select></label>
+            <button class="btn-soft" type="button" id="f-clear">Limpar filtros</button>
+          </div>
+        </details>
+      </section>
+
+      <div class="aa-grid">
+        <section class="ag-panel aa-agenda">
+          <div class="aa-title"><h3><i data-icon="calendar"></i>Vagas por dia</h3><span class="aa-legend"><i class="l-free"></i>livre <i class="l-mid"></i>enchendo <i class="l-full"></i>lotado</span></div>
+          <p class="ag-desc">Toque em um dia para ver só os alunos dele.</p>
+          <div class="aa-days" id="ag-slots"></div>
+        </section>
+
+        <section class="ag-panel aa-side">
+          <h3><i data-icon="lock"></i>Datas bloqueadas</h3>
+          <p class="ag-desc">Feriados ou fechamento do polo: o site não aceita agendamentos nesses dias.</p>
+          <div class="aa-block-form">
+            <label class="ag-field"><span>Data</span><input type="date" id="bl-d" min="${now}"></label>
+            <label class="ag-field"><span>Para</span><select id="bl-s"><option value="todos">Tudo</option><option value="prova">Só provas</option><option value="tutoria">Só tutorias</option></select></label>
+            <label class="ag-field full"><span>Motivo (opcional)</span><input id="bl-r" maxlength="80" placeholder="Ex.: Feriado municipal"></label>
+            <button class="btn-dark full" type="button" id="bl-go"><i data-icon="lock"></i>Bloquear data</button>
+          </div>
+          <div class="ag-blocks" id="ag-blocks"></div>
+        </section>
+      </div>
+
+      <section class="ag-panel ag-list-panel">
+        <div class="aa-list-head">
+          <div class="ag-tabs" id="ag-tabs"></div>
+          <span class="aa-dayfilter" id="aa-dayfilter"></span>
+        </div>
+        <div class="ag-list" id="ag-list"><p class="me-loading">Carregando agendamentos…</p></div>
+      </section>
+
+      <dialog class="aa-dlg" id="rp-dlg">
+        <form method="dialog" class="aa-dlg-card">
+          <h3><i data-icon="report"></i>Relatório em PDF</h3>
+          <p class="ag-desc">Gera uma lista para imprimir ou salvar em PDF, com os totais do período.</p>
           <label class="ag-field"><span>Início</span><input type="date" id="rp-d1" value="${m1}"></label>
           <label class="ag-field"><span>Fim</span><input type="date" id="rp-d2" value="${mEnd}"></label>
           <label class="ag-field"><span>Tipo</span><select id="rp-k"><option value="">Provas e tutorias</option><option value="prova">Só provas</option><option value="tutoria">Só tutorias</option></select></label>
-          <button class="btn-dark" type="button" id="rp-go"><i data-icon="report"></i>Gerar relatório PDF</button>
-        </div>
-      </section>
-
-      <section class="ag-panel">
-        <h3><i data-icon="search"></i>Filtros</h3>
-        <div class="ag-row">
-          <label class="ag-field"><span>Data inicial</span><input type="date" data-f="d1"></label>
-          <label class="ag-field"><span>Data final</span><input type="date" data-f="d2"></label>
-          <label class="ag-field"><span>Tipo</span><select data-f="kind"><option value="">Todos</option><option value="prova">Prova</option><option value="tutoria">Tutoria</option></select></label>
-          <label class="ag-field"><span>Turno</span><select data-f="shift"><option value="">Todos</option><option value="manha">Manhã</option><option value="tarde">Tarde</option></select></label>
-          <label class="ag-field"><span>Nome ou CPF</span><input type="search" data-f="q" placeholder="Digite para buscar"></label>
-          <div class="ag-row-btns"><button class="btn-soft" type="button" id="f-clear">Limpar</button><button class="btn-soft" type="button" id="f-reload"><i data-icon="refresh"></i>Atualizar</button></div>
-        </div>
-      </section>
-
-      <section class="ag-panel"><h3><i data-icon="calendar"></i>Vagas por data, tipo e turno</h3><div class="ag-slots" id="ag-slots"></div></section>
-
-      <section class="ag-panel">
-        <h3><i data-icon="lock"></i>Datas bloqueadas</h3>
-        <p class="ag-desc">Feriados, fechamento do polo ou balanço: nessas datas o site não aceita novos agendamentos.</p>
-        <div class="ag-row">
-          <label class="ag-field"><span>Data</span><input type="date" id="bl-d" min="${now}"></label>
-          <label class="ag-field"><span>Bloquear para</span><select id="bl-s"><option value="todos">Todos os agendamentos</option><option value="prova">Somente provas</option><option value="tutoria">Somente tutorias</option></select></label>
-          <label class="ag-field"><span>Motivo (opcional)</span><input id="bl-r" maxlength="80" placeholder="Ex.: Feriado municipal"></label>
-          <button class="btn-dark" type="button" id="bl-go">Bloquear data</button>
-        </div>
-        <div class="ag-blocks" id="ag-blocks"></div>
-      </section>
-
-      <section class="ag-panel ag-list-panel">
-        <div class="ag-tabs" id="ag-tabs"></div>
-        <div class="ag-list" id="ag-list"><p class="me-loading">Carregando agendamentos…</p></div>
-      </section>
+          <div class="aa-dlg-btns"><button class="btn-soft" value="cancel">Cancelar</button><button class="btn-dark" type="button" id="rp-go"><i data-icon="report"></i>Gerar PDF</button></div>
+        </form>
+      </dialog>
     </div>`;
     paintIcons(view);
-    view.querySelectorAll('[data-f]').forEach((el) => { el.value = agAdm.f[el.dataset.f] || ''; el.addEventListener('input', () => { agAdm.f[el.dataset.f] = el.value; agDraw(); }); });
-    $('#f-clear').addEventListener('click', () => { agAdm.f = { d1: '', d2: '', kind: '', shift: '', q: '' }; view.querySelectorAll('[data-f]').forEach((el) => { el.value = ''; }); agDraw(); });
-    $('#f-reload').addEventListener('click', () => agReload());
-    $('#ag-tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) { agAdm.tab = b.dataset.tab; agDraw(); } });
+    const redraw = () => agDraw();
+    view.querySelectorAll('[data-f]').forEach((el) => { el.value = agAdm.f[el.dataset.f] || ''; el.addEventListener('input', () => { agAdm.f[el.dataset.f] = el.value; redraw(); }); });
+    $('#aa-range').addEventListener('click', (e) => { const b = e.target.closest('[data-range]'); if (!b) return; agAdm.f.range = b.dataset.range; agAdm.f.d1 = agAdm.f.d2 = ''; agAdm.day = ''; view.querySelectorAll('[data-f="d1"],[data-f="d2"]').forEach((x) => { x.value = ''; }); view.querySelectorAll('[data-range]').forEach((x) => x.classList.toggle('on', x === b)); redraw(); });
+    $('#aa-kind').addEventListener('click', (e) => { const b = e.target.closest('[data-kindf]'); if (!b) return; agAdm.f.kind = b.dataset.kindf; view.querySelectorAll('[data-kindf]').forEach((x) => x.classList.toggle('on', x === b)); redraw(); });
+    $('#f-clear').addEventListener('click', () => { Object.assign(agAdm.f, { d1: '', d2: '', shift: '', q: '' }); agAdm.day = ''; view.querySelectorAll('[data-f]').forEach((el) => { el.value = ''; }); redraw(); });
+    $('#f-reload').addEventListener('click', () => agReload().then(() => toast('Atualizado')));
+    $('#ag-tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) { agAdm.tab = b.dataset.tab; redraw(); } });
+    $('#ag-slots').addEventListener('click', (e) => { const d = e.target.closest('[data-day]'); if (!d) return; agAdm.day = agAdm.day === d.dataset.day ? '' : d.dataset.day; redraw(); if (agAdm.day && PHONE()) $('#ag-list').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    $('#aa-dayfilter').addEventListener('click', (e) => { if (e.target.closest('[data-clearday]')) { agAdm.day = ''; redraw(); } });
     $('#ag-list').addEventListener('click', agAction);
     $('#ag-blocks').addEventListener('click', async (e) => {
       const b = e.target.closest('[data-unblock]'); if (!b) return;
@@ -449,7 +489,8 @@ function renderAgendaAdmin(view) {
       toast(busy ? `Data bloqueada. Atenção: ${busy} agendamento(s) já marcados nesse dia.` : 'Data bloqueada');
       $('#bl-d').value = ''; $('#bl-r').value = ''; agReload();
     });
-    $('#rp-go').addEventListener('click', () => agReport($('#rp-d1').value, $('#rp-d2').value, $('#rp-k').value));
+    $('#rp-open').addEventListener('click', () => $('#rp-dlg').showModal());
+    $('#rp-go').addEventListener('click', () => { $('#rp-dlg').close(); agReport($('#rp-d1').value, $('#rp-d2').value, $('#rp-k').value); });
     agReload();
   });
 }
@@ -465,58 +506,88 @@ async function agReload() {
 const agTabOf = (a) => (a.status === 'confirmado' ? 'agendados' : a.status === 'cancelado' ? 'cancelados' : 'realizados');
 function agFiltered() {
   const f = agAdm.f, q = fold(f.q.trim()), qd = cpfDigits(f.q);
-  return agAdm.list.filter((a) => (!f.d1 || a.date >= f.d1) && (!f.d2 || a.date <= f.d2) && (!f.kind || a.kind === f.kind) && (!f.shift || a.shift === f.shift)
+  const [d1, d2] = agAdm.day ? [agAdm.day, agAdm.day] : agRange();
+  const realizadoAntes = agAdm.tab !== 'agendados'; // realizados/cancelados: mostra também o passado
+  return agAdm.list.filter((a) => (realizadoAntes && !agAdm.day && !f.d1 && !f.d2 ? true : a.date >= d1 && a.date <= d2)
+    && (!f.kind || a.kind === f.kind) && (!f.shift || a.shift === f.shift)
     && (!q || fold(a.name).includes(q) || (qd.length >= 3 && a.cpf.includes(qd))));
 }
 function agDraw() {
   if (!$('#ag-list')) return;
-  const rows = agFiltered();
   const now = agNow().date;
-  // vagas: das datas filtradas (ou de hoje em diante) com atendimento
-  const from = agAdm.f.d1 || now, to = agAdm.f.d2 || isoAdd(now, 14);
-  const slots = [];
-  for (let d = from; d <= to && slots.length < 60; d = isoAdd(d, 1)) {
-    for (const k of Object.keys(AG.kinds)) {
-      if (agAdm.f.kind && agAdm.f.kind !== k) continue;
-      const shifts = AG.kinds[k].days[dow(d)]; if (!shifts) continue;
-      slots.push({ d, k, shifts, blocked: (agAdm.blocked || []).find((b) => b.date === d && (b.scope === 'todos' || b.scope === k)) });
-    }
-  }
   const used = (d, k, s) => agAdm.list.filter((a) => a.date === d && a.kind === k && a.shift === s && a.status !== 'cancelado').length;
-  $('#ag-slots').innerHTML = slots.length ? slots.map(({ d, k, shifts, blocked }) => `
-    <div class="ag-slot ${blocked ? 'blocked' : ''}">
-      <div class="ag-slot-h"><strong>${brDate(d)}</strong><span class="ag-tag t-${k}">${AG.kinds[k].label}</span></div>
-      ${blocked ? `<p class="ag-slot-bl">Bloqueado${blocked.reason ? ' · ' + esc(blocked.reason) : ''}</p>` : shifts.map((s) => { const u = used(d, k, s), c = AG.kinds[k].cap; return `<div class="ag-slot-r"><span>${AG.shifts[s].label}</span><b class="${u >= c ? 'full' : ''}">${u}/${c}</b><i style="--p:${u / c}"></i></div>`; }).join('')}
-    </div>`).join('') : '<p class="ag-desc">Nenhuma data com atendimento nesse período.</p>';
 
-  $('#ag-blocks').innerHTML = (agAdm.blocked || []).filter((b) => b.date >= now).map((b) => `
-    <div class="ag-block"><strong>${brDate(b.date)}</strong><span class="ag-tag">${b.scope === 'todos' ? 'Todos os agendamentos' : b.scope === 'prova' ? 'Somente provas' : 'Somente tutorias'}</span><em>${esc(b.reason || '')}</em>
-    <button class="btn-soft sm" type="button" data-unblock="${b.date}|${b.scope}"><i data-icon="trash"></i>Desbloquear</button></div>`).join('') || '<p class="ag-desc">Nenhuma data bloqueada.</p>';
+  // números do topo
+  const conf = agAdm.list.filter((a) => a.status === 'confirmado');
+  const pres = agAdm.list.filter((a) => a.status === 'compareceu').length, falt = agAdm.list.filter((a) => a.status === 'faltou').length;
+  const kpi = (ico, c, n, t, s) => `<div class="aa-kpi" style="--a:${c[0]};--b:${c[1]}"><span class="aa-kpi-ico"><i data-icon="${ico}"></i></span><b>${n}</b><span>${t}</span>${s ? `<small>${s}</small>` : ''}</div>`;
+  $('#aa-kpis').innerHTML =
+    kpi('calendar', ['#34d399', '#059669'], conf.filter((a) => a.date === now).length, 'Hoje', agDayLong(now)) +
+    kpi('clock', ['#60a5fa', '#2563eb'], conf.filter((a) => a.date > now && a.date <= isoAdd(now, 7)).length, 'Próximos 7 dias', 'agendados') +
+    kpi('users', ['#a78bfa', '#7c3aed'], conf.filter((a) => a.date >= now).length, 'Agendados', `${conf.filter((a) => a.date >= now && a.kind === 'prova').length} provas · ${conf.filter((a) => a.date >= now && a.kind === 'tutoria').length} tutorias`) +
+    kpi('check', ['#fbbf24', '#f97316'], pres + falt ? Math.round((pres / (pres + falt)) * 100) + '%' : '—', 'Presença', `${pres} vieram · ${falt} faltaram`);
 
-  const count = (t) => { const r = rows.filter((a) => agTabOf(a) === t); return `${r.length} <small>${r.filter((a) => a.kind === 'prova').length}P · ${r.filter((a) => a.kind === 'tutoria').length}T</small>`; };
+  // agenda de vagas: um dia por linha, com provas e tutorias lado a lado
+  const [r1, r2raw] = agAdm.f.d1 || agAdm.f.d2 ? agRange() : agAdm.f.range === 'tudo' ? [now, isoAdd(now, 60)] : agRange();
+  const r2 = r2raw > isoAdd(r1, 90) ? isoAdd(r1, 90) : r2raw;
+  const kinds = agAdm.f.kind ? [agAdm.f.kind] : ['prova', 'tutoria'];
+  const days = [];
+  for (let d = r1 < now && !agAdm.f.d1 ? now : r1; d <= r2 && days.length < 90; d = isoAdd(d, 1)) {
+    if (!kinds.some((k) => AG.kinds[k].days[dow(d)])) continue;
+    days.push(d);
+  }
+  const bar = (u, c) => { const p = u / c; return `<span class="aa-meter ${u >= c ? 'full' : p >= .5 ? 'mid' : ''}"><i style="--p:${Math.min(1, p)}"></i></span><b>${u}/${c}</b>`; };
+  $('#ag-slots').innerHTML = days.length ? days.map((d) => {
+    const dd = new Date(d + 'T12:00:00');
+    const bl = (agAdm.blocked || []).filter((b) => b.date === d);
+    const cols = kinds.map((k) => {
+      const shifts = AG.kinds[k].days[dow(d)];
+      const kb = bl.find((b) => b.scope === 'todos' || b.scope === k);
+      if (!shifts) return `<div class="aa-k off"><span class="ag-tag t-${k}">${AG.kinds[k].short}</span><em>Sem atendimento</em></div>`;
+      if (kb) return `<div class="aa-k off"><span class="ag-tag t-${k}">${AG.kinds[k].short}</span><em><i data-icon="lock"></i>Bloqueado${kb.reason ? ' · ' + esc(kb.reason) : ''}</em></div>`;
+      return `<div class="aa-k"><span class="ag-tag t-${k}">${AG.kinds[k].short}</span>${shifts.map((s) => `<span class="aa-s"><span>${AG.shifts[s].label}</span>${bar(used(d, k, s), AG.kinds[k].cap)}</span>`).join('')}</div>`;
+    }).join('');
+    return `<button type="button" class="aa-day ${d === now ? 'today' : ''} ${agAdm.day === d ? 'on' : ''}" data-day="${d}">
+      <span class="aa-date"><small>${AG_WD[dd.getDay()]}</small><b>${dd.getDate()}</b><small>${AG_MS[dd.getMonth()]}</small></span>
+      <span class="aa-cols">${cols}</span></button>`;
+  }).join('') : '<p class="ag-desc">Nenhum dia com atendimento nesse período.</p>';
+
+  $('#ag-blocks').innerHTML = (agAdm.blocked || []).filter((b) => b.date >= now).map((b) => {
+    const dd = new Date(b.date + 'T12:00:00');
+    return `<div class="ag-block"><span class="aa-date sm"><small>${AG_WD[dd.getDay()]}</small><b>${dd.getDate()}</b><small>${AG_MS[dd.getMonth()]}</small></span>
+    <span class="aa-bl-txt"><strong>${b.scope === 'todos' ? 'Tudo bloqueado' : b.scope === 'prova' ? 'Só provas' : 'Só tutorias'}</strong><em>${esc(b.reason || 'Sem motivo informado')}</em></span>
+    <button class="icon-btn" type="button" data-unblock="${b.date}|${b.scope}" title="Desbloquear"><i data-icon="trash"></i></button></div>`;
+  }).join('') || '<p class="ag-desc">Nenhuma data bloqueada.</p>';
+
+  // lista de alunos, agrupada por dia
+  const rows = agFiltered();
+  const count = (t) => rows.filter((a) => agTabOf(a) === t).length;
   $('#ag-tabs').innerHTML = [['agendados', 'Agendados'], ['realizados', 'Realizados'], ['cancelados', 'Cancelados']].map(([t, l]) => `<button type="button" data-tab="${t}" class="${agAdm.tab === t ? 'on' : ''}">${l} <b>${count(t)}</b></button>`).join('');
-
+  $('#aa-dayfilter').innerHTML = agAdm.day ? `<span class="aa-chip">${agDayLong(agAdm.day)}<button type="button" data-clearday aria-label="Ver todos os dias"><i data-icon="x"></i></button></span>` : '';
   const list = rows.filter((a) => agTabOf(a) === agAdm.tab);
   if (agAdm.tab !== 'agendados') list.reverse();
-  $('#ag-list').innerHTML = list.length ? `
-    <div class="ag-tr ag-th"><span>Aluno</span><span>Curso · Faculdade</span><span>Tipo</span><span>Data · Turno</span><span>Status</span><span></span></div>
-    ${list.map((a) => `
-    <div class="ag-tr" data-id="${a.id}">
-      <span class="ag-who"><strong>${esc(a.name)}</strong><small>CPF ${cpfMask(a.cpf)}</small></span>
-      <span class="ag-c"><strong>${esc(a.course)}</strong><small>${esc(a.college)}</small></span>
-      <span><span class="ag-tag t-${a.kind}">${AG.kinds[a.kind].short}</span></span>
-      <span class="ag-c"><strong>${brDate(a.date)}</strong><small>${AG.shifts[a.shift].label} · ${AG.shifts[a.shift].time}</small></span>
-      <span><span class="ag-st s-${a.status}">${AG_STATUS[a.status]}</span></span>
-      <span class="ag-acts">
-        ${a.status === 'confirmado' ? `
-          <button class="btn-dark sm ok" data-ag="compareceu"><i data-icon="check"></i>Compareceu</button>
-          <button class="btn-soft sm no" data-ag="faltou"><i data-icon="x"></i>Não compareceu</button>
-          <button class="btn-soft sm" data-ag="remarcar"><i data-icon="calendar"></i>Remarcar</button>
-          <button class="icon-btn" data-ag="cancelar" title="Cancelar agendamento"><i data-icon="trash"></i></button>` : `
-          <button class="btn-soft sm" data-ag="desfazer"><i data-icon="left"></i>Voltar para agendado</button>`}
-        ${a.history?.length ? `<button class="icon-btn neutral" data-ag="hist" title="Histórico"><i data-icon="clock"></i></button>` : ''}
-      </span>
-    </div>`).join('')}` : `<p class="us-empty">Nenhum agendamento ${agAdm.tab === 'agendados' ? 'marcado' : agAdm.tab === 'realizados' ? 'realizado' : 'cancelado'} com esses filtros.</p>`;
+  const groups = [];
+  list.forEach((a) => { const g = groups.at(-1); if (g && g.date === a.date) g.items.push(a); else groups.push({ date: a.date, items: [a] }); });
+  $('#ag-list').innerHTML = groups.length ? groups.map((g) => `
+    <div class="aa-group">
+      <h4 class="aa-gh"><span>${agDayLong(g.date)}${g.date === now ? ' · <b>hoje</b>' : ''}</span><small>${g.items.length} ${g.items.length === 1 ? 'aluno' : 'alunos'}</small></h4>
+      ${g.items.map((a) => `
+      <div class="aa-row" data-id="${a.id}">
+        <span class="aa-av" style="--a:${a.kind === 'prova' ? '#60a5fa' : '#a78bfa'};--b:${a.kind === 'prova' ? '#2563eb' : '#7c3aed'}">${esc(initials(a.name))}</span>
+        <span class="aa-who"><strong>${esc(a.name)}</strong><small>${esc(a.course)} · ${esc(a.college)} · CPF ${cpfMask(a.cpf)}</small></span>
+        <span class="aa-when"><span class="ag-tag t-${a.kind}">${AG.kinds[a.kind].short}</span><span class="aa-time"><i data-icon="${a.shift === 'manha' ? 'sun' : 'clock'}"></i>${AG.shifts[a.shift].label} · ${AG.shifts[a.shift].time}</span></span>
+        <span class="ag-st s-${a.status}">${AG_STATUS[a.status]}</span>
+        <span class="ag-acts">
+          ${a.status === 'confirmado' ? `
+            <button class="aa-btn ok" data-ag="compareceu" title="Compareceu"><i data-icon="check"></i><span>Veio</span></button>
+            <button class="aa-btn no" data-ag="faltou" title="Não compareceu"><i data-icon="x"></i><span>Faltou</span></button>
+            <button class="icon-btn neutral" data-ag="remarcar" title="Remarcar"><i data-icon="calendar"></i></button>
+            <button class="icon-btn" data-ag="cancelar" title="Cancelar agendamento"><i data-icon="trash"></i></button>` : `
+            <button class="btn-soft sm" data-ag="desfazer"><i data-icon="left"></i>Desfazer</button>`}
+          ${a.history?.length ? `<button class="icon-btn neutral" data-ag="hist" title="Histórico"><i data-icon="clock"></i></button>` : ''}
+        </span>
+      </div>`).join('')}
+    </div>`).join('') : `<p class="us-empty">Nenhum agendamento ${agAdm.tab === 'agendados' ? 'marcado' : agAdm.tab === 'realizados' ? 'realizado' : 'cancelado'} ${agAdm.day ? 'nesse dia' : 'nesse período'}.</p>`;
   paintIcons($('.ag-adm'));
 }
 async function agUpdate(a, patch, note) {
