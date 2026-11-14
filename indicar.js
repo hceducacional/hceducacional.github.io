@@ -51,8 +51,9 @@ function refHeroHTML(out) {
       ? '<h1 class="ref-title"><span>Indique.</span> <span class="ap-grad">Estudem juntos.</span></h1>'
       : `<h1 class="ref-title" id="rf-title"><span>${first ? esc(first) + ',' : 'Suas'}</span> <span class="ap-grad">${first ? 'suas indicações.' : 'indicações.'}</span></h1>`}
     <p class="ref-sub">${out
-      ? 'Convide quem você conhece para estudar no HC Instituto Educacional e acompanhe aqui cada indicação. Entre na sua conta para ver as suas.'
-      : 'Acompanhe aqui quem você indicou para estudar no HC Instituto Educacional.'}</p>
+      ? 'Convide quem você conhece para estudar no HC Instituto Educacional. Além de estudarem juntos, você ainda conquista vantagens exclusivas. Entre na sua conta para acompanhar as suas indicações.'
+      : 'Acompanhe aqui quem você indicou para estudar no HC Instituto Educacional e as vantagens que você conquista.'}</p>
+    <p class="ref-prize"><span class="ref-prize-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M11.2 7.4C10 4.6 8.1 3 6.6 3.6c-1.4.6-1.1 2.9 1 3.8zM12.8 7.4C14 4.6 15.9 3 17.4 3.6c1.4.6 1.1 2.9-1 3.8z"/><rect x="2.5" y="8" width="8.4" height="4.4" rx="1.2"/><rect x="13.1" y="8" width="8.4" height="4.4" rx="1.2"/><rect x="4" y="13.6" width="6.9" height="7.4" rx="1.2"/><rect x="13.1" y="13.6" width="6.9" height="7.4" rx="1.2"/></svg></span><span><b class="ap-grad">Ganhe prêmios</b> por suas indicações</span></p>
     ${out ? '<div class="me-cta rf-cta"><button class="btn-dark" type="button" data-auth="login">Entrar</button><button class="btn-soft" type="button" data-auth="signup">Criar conta</button></div>' : ''}
   </section>`;
 }
