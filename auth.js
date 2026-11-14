@@ -12,7 +12,32 @@ const sb = window.supabase?.createClient(SB_URL, SB_KEY, {
 });
 
 const auth = { user: null, profile: null, ready: false, pending: 0 };
-const AVATAR_MAX = 512;
+const AVATAR_MAX = 480; // maior lado da foto de perfil (ela aparece no máximo com 128 px; 480 fica nítido até em telas 3x)
+
+/* Foto de perfil sempre recomprimida: reduz para no máximo 480 px no maior lado e salva em
+   WebP (ou JPEG, no Safari) com qualidade alta. Fica entre ~20 e 60 KB, sem perda visível. */
+function compressAvatar(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const k = Math.min(1, AVATAR_MAX / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k));
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); // fundo branco se a foto tiver transparência
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob((webp) => {
+        if (webp && webp.type === 'image/webp') return resolve(webp);
+        c.toBlob((jpg) => (jpg ? resolve(jpg) : reject(new Error('Não foi possível preparar a foto.'))), 'image/jpeg', .86);
+      }, 'image/webp', .84);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Esse arquivo não é uma imagem válida.')); };
+    img.src = url;
+  });
+}
 const STATUS_TXT = { pending: 'Aguardando aprovação', approved: 'Aprovado', blocked: 'Bloqueado' };
 const isAdmin = () => auth.profile?.role === 'admin' && auth.profile?.status === 'approved';
 const meName = () => auth.profile?.name || auth.user?.user_metadata?.name || (auth.user?.email || '').split('@')[0];
@@ -382,7 +407,7 @@ function renderProfile(view) {
         <section class="me-card me-id">
           <div class="me-photo">
             ${userAvatar(p, 'me-avatar')}
-            <label class="me-cam" title="Trocar foto"><i data-icon="image"></i><input type="file" accept="image/jpeg,image/png,image/webp" id="me-file" hidden></label>
+            <label class="me-cam" title="Trocar foto"><i data-icon="image"></i><input type="file" accept="image/*" id="me-file" hidden></label>
           </div>
           <div class="me-photo-actions">
             <label class="btn-soft" for="me-file"><i data-icon="image"></i>${p.avatar_url ? 'Trocar foto' : 'Escolher foto'}</label>
@@ -430,10 +455,10 @@ function renderProfile(view) {
     $('#me-file').addEventListener('change', async (e) => {
       const file = e.target.files[0]; e.target.value = '';
       if (!file) return;
-      if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return toast('Use uma foto em JPG, PNG ou WebP.');
+      if (!/^image\//.test(file.type)) return toast('Escolha um arquivo de imagem.');
       toast('Enviando foto…');
       try {
-        const blob = await prepareImage(file, AVATAR_MAX);
+        const blob = await compressAvatar(file);
         const ext = blob.type === 'image/webp' ? 'webp' : blob.type === 'image/png' ? 'png' : 'jpg';
         const path = `${auth.user.id}/foto-${Date.now().toString(36)}.${ext}`;
         const up = await sb.storage.from('avatars').upload(path, blob, { contentType: blob.type, upsert: false });
