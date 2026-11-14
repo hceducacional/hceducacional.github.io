@@ -2674,7 +2674,7 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
 /* elementos que se movem o tempo todo ganham camada própria na GPU */
 .slide.active .slide-bg, .slide.leaving .slide-bg, .nr-orbit, .nr-wave, .nr-glow, .nr-user,
 .ref-glow span, .ref-core, .ref-av, .ag-core, .ag-chip, .dot.active .dot-fill { will-change: transform; }
-@media (max-width: 860px), (hover: none) {
+@media all { /* modo leve: vale para celular e computador */
   /* sem vidro desfocado sobre o radar animado (refazer o desfoque a cada quadro pesa) */
   .ap-pills { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(255, 255, 255, .95); }
   /* relógio da barra fixa: sol e lua parados (a barra de vidro não precisa ser redesenhada sem parar) */
@@ -2691,14 +2691,13 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
    fundos ficam um pouco mais opacos; as animações usam só movimento e
    transparência, que rodam direto no processador gráfico.
    ========================================================= */
-@media (max-width: 860px), (hover: none) {
+@media all { /* modo leve: vale para celular e computador */
   *, *::before, *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
   .topbar::before { background: rgba(22, 22, 23, .96); }
   .tabbar { background: rgba(22, 22, 23, .95); }
   .cx-glass { background: linear-gradient(180deg, rgba(255, 255, 255, .92), rgba(255, 255, 255, .86)); }
   .nm-backdrop, .lk-backdrop, .cfg-backdrop, .ag-backdrop { background: rgba(0, 0, 0, .55); }
   .more-backdrop { background: rgba(0, 0, 0, .45); }
-  .ap-paddle, .nm-close, .nm-arrow, .car-arrow { background-color: rgba(29, 29, 31, .78); }
   .nm-dots { background: rgba(0, 0, 0, .4); }
   /* entradas sem desfoque: só sobem/deslizam e aparecem */
   .more-item, .topbar.hw-out .tb-title, .topbar-wrap.mini .topbar :is(.tb-logo, .tb-title, .hw) { filter: none !important; }
@@ -2735,10 +2734,11 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
    coloridas e em elementos que se movem). Aqui elas viram sombras curtas ou
    contornos finos, as órbitas param de flutuar e o fundo vira um degradê simples.
    ========================================================= */
-@media (max-width: 860px), (hover: none) {
+@media all { /* modo leve: vale para celular e computador */
   /* fundo: degradê simples, sem máscara e sem círculos sobrepostos */
   .ag-hero-glow { -webkit-mask-image: none; mask-image: none; inset: -140px -16px -120px;
-    background: radial-gradient(120% 70% at 30% 0%, rgba(52, 211, 153, .2), transparent 60%), radial-gradient(90% 60% at 95% 10%, rgba(96, 165, 250, .16), transparent 60%); }
+    /* "closest-side": cada luz termina transparente antes da borda da área, então nunca aparece corte */
+    background: radial-gradient(ellipse closest-side at 38% 42%, rgba(52, 211, 153, .24), rgba(52, 211, 153, 0)), radial-gradient(ellipse closest-side at 70% 34%, rgba(96, 165, 250, .18), rgba(96, 165, 250, 0)); }
   .ag-hero-glow span { display: none; }
 
   /* peça central: entra uma vez e fica parada (sem flutuar sem parar) */
@@ -2775,3 +2775,34 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
 .ag-wiz.sheet-out { animation: agSheetOut .36s cubic-bezier(.4, 0, 1, 1) both; }
 @keyframes agSheetIn { from { opacity: 0; transform: translateY(40px) scale(.98); } to { opacity: 1; transform: none; } }
 @keyframes agSheetOut { to { opacity: 0; transform: translateY(30px) scale(.98); } }
+
+/* =========================================================
+   INDICAR — MODO LEVE NO CELULAR
+   As letras do título "travavam" porque cada palavra (algumas com texto em
+   degradê) subia com movimento; no iPhone o texto em degradê é redesenhado a
+   cada quadro. Aqui as palavras só aparecem (opacidade), a peça central entra
+   uma vez e para, e as sombras grandes viram sombras curtas.
+   ========================================================= */
+@keyframes refFadeIn { to { opacity: 1; } }
+@media all { /* modo leve: vale para celular e computador */
+  .ref-title > span, .ag-words > span { transform: none !important; filter: none !important; animation-name: refFadeIn !important; animation-duration: .7s !important; }
+  .ref-sub, .ref-badge { animation-name: refFadeIn !important; transform: none; }
+  .ref-core { animation: refPop .8s cubic-bezier(.34, 1.4, .64, 1) .2s forwards !important; box-shadow: 0 8px 18px -10px rgba(6, 122, 87, .6); will-change: auto; }
+  .ref-av { animation: refPop .6s cubic-bezier(.34, 1.4, .64, 1) forwards !important; box-shadow: 0 0 0 3px var(--bg); will-change: auto; }
+  .ref-av.a1 { animation-delay: .5s !important; } .ref-av.a2 { animation-delay: .6s !important; } .ref-av.a3 { animation-delay: .7s !important; }
+  .ref-dot { animation: none; }
+  .ref-glow { animation: none; opacity: 1; }
+  .ref-glow span { will-change: auto; }
+  .ref-step { box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 0 0 1px rgba(0, 0, 0, .04); transform: translateY(18px); transition: none; }
+  .ref-step:hover { transform: none; box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 0 0 1px rgba(0, 0, 0, .04); }
+  .ref-ico { box-shadow: none; }
+  .ref-num { color: var(--line); }
+}
+
+/* computador: sem o vidro desfocado, a barra de cima fica um pouco mais opaca */
+@media (min-width: 861px) { .topbar { background: rgba(22, 22, 23, .96); } }
+/* sem o desfoque, os botões redondos sobre fotos ficam um pouco mais opacos para continuar legíveis */
+.nm-arrow, .nm-close { background-color: rgba(29, 29, 31, .8); }
+.car-arrow { background-color: rgba(220, 220, 225, .9); }
+/* computador: a área das luzes do Agendar é bem maior que o título, para o degradê sumir sem corte */
+@media (min-width: 1100px) { .ag-hero-glow { inset: -220px -260px -260px -220px; } }
