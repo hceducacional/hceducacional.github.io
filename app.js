@@ -4,6 +4,8 @@
 
 /* ---------- Ícones (estilo Lucide) ---------- */
 const ICONS = {
+  edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  chat: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/>',
   grid: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
   phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
   calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
@@ -2411,46 +2413,6 @@ function confirmDialog({ title, sub = '', image = '', ok = 'Excluir', icon = 'tr
 }
 
 /* =========================================================
-   INDICAR (em breve): alunos indicam amigos e ganham desconto
-   ========================================================= */
-function renderReferral(view) {
-  const steps = [
-    ['userPlus', 'Convide', 'Indique amigos, familiares e colegas que querem estudar. É só informar o nome e o contato de quem você conhece.'],
-    ['users', 'Estudem juntos', 'Quando a pessoa indicada faz a matrícula, a secretaria do polo confirma a indicação.'],
-    ['star', 'Ganhe desconto', 'Cada indicação válida vira desconto nas mensalidades do seu curso. Quanto mais amigos, mais você economiza.'],
-  ];
-  view.innerHTML = `
-  <div class="wrap ref">
-    <section class="ref-hero">
-      <div class="ref-glow" aria-hidden="true"><span></span><span></span><span></span></div>
-      <div class="ref-orb" aria-hidden="true">
-        <span class="ref-ring r1"></span><span class="ref-ring r2"></span><span class="ref-ring r3"></span>
-        <span class="ref-core"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
-        <span class="orb-spin" style="--r:98px;--t:32s">
-          <span class="orb-arm" style="--deg:-70deg"><span class="orb-up"><span class="ref-av a1">${initials('Ana Lima')}</span></span></span>
-          <span class="orb-arm" style="--deg:50deg"><span class="orb-up"><span class="ref-av a2">${initials('João Pedro')}</span></span></span>
-          <span class="orb-arm" style="--deg:170deg"><span class="orb-up"><span class="ref-av a3">${initials('Maria Clara')}</span></span></span>
-        </span>
-      </div>
-      <p class="ref-badge"><span class="ref-dot"></span>Em breve</p>
-      <h1 class="ref-title"><span>Indique.</span> <span>Estudem juntos.</span> <span class="ap-grad">Ganhe desconto.</span></h1>
-      <p class="ref-sub">Em breve, um espaço só seu para convidar quem você conhece a estudar no HC Instituto Educacional. A cada indicação válida, você ganha desconto na mensalidade do seu curso.</p>
-    </section>
-    <section class="ref-steps">
-      ${steps.map(([ico, t, d], k) => `
-      <article class="ref-step" style="--k:${k}">
-        <span class="ref-num">0${k + 1}</span>
-        <span class="ref-ico"><i data-icon="${ico}"></i></span>
-        <h3>${t}</h3>
-        <p>${d}</p>
-      </article>`).join('')}
-    </section>
-    <p class="ref-note">Estamos preparando tudo com cuidado. Assim que estiver no ar, avisamos por aqui.</p>
-  </div>`;
-  paintIcons(view);
-}
-
-/* =========================================================
    Páginas ainda não construídas
    ========================================================= */
 const TITLES = {
@@ -2494,7 +2456,6 @@ function route() {
   else if (r === 'config') renderConfig(view);
   else if (r === 'config/noticias') renderNewsAdmin(view);
   else if (r === 'noticias') renderNews(view);
-  else if (r === 'indicar') renderReferral(view);
   else if (window.HC_ROUTES?.[r]) window.HC_ROUTES[r](view);
   else if (TITLES[r]) renderPlaceholder(view, r);
   else renderDashboard(view);

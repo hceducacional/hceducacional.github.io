@@ -89,7 +89,7 @@ async function setUser(user) {
   paintUser();
   if (isAdmin() && pending.size) [...pending].forEach((k) => queuePush(k)); // termina envios que ficaram pendentes
   const r = (location.hash || '').slice(1);
-  if ((changed || first) && (r === 'perfil' || r === 'usuarios' || r.startsWith('config') || r.startsWith('agendar'))) route(); // a página depende de quem entrou
+  if ((changed || first) && (r === 'perfil' || r === 'usuarios' || r.startsWith('config') || r.startsWith('agendar') || r.startsWith('indicar'))) route(); // a página depende de quem entrou
 }
 async function refreshMe() { await loadProfile(); paintUser(); }
 
@@ -117,6 +117,7 @@ function paintUser() {
       ${p.status && p.status !== 'approved' ? `<p class="um-state s-${esc(p.status)}"><i></i>${esc(STATUS_TXT[p.status])}${p.status === 'pending' ? '<span>A secretaria vai liberar o seu acesso em breve.</span>' : ''}</p>` : ''}
       <a class="um-item" role="menuitem" href="#perfil"><i data-icon="user"></i>Meu perfil</a>
       ${isAdmin() ? `<a class="um-item" role="menuitem" href="#agendar/painel"><i data-icon="calendar"></i>Agendamentos</a>` : ''}
+      ${isAdmin() ? `<a class="um-item" role="menuitem" href="#indicar/painel"><i data-icon="userPlus"></i>Indicações</a>` : ''}
       ${isAdmin() ? `<a class="um-item" role="menuitem" href="#usuarios"><i data-icon="users"></i>Usuários${auth.pending ? `<b class="um-count">${auth.pending}</b>` : ''}</a>` : ''}
       <button class="um-item danger" role="menuitem" type="button" data-auth="logout"><i data-icon="logout"></i>Sair da conta</button>
     </div>`;
@@ -760,6 +761,7 @@ window.HC_signOut = signOut;
       if (event === 'SIGNED_OUT') {
         auth.user = null; auth.profile = null; auth.pending = 0; paintUser();
         if (typeof agForm !== 'undefined') Object.assign(agForm, { name: '', cpf: '', course: '', college: '' }); // não deixa dados no agendamento
+        if ((location.hash || '').startsWith('#indicar')) route(); // tira da tela as indicações de quem saiu
         return;
       }
       if (['INITIAL_SESSION', 'SIGNED_IN', 'USER_UPDATED', 'TOKEN_REFRESHED'].includes(event)) {
