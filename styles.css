@@ -3089,3 +3089,34 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
       radial-gradient(ellipse closest-side at 60% 68%, rgba(251, 191, 36, .2), rgba(251, 191, 36, 0)); }
   .ref-glow span { display: none; }
 }
+
+/* =========================================================
+   AGENDAR NO CELULAR — 1ª etapa compacta: o tipo vira duas pílulas
+   lado a lado, para escolher sem precisar rolar a tela
+   ========================================================= */
+.ag-tile-mini { display: none; }
+@media (max-width: 860px) {
+  .ag-wiz:not(.expanded) { padding-top: 12px; padding-bottom: 16px; }
+  .ag-wiz:not(.expanded) .ag-prog { margin-bottom: 8px; min-height: 28px; }
+  .step-tipo .ag-pane-ico { display: none; }
+  .step-tipo h2 { font-size: 21px; }
+  .step-tipo .ag-pane-sub { margin-top: 4px; font-size: 13.5px; }
+  .step-tipo .ag-pane-body { margin-top: 14px; }
+  .step-tipo .ag-big2 { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .step-tipo .ag-tile {
+    min-height: 0; flex-direction: row; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 20px;
+    display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 10px; row-gap: 1px;
+  }
+  .step-tipo .ag-tile-ico { grid-row: span 2; width: 34px; height: 34px; margin: 0; border-radius: 11px; }
+  .step-tipo .ag-tile-ico i { width: 18px; height: 18px; }
+  .step-tipo .ag-tile strong { margin: 0; font-size: 14.5px; line-height: 1.15; letter-spacing: -.01em; }
+  .step-tipo .ag-tile small, .step-tipo .ag-tile-go { display: none; }
+  .step-tipo .ag-tile-mini { display: block; font-style: normal; font-size: 11.5px; opacity: .85; line-height: 1.2; }
+  .step-tipo .ag-tile.on { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--b); }
+}
+@media (max-width: 860px) {
+  .step-tipo .ag-tile-long { display: none; }
+  .step-tipo .ag-tile strong { font-size: 16px; }
+  .step-tipo .ag-tile .ag-tile-mini { margin: 0; padding: 0; background: none; border-radius: 0; font-weight: 600; }
+}
+@media (max-width: 860px) { .step-tipo .ag-tile .ag-tile-mini { white-space: nowrap; } }

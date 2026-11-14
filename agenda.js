@@ -174,7 +174,7 @@ function agGo(n, dir = 1) {
     <button type="button" class="ag-closebtn" data-close aria-label="Fechar"><i data-icon="x"></i></button>`;
   const sub = st.id === 'turno' && agForm.date ? agLongDate(agForm.date) : st.sub;
   agMorph(stage, () => { stage.innerHTML = `
-    <div class="ag-pane ${dir > 0 ? 'from-r' : dir < 0 ? 'from-l' : ''}" style="--a:${st.c[0]};--b:${st.c[1]}">
+    <div class="ag-pane step-${st.id} ${dir > 0 ? 'from-r' : dir < 0 ? 'from-l' : ''}" style="--a:${st.c[0]};--b:${st.c[1]}">
       <span class="ag-pane-ico"><i data-icon="${['report', 'user', 'building', 'calendar', 'clock', 'check'][n]}"></i></span>
       <h2>${st.title}</h2>
       ${sub ? `<p class="ag-pane-sub">${esc(sub)}</p>` : ''}
@@ -233,7 +233,7 @@ function agStepHTML(id) {
   if (id === 'tipo') return `<div class="ag-big2">${Object.entries(AG.kinds).map(([k, v]) => `
     <button type="button" class="ag-tile ${agForm.kind === k ? 'on' : ''}" data-kind="${k}" style="--a:${k === 'prova' ? '#60a5fa' : '#a78bfa'};--b:${k === 'prova' ? '#2563eb' : '#7c3aed'}">
       <span class="ag-tile-ico"><i data-icon="${k === 'prova' ? 'report' : 'users'}"></i></span>
-      <strong>${v.label}</strong><small>${v.sub.replace(' · ', '<br>')}</small><span class="ag-tile-go"><i data-icon="right"></i></span>
+      <strong>${v.short}<span class="ag-tile-long"> presencial</span></strong><small>${v.sub.replace(' · ', '<br>')}</small><em class="ag-tile-mini">${k === 'prova' ? '6 vagas/turno' : '2 vagas/turno'}</em><span class="ag-tile-go"><i data-icon="right"></i></span>
     </button>`).join('')}</div>`;
   if (id === 'dados') return `<div class="ag-grid">
     <label class="ag-field full"><span>Nome completo</span><input id="ag-name" autocomplete="name" maxlength="120" placeholder="Seu nome completo" value="${esc(agForm.name)}"></label>
