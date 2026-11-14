@@ -2418,3 +2418,48 @@ body:not(.is-admin) .admin-only { display: none !important; }
   .ag-panel { padding: 16px; border-radius: 22px; }
   .ag-tabs { width: auto; }
 }
+
+/* =========================================================
+   NOTÍCIAS — categorias em pílulas (cada uma na sua cor), estilo Apple
+   ========================================================= */
+.ap-pills {
+  position: relative; z-index: 1; isolation: isolate;
+  display: flex; width: fit-content; max-width: 100%; gap: 2px; margin: -12px auto 44px; padding: 5px;
+  border-radius: 999px; background: rgba(255, 255, 255, .72);
+  -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px);
+  border: 1px solid rgba(0, 0, 0, .06);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 12px 30px -18px rgba(0, 0, 0, .35);
+  overflow-x: auto; scrollbar-width: none; scroll-behavior: smooth;
+}
+.ap-pills::-webkit-scrollbar { display: none; }
+.ap-pill-ind {
+  position: absolute; z-index: -1; top: 5px; bottom: 5px; left: 0; width: 0; border-radius: 999px;
+  background: linear-gradient(150deg, var(--a, #3a3a3c), var(--b, #1d1d1f));
+  box-shadow: 0 8px 18px -8px var(--b, #000), inset 0 1px 0 rgba(255, 255, 255, .25);
+  transition: transform .55s cubic-bezier(.3, 1.25, .5, 1), width .55s cubic-bezier(.3, 1.25, .5, 1), background .4s ease, box-shadow .4s ease;
+}
+.ap-pill {
+  flex: none; display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 16px 0 13px; border: 0; border-radius: 999px;
+  background: none; font: 600 14.5px/1 "Inter", sans-serif; color: var(--ink-2); cursor: pointer; white-space: nowrap;
+  transition: color .3s ease, transform .3s var(--ease);
+}
+.ap-pill:active { transform: scale(.96); }
+.ap-pill i { width: 17px; height: 17px; display: grid; color: var(--b); transition: color .3s ease, transform .45s cubic-bezier(.34, 1.56, .64, 1); }
+.ap-pill small { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: grid; place-items: center; font-size: 11.5px; font-weight: 700; background: rgba(0, 0, 0, .06); color: var(--muted); transition: background .3s, color .3s; }
+.ap-pill:hover:not(.on) { color: var(--ink); }
+.ap-pill:hover:not(.on) i { transform: scale(1.12) rotate(-6deg); }
+.ap-pill.on { color: #fff; }
+.ap-pill.on i { color: #fff; }
+.ap-pill.on small { background: rgba(255, 255, 255, .24); color: #fff; }
+.ap-pill:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(0, 0, 0, .15); }
+.ap-pills.reveal { opacity: 0; transform: translateY(14px); transition: opacity .7s ease .1s, transform .8s var(--ease) .1s; }
+.ap-pills.reveal.in { opacity: 1; transform: none; }
+@media (max-width: 860px) {
+  .ap-pills { margin: -18px auto 26px; }
+  .ap-pill { height: 38px; padding: 0 12px 0 10px; gap: 6px; font-size: 14px; }
+  .ap-pill small { display: none; } /* no celular, sem a contagem: as categorias cabem numa linha só */
+  .ap-pill i { display: none; width: 15px; height: 15px; } /* no celular o ícone aparece só na categoria escolhida */
+  .ap-pill.on i { display: grid; }
+  .ap-pills { width: 100%; }
+  .ap-pill { flex: 1 1 auto; justify-content: center; padding: 0 8px; font-size: 13.5px; letter-spacing: -.01em; }
+}

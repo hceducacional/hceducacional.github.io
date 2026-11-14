@@ -1222,14 +1222,13 @@ function renderNews(view) {
       <h1>Acontece no <span class="ap-grad">HC</span>.</h1>
       <p class="ap-sub">Conquistas, eventos e comunicados do HC Instituto Educacional, reunidos em um só lugar.</p>
     </header>
-    <nav class="ap-cats reveal" role="tablist" aria-label="Categorias">
+    <nav class="ap-pills reveal" role="tablist" aria-label="Categorias">
+      <span class="ap-pill-ind" aria-hidden="true"></span>
       ${cats.map((c, k) => {
         const n = c === 'Todas' ? news.length : news.filter((x) => x.cat === c).length;
         const m = CAT_TILE[c] || CAT_TILE.Todas;
-        return `<button class="ap-cat ${c === newsFilter ? 'on' : ''}" data-cat="${esc(c)}" role="tab" aria-selected="${c === newsFilter}" style="--a:${m[1]};--b:${m[2]};--k:${k}">
-          <span class="ap-cat-ico"><i data-icon="${m[0]}"></i></span>
-          <span class="ap-cat-name">${esc(c)}</span>
-          <span class="ap-cat-count">${n} ${n === 1 ? 'notícia' : 'notícias'}</span>
+        return `<button class="ap-pill ${c === newsFilter ? 'on' : ''}" data-cat="${esc(c)}" role="tab" aria-selected="${c === newsFilter}" style="--a:${m[1]};--b:${m[2]};--k:${k}">
+          <i data-icon="${m[0]}"></i><span>${esc(c)}</span><small>${n}</small>
         </button>`;
       }).join('')}
     </nav>
@@ -1238,8 +1237,22 @@ function renderNews(view) {
 
   const page = view.querySelector('.news-page');
   const body = page.querySelector('#news-body');
-  const seg = page.querySelector('.ap-cats');
+  const seg = page.querySelector('.ap-pills');
+  const ind = seg.querySelector('.ap-pill-ind');
   paintIcons(seg);
+  // pílula colorida que desliza até a categoria escolhida (na cor dela)
+  const moveInd = (instant) => {
+    const on = seg.querySelector('.ap-pill.on'); if (!on) return;
+    if (instant) ind.style.transition = 'none';
+    ind.style.width = on.offsetWidth + 'px';
+    ind.style.transform = `translateX(${on.offsetLeft}px)`;
+    ind.style.setProperty('--a', on.style.getPropertyValue('--a'));
+    ind.style.setProperty('--b', on.style.getPropertyValue('--b'));
+    if (instant) { void ind.offsetWidth; ind.style.transition = ''; }
+  };
+  moveInd(true);
+  new ResizeObserver(() => moveInd(true)).observe(seg);
+  document.fonts?.ready.then(() => moveInd(true));
   // no celular a fileira rola de lado: mantém a categoria escolhida à vista
   const showOn = (smooth) => {
     const on = seg.querySelector('.on'); if (!on || seg.scrollWidth <= seg.clientWidth) return;
@@ -1255,6 +1268,7 @@ function renderNews(view) {
     seg.querySelectorAll('button').forEach((x) => {
       const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on);
     });
+    moveInd();
     showOn(true);
     swapBody();
   });
@@ -1290,7 +1304,7 @@ function renderNews(view) {
   const io = new IntersectionObserver((entries) => entries.forEach((en) => {
     if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
   }), { threshold: 0.12 });
-  page.querySelectorAll('.ap-hero.reveal, .ap-cats.reveal').forEach((el) => io.observe(el));
+  page.querySelectorAll('.ap-hero.reveal, .ap-pills.reveal').forEach((el) => io.observe(el));
 
   // prepara a vitrine (setas) e as animações de entrada do conteúdo
   function setupBody(shown) {
