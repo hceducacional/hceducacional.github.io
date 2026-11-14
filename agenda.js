@@ -84,17 +84,30 @@ function renderAgenda(view) {
   <div class="wrap ag-page">
     <header class="ag-hero">
       <div class="ag-hero-glow" aria-hidden="true"><span></span><span></span></div>
-      <p class="ag-kicker"><i data-icon="calendar"></i>Polo Humberto de Campos</p>
-      <h1>Agende sua <span class="ap-grad">prova</span> ou <span class="ap-grad">tutoria</span> presencial.</h1>
-      <p class="ag-lead">O agendamento é obrigatório para as provas e a tutoria presencial dos cursos de graduação. Leva menos de um minuto.</p>
+      <div class="ag-orb" aria-hidden="true">
+        <span class="ag-ring r1"></span><span class="ag-ring r2"></span>
+        <span class="ag-core">
+          <span class="ag-core-top"></span>
+          <b class="ag-core-day">${new Date().toLocaleDateString('pt-BR', { day: 'numeric', timeZone: 'America/Fortaleza' })}</b>
+          <small>${new Date().toLocaleDateString('pt-BR', { month: 'short', timeZone: 'America/Fortaleza' }).replace('.', '')}</small>
+          <span class="ag-core-check"><svg viewBox="0 0 24 24"><path d="m6 12.5 4 4 8-9"/></svg></span>
+        </span>
+        <span class="ag-chip c1"><i data-icon="report"></i>Prova</span>
+        <span class="ag-chip c2"><i data-icon="users"></i>Tutoria</span>
+        <span class="ag-chip c3"><i data-icon="clock"></i>08h30</span>
+        <span class="ag-chip c4"><i data-icon="news"></i>Atividades</span>
+      </div>
+      <p class="ag-kicker ag-in" style="--d:.55s"><i data-icon="calendar"></i>Polo Humberto de Campos</p>
+      <h1 class="ag-words"><span style="--d:.7s">Agende</span> <span style="--d:.78s">sua</span> <span class="ap-grad" style="--d:.86s">prova</span> <span style="--d:.94s">ou</span> <span class="ap-grad" style="--d:1.02s">tutoria</span> <span style="--d:1.1s">presencial.</span></h1>
+      <p class="ag-lead ag-in" style="--d:1.25s">O agendamento é obrigatório para as provas e a tutoria presencial dos cursos de graduação. Leva menos de um minuto.</p>
     </header>
 
-    <section class="ag-card ag-wiz" id="ag-box">
+    <section class="ag-card ag-wiz ag-rise" id="ag-box">
       <div class="ag-prog" id="ag-prog"></div>
       <div class="ag-stage" id="ag-stage" aria-live="polite"></div>
     </section>
 
-    <section class="ag-polo">
+    <section class="ag-polo ag-reveal">
       <h2>Polo Faveni HC</h2>
       <p>Informações de contato e localização</p>
       <div class="ag-info">
@@ -112,6 +125,10 @@ function renderAgenda(view) {
   const now = agNow();
   if (!agForm.month) agForm.month = now.date.slice(0, 7);
   agGo(agForm.step, 0);
+  $('#ag-stage .ag-pane')?.classList.add('first'); // conteúdo da 1ª etapa entra depois do cartão
+  // seção do polo aparece ao chegar nela
+  const io = new IntersectionObserver((en) => en.forEach((x) => { if (x.isIntersecting) { x.target.classList.add('in'); io.disconnect(); } }), { threshold: .2 });
+  io.observe(view.querySelector('.ag-polo'));
   agLoad(true).then(() => {
     if (agForm.date && !agDayOpen(agForm.kind, agForm.date)) { agForm.date = ''; agForm.shift = ''; }
     if (['data', 'turno'].includes(AG_STEPS[agForm.step].id)) agGo(agForm.step, 0);

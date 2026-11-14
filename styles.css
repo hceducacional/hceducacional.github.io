@@ -2552,3 +2552,64 @@ body:not(.is-admin) .admin-only { display: none !important; }
   .ag-rv { grid-template-columns: 76px 1fr auto; gap: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { .ag-pane { animation: none !important; } }
+
+/* =========================================================
+   AGENDAR — animação de entrada (estilo Apple)
+   ========================================================= */
+/* peça central: calendário que "carimba" o dia, com anéis e etiquetas em órbita */
+.ag-orb { position: relative; width: 200px; height: 170px; margin: 0 auto 14px; display: grid; place-items: center; }
+.ag-ring { position: absolute; left: 50%; top: 50%; border-radius: 50%; border: 1px solid rgba(6, 122, 87, .16); opacity: 0; transform: translate(-50%, -50%) scale(.6); animation: agRing 1.2s var(--ease) forwards; }
+.ag-ring.r1 { width: 170px; height: 170px; }
+.ag-ring.r2 { width: 118px; height: 118px; border-color: rgba(6, 122, 87, .26); animation-delay: .1s; }
+.ag-core {
+  position: relative; width: 78px; height: 84px; border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: #fff; color: var(--ink); box-shadow: 0 18px 40px -16px rgba(6, 122, 87, .55), 0 0 0 1px rgba(0, 0, 0, .04);
+  opacity: 0; transform: translateY(-30px) rotate(-12deg) scale(.6);
+  animation: agDrop .9s cubic-bezier(.34, 1.56, .64, 1) .15s forwards, refFloat 5s ease-in-out 1.6s infinite;
+}
+.ag-core-top { position: absolute; left: 0; right: 0; top: 0; height: 22px; border-radius: 22px 22px 0 0; background: linear-gradient(150deg, #34d399, #0f9b6c 50%, #2563eb); }
+.ag-core-day { margin-top: 16px; font-size: 32px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+.ag-core small { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.ag-core-check { position: absolute; right: -11px; bottom: -11px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #34c759; box-shadow: 0 0 0 3px #fff; opacity: 0; transform: scale(0); animation: agPop .5s cubic-bezier(.34, 1.56, .64, 1) .95s forwards; }
+.ag-core-check svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 24; stroke-dashoffset: 24; animation: agDraw .4s ease 1.2s forwards; }
+.ag-chip {
+  position: absolute; display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px 0 8px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; box-shadow: 0 10px 22px -10px var(--cb, rgba(0, 0, 0, .4));
+  opacity: 0; transform: scale(.4); animation: agPop .6s cubic-bezier(.34, 1.56, .64, 1) forwards, refFloat 6s ease-in-out infinite;
+}
+.ag-chip i { width: 14px; height: 14px; display: grid; }
+.ag-chip.c1 { left: -18px; top: 26px; background: linear-gradient(150deg, #60a5fa, #2563eb); --cb: #2563eb; animation-delay: .5s, 1.4s; }
+.ag-chip.c2 { right: -20px; top: 14px; background: linear-gradient(150deg, #a78bfa, #7c3aed); --cb: #7c3aed; animation-delay: .62s, 2s; }
+.ag-chip.c3 { right: -6px; bottom: 18px; background: linear-gradient(150deg, #fbbf24, #f97316); --cb: #f97316; animation-delay: .74s, 2.6s; }
+.ag-chip.c4 { left: -10px; bottom: 8px; background: linear-gradient(150deg, #34d399, #059669); --cb: #059669; animation-delay: .86s, 3.2s; }
+@keyframes agRing { to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes agDrop { to { opacity: 1; transform: none; } }
+@keyframes agPop { to { opacity: 1; transform: none; } }
+
+/* textos: sobem e saem do desfoque, palavra por palavra no título */
+.ag-in { opacity: 0; animation: agUp .8s var(--ease) var(--d, 0s) forwards; }
+.ag-words > span { display: inline-block; opacity: 0; filter: blur(10px); transform: translateY(18px); animation: refWord .9s var(--ease) var(--d, 0s) forwards; }
+@keyframes agUp { from { opacity: 0; transform: translateY(16px); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+/* cartão do agendamento sobe e o conteúdo da primeira etapa entra em sequência */
+.ag-rise { opacity: 0; transform: translateY(40px) scale(.97); animation: agRise .9s var(--ease) 1.35s forwards; }
+@keyframes agRise { to { opacity: 1; transform: none; } }
+.ag-pane > *, .ag-big2 > *, .ag-big4 > * { animation: agUp .6s var(--ease) backwards; }
+.ag-pane > :nth-child(1) { animation-delay: .05s; } .ag-pane > :nth-child(2) { animation-delay: .1s; } .ag-pane > :nth-child(3) { animation-delay: .15s; }
+.ag-pane > :nth-child(4) { animation-delay: .2s; } .ag-pane > :nth-child(5), .ag-pane > :nth-child(6) { animation-delay: .25s; }
+.ag-big2 > :nth-child(1), .ag-big4 > :nth-child(1) { animation-delay: .25s; } .ag-big2 > :nth-child(2), .ag-big4 > :nth-child(2) { animation-delay: .33s; }
+.ag-big4 > :nth-child(3) { animation-delay: .41s; } .ag-big4 > :nth-child(4) { animation-delay: .49s; }
+/* na primeira abertura, tudo isso espera o cartão chegar */
+.ag-pane.first > *, .ag-pane.first .ag-big2 > * { animation-delay: calc(1.6s + var(--i, 0) * .08s); }
+.ag-pane.first > :nth-child(2) { --i: 1; } .ag-pane.first > :nth-child(3) { --i: 2; } .ag-pane.first > :nth-child(4) { --i: 3; }
+.ag-pane.first .ag-big2 > :nth-child(1) { --i: 4; } .ag-pane.first .ag-big2 > :nth-child(2) { --i: 5; }
+.ag-reveal { opacity: 0; transform: translateY(30px); transition: opacity .8s ease, transform .9s var(--ease); }
+.ag-reveal.in { opacity: 1; transform: none; }
+
+@media (max-width: 860px) {
+  .ag-orb { width: 170px; height: 140px; margin-bottom: 8px; transform: scale(.88); }
+  .ag-ring.r1 { width: 140px; height: 140px; } .ag-ring.r2 { width: 100px; height: 100px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ag-page *, .ag-page { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition: none !important; }
+  .ag-reveal { opacity: 1; transform: none; }
+}
