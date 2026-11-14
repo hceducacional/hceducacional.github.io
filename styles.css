@@ -2877,3 +2877,8 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
   .um .um-state span { color: rgba(255, 214, 153, .85); }
   .um .avatar.um-avatar { box-shadow: 0 0 0 2px rgba(255, 255, 255, .15); }
 }
+/* celular: depois do toque o relógio fica "com o mouse em cima" (hover preso do toque);
+   isso escondia o cartão na hora, sem a animação de fechar. Aqui só o recorte anima. */
+@media (max-width: 860px) {
+  .topbar .hw:hover .hw-card, .topbar .hw:focus-visible .hw-card, .topbar .hw:focus-within .hw-card { opacity: 1; transform: none; }
+}
