@@ -10,7 +10,7 @@ window.HC_CONTENT = {
       "image": "assets/conteudo/banner-b1-d49a976a.png",
       "title": "Bem-vindo ao HC Instituto Educacional",
       "linkOn": false,
-      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/786cfccf-afc3-4c49-8fa4-50abb04d431e.webp"
+      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/c180d628-c2a3-4dc0-8d27-d045f420b3e9.webp"
     },
     {
       "id": "b2",

@@ -374,17 +374,29 @@ function renderDashboard(view) {
   <div class="wrap">
     ${carouselHTML(banners, 'top')}
 
-    ${links.length ? `<h2 class="shelf-title"><span class="ap-grad">Acesso rápido.</span><span> Portais das instituições parceiras, a um clique.</span></h2>` : ''}
     ${links.length ? `
+    <section class="qa" id="qa">
+      <h2 class="shelf-title qa-title"><span class="ap-grad">Acesso rápido.</span><span> Portais das instituições parceiras, a um clique.</span></h2>
+      <button type="button" class="qa-head" id="qa-head" aria-expanded="false" aria-controls="qa-body">
+        <span class="qa-stack" aria-hidden="true">${links.slice(0, 3).map((l, i) => `<span class="qa-dot" style="--i:${i};${l.image ? `background-image:url('${esc(imgUrl(l.image))}')` : `background:linear-gradient(135deg, ${l.c1}, ${l.c2})`}">${l.image ? '' : esc((l.name || '?')[0])}</span>`).join('')}${links.length > 3 ? `<span class="qa-dot qa-more" style="--i:3">+${links.length - 3}</span>` : ''}</span>
+        <span class="qa-txt"><strong>Acesso rápido</strong><small>Toque aqui para entrar na sua plataforma</small></span>
+        <span class="qa-chev" aria-hidden="true">${CHEV_SVG}</span>
+      </button>
+      <div class="qa-body" id="qa-body">
+        <div class="qa-inner">
     <nav class="quick-links" id="quick-links" aria-label="Acesso rápido">
       ${links.map((l, i) => `
         <a class="ql ${l.image ? 'has-img' : ''}" data-ql="${i}"
            ${isSafeUrl(normalizeUrl(l.url)) ? `href="${esc(normalizeUrl(l.url))}" target="_blank" rel="noopener noreferrer"` : 'href="#" data-empty="1"'}
-           style="background:${linkBg(l)};color:${linkInk(l)}">
+           style="background:${linkBg(l)};color:${linkInk(l)};--k:${i}${l.image ? `;--img:url('${esc(imgUrl(l.image))}')` : ''}">
           <span class="ql-name">${esc(l.name)}</span>
           <span class="ql-go"><i data-icon="external"></i></span>
+          <span class="ql-cta" aria-hidden="true">Abrir</span>
         </a>`).join('')}
-    </nav>` : ''}
+    </nav>
+        </div>
+      </div>
+    </section>` : ''}
 
     ${recentNews().length ? `
     <section class="rn" aria-label="Notícias recentes">
@@ -438,6 +450,16 @@ function renderDashboard(view) {
   view.querySelector('.cx-grid')?.addEventListener('keydown', (e) => {
     const tile = e.target.closest('.cx-tile');
     if (tile && e.target === tile && e.key === 'Enter') tile.querySelector('.cx-go')?.click();
+  });
+  // Acesso rápido no celular: menu escuro que abre e fecha; ao abrir, os cartões entram em cascata
+  const qa = $('#qa'), qaHead = $('#qa-head');
+  qaHead?.addEventListener('click', () => {
+    const open = !qa.classList.contains('open');
+    qa.classList.toggle('open', open);
+    qaHead.setAttribute('aria-expanded', open);
+    const ql = $('#quick-links');
+    ql.classList.remove('ql-in');
+    if (open && !reduceMotion()) { void ql.offsetWidth; ql.classList.add('ql-in'); }
   });
   $('#quick-links')?.addEventListener('click', (e) => {
     const a = e.target.closest('[data-empty]'); if (!a) return;
