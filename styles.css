@@ -2806,3 +2806,19 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
 .car-arrow { background-color: rgba(220, 220, 225, .9); }
 /* computador: a área das luzes do Agendar é bem maior que o título, para o degradê sumir sem corte */
 @media (min-width: 1100px) { .ag-hero-glow { inset: -220px -260px -260px -220px; } }
+
+/* =========================================================
+   CELULAR — barra de cima: volta o recolhimento deslizante
+   (o fundo escuro desliza da esquerda para a direita em curva suave)
+   e, recolhida, sobra só a foto de perfil. Sem desfoque por trás,
+   o deslize é leve de desenhar.
+   ========================================================= */
+@media (max-width: 860px) {
+  .topbar::before { left: 0; opacity: 1; transform: none; transition: left .9s cubic-bezier(.45, 0, .15, 1); }
+  .topbar::after { display: none; }
+  .topbar-wrap.mini .topbar:not(.searching)::before { left: calc(100% - 56px); opacity: 1; transform: none; transition: left .9s cubic-bezier(.45, 0, .15, 1); }
+  .tb-search-btn { transition: opacity .45s ease .18s, transform .9s cubic-bezier(.45, 0, .15, 1), background .2s; }
+  .topbar-wrap.mini .topbar:not(.searching) .tb-search-btn { opacity: 0; transform: translateX(30px) scale(.9); pointer-events: none; transition: opacity .3s ease, transform .9s cubic-bezier(.45, 0, .15, 1); }
+  .topbar :is(.tb-logo, .tb-title, .hw) { transition: opacity .45s ease .18s, transform .9s cubic-bezier(.45, 0, .15, 1); }
+  .topbar-wrap.mini .topbar:not(.searching) :is(.tb-logo, .tb-title, .hw) { transition: opacity .3s ease, transform .9s cubic-bezier(.45, 0, .15, 1); }
+}
