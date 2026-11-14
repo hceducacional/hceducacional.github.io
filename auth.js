@@ -12,6 +12,24 @@ const sb = window.supabase?.createClient(SB_URL, SB_KEY, {
 });
 
 const auth = { user: null, profile: null, ready: false, pending: 0 };
+
+/* Ao abrir o site (por exemplo, logo depois de uma publicação), o Supabase renova o acesso.
+   Se essa renovação falha por um instante (internet oscilando, celular voltando do segundo
+   plano), ele avisa "sem sessão" mesmo com o acesso ainda guardado. Antes de mostrar
+   "Entrar", tentamos de novo algumas vezes; só um acesso de fato inválido desloga. */
+const SB_TOKEN_KEY = `sb-${new URL(SB_URL).hostname.split('.')[0]}-auth-token`;
+const hasStoredSession = () => { try { return !!localStorage.getItem(SB_TOKEN_KEY); } catch { return false; } };
+async function recoverSession() {
+  for (const wait of [700, 2000, 5000]) {
+    await new Promise((r) => setTimeout(r, wait));
+    if (!hasStoredSession()) return null; // o Supabase recusou o acesso e o apagou: aí sim saiu
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data?.session) return data.session;
+    } catch {}
+  }
+  return null;
+}
 const AVATAR_MAX = 480; // maior lado da foto de perfil (ela aparece no máximo com 128 px; 480 fica nítido até em telas 3x)
 
 /* Foto de perfil sempre recomprimida: reduz para no máximo 480 px no maior lado e salva em
@@ -148,7 +166,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleMenu
 window.addEventListener('hashchange', () => toggleMenu(false));
 
 async function signOut() {
-  await sb?.auth.signOut();
+  await sb?.auth.signOut({ scope: 'local' }); // sai só deste aparelho; os outros continuam conectados
   toast('Você saiu da sua conta.');
   if (['perfil', 'usuarios'].includes(location.hash.slice(1))) location.hash = '#dashboard';
 }
@@ -811,6 +829,7 @@ window.HC_signOut = signOut;
         return;
       }
       if (['INITIAL_SESSION', 'SIGNED_IN', 'USER_UPDATED', 'TOKEN_REFRESHED'].includes(event)) {
+        if (!session && hasStoredSession()) session = await recoverSession(); // falha passageira: não desloga
         await setUser(session?.user);
         if (event === 'SIGNED_IN' && fromEmail) {
           history.replaceState(null, '', location.pathname + location.hash);
