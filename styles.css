@@ -2683,3 +2683,48 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
   /* títulos entram sem desfoque, só subindo e aparecendo */
   .ag-words > span, .ref-title > span { filter: none !important; }
 }
+
+/* =========================================================
+   CELULAR — MODO LEVE
+   No iPhone, o desfoque "ao vivo" (backdrop-filter) é refeito a cada quadro
+   enquanto a página rola ou algo se mexe atrás dele. No celular ele sai e os
+   fundos ficam um pouco mais opacos; as animações usam só movimento e
+   transparência, que rodam direto no processador gráfico.
+   ========================================================= */
+@media (max-width: 860px), (hover: none) {
+  *, *::before, *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  .topbar::before { background: rgba(22, 22, 23, .96); }
+  .tabbar { background: rgba(22, 22, 23, .95); }
+  .cx-glass { background: linear-gradient(180deg, rgba(255, 255, 255, .92), rgba(255, 255, 255, .86)); }
+  .nm-backdrop, .lk-backdrop, .cfg-backdrop, .ag-backdrop { background: rgba(0, 0, 0, .55); }
+  .more-backdrop { background: rgba(0, 0, 0, .45); }
+  .ap-paddle, .nm-close, .nm-arrow, .car-arrow { background-color: rgba(29, 29, 31, .78); }
+  .nm-dots { background: rgba(0, 0, 0, .4); }
+  /* entradas sem desfoque: só sobem/deslizam e aparecem */
+  .more-item, .topbar.hw-out .tb-title, .topbar-wrap.mini .topbar :is(.tb-logo, .tb-title, .hw) { filter: none !important; }
+  /* luzes de fundo paradas (o degradê continua, só não fica se mexendo) */
+  .ref-glow span, .nr-glow { animation: none !important; }
+
+  /* --- barra de cima: recolhe só com movimento e transparência ---
+     a barra inteira desliza para a direita e se dissolve enquanto uma pílula pequena
+     (pesquisa + foto) surge no canto; nada muda de tamanho, então não há trabalho de layout */
+  .topbar::before { transition: transform .7s cubic-bezier(.32, .72, 0, 1), opacity .45s ease; transform-origin: right center; }
+  .topbar::after {
+    content: ""; position: absolute; z-index: -1; top: 0; bottom: 0; right: 0; width: 106px; border-radius: 999px; pointer-events: none;
+    background: rgba(22, 22, 23, .96); border: 1px solid rgba(255, 255, 255, .08);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .1), 0 16px 40px -16px rgba(0, 0, 0, .45);
+    opacity: 0; transform: scale(.94); transition: opacity .45s ease .12s, transform .7s cubic-bezier(.32, .72, 0, 1);
+  }
+  .topbar-wrap.mini .topbar:not(.searching)::before { left: 0; opacity: 0; transform: translateX(28%) scaleX(.9); transition: transform .7s cubic-bezier(.32, .72, 0, 1), opacity .4s ease .08s; }
+  .topbar-wrap.mini .topbar:not(.searching)::after { opacity: 1; transform: none; transition: opacity .35s ease, transform .7s cubic-bezier(.32, .72, 0, 1); }
+
+  /* --- barra de abas: encolhe com escala (sem mexer em largura/altura) --- */
+  .tabbar { transform-origin: 50% 100%; transition: transform .55s cubic-bezier(.32, .72, 0, 1), background .3s ease, border-color .3s ease, box-shadow .3s ease; }
+  .tabbar.compact { left: 20px; right: 20px; height: 60px; border-radius: 30px; bottom: var(--tab-b); transform: translateY(-6px) scale(.82); }
+  .tabbar.compact .tab { height: 50px; gap: 3px; border-radius: 18px; }
+  .tab span { transition: opacity .25s ease, transform .45s cubic-bezier(.32, .72, 0, 1); }
+  .tab i { transition: color .2s, transform .45s cubic-bezier(.32, .72, 0, 1); }
+  .tabbar.compact .tab span { max-height: 12px; opacity: 0; transform: translateY(4px) scale(.8); }
+  .tabbar.compact .tab i { transform: translateY(7px) scale(1.12); }
+  .tabbar.dragging.compact .tab.pressing i { transform: translateY(7px) scale(1.3); }
+}

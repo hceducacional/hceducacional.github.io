@@ -2474,10 +2474,12 @@ window.addEventListener('hashchange', route);
   const tabAt = (x) => tabs().find((t) => { const r = t.getBoundingClientRect(); return x >= r.left && x <= r.right; });
   const place = (x, snap) => {
     const br = bar.getBoundingClientRect();
+    const k = br.width / bar.offsetWidth || 1; // a barra recolhida está em escala: converte para as medidas dela
     const t = tabAt(x) || drag.cur;
     const tr = t.getBoundingClientRect();
-    const w = tr.width + 8;
-    const left = snap ? tr.left - br.left - 4 : Math.min(Math.max(x - br.left - w / 2, 2), br.width - w - 2);
+    const w = tr.width / k + 8;
+    const bw = bar.offsetWidth;
+    const left = snap ? (tr.left - br.left) / k - 4 : Math.min(Math.max((x - br.left) / k - w / 2, 2), bw - w - 2);
     lens.style.width = w + 'px';
     lens.style.transform = `translateX(${left}px)`;
     if (t !== drag.cur) { drag.cur?.classList.remove('pressing'); t.classList.add('pressing'); drag.cur = t; drag.moved = true; navigator.vibrate?.(8); }
