@@ -2038,7 +2038,7 @@ body.modal-open { overflow: hidden; }
 
 @keyframes refFade { to { opacity: 1; } }
 @keyframes refUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-@keyframes refWord { to { opacity: 1; filter: blur(0); transform: none; } }
+@keyframes refWord { to { opacity: 1; filter: none; transform: none; } }
 @keyframes refCard { to { opacity: 1; transform: none; } }
 @keyframes refRing { to { opacity: 1; transform: none; } }
 @keyframes refPop { to { opacity: 1; transform: none; } }
@@ -2589,7 +2589,8 @@ body:not(.is-admin) .admin-only { display: none !important; }
 /* textos: sobem e saem do desfoque, palavra por palavra no título */
 .ag-in { opacity: 0; animation: agUp .8s var(--ease) var(--d, 0s) forwards; }
 .ag-words > span { display: inline-block; opacity: 0; filter: blur(10px); transform: translateY(18px); animation: refWord .9s var(--ease) var(--d, 0s) forwards; }
-@keyframes agUp { from { opacity: 0; transform: translateY(16px); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+/* sem desfoque (filter): no Safari do iPhone o texto podia ficar borrado depois da animação */
+@keyframes agUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 /* cartão do agendamento sobe e o conteúdo da primeira etapa entra em sequência */
 .ag-rise { opacity: 0; transform: translateY(40px) scale(.97); animation: agRise .9s var(--ease) 1.35s forwards; }
 @keyframes agRise { to { opacity: 1; transform: none; } }
@@ -2612,4 +2613,31 @@ body:not(.is-admin) .admin-only { display: none !important; }
 @media (prefers-reduced-motion: reduce) {
   .ag-page *, .ag-page { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition: none !important; }
   .ag-reveal { opacity: 1; transform: none; }
+}
+
+/* =========================================================
+   AGENDAR — cartão expandido ocupando a tela
+   ========================================================= */
+.ag-backdrop { position: fixed; inset: 0; z-index: 205; background: rgba(0, 0, 0, .38); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); opacity: 0; transition: opacity .45s ease; }
+.ag-backdrop.in { opacity: 1; }
+.ag-wiz.expanded {
+  position: fixed; z-index: 210; margin: 0; max-width: none; overflow-y: auto; overscroll-behavior: contain;
+  top: 32px; left: calc((100vw + var(--sb-collapsed)) / 2 - min(380px, (100vw - 48px - var(--sb-collapsed)) / 2)); width: min(760px, 100vw - 48px - var(--sb-collapsed)); height: calc(100vh - 64px); height: calc(100dvh - 64px);
+  border-radius: 30px; box-shadow: 0 40px 100px -30px rgba(0, 0, 0, .55);
+  animation: none; opacity: 1; transform: none;
+}
+.ag-wiz.closing { overflow: hidden; }
+.ag-wiz.expanded .ag-prog { position: sticky; top: -22px; z-index: 3; margin: -22px -26px 18px; padding: 18px 26px 12px; background: rgba(255, 255, 255, .92); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+.ag-closebtn { display: none; flex: none; width: 36px; height: 36px; border-radius: 50%; border: 0; place-items: center; background: var(--bg); color: var(--ink); cursor: pointer; }
+.ag-closebtn i { width: 18px; height: 18px; display: grid; }
+.ag-wiz.expanded .ag-closebtn { display: grid; }
+.ag-ph { pointer-events: none; }
+@media (max-width: 860px) {
+  .ag-wiz.expanded {
+    top: calc(env(safe-area-inset-top) * 1.2 + 16px); left: 10px; width: calc(100vw - 20px);
+    height: calc(100vh - env(safe-area-inset-top) * 1.2 - 26px - env(safe-area-inset-bottom));
+    height: calc(100dvh - env(safe-area-inset-top) * 1.2 - 26px - env(safe-area-inset-bottom));
+    border-radius: 26px;
+  }
+  .ag-wiz.expanded .ag-prog { top: -16px; margin: -16px -14px 14px; padding: 14px 14px 10px; }
 }

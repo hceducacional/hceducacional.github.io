@@ -126,6 +126,8 @@ function renderAgenda(view) {
   if (!agForm.month) agForm.month = now.date.slice(0, 7);
   agGo(agForm.step, 0);
   $('#ag-stage .ag-pane')?.classList.add('first'); // conteúdo da 1ª etapa entra depois do cartão
+  // a animação de subida do cartão acontece só uma vez (não repete ao recolher)
+  $('#ag-box').addEventListener('animationend', (e) => { if (e.target.id === 'ag-box' && e.animationName === 'agRise') e.target.classList.remove('ag-rise'); });
   // seção do polo aparece ao chegar nela
   const io = new IntersectionObserver((en) => en.forEach((x) => { if (x.isIntersecting) { x.target.classList.add('in'); io.disconnect(); } }), { threshold: .2 });
   io.observe(view.querySelector('.ag-polo'));
@@ -143,7 +145,8 @@ function agGo(n, dir = 1) {
   $('#ag-prog').innerHTML = `
     <button type="button" class="ag-backbtn" data-back ${n === 0 ? 'disabled' : ''} aria-label="Voltar"><i data-icon="left"></i></button>
     <div class="ag-bars">${AG_STEPS.map((s, k) => `<span class="${k < n ? 'done' : k === n ? 'now' : ''}" style="--a:${s.c[0]};--b:${s.c[1]}"></span>`).join('')}</div>
-    <span class="ag-count">${n + 1} de ${AG_STEPS.length}</span>`;
+    <span class="ag-count">${n + 1} de ${AG_STEPS.length}</span>
+    <button type="button" class="ag-closebtn" data-close aria-label="Fechar"><i data-icon="x"></i></button>`;
   const sub = st.id === 'turno' && agForm.date ? agLongDate(agForm.date) : st.sub;
   stage.innerHTML = `
     <div class="ag-pane ${dir > 0 ? 'from-r' : dir < 0 ? 'from-l' : ''}" style="--a:${st.c[0]};--b:${st.c[1]}">
@@ -159,8 +162,51 @@ function agGo(n, dir = 1) {
     $('#ag-cpf').addEventListener('input', (e) => { e.target.value = cpfMask(e.target.value); agMsg(); });
     setTimeout(() => (agForm.name ? (agForm.cpf ? $('#ag-course') : $('#ag-cpf')) : $('#ag-name'))?.focus({ preventScroll: true }), 350);
   }
-  if (dir && PHONE()) $('#ag-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const box = $('#ag-box');
+  if (box.classList.contains('expanded')) box.scrollTo({ top: 0, behavior: dir ? 'smooth' : 'auto' });
+  else if (dir && PHONE()) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+/* O cartão do agendamento se expande e ocupa a tela (como a notícia aberta):
+   assim a página não sobe nem desce enquanto o aluno preenche as etapas. */
+let agPh = null;
+function agExpand(on, instant) {
+  const box = $('#ag-box'); if (!box) return;
+  const ease = 'cubic-bezier(.32, .72, 0, 1)';
+  if (on) {
+    if (box.classList.contains('expanded')) return;
+    box.classList.remove('ag-rise'); // a subida de entrada não deve se repetir ao recolher
+    const r = box.getBoundingClientRect();
+    agPh = document.createElement('div'); agPh.className = 'ag-ph'; agPh.style.height = r.height + 'px';
+    box.before(agPh);
+    const bd = document.createElement('div'); bd.className = 'ag-backdrop'; bd.dataset.close = '1';
+    document.body.append(bd, box);
+    document.body.classList.add('modal-open');
+    Object.assign(box.style, { top: r.top + 'px', left: r.left + 'px', width: r.width + 'px', height: r.height + 'px', transition: 'none' });
+    box.classList.add('expanded');
+    void box.offsetWidth;
+    box.style.transition = `top .6s ${ease}, left .6s ${ease}, width .6s ${ease}, height .6s ${ease}, border-radius .6s ${ease}`;
+    Object.assign(box.style, { top: '', left: '', width: '', height: '' });
+    requestAnimationFrame(() => bd.classList.add('in'));
+  } else {
+    if (!box.classList.contains('expanded')) return;
+    const bd = document.querySelector('.ag-backdrop');
+    const done = () => {
+      box.classList.remove('expanded', 'closing');
+      box.removeAttribute('style');
+      if (agPh?.isConnected) agPh.replaceWith(box); else box.remove(); // a página mudou: o cartão não volta
+      agPh = null; bd?.remove();
+      document.body.classList.remove('modal-open');
+    };
+    if (instant || !agPh?.isConnected) return done();
+    const r = agPh.getBoundingClientRect();
+    box.classList.add('closing');
+    Object.assign(box.style, { top: r.top + 'px', left: r.left + 'px', width: r.width + 'px', height: r.height + 'px' });
+    bd?.classList.remove('in');
+    setTimeout(done, 560);
+  }
+}
+window.addEventListener('hashchange', () => agExpand(false, true));
+
 const agMsg = (t) => { const m = $('#ag-msg'); if (m) m.textContent = t || ''; };
 
 function agStepHTML(id) {
@@ -226,9 +272,11 @@ function agStepHTML(id) {
 
 /* cliques do assistente (um único ouvinte para todas as etapas) */
 document.addEventListener('click', async (e) => {
+  if (e.target.closest('.ag-backdrop')) { agExpand(false); return setTimeout(() => agGo(0, 0), 560); }
   const box = e.target.closest('.ag-wiz'); if (!box) return;
   const t = (sel) => e.target.closest(sel);
   const next = (n) => setTimeout(() => agGo(n, 1), 220); // pequena pausa para ver a escolha marcada
+  if (t('[data-close]')) { agExpand(false); return setTimeout(() => agGo(0, 0), 560); }
   if (t('[data-back]')) return agGo(Math.max(0, agForm.step - 1), -1);
   if (t('[data-goto]')) return agGo(+t('[data-goto]').dataset.goto, -1);
   const k = t('[data-kind]');
@@ -236,6 +284,7 @@ document.addEventListener('click', async (e) => {
     if (agForm.kind !== k.dataset.kind) { agForm.date = ''; agForm.shift = ''; }
     agForm.kind = k.dataset.kind;
     box.querySelectorAll('[data-kind]').forEach((b) => b.classList.toggle('on', b === k));
+    agExpand(true);
     return next(1);
   }
   const c = t('[data-college]');
@@ -310,8 +359,8 @@ function agSuccess(a) {
         <button class="btn-soft" type="button" id="ag-new">Novo agendamento</button>
       </div>
     </div>`;
-  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  $('#ag-new').addEventListener('click', () => route()); // recomeça o assistente na etapa 1
+  if (box.classList.contains('expanded')) box.scrollTo({ top: 0, behavior: 'smooth' }); else box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  $('#ag-new').addEventListener('click', () => { agExpand(false, true); route(); }); // recomeça o assistente na etapa 1
   window.open(wa, '_blank', 'noopener'); // tenta abrir o WhatsApp sozinho; se o navegador bloquear, fica o botão
 }
 
