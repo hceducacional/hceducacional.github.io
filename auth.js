@@ -64,7 +64,7 @@ async function setUser(user) {
   paintUser();
   if (isAdmin() && pending.size) [...pending].forEach((k) => queuePush(k)); // termina envios que ficaram pendentes
   const r = (location.hash || '').slice(1);
-  if ((changed || first) && (r === 'perfil' || r === 'usuarios' || r.startsWith('config'))) route(); // a página depende de quem entrou
+  if ((changed || first) && (r === 'perfil' || r === 'usuarios' || r.startsWith('config') || r.startsWith('agendar'))) route(); // a página depende de quem entrou
 }
 async function refreshMe() { await loadProfile(); paintUser(); }
 
@@ -91,6 +91,7 @@ function paintUser() {
       </div>
       ${p.status && p.status !== 'approved' ? `<p class="um-state s-${esc(p.status)}"><i></i>${esc(STATUS_TXT[p.status])}${p.status === 'pending' ? '<span>A secretaria vai liberar o seu acesso em breve.</span>' : ''}</p>` : ''}
       <a class="um-item" role="menuitem" href="#perfil"><i data-icon="user"></i>Meu perfil</a>
+      ${isAdmin() ? `<a class="um-item" role="menuitem" href="#agendar/painel"><i data-icon="calendar"></i>Agendamentos</a>` : ''}
       ${isAdmin() ? `<a class="um-item" role="menuitem" href="#usuarios"><i data-icon="users"></i>Usuários${auth.pending ? `<b class="um-count">${auth.pending}</b>` : ''}</a>` : ''}
       <button class="um-item danger" role="menuitem" type="button" data-auth="logout"><i data-icon="logout"></i>Sair da conta</button>
     </div>`;
