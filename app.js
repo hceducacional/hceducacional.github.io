@@ -400,7 +400,7 @@ function renderDashboard(view) {
 
     ${recentNews().length ? `
     <section class="rn" aria-label="Notícias recentes">
-      <h2 class="shelf-title"><span class="ap-grad">Notícias recentes.</span><span> Fique por dentro dos últimos acontecimentos.</span></h2>
+      <div class="shelf-head"><h2 class="shelf-title"><span class="ap-grad">Notícias recentes.</span><span> Fique por dentro dos últimos acontecimentos.</span></h2><a class="shelf-more" href="#noticias">Ver tudo</a></div>
       <div class="rn-row" id="rn-row">${recentNews().map(recentCard).join('')}</div>
       <div class="ap-paddles rn-paddles">
         <button class="ap-paddle" data-dir="-1" aria-label="Anteriores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
@@ -451,6 +451,16 @@ function renderDashboard(view) {
     const tile = e.target.closest('.cx-tile');
     if (tile && e.target === tile && e.key === 'Enter') tile.querySelector('.cx-go')?.click();
   });
+  // celular: o título de cada seção aparece com a linha divisória se desenhando
+  if (PHONE() && !reduceMotion()) {
+    const heads = view.querySelectorAll('.shelf-title:not(.qa-title)');
+    heads.forEach((h) => h.classList.add('st-wait'));
+    const stIO = new IntersectionObserver((en) => en.forEach((e) => {
+      if (!e.isIntersecting) return;
+      e.target.classList.replace('st-wait', 'st-in'); stIO.unobserve(e.target);
+    }), { threshold: 0.6 });
+    heads.forEach((h) => stIO.observe(h));
+  }
   // Acesso rápido no celular: menu escuro que abre e fecha; ao abrir, os cartões entram em cascata
   const qa = $('#qa'), qaHead = $('#qa-head');
   qaHead?.addEventListener('click', () => {
@@ -520,7 +530,7 @@ function cxTint(root = document) {
 function connectSection() {
   return `
     <section class="cx" aria-label="Mantenha-se conectado com a instituição">
-      <h2 class="shelf-title"><span class="ap-grad">Mantenha-se conectado</span><span> com a instituição.</span></h2>
+      <h2 class="shelf-title"><span class="ap-grad">Mantenha-se conectado<i class="st-mob">.</i></span><span class="st-desk"> com a instituição.</span><span class="st-mob">Fale com a equipe do polo pelos canais oficiais.</span></h2>
       <div class="cx-grid">
         ${connect.map((c, i) => {
           const wa = waDigits(c.whatsapp);
