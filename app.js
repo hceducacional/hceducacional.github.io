@@ -29,6 +29,7 @@ const ICONS = {
   party: '<path d="M4 20 9 6l9 9Z"/><path d="M13 3v2M19 9h2M16.5 5.5 18 4M15 2.5l.5.5M21 13l.5.5"/>',
   smartphone: '<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/>',
   refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   megaphone: '<path d="M3 11v2a1 1 0 0 0 1 1h3l8 5V5L7 10H4a1 1 0 0 0-1 1Z"/><path d="M18.5 9a4 4 0 0 1 0 6M7 14l1 6h3l-1-5.5"/>',
   arrow: '<path d="M7 17 17 7M8 7h9v9"/>',
   left: '<path d="m15 18-6-6 6-6"/>',

@@ -65,49 +65,33 @@ function agDayOpen(kind, date) {
   return ['manha', 'tarde'].some((s) => typeof agShiftState(kind, date, s) === 'number');
 }
 
-/* ---------- página pública ---------- */
-const agForm = { kind: 'prova', date: '', shift: '', month: '' };
+/* ---------- página pública: agendamento em etapas ---------- */
+const agForm = { kind: '', name: '', cpf: '', course: '', college: '', date: '', shift: '', month: '', step: 0 };
+const AG_COLLEGE_COLORS = { Unifaveni: ['#34d6ae', '#0e9f7e'], Uniabeu: ['#0b7a9a', '#070f3d'], Futura: ['#08a8f5', '#06237e'], 'Dom Alberto': ['#f0163a', '#8a0618'] };
+const AG_STEPS = [
+  { id: 'tipo', title: 'O que você vai agendar?', sub: 'Escolha o tipo de atendimento presencial.', c: ['#60a5fa', '#2563eb'] },
+  { id: 'dados', title: 'Seus dados', sub: 'Usados para confirmar a sua presença no polo.', c: ['#34d399', '#059669'] },
+  { id: 'faculdade', title: 'Qual é a sua faculdade?', sub: 'A instituição do seu curso de graduação.', c: ['#2dd4bf', '#0d9488'] },
+  { id: 'data', title: 'Escolha o dia', sub: 'Só aparecem os dias com vagas abertas.', c: ['#fbbf24', '#f97316'] },
+  { id: 'turno', title: 'Escolha o turno', sub: '', c: ['#f472b6', '#db2777'] },
+  { id: 'revisao', title: 'Confira e confirme', sub: 'Veja se está tudo certo antes de agendar.', c: ['#a78bfa', '#7c3aed'] },
+];
+const agLongDate = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+
 function renderAgenda(view) {
-  const me = auth.user ? { name: auth.profile?.name || '' } : {};
+  if (auth.user && !agForm.name) agForm.name = auth.profile?.name || '';
   view.innerHTML = `
   <div class="wrap ag-page">
     <header class="ag-hero">
       <div class="ag-hero-glow" aria-hidden="true"><span></span><span></span></div>
       <p class="ag-kicker"><i data-icon="calendar"></i>Polo Humberto de Campos</p>
       <h1>Agende sua <span class="ap-grad">prova</span> ou <span class="ap-grad">tutoria</span> presencial.</h1>
-      <p class="ag-lead">O agendamento é obrigatório para as provas presenciais e a tutoria presencial dos cursos de graduação. Escolha o tipo, a data e o turno disponíveis e compareça ao polo no horário marcado.</p>
+      <p class="ag-lead">O agendamento é obrigatório para as provas e a tutoria presencial dos cursos de graduação. Leva menos de um minuto.</p>
     </header>
 
-    <section class="ag-card" id="ag-box">
-      <form id="ag-form" novalidate>
-        <div class="ag-step"><span class="ag-n">1</span><h3>Tipo de agendamento</h3></div>
-        <div class="ag-kinds" role="radiogroup" aria-label="Tipo de agendamento">
-          ${Object.entries(AG.kinds).map(([k, v]) => `
-            <button type="button" role="radio" class="ag-opt ${agForm.kind === k ? 'on' : ''}" data-kind="${k}" aria-checked="${agForm.kind === k}">
-              <span class="ag-opt-ico"><i data-icon="${k === 'prova' ? 'report' : 'users'}"></i></span>
-              <strong>${v.label}</strong><small>${v.sub}</small>
-            </button>`).join('')}
-        </div>
-
-        <div class="ag-step"><span class="ag-n">2</span><h3>Seus dados</h3></div>
-        <div class="ag-grid">
-          <label class="ag-field full"><span>Nome completo</span><input id="ag-name" autocomplete="name" maxlength="120" placeholder="Seu nome completo" value="${esc(me.name || '')}"></label>
-          <label class="ag-field"><span>CPF</span><input id="ag-cpf" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14"></label>
-          <label class="ag-field"><span>Curso</span><input id="ag-course" maxlength="80" placeholder="Ex.: Pedagogia"></label>
-          <div class="ag-field full"><span>Faculdade</span>
-            <div class="ag-chips" role="radiogroup" aria-label="Faculdade">${AG.colleges.map((c) => `<button type="button" role="radio" aria-checked="false" data-college="${c}">${c}</button>`).join('')}</div>
-          </div>
-        </div>
-
-        <div class="ag-step"><span class="ag-n">3</span><h3>Data e turno</h3></div>
-        <div class="ag-when">
-          <div class="ag-cal" id="ag-cal" aria-label="Escolha a data"></div>
-          <div class="ag-shifts" id="ag-shifts"></div>
-        </div>
-
-        <p class="ag-msg" id="ag-msg" role="alert"></p>
-        <button class="ag-submit" type="submit" id="ag-go">Confirmar agendamento</button>
-      </form>
+    <section class="ag-card ag-wiz" id="ag-box">
+      <div class="ag-prog" id="ag-prog"></div>
+      <div class="ag-stage" id="ag-stage" aria-live="polite"></div>
     </section>
 
     <section class="ag-polo">
@@ -125,102 +109,161 @@ function renderAgenda(view) {
     </section>
   </div>`;
   paintIcons(view);
-
-  const form = $('#ag-form');
-  let college = '';
-  const msg = (t) => { $('#ag-msg').textContent = t || ''; };
   const now = agNow();
   if (!agForm.month) agForm.month = now.date.slice(0, 7);
+  agGo(agForm.step, 0);
+  agLoad(true).then(() => {
+    if (agForm.date && !agDayOpen(agForm.kind, agForm.date)) { agForm.date = ''; agForm.shift = ''; }
+    if (['data', 'turno'].includes(AG_STEPS[agForm.step].id)) agGo(agForm.step, 0);
+  });
+}
 
-  const drawCal = () => {
+/* mostra a etapa n (dir: 1 avança, -1 volta, 0 sem animação de lado) */
+function agGo(n, dir = 1) {
+  const stage = $('#ag-stage'); if (!stage) return;
+  agForm.step = n;
+  const st = AG_STEPS[n];
+  $('#ag-prog').innerHTML = `
+    <button type="button" class="ag-backbtn" data-back ${n === 0 ? 'disabled' : ''} aria-label="Voltar"><i data-icon="left"></i></button>
+    <div class="ag-bars">${AG_STEPS.map((s, k) => `<span class="${k < n ? 'done' : k === n ? 'now' : ''}" style="--a:${s.c[0]};--b:${s.c[1]}"></span>`).join('')}</div>
+    <span class="ag-count">${n + 1} de ${AG_STEPS.length}</span>`;
+  const sub = st.id === 'turno' && agForm.date ? agLongDate(agForm.date) : st.sub;
+  stage.innerHTML = `
+    <div class="ag-pane ${dir > 0 ? 'from-r' : dir < 0 ? 'from-l' : ''}" style="--a:${st.c[0]};--b:${st.c[1]}">
+      <span class="ag-pane-ico"><i data-icon="${['report', 'user', 'building', 'calendar', 'clock', 'check'][n]}"></i></span>
+      <h2>${st.title}</h2>
+      ${sub ? `<p class="ag-pane-sub">${esc(sub)}</p>` : ''}
+      <div class="ag-pane-body">${agStepHTML(st.id)}</div>
+      <p class="ag-msg" id="ag-msg" role="alert"></p>
+      ${['dados', 'revisao'].includes(st.id) ? `<button class="ag-submit" type="button" data-next>${st.id === 'revisao' ? 'Confirmar agendamento' : 'Continuar'}</button>` : ''}
+    </div>`;
+  paintIcons($('#ag-box'));
+  if (st.id === 'dados') {
+    $('#ag-cpf').addEventListener('input', (e) => { e.target.value = cpfMask(e.target.value); agMsg(); });
+    setTimeout(() => (agForm.name ? (agForm.cpf ? $('#ag-course') : $('#ag-cpf')) : $('#ag-name'))?.focus({ preventScroll: true }), 350);
+  }
+  if (dir && PHONE()) $('#ag-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+const agMsg = (t) => { const m = $('#ag-msg'); if (m) m.textContent = t || ''; };
+
+function agStepHTML(id) {
+  const now = agNow();
+  if (id === 'tipo') return `<div class="ag-big2">${Object.entries(AG.kinds).map(([k, v]) => `
+    <button type="button" class="ag-tile ${agForm.kind === k ? 'on' : ''}" data-kind="${k}" style="--a:${k === 'prova' ? '#60a5fa' : '#a78bfa'};--b:${k === 'prova' ? '#2563eb' : '#7c3aed'}">
+      <span class="ag-tile-ico"><i data-icon="${k === 'prova' ? 'report' : 'users'}"></i></span>
+      <strong>${v.label}</strong><small>${v.sub.replace(' · ', '<br>')}</small><span class="ag-tile-go"><i data-icon="right"></i></span>
+    </button>`).join('')}</div>`;
+  if (id === 'dados') return `<div class="ag-grid">
+    <label class="ag-field full"><span>Nome completo</span><input id="ag-name" autocomplete="name" maxlength="120" placeholder="Seu nome completo" value="${esc(agForm.name)}"></label>
+    <label class="ag-field"><span>CPF</span><input id="ag-cpf" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14" value="${esc(agForm.cpf)}"></label>
+    <label class="ag-field"><span>Curso</span><input id="ag-course" maxlength="80" placeholder="Ex.: Pedagogia" value="${esc(agForm.course)}"></label>
+  </div>`;
+  if (id === 'faculdade') return `<div class="ag-big4">${AG.colleges.map((c) => `
+    <button type="button" class="ag-tile sm ${agForm.college === c ? 'on' : ''}" data-college="${c}" style="--a:${AG_COLLEGE_COLORS[c][0]};--b:${AG_COLLEGE_COLORS[c][1]}">
+      <strong>${c}</strong><span class="ag-tile-go"><i data-icon="right"></i></span>
+    </button>`).join('')}</div>`;
+  if (id === 'data') {
     const [y, m] = agForm.month.split('-').map(Number);
-    const first = `${agForm.month}-01`;
-    const days = new Date(y, m, 0).getDate();
-    const pad = dow(first);
+    const first = `${agForm.month}-01`, days = new Date(y, m, 0).getDate(), pad = dow(first);
     const minMonth = now.date.slice(0, 7), maxMonth = isoAdd(now.date, AG.maxDays).slice(0, 7);
     let cells = '';
     for (let i = 0; i < pad; i++) cells += '<span></span>';
     for (let d = 1; d <= days; d++) {
       const iso = `${agForm.month}-${String(d).padStart(2, '0')}`;
-      const open = agDayOpen(agForm.kind, iso);
-      const bl = agBlocked(iso, agForm.kind);
-      cells += `<button type="button" class="ag-day ${iso === agForm.date ? 'on' : ''} ${iso === now.date ? 'today' : ''} ${bl && iso >= now.date ? 'blocked' : ''}" data-date="${iso}" ${open ? '' : 'disabled'} title="${bl && iso >= now.date ? esc('Bloqueado' + (bl.reason ? ': ' + bl.reason : '')) : ''}">${d}</button>`;
+      const open = agDayOpen(agForm.kind, iso), bl = iso >= now.date && agBlocked(iso, agForm.kind);
+      cells += `<button type="button" class="ag-day ${iso === agForm.date ? 'on' : ''} ${iso === now.date ? 'today' : ''} ${bl ? 'blocked' : ''}" data-date="${iso}" ${open ? '' : 'disabled'} title="${bl ? esc('Bloqueado' + (bl.reason ? ': ' + bl.reason : '')) : ''}">${d}</button>`;
     }
-    $('#ag-cal').innerHTML = `
+    return `<div class="ag-cal">
       <div class="ag-cal-head">
         <button type="button" class="ag-nav" data-mv="-1" ${agForm.month <= minMonth ? 'disabled' : ''} aria-label="Mês anterior"><i data-icon="left"></i></button>
         <strong>${MESES_AG[m - 1]} ${y}</strong>
         <button type="button" class="ag-nav" data-mv="1" ${agForm.month >= maxMonth ? 'disabled' : ''} aria-label="Próximo mês"><i data-icon="right"></i></button>
       </div>
       <div class="ag-wk">${['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'].map((w) => `<span>${w}</span>`).join('')}</div>
-      <div class="ag-days">${cells}</div>`;
-    paintIcons($('#ag-cal'));
-  };
-  const drawShifts = () => {
-    const box = $('#ag-shifts');
-    if (!agForm.date) { box.innerHTML = `<p class="ag-hint"><i data-icon="calendar"></i>Escolha uma data no calendário para ver os turnos e as vagas.</p>`; paintIcons(box); return; }
-    const d = new Date(agForm.date + 'T12:00:00');
-    box.innerHTML = `<p class="ag-date-t">${d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>` + ['manha', 'tarde'].map((s) => {
-      const st = agShiftState(agForm.kind, agForm.date, s);
-      const ok = typeof st === 'number';
-      const note = st === 'off' ? 'Sem atendimento' : st === 'past' ? 'Já começou' : st === 'full' ? 'Lotado' : `${st} ${st === 1 ? 'vaga' : 'vagas'}`;
-      return `<button type="button" class="ag-shift ${agForm.shift === s ? 'on' : ''}" data-shift="${s}" ${ok ? '' : 'disabled'}>
-        <strong>${AG.shifts[s].label}</strong><small>Início às ${AG.shifts[s].time}</small><em class="${ok && st <= 2 ? 'few' : ''}">${note}</em></button>`;
-    }).join('');
-  };
-  const redraw = () => { drawCal(); drawShifts(); };
-  redraw();
-  agLoad(true).then(() => {
-    if (agForm.date && !agDayOpen(agForm.kind, agForm.date)) { agForm.date = ''; agForm.shift = ''; }
-    redraw();
-  });
-
-  form.addEventListener('click', (e) => {
-    const k = e.target.closest('[data-kind]');
-    if (k) {
-      agForm.kind = k.dataset.kind;
-      form.querySelectorAll('[data-kind]').forEach((b) => { const on = b === k; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
-      if (agForm.date && !agDayOpen(agForm.kind, agForm.date)) agForm.date = '';
-      if (agForm.date && typeof agShiftState(agForm.kind, agForm.date, agForm.shift) !== 'number') agForm.shift = '';
-      redraw(); msg(); return;
-    }
-    const c = e.target.closest('[data-college]');
-    if (c) { college = c.dataset.college; form.querySelectorAll('[data-college]').forEach((b) => { const on = b === c; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); }); msg(); return; }
-    const mv = e.target.closest('[data-mv]');
-    if (mv) { const [y, m] = agForm.month.split('-').map(Number); const d = new Date(y, m - 1 + +mv.dataset.mv, 1); agForm.month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; drawCal(); return; }
-    const day = e.target.closest('[data-date]');
-    if (day && !day.disabled) {
-      agForm.date = day.dataset.date;
-      const free = ['manha', 'tarde'].filter((s) => typeof agShiftState(agForm.kind, agForm.date, s) === 'number');
-      if (!free.includes(agForm.shift)) agForm.shift = free.length === 1 ? free[0] : '';
-      redraw(); msg();
-      if (PHONE()) $('#ag-shifts').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-    const sh = e.target.closest('[data-shift]');
-    if (sh && !sh.disabled) { agForm.shift = sh.dataset.shift; drawShifts(); msg(); }
-  });
-  $('#ag-cpf').addEventListener('input', (e) => { e.target.value = cpfMask(e.target.value); msg(); });
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const name = $('#ag-name').value.trim().replace(/\s+/g, ' '), cpf = $('#ag-cpf').value, course = $('#ag-course').value.trim();
-    const fail = (t, el) => { msg(t); el?.focus?.(); };
-    if (name.split(' ').length < 2) return fail('Digite o seu nome completo.', $('#ag-name'));
-    if (!cpfOk(cpf)) return fail('CPF inválido. Confira os números.', $('#ag-cpf'));
-    if (course.length < 2) return fail('Digite o seu curso.', $('#ag-course'));
-    if (!college) return fail('Escolha a sua faculdade.');
-    if (!agForm.date) return fail('Escolha a data no calendário.');
-    if (!agForm.shift) return fail('Escolha o turno.');
-    const go = $('#ag-go'); go.disabled = true; go.textContent = 'Agendando…';
-    const { data, error } = await sb.rpc('book_appointment', { p_kind: agForm.kind, p_name: name, p_cpf: cpfDigits(cpf), p_course: course, p_college: college, p_date: agForm.date, p_shift: agForm.shift });
-    go.disabled = false; go.textContent = 'Confirmar agendamento';
-    if (error) { msg(error.message || 'Não foi possível agendar. Tente de novo.'); agLoad(true).then(redraw); return; }
-    const a = { kind: agForm.kind, name, cpf: cpfMask(cpf), course, college, date: agForm.date, shift: agForm.shift, ...(data?.[0] || {}) };
-    agForm.date = ''; agForm.shift = ''; agData.loaded = 0;
-    agSuccess(a);
-  });
+      <div class="ag-days">${cells}</div>
+      <p class="ag-legend"><span><i class="ok"></i>Com vagas</span><span><i></i>Sem atendimento ou lotado</span></p>
+    </div>`;
+  }
+  if (id === 'turno') return `<div class="ag-big2">${['manha', 'tarde'].map((s) => {
+    const st = agShiftState(agForm.kind, agForm.date, s), ok = typeof st === 'number';
+    const note = st === 'off' ? 'Sem atendimento' : st === 'past' ? 'Já começou' : st === 'full' ? 'Lotado' : `${st} ${st === 1 ? 'vaga livre' : 'vagas livres'}`;
+    const col = s === 'manha' ? ['#fbbf24', '#f97316'] : ['#f472b6', '#7c3aed'];
+    return `<button type="button" class="ag-tile ${agForm.shift === s ? 'on' : ''}" data-shift="${s}" ${ok ? '' : 'disabled'} style="--a:${col[0]};--b:${col[1]}">
+      <span class="ag-tile-ico"><i data-icon="${s === 'manha' ? 'sun' : 'clock'}"></i></span>
+      <strong>${AG.shifts[s].label}</strong><small>Início às ${AG.shifts[s].time}</small><em>${note}</em><span class="ag-tile-go"><i data-icon="right"></i></span>
+    </button>`;
+  }).join('')}</div>`;
+  if (id === 'revisao') {
+    const k = AG.kinds[agForm.kind], s = AG.shifts[agForm.shift];
+    const row = (lab, val, step) => `<div class="ag-rv"><span>${lab}</span><strong>${val}</strong><button type="button" data-goto="${step}">Alterar</button></div>`;
+    return `<div class="ag-review">
+      ${row('Tipo', k.label, 0)}
+      ${row('Nome', esc(agForm.name), 1)}${row('CPF', esc(agForm.cpf), 1)}${row('Curso', esc(agForm.course), 1)}
+      ${row('Faculdade', esc(agForm.college), 2)}
+      ${row('Data', agLongDate(agForm.date), 3)}
+      ${row('Turno', `${s.label} · início às ${s.time}`, 4)}
+    </div>`;
+  }
+  return '';
 }
+
+/* cliques do assistente (um único ouvinte para todas as etapas) */
+document.addEventListener('click', async (e) => {
+  const box = e.target.closest('.ag-wiz'); if (!box) return;
+  const t = (sel) => e.target.closest(sel);
+  const next = (n) => setTimeout(() => agGo(n, 1), 220); // pequena pausa para ver a escolha marcada
+  if (t('[data-back]')) return agGo(Math.max(0, agForm.step - 1), -1);
+  if (t('[data-goto]')) return agGo(+t('[data-goto]').dataset.goto, -1);
+  const k = t('[data-kind]');
+  if (k) {
+    if (agForm.kind !== k.dataset.kind) { agForm.date = ''; agForm.shift = ''; }
+    agForm.kind = k.dataset.kind;
+    box.querySelectorAll('[data-kind]').forEach((b) => b.classList.toggle('on', b === k));
+    return next(1);
+  }
+  const c = t('[data-college]');
+  if (c) { agForm.college = c.dataset.college; box.querySelectorAll('[data-college]').forEach((b) => b.classList.toggle('on', b === c)); return next(3); }
+  const mv = t('[data-mv]');
+  if (mv) { const [y, m] = agForm.month.split('-').map(Number); const d = new Date(y, m - 1 + +mv.dataset.mv, 1); agForm.month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; return agGo(3, 0); }
+  const day = t('[data-date]');
+  if (day && !day.disabled) {
+    agForm.date = day.dataset.date;
+    box.querySelectorAll('[data-date]').forEach((b) => b.classList.toggle('on', b === day));
+    if (typeof agShiftState(agForm.kind, agForm.date, agForm.shift) !== 'number') agForm.shift = '';
+    return next(4);
+  }
+  const sh = t('[data-shift]');
+  if (sh && !sh.disabled) { agForm.shift = sh.dataset.shift; box.querySelectorAll('[data-shift]').forEach((b) => b.classList.toggle('on', b === sh)); return next(5); }
+  if (!t('[data-next]')) return;
+
+  if (AG_STEPS[agForm.step].id === 'dados') {
+    agForm.name = $('#ag-name').value.trim().replace(/\s+/g, ' ');
+    agForm.cpf = $('#ag-cpf').value; agForm.course = $('#ag-course').value.trim();
+    if (agForm.name.split(' ').length < 2) { agMsg('Digite o seu nome completo.'); return $('#ag-name').focus(); }
+    if (!cpfOk(agForm.cpf)) { agMsg('CPF inválido. Confira os números.'); return $('#ag-cpf').focus(); }
+    if (agForm.course.length < 2) { agMsg('Digite o seu curso.'); return $('#ag-course').focus(); }
+    return agGo(2, 1);
+  }
+  // revisão: confirmar
+  const go = t('[data-next]'); go.disabled = true; go.textContent = 'Agendando…';
+  const { data, error } = await sb.rpc('book_appointment', { p_kind: agForm.kind, p_name: agForm.name, p_cpf: cpfDigits(agForm.cpf), p_course: agForm.course, p_college: agForm.college, p_date: agForm.date, p_shift: agForm.shift });
+  go.disabled = false; go.textContent = 'Confirmar agendamento';
+  if (error) {
+    agMsg(error.message || 'Não foi possível agendar. Tente de novo.');
+    await agLoad(true);
+    if (/lotar|bloquead|turno de hoje/i.test(error.message)) setTimeout(() => agGo(/turno/i.test(error.message) ? 4 : 3, -1), 1600);
+    return;
+  }
+  const a = { kind: agForm.kind, name: agForm.name, cpf: cpfMask(agForm.cpf), course: agForm.course, college: agForm.college, date: agForm.date, shift: agForm.shift, ...(data?.[0] || {}) };
+  // limpa tudo (nos computadores do polo, o próximo aluno não vê os dados do anterior)
+  Object.assign(agForm, { kind: '', name: '', cpf: '', course: '', college: '', date: '', shift: '', step: 0 });
+  agData.loaded = 0;
+  $('#ag-prog').innerHTML = '';
+  agSuccess(a);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.closest?.('.ag-wiz input')) { e.preventDefault(); $('.ag-wiz [data-next]')?.click(); }
+});
 
 function agWhatsText(a) {
   const k = AG.kinds[a.kind], s = AG.shifts[a.shift];
@@ -251,7 +294,7 @@ function agSuccess(a) {
       </div>
     </div>`;
   box.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  $('#ag-new').addEventListener('click', () => route());
+  $('#ag-new').addEventListener('click', () => route()); // recomeça o assistente na etapa 1
   window.open(wa, '_blank', 'noopener'); // tenta abrir o WhatsApp sozinho; se o navegador bloquear, fica o botão
 }
 
