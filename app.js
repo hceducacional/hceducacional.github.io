@@ -141,6 +141,7 @@ const igHandles = (v = '') => String(v).split(/[\s,;]+/)
 const IG_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".6" fill="currentColor"/></svg>';
 /* letras que sobem em cascata (número do WhatsApp e @ do Instagram) */
 const cascade = (text, start = 0) => [...text].map((ch, k) => `<span style="--d:${start + k}">${ch === ' ' ? '&nbsp;' : esc(ch)}</span>`).join('');
+const CONNECT_MOBILE_SIZE = '1080 × 1350 px'; // cartões do celular (estilo App Store, 4:5)
 const CONNECT_SLOTS = [
   { name: 'Bloco grande', size: '1440 × 1080 px' },
   { name: 'Bloco largo', size: '2000 × 440 px' },
@@ -267,7 +268,7 @@ async function storeImage(file, kind) {
   return ref;
 }
 
-const allImageRefs = () => [...banners, ...exclusive, ...links, ...news, ...brandList, ...connect, ...authors, ...radar].flatMap((x) => [x.image, x.imageMobile, ...(x.gallery || [])]).filter(Boolean);
+const allImageRefs = () => [...banners, ...exclusive, ...links, ...news, ...brandList, ...connect, ...authors, ...radar].flatMap((x) => [x.image, x.imageMobile, x.avatar, ...(x.gallery || [])]).filter(Boolean);
 async function loadImages() {
   for (const ref of allImageRefs()) {
     if (!ref.startsWith('idb:') || imgCache.has(ref)) continue;
@@ -318,6 +319,7 @@ async function exportContent() {
   const conv = (list) => Promise.all(list.map(async (it) => {
     const out = { ...it, image: await one(it.image) };
     if (it.imageMobile) out.imageMobile = await one(it.imageMobile);
+    if (it.avatar) out.avatar = await one(it.avatar);
     if (Array.isArray(it.gallery)) out.gallery = (await Promise.all(it.gallery.map(one))).filter(Boolean);
     return out;
   }));
@@ -397,6 +399,7 @@ function renderDashboard(view) {
 
   paintIcons(view);
   view.querySelectorAll('.car-box').forEach((box) => initCarousel(box, box.dataset.car === 'hc' ? exclusive : banners, box.dataset.car));
+  cxTint(view);
   initRecentNews();
   view.querySelector('.cx-grid')?.addEventListener('click', (e) => {
     const tile = e.target.closest('.cx-tile');
@@ -436,6 +439,54 @@ function renderDashboard(view) {
 }
 
 /* Mantenha-se conectado: blocos que revelam uma faixa de vidro fosco ao passar o mouse */
+/* Celular: cartão no estilo da App Store — imagem grande, título sobre um degradê
+   na cor da própria imagem e, embaixo, a foto de perfil com o botão "Acessar" */
+const CX_TAGS = ['Atendimento ao aluno', 'Matrículas e cursos', 'Redes sociais', 'HC Instituto Educacional'];
+function cxAppCard(c, i, url, ok, num, ig) {
+  const href = num ? url : ig.length ? `https://www.instagram.com/${ig[0]}/` : ok ? url : '';
+  const sub = num || (ig.length ? ig.map((h) => '@' + h).join(' · ') : (c.desc || ''));
+  const tag = c.tag || (num ? 'Atendimento no WhatsApp' : ig.length ? 'Redes sociais' : CX_TAGS[i] || '');
+  const av = c.avatar ? `<img src="${esc(imgUrl(c.avatar))}" alt=""${objPos(c.avatarFocus)}>` : `<span>${esc(initials(c.title))}</span>`;
+  return `
+            <div class="cx-app">
+              <div class="cx-app-text">
+                ${tag ? `<span class="cx-app-tag">${esc(tag)}</span>` : ''}
+                <h3>${esc(c.title)}</h3>
+                ${c.desc ? `<p>${esc(c.desc)}</p>` : ''}
+              </div>
+              <div class="cx-app-bar">
+                <span class="cx-app-av">${av}</span>
+                <span class="cx-app-who"><strong>${esc(c.title)}</strong><small>${esc(sub)}</small></span>
+                ${href ? `<a class="cx-app-go" href="${esc(href)}" target="_blank" rel="noopener noreferrer">Acessar</a>` : ''}
+              </div>
+            </div>`;
+}
+/* cor de fundo do cartão tirada da própria imagem (média das cores, escurecida) */
+const cxTintCache = new Map();
+function cxTint(root = document) {
+  root.querySelectorAll('.cx-tile').forEach((tile, i) => {
+    const c = connect[i] || {}, ref = (PHONE() && c.imageMobile) || c.image;
+    const src = ref ? imgUrl(ref) : '';
+    if (!src) return;
+    const apply = (rgb) => tile.style.setProperty('--tint', rgb);
+    if (cxTintCache.has(src)) return apply(cxTintCache.get(src));
+    const img = new Image(); img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas'); c.width = 24; c.height = 24;
+        const g = c.getContext('2d', { willReadFrequently: true });
+        g.drawImage(img, 0, img.height * .55, img.width, img.height * .45, 0, 0, 24, 24); // parte de baixo, onde fica o texto
+        const d = g.getImageData(0, 0, 24, 24).data; let r = 0, gg = 0, b = 0;
+        for (let k = 0; k < d.length; k += 4) { r += d[k]; gg += d[k + 1]; b += d[k + 2]; }
+        const n = d.length / 4, f = .62; // escurece para o texto branco ficar legível
+        const rgb = `${Math.round(r / n * f)}, ${Math.round(gg / n * f)}, ${Math.round(b / n * f)}`;
+        cxTintCache.set(src, rgb); apply(rgb);
+      } catch { /* imagem sem permissão de leitura: fica a cor padrão */ }
+    };
+    img.src = src;
+  });
+}
+
 function connectSection() {
   return `
     <section class="cx" aria-label="Mantenha-se conectado com a instituição">
@@ -449,7 +500,8 @@ function connectSection() {
           const ig = igHandles(c.instagram);
           return `
           <article class="cx-tile cx-${i + 1} ${ok ? 'has-link' : ''}" tabindex="0" aria-label="${esc(c.title)}">
-            <div class="cx-bg" ${c.image ? `style="background-image:url('${esc(imgUrl(c.image))}')"` : ''}></div>
+            <div class="cx-bg" ${c.image || c.imageMobile ? `style="${c.image ? `background-image:url('${esc(imgUrl(c.image))}');` : ''}${c.imageMobile ? `--img-m:url('${esc(imgUrl(c.imageMobile))}');${VALID_POS.test(c.focusMobile || '') ? `--pos-m:${c.focusMobile};` : ''}` : ''}"` : ''}></div>
+            ${cxAppCard(c, i, url, ok, num, ig)}
             <div class="cx-glass">
               <div class="cx-text">
                 <h3>${esc(c.title)}</h3>
@@ -898,13 +950,27 @@ function initBannerEditor(key) {
 
 function initConnectPanel() {
   const panel = $('#connect-panel');
-  let imgIdx = -1;
+  let imgIdx = -1, avMode = false;
   drawConnectPanel();
   panel.addEventListener('click', (e) => {
     const t = e.target.closest('[data-cact]'); if (!t) return;
     const i = +t.dataset.i;
-    if (t.dataset.cact === 'img') { imgIdx = i; $('#file-connect').click(); }
+    if (t.dataset.cact === 'img') { imgIdx = i; avMode = false; $('#file-connect').click(); }
+    if (t.dataset.cact === 'mimg') { imgIdx = i; avMode = 'mobile'; $('#file-connect').click(); }
+    if (t.dataset.cact === 'rmmimg') { delete connect[i].imageMobile; delete connect[i].focusMobile; saveConnect(); drawConnectPanel(); toast('No celular, este bloco volta a usar a imagem do computador'); }
+    if (t.dataset.cact === 'mfocus') {
+      focusEditor({ src: connect[i].imageMobile, pos: connect[i].focusMobile }).then((pos) => {
+        if (pos === null) return; connect[i].focusMobile = pos; saveConnect(); drawConnectPanel(); toast('Enquadramento salvo');
+      });
+    }
     if (t.dataset.cact === 'rmimg') { connect[i].image = ''; saveConnect(); drawConnectPanel(); toast('Imagem removida'); }
+    if (t.dataset.cact === 'avatar') { imgIdx = i; avMode = true; $('#file-connect').click(); }
+    if (t.dataset.cact === 'rmav') { delete connect[i].avatar; delete connect[i].avatarFocus; saveConnect(); drawConnectPanel(); toast('Foto de perfil removida'); }
+    if (t.dataset.cact === 'avfocus') {
+      focusEditor({ src: connect[i].avatar, pos: connect[i].avatarFocus, round: true }).then((pos) => {
+        if (pos === null) return; connect[i].avatarFocus = pos; saveConnect(); drawConnectPanel(); toast('Enquadramento salvo');
+      });
+    }
   });
   panel.addEventListener('input', (e) => {
     const f = e.target.closest('[data-cfield]'); if (!f) return;
@@ -918,6 +984,18 @@ function initConnectPanel() {
   $('#file-connect').addEventListener('change', async (e) => {
     const file = e.target.files[0]; e.target.value = '';
     if (!file || imgIdx < 0) return;
+    if (avMode === 'mobile') { // imagem só para o celular
+      const c = connect[imgIdx], old = c.imageMobile, oldF = c.focusMobile;
+      c.imageMobile = await storeImage(file, 'connect'); delete c.focusMobile;
+      if (saveConnect()) toast('Imagem do celular aplicada'); else { c.imageMobile = old; c.focusMobile = oldF; }
+      return drawConnectPanel();
+    }
+    if (avMode) { // foto de perfil do cartão no celular
+      const c = connect[imgIdx], old = c.avatar, oldF = c.avatarFocus;
+      c.avatar = await storeImage(file, 'author'); delete c.avatarFocus;
+      if (saveConnect()) toast('Foto de perfil aplicada. Use o botão de enquadrar para centralizar.'); else { c.avatar = old; c.avatarFocus = oldF; }
+      return drawConnectPanel();
+    }
     const old = connect[imgIdx].image;
     connect[imgIdx].image = await storeImage(file, 'connect');
     if (saveConnect()) toast('Imagem aplicada'); else connect[imgIdx].image = old;
@@ -933,16 +1011,21 @@ function drawConnectPanel() {
     ${connect.map((c, i) => `
       <div class="banner-item">
         <div class="bi-head">
-          <button class="bi-thumb cx-thumb cx-${i + 1}" data-cact="img" data-i="${i}" title="Trocar imagem" ${c.image ? `style="background-image:url('${esc(imgUrl(c.image))}')"` : ''}></button>
+          <button class="bi-thumb cx-thumb cx-${i + 1}" data-cact="img" data-i="${i}" title="Trocar imagem do computador" ${c.image ? `style="background-image:url('${esc(imgUrl(c.image))}')"` : ''}><span class="bi-tag">Computador</span></button>
+          <button class="bi-mthumb ${c.imageMobile ? 'has' : ''}" data-cact="mimg" data-i="${i}" title="${c.imageMobile ? 'Trocar imagem do celular' : 'Adicionar imagem só para celular (opcional)'}" ${c.imageMobile ? `style="background-image:url('${esc(imgUrl(c.imageMobile))}');${bgPos(c.focusMobile)}"` : ''}>${c.imageMobile ? '' : '<i data-icon="smartphone"></i>'}<span class="bi-tag">Celular</span></button>
+          ${c.imageMobile ? `<span class="bi-mtools"><button class="icon-btn neutral" data-cact="mfocus" data-i="${i}" title="Enquadrar imagem do celular"><i data-icon="focus"></i></button><button class="icon-btn" data-cact="rmmimg" data-i="${i}" title="Remover imagem do celular (volta a usar a do computador)"><i data-icon="x"></i></button></span>` : ''}
           <div class="bi-meta">
-            <span class="bi-badge">${CONNECT_SLOTS[i].name.toUpperCase()} · ${CONNECT_SLOTS[i].size}</span>
+            <span class="bi-badge">${CONNECT_SLOTS[i].name.toUpperCase()} · PC ${CONNECT_SLOTS[i].size} · CELULAR ${CONNECT_MOBILE_SIZE}</span>
             <p data-csub="${i}">${esc(c.title) || 'Sem título'}</p>
           </div>
+          <button class="cx-av-btn ${c.avatar ? 'has' : ''}" data-cact="avatar" data-i="${i}" title="Foto de perfil do cartão no celular">${c.avatar ? `<img src="${esc(imgUrl(c.avatar))}" alt=""${objPos(c.avatarFocus)}>` : '<i data-icon="user"></i>'}<span class="bi-tag">Perfil</span></button>
+          ${c.avatar ? `<span class="bi-mtools"><button class="icon-btn neutral" data-cact="avfocus" data-i="${i}" title="Enquadrar foto de perfil"><i data-icon="focus"></i></button><button class="icon-btn" data-cact="rmav" data-i="${i}" title="Remover foto de perfil"><i data-icon="x"></i></button></span>` : ''}
           <button class="btn-soft" data-cact="img" data-i="${i}"><i data-icon="image"></i>${c.image ? 'Trocar' : 'Imagem'}</button>
           ${c.image ? `<button class="icon-btn" data-cact="rmimg" data-i="${i}" title="Remover imagem (volta ao degradê)"><i data-icon="x"></i></button>` : ''}
         </div>
         <div class="bi-fields">
           <div class="field"><label>Título</label><input data-i="${i}" data-cfield="title" value="${esc(c.title)}" maxlength="60"></div>
+          <div class="field"><label>Etiqueta no celular <em>(opcional, ex.: Atendimento ao aluno)</em></label><input data-i="${i}" data-cfield="tag" value="${esc(c.tag || '')}" maxlength="40" placeholder="${esc(CX_TAGS[i])}"></div>
           <div class="field"><label>Número do WhatsApp <em>(com DDD, opcional)</em></label><input data-i="${i}" data-cfield="whatsapp" value="${esc(c.whatsapp || '')}" placeholder="(98) 9 8765-4321" inputmode="tel" maxlength="20"></div>
           <div class="field full"><label>Contas do Instagram <em>(opcional, até 3, separadas por espaço)</em></label><input data-i="${i}" data-cfield="instagram" value="${esc(c.instagram || '')}" placeholder="@hceducacional @favenihc" maxlength="100" autocapitalize="off" spellcheck="false"></div>
           ${i === 0
