@@ -1,3 +1,7 @@
 .claude/
 __pycache__/
 *.pyc
+
+# vídeos de referência (não vão para o site)
+*.mp4
+*.mov

@@ -4,6 +4,12 @@
 
 /* ---------- Ícones (estilo Lucide) ---------- */
 const ICONS = {
+  share: '<path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M20 14v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5"/>',
+  copy: '<rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  whatsapp: '<path fill="currentColor" stroke="none" d="M12.04 2a9.9 9.9 0 0 0-8.5 14.96L2 22l5.2-1.5A9.9 9.9 0 1 0 12.04 2Zm0 18.1a8.2 8.2 0 0 1-4.2-1.15l-.3-.18-3.1.9.9-3-.2-.31A8.2 8.2 0 1 1 12.04 20.1Zm4.5-6.14c-.25-.12-1.46-.72-1.69-.8-.23-.08-.39-.12-.56.12-.16.25-.64.8-.78.97-.14.16-.29.18-.53.06a6.7 6.7 0 0 1-3.32-2.9c-.25-.43.25-.4.72-1.33.08-.16.04-.3-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.41-.56-.42h-.47a.9.9 0 0 0-.65.3 2.74 2.74 0 0 0-.86 2.04 4.76 4.76 0 0 0 1 2.53 10.9 10.9 0 0 0 4.17 3.68c1.55.67 2.16.73 2.93.61.47-.07 1.46-.6 1.66-1.17.2-.58.2-1.07.15-1.17-.06-.1-.22-.17-.47-.29Z"/>',
+  facebook: '<path fill="currentColor" stroke="none" d="M14 8.5V6.8c0-.8.2-1.3 1.4-1.3H17V2.3c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3v2H7.5V12h2.8v9.8H14V12h2.8l.4-3.5Z"/>',
+  xlogo: '<path fill="currentColor" stroke="none" d="M17.75 3h3.07l-6.7 7.66L22 21h-6.17l-4.83-6.32L5.47 21H2.4l7.17-8.2L2 3h6.33l4.37 5.78L17.75 3Zm-1.08 16.18h1.7L7.4 4.73H5.58l11.09 14.45Z"/>',
+  telegram: '<path fill="currentColor" stroke="none" d="M21.43 3.5 2.95 10.62c-1.26.5-1.25 1.2-.23 1.52l4.74 1.48 1.83 5.6c.22.6.11.85.75.85.5 0 .71-.23.99-.5l2.37-2.3 4.93 3.64c.9.5 1.56.24 1.78-.84l3.23-15.2c.33-1.32-.5-1.92-1.91-1.37ZM8.5 13.3l9.9-6.25c.5-.3.95-.14.58.19l-8.48 7.65-.33 3.52L8.5 13.3Z"/>',
   edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   chat: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/>',
   grid: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
@@ -1265,6 +1271,7 @@ function newsBodyHTML() {
   const filtered = newsFilter === 'Todas' ? list : list.filter((n) => n.cat === newsFilter);
   const [feat, ...rest] = filtered;
   if (!feat) return `<p class="ap-empty">Nenhuma notícia publicada ainda.</p>`;
+  if (PHONE()) return `<section class="td-list">${filtered.map((n, k) => todayCard(n, k)).join('')}</section>`;
   return `
     <section class="reveal">${featureCard(feat)}</section>
     ${rest.length ? `
@@ -1394,6 +1401,7 @@ function renderNews(view) {
 
   // prepara a vitrine (setas) e as animações de entrada do conteúdo
   function setupBody(shown) {
+    paintTints(body);
     body.querySelectorAll('.reveal').forEach((el) => (shown ? el.classList.add('in') : io.observe(el)));
     const sc = body.querySelector('.ap-scroller'); if (!sc) return;
     const paddles = body.querySelectorAll('.ap-paddle');
@@ -1412,6 +1420,10 @@ function renderNews(view) {
     update();
   }
   setupBody(false);
+  // virou de celular para tela grande (ou o contrário): troca o tipo de cartão
+  const mq = matchMedia('(max-width: 860px)');
+  const onMq = () => { if (!document.body.contains(body)) return mq.removeEventListener('change', onMq); body.innerHTML = newsBodyHTML(); setupBody(true); };
+  mq.addEventListener('change', onMq);
 }
 
 /* ---------- Pop-up com animação de expansão ----------
@@ -1421,7 +1433,8 @@ const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)')
 const EASE_OUT = 'cubic-bezier(.2, .8, .2, 1)';
 
 function openNews(n, card) {
-  if (!n || document.querySelector('.nm')) return;
+  if (!n || document.querySelector('.nm, .ts')) return;
+  if (PHONE() || !card) return openNewsSheet(n, card);
   const cardImg = card.querySelector('.nc-media img');
   const cardMedia = card.querySelector('.nc-media');
   const from = cardMedia.getBoundingClientRect();
@@ -1467,6 +1480,7 @@ function openNews(n, card) {
             const it = allItems[(+m[1] || 1) - 1];
             return it ? `<figure class="nm-fig"><img src="${esc(imgUrl(it.src))}" alt="" loading="lazy"></figure>` : '';
           }).join('')}</div>
+          <div class="nm-share"><button type="button" class="share-pill" data-share><i data-icon="share"></i>Compartilhar</button></div>
           ${others.length ? `
           <div class="nm-related">
             <h4>Leia também.</h4>
@@ -1559,6 +1573,7 @@ function openNews(n, card) {
   };
   document.addEventListener('keydown', onKey);
   wrap.querySelector('.nm-close').addEventListener('click', () => close());
+  wrap.querySelector('[data-share]').addEventListener('click', (e) => shareNews(n, e.currentTarget));
   wrap.querySelector('.nm-scroll').addEventListener('click', (e) => { if (e.target.classList.contains('nm-scroll')) close(); });
   wrap.querySelectorAll('[data-rel]').forEach((b) => b.addEventListener('click', () => {
     const target = document.querySelector(`[data-news="${b.dataset.rel}"]`);
@@ -1581,6 +1596,270 @@ function openNews(n, card) {
     { duration: 500, easing: EASE_OUT, fill: 'backwards', delay: 300 + i * 70 }));
   const ghost = flyImage(imgUrl(items[0].src), from, to, fromRadius, getComputedStyle(media).borderTopLeftRadius, 620, items[0].pos);
   ghost.onfinish = () => { media.style.visibility = ''; ghost.effect.target.remove(); };
+}
+
+/* =========================================================
+   NOTÍCIAS NO CELULAR — cartões no estilo "Hoje" da App Store
+   A imagem ocupa o cartão inteiro e a parte de baixo ganha a cor da
+   própria foto. Ao tocar, o cartão cresce até virar a tela cheia.
+   ========================================================= */
+const TINT_DEFAULT = '40, 40, 44';
+const tintCache = new Map();
+const tdKick = (n) => `${esc(n.cat)}<span class="ap-sep">·</span>${fmtShort(n.date)}`;
+function tdInner(n, inSheet) {
+  const a = newsAuthor(n);
+  return `
+    <div class="nc-media td-media"><img src="${esc(imgUrl(n.image))}" alt=""${inSheet ? '' : ' loading="lazy"'}${objPos(coverPos(n))}></div>
+    <div class="td-shade"></div>
+    <div class="td-text">
+      <span class="td-kick">${tdKick(n)}</span>
+      <h3 class="td-title"${inSheet ? ' id="ts-title"' : ''}>${esc(n.title)}</h3>
+      <p class="td-sub">${esc(n.excerpt)}</p>
+    </div>
+    <div class="td-strip">
+      ${avatarHTML(a, 'td-av')}
+      <span class="td-who"><strong>${esc(a.name)}</strong><small>${readTime(n)} min de leitura</small></span>
+      ${inSheet ? '<button type="button" class="td-btn" data-share><i data-icon="share"></i>Compartilhar</button>' : '<span class="td-btn">Ler</span>'}
+    </div>`;
+}
+function todayCard(n, k = 0) {
+  return `<article class="nc td" data-news="${n.id}" data-tint="${esc(n.image)}" tabindex="0" role="button" aria-label="Abrir notícia: ${esc(n.title)}" style="--tint:${tintCache.get(n.image) || TINT_DEFAULT};--k:${Math.min(k, 6)}">${tdInner(n, false)}</article>`;
+}
+/* cor da parte de baixo da foto, escurecida para o texto branco ficar legível */
+function paintTints(root = document) {
+  root.querySelectorAll('[data-tint]').forEach((el) => {
+    const src = el.dataset.tint;
+    if (tintCache.has(src)) return el.style.setProperty('--tint', tintCache.get(src));
+    if (tintCache.has('wait:' + src)) return;
+    tintCache.set('wait:' + src, 1);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas'); c.width = 24; c.height = 24;
+        const g = c.getContext('2d', { willReadFrequently: true });
+        g.drawImage(img, 0, 0, 24, 24);
+        const d = g.getImageData(0, 13, 24, 11).data;
+        let r = 0, gr = 0, b = 0; const k = d.length / 4;
+        for (let i = 0; i < d.length; i += 4) { r += d[i]; gr += d[i + 1]; b += d[i + 2]; }
+        r /= k; gr /= k; b /= k;
+        const avg = (r + gr + b) / 3; // um pouco mais de cor, como a App Store
+        [r, gr, b] = [r, gr, b].map((v) => Math.max(0, Math.min(255, avg + (v - avg) * 1.35)));
+        const lum = (0.2126 * r + 0.7152 * gr + 0.0722 * b) / 255;
+        const f = lum > 0.26 ? 0.26 / lum : 1;
+        const tint = [r, gr, b].map((v) => Math.round(v * f)).join(', ');
+        tintCache.set(src, tint);
+        document.querySelectorAll('[data-tint]').forEach((x) => { if (x.dataset.tint === src) x.style.setProperty('--tint', tint); });
+      } catch { /* imagem de outro site sem permissão: fica a cor padrão */ }
+    };
+    img.src = imgUrl(src);
+  });
+}
+
+function openNewsSheet(n, card) {
+  if (!n || document.querySelector('.ts')) return;
+  const vw = document.documentElement.clientWidth, vh = innerHeight;
+  const rect = card?.getBoundingClientRect();
+  const fromCard = !!(card && card.classList.contains('td') && rect.width);
+  const heroH = Math.round(fromCard ? vw * (rect.height / rect.width) : Math.min(vw * 1.25, vh * 0.78));
+  const allItems = newsItems(n);
+  const inText = new Set(n.body.map((p) => BODY_IMG.exec(p.trim())).filter(Boolean).map((m) => (+m[1] || 1) - 1));
+  const extra = allItems.filter((_, k) => k > 0 && !inText.has(k));
+  const others = news.filter((x) => x.id !== n.id).sort(byNewest).slice(0, 3);
+  const a = newsAuthor(n);
+  const tint = tintCache.get(n.image) || (card && getComputedStyle(card).getPropertyValue('--tint')) || TINT_DEFAULT;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'ts';
+  wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-labelledby', 'ts-title');
+  wrap.innerHTML = `
+    <div class="ts-scroll">
+      <header class="td ts-hero" data-tint="${esc(n.image)}" style="--tint:${tint};height:${heroH}px">${tdInner(n, true)}</header>
+      <div class="ts-body">
+        <div class="ts-text">${n.body.map((p) => {
+          const m = BODY_IMG.exec(p.trim());
+          if (!m) return `<p>${esc(p)}</p>`;
+          const it = allItems[(+m[1] || 1) - 1];
+          return it ? `<figure class="ts-fig"><img src="${esc(imgUrl(it.src))}" alt="" loading="lazy"></figure>` : '';
+        }).join('')}</div>
+        ${extra.map((it) => `<figure class="ts-fig"><img src="${esc(imgUrl(it.src))}" alt="" loading="lazy"></figure>`).join('')}
+        <div class="ts-end">
+          ${avatarHTML(a, 'ts-end-av')}
+          <strong>${esc(a.name)}</strong>
+          <span>${fmtDate(n.date, true)}</span>
+          <button type="button" class="share-pill" data-share><i data-icon="share"></i>Compartilhar</button>
+        </div>
+        ${others.length ? `
+        <div class="ts-rel">
+          <h4>Leia também</h4>
+          ${others.map((o) => `
+          <button type="button" class="ts-rel-item" data-rel="${o.id}">
+            <span class="ts-rel-img"><img src="${esc(imgUrl(o.image))}" alt="" loading="lazy"${objPos(coverPos(o))}></span>
+            <span class="ts-rel-txt"><small>${tdKick(o)}</small><strong>${esc(o.title)}</strong></span>
+          </button>`).join('')}
+        </div>` : ''}
+      </div>
+    </div>
+    <button type="button" class="ts-close" aria-label="Fechar notícia"><i data-icon="x"></i></button>
+    <div class="ts-bar" aria-hidden="true">
+      <span class="ts-bar-img"><img src="${esc(imgUrl(n.image))}" alt=""${objPos(coverPos(n))}></span>
+      <span class="ts-bar-t"><strong>${esc(n.title)}</strong><small>${esc(a.name)}</small></span>
+      <button type="button" class="td-btn" data-share tabindex="-1"><i data-icon="share"></i>Compartilhar</button>
+    </div>`;
+  document.body.appendChild(wrap);
+  paintIcons(wrap); paintTints(wrap);
+  document.body.classList.add('modal-open');
+  const scroller = wrap.querySelector('.ts-scroll'), hero = wrap.querySelector('.ts-hero');
+  const bodyEl = wrap.querySelector('.ts-body'), closeBtn = wrap.querySelector('.ts-close'), bar = wrap.querySelector('.ts-bar');
+  const lastFocus = document.activeElement;
+
+  // a barrinha de baixo aparece quando a capa sai da tela
+  scroller.addEventListener('scroll', () => {
+    const past = scroller.scrollTop > heroH - 40;
+    bar.classList.toggle('on', past);
+    bar.setAttribute('aria-hidden', !past);
+    bar.querySelector('button').tabIndex = past ? 0 : -1;
+  }, { passive: true });
+  wrap.addEventListener('click', (e) => { const b = e.target.closest('[data-share]'); if (b) shareNews(n, b); });
+
+  // posição do cartão na tela, no "tamanho" da folha (a folha encolhe até caber nele)
+  const cardGeom = () => {
+    const r = card.getBoundingClientRect(), sc = r.width / vw;
+    const rad = parseFloat(getComputedStyle(card).borderTopLeftRadius) || 22;
+    return { tr: `translate(${r.left}px, ${r.top}px) scale(${sc})`, clip: `inset(0px 0px ${Math.max(0, vh - r.height / sc)}px 0px round ${rad / sc}px)`, visible: r.bottom > 0 && r.top < vh };
+  };
+  const EASE_SPRING = 'cubic-bezier(.32, .72, 0, 1)';
+
+  let closing = false;
+  const close = (then) => {
+    if (closing) return; closing = true;
+    document.removeEventListener('keydown', onKey);
+    const finish = () => {
+      wrap.remove(); if (card) card.style.visibility = '';
+      if (!document.querySelector('.nm, .ts')) document.body.classList.remove('modal-open');
+      if (then) then(); else lastFocus?.focus?.({ preventScroll: true });
+    };
+    const g = card && !then && !reduceMotion() ? cardGeom() : null;
+    if (!g || !g.visible || !fromCard) {
+      wrap.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(.94)' }], { duration: 260, easing: 'ease', fill: 'forwards' }).onfinish = finish;
+      return;
+    }
+    // encolhe de volta para dentro do cartão
+    closeBtn.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' });
+    bar.classList.remove('on');
+    const shrink = () => {
+      scroller.scrollTop = 0;
+      wrap.classList.add('flying');
+      const anim = wrap.animate([
+        { transform: 'none', clipPath: `inset(0px 0px 0px 0px round 0px)` },
+        { transform: g.tr, clipPath: g.clip },
+      ], { duration: 460, easing: EASE_SPRING, fill: 'forwards' });
+      bodyEl.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' });
+      anim.onfinish = finish;
+    };
+    if (scroller.scrollTop > 2) bodyEl.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, fill: 'forwards' }).onfinish = shrink;
+    else shrink();
+  };
+  const onKey = (e) => {
+    if (e.key === 'Escape' && !document.querySelector('.lk')) close();
+    if (e.key === 'Tab') {
+      const f = [...wrap.querySelectorAll('button')].filter((x) => x.tabIndex >= 0);
+      if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+      else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+    }
+  };
+  document.addEventListener('keydown', onKey);
+  closeBtn.addEventListener('click', () => close());
+  // puxar a capa para baixo (no topo) também fecha, como na App Store
+  let y0 = null;
+  scroller.addEventListener('touchstart', (e) => { y0 = scroller.scrollTop <= 0 ? e.touches[0].clientY : null; }, { passive: true });
+  scroller.addEventListener('touchmove', (e) => {
+    if (y0 === null) return;
+    const dy = e.touches[0].clientY - y0;
+    if (dy > 0 && scroller.scrollTop <= 0) wrap.style.transform = `scale(${Math.max(0.86, 1 - dy / 900)})`;
+  }, { passive: true });
+  scroller.addEventListener('touchend', (e) => {
+    if (y0 === null) return;
+    const dy = e.changedTouches[0].clientY - y0; y0 = null;
+    if (dy > 110) { wrap.style.transform = ''; close(); }
+    else if (wrap.style.transform) wrap.animate([{ transform: wrap.style.transform }, { transform: 'none' }], { duration: 300, easing: EASE_SPRING }).onfinish = () => { wrap.style.transform = ''; };
+    if (dy <= 110) wrap.style.transform = '';
+  });
+  wrap.querySelectorAll('[data-rel]').forEach((b) => b.addEventListener('click', () => {
+    const o = news.find((x) => x.id === b.dataset.rel);
+    close(() => {
+      const target = document.querySelector(`.td[data-news="${b.dataset.rel}"]`);
+      if (target) { target.scrollIntoView({ block: 'center' }); setTimeout(() => openNewsSheet(o, target), 60); }
+      else openNewsSheet(o, null);
+    });
+  }));
+
+  closeBtn.focus({ preventScroll: true });
+  if (reduceMotion()) return;
+
+  // --- abertura: o cartão cresce até ocupar a tela ---
+  if (fromCard) {
+    const g = cardGeom();
+    card.style.visibility = 'hidden';
+    wrap.classList.add('flying');
+    const anim = wrap.animate([
+      { transform: g.tr, clipPath: g.clip },
+      { transform: 'none', clipPath: `inset(0px 0px 0px 0px round 0px)` },
+    ], { duration: 560, easing: EASE_SPRING });
+    anim.onfinish = () => wrap.classList.remove('flying');
+    bodyEl.animate([{ opacity: 0, transform: 'translateY(30px)' }, { opacity: 1, transform: 'none' }], { duration: 520, delay: 180, easing: EASE_SPRING, fill: 'backwards' });
+    closeBtn.animate([{ opacity: 0, transform: 'scale(.6)' }, { opacity: 1, transform: 'none' }], { duration: 300, delay: 320, easing: EASE_SPRING, fill: 'backwards' });
+  } else {
+    wrap.animate([{ opacity: 0, transform: 'translateY(40px)' }, { opacity: 1, transform: 'none' }], { duration: 480, easing: EASE_SPRING });
+  }
+}
+
+/* ---------- Compartilhar uma notícia ----------
+   No celular abre a folha de compartilhar do próprio aparelho (WhatsApp,
+   Instagram, Facebook…). No computador mostra as redes mais usadas. */
+const newsLink = (n) => `${location.origin}${location.pathname}#noticias/${n.id}`;
+function shareNews(n, btn) {
+  const url = newsLink(n), text = `${n.title} — HC Instituto Educacional`;
+  const touch = matchMedia('(pointer: coarse)').matches;
+  if (navigator.share && touch) {
+    navigator.share({ title: n.title, text, url }).catch(() => {});
+    return;
+  }
+  if (document.querySelector('.lk')) return;
+  const enc = encodeURIComponent;
+  const nets = [
+    ['whatsapp', 'WhatsApp', '#25d366', `https://wa.me/?text=${enc(text + '\n' + url)}`],
+    ['facebook', 'Facebook', '#1877f2', `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`],
+    ['xlogo', 'X', '#000000', `https://twitter.com/intent/tweet?text=${enc(text)}&url=${enc(url)}`],
+    ['telegram', 'Telegram', '#229ed9', `https://t.me/share/url?url=${enc(url)}&text=${enc(text)}`],
+  ];
+  const wrap = document.createElement('div');
+  wrap.className = 'lk sh';
+  wrap.innerHTML = `<div class="lk-backdrop"></div>
+    <div class="lk-card sh-card" role="dialog" aria-modal="true" aria-labelledby="sh-t">
+      <div class="sh-head">
+        <span class="sh-img"><img src="${esc(imgUrl(n.image))}" alt=""${objPos(coverPos(n))}></span>
+        <span class="sh-t"><small>Compartilhar notícia</small><strong id="sh-t">${esc(n.title)}</strong></span>
+      </div>
+      <div class="sh-nets">${nets.map(([ico, name, c, href]) => `<a class="sh-net" href="${esc(href)}" target="_blank" rel="noopener" style="--c:${c}"><span><i data-icon="${ico}"></i></span>${name}</a>`).join('')}</div>
+      <div class="sh-copy"><input readonly value="${esc(url)}" aria-label="Link da notícia"><button type="button" class="btn-dark sm" data-copy><i data-icon="copy"></i>Copiar</button></div>
+      ${navigator.share ? '<button type="button" class="sh-more" data-more>Mais opções</button>' : ''}
+      <button type="button" class="btn-soft sh-close">Fechar</button>
+    </div>`;
+  document.body.appendChild(wrap); paintIcons(wrap);
+  const close = () => { wrap.classList.remove('in'); document.removeEventListener('keydown', onKey); setTimeout(() => wrap.remove(), 300); btn?.focus?.({ preventScroll: true }); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  wrap.querySelector('.lk-backdrop').addEventListener('click', close);
+  wrap.querySelector('.sh-close').addEventListener('click', close);
+  wrap.querySelectorAll('.sh-net').forEach((a) => a.addEventListener('click', () => setTimeout(close, 200)));
+  wrap.querySelector('[data-more]')?.addEventListener('click', () => { navigator.share({ title: n.title, text, url }).catch(() => {}); close(); });
+  wrap.querySelector('[data-copy]').addEventListener('click', async () => {
+    const inp = wrap.querySelector('.sh-copy input');
+    try { await navigator.clipboard.writeText(url); } catch { inp.select(); document.execCommand('copy'); }
+    toast('Link copiado');
+  });
+  requestAnimationFrame(() => wrap.classList.add('in'));
+  setTimeout(() => wrap.querySelector('.sh-net')?.focus({ preventScroll: true }), 60);
 }
 
 /* Cria uma cópia da imagem que se move/escala entre dois retângulos da tela */
@@ -2446,7 +2725,7 @@ function route() {
   if (r === 'sair') { if (window.HC_signOut) window.HC_signOut(); else toast('Sessão encerrada'); history.replaceState(null, '', '#dashboard'); return route(); }
   lastRoute = r;
   const view = $('#view');
-  document.querySelectorAll('.nm, .nm-ghost').forEach((el) => el.remove());
+  document.querySelectorAll('.nm, .nm-ghost, .ts').forEach((el) => el.remove());
   document.body.classList.remove('modal-open');
   document.querySelectorAll('.sb-item[data-route], .tab[data-route], .more-item[data-route]').forEach((a) => a.classList.toggle('active', a.dataset.route === r.split('/')[0]));
   // "Mais" fica destacado quando a página atual está dentro dele
@@ -2456,6 +2735,13 @@ function route() {
   else if (r === 'config') renderConfig(view);
   else if (r === 'config/noticias') renderNewsAdmin(view);
   else if (r === 'noticias') renderNews(view);
+  else if (r.startsWith('noticias/')) { // link compartilhado de uma notícia
+    const n = news.find((x) => x.id === r.slice(9));
+    newsFilter = 'Todas';
+    history.replaceState(null, '', '#noticias');
+    renderNews(view);
+    if (n) setTimeout(() => openNews(n, view.querySelector(`[data-news="${n.id}"]`)), 350);
+  }
   else if (window.HC_ROUTES?.[r]) window.HC_ROUTES[r](view);
   else if (TITLES[r]) renderPlaceholder(view, r);
   else renderDashboard(view);
