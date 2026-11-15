@@ -765,7 +765,7 @@
             </div>
           </div>
         </div>
-        <div class="lr-foot"><span class="lr-spin" aria-label="Calculando"></span><button type="button" class="lr-go" data-lr="go">Continuar ${svg('play', true)}</button></div>
+        <div class="lr-foot"><span class="lr-wait" role="status"><em>Aguarde, registrando seus dados</em><span class="lr-spin" aria-hidden="true"></span></span><button type="button" class="lr-go" data-lr="go">Continuar ${svg('play', true)}</button></div>
         <div class="lr-bands">${[0, 1, 2, 3, 4, 5, 6].map((k) => `<i style="--k:${k}"></i>`).join('')}</div>`;
       document.body.append(el);
       requestAnimationFrame(() => el.classList.add('in'));
