@@ -351,11 +351,14 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
     const fill = () => { inner.innerHTML = modBody(i); bindLessons(view, inner); inner.classList.remove('enter'); void inner.offsetWidth; inner.classList.add('enter'); };
     if (swap) { box.classList.remove('show'); setTimeout(() => { fill(); box.classList.add('show'); }, 650); }
     else { fill(); box.classList.add('show'); }
-    // rola até o painel, mas para logo abaixo da barra de cima (que fica fixa), sem esconder o título
+    // sobe a página só um pouco, para o aluno perceber que abriu algo embaixo; o resto ele rola se quiser.
+    // Nunca passa do ponto em que o painel ficaria escondido atrás da barra de cima.
     setTimeout(() => {
       const bar = document.querySelector('.topbar-wrap, .topbar');
-      const gap = (bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0) + 20;
-      window.scrollTo({ top: Math.max(0, box.getBoundingClientRect().top + scrollY - gap), behavior: 'smooth' });
+      const limit = (bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0) + 20;
+      const top = box.getBoundingClientRect().top;
+      const step = Math.min(Math.round(innerHeight * .22), 220, top - limit);
+      if (step > 24) window.scrollBy({ top: step, behavior: 'smooth' });
     }, swap ? 900 : 300);
   }
 
