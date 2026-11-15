@@ -3832,3 +3832,6 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
 .au-hint { display: block; margin-top: 6px; font-size: 12px; line-height: 1.4; color: var(--muted); }
 .us-user { font-weight: 600; color: var(--ink-2); }
 .icon-btn.us-at { font: 700 16px/1 "Inter", sans-serif; }
+.au-art picture { display: contents; }
+.au-art-ed { flex-wrap: wrap; justify-content: flex-end; max-width: calc(100% - 28px); }
+@media (max-width: 640px) { .au-art-ed { top: 10px; right: 10px; } .au-art-ed button { height: 32px; padding: 0 11px; font-size: 12px; } .au-art-ed button[data-art="clear"] { width: 32px; } }

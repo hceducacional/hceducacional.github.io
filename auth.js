@@ -260,27 +260,49 @@ function openAuth(mode = 'login', data = {}) {
   const lastFocus = document.activeElement;
   let current = mode, ctx = data;
 
-  /* banner do lado esquerdo: a imagem escolhida pelo administrador ou, sem ela, a marca do instituto */
+  /* banner do lado esquerdo (no celular, faixa no alto): a imagem escolhida pelo administrador
+     — uma para o computador e outra para o celular — ou, sem ela, a marca do instituto */
+  const PHONE_MQ = '(max-width: 640px)';
+  let editing = 'image';
   const drawArt = () => {
-    const src = loginBanner[0]?.image || '';
-    art.innerHTML = (src
-      ? `<img src="${esc(imgUrl(src))}" alt="" decoding="async">`
-      : `<div class="au-art-def"><span class="au-art-logo"><b>H</b><b>C</b></span><strong>HC Instituto <br>Educacional</strong><small>Explore todas as suas possibilidades de estudo.</small></div>`)
-      + (isAdmin() ? `<div class="au-art-ed"><button type="button" data-art="pick"><i data-icon="edit"></i>Editar banner</button>${src ? '<button type="button" data-art="clear" aria-label="Remover banner"><i data-icon="trash"></i></button>' : ''}<input type="file" accept="image/*" hidden></div><span class="au-art-hint">Sugestão: 900 × 1300 (em pé)</span>` : '');
+    const b = loginBanner[0] || {}, desk = b.image || '', mob = b.imageMobile || '';
+    const phone = matchMedia(PHONE_MQ).matches, shown = phone ? (mob || desk) : desk;
+    const pic = shown // sem imagem do computador, o computador mostra a marca (a do celular é deitada)
+      ? `<picture>${mob ? `<source media="${PHONE_MQ}" srcset="${esc(imgUrl(mob))}">` : ''}<img src="${esc(imgUrl(shown))}" alt="" decoding="async"></picture>`
+      : `<div class="au-art-def"><span class="au-art-logo"><b>H</b><b>C</b></span><strong>HC Instituto <br>Educacional</strong><small>Explore todas as suas possibilidades de estudo.</small></div>`;
+    art.innerHTML = pic + (isAdmin() ? `<div class="au-art-ed">
+        <button type="button" data-art="image" title="Imagem do computador (900 × 1300, em pé)"><i data-icon="edit"></i>Computador</button>
+        <button type="button" data-art="imageMobile" title="Imagem do celular (1200 × 460, deitada)"><i data-icon="edit"></i>Celular</button>
+        ${shown ? `<button type="button" data-art="clear" aria-label="Remover a imagem ${phone && mob ? 'do celular' : 'do computador'}" title="Remover a imagem ${phone && mob ? 'do celular' : 'do computador'}"><i data-icon="trash"></i></button>` : ''}
+        <input type="file" accept="image/*" hidden></div>
+        <span class="au-art-hint">Computador: 900 × 1300 · Celular: 1200 × 460</span>` : '');
     const img = art.querySelector('img');
     if (img) { const ld = () => img.classList.add('ld'); img.complete ? ld() : img.addEventListener('load', ld); }
     paintIcons(art);
   };
   drawArt();
+  const setBanner = (field, ref) => {
+    const next = { id: 'login', ...(loginBanner[0] || {}) };
+    if (ref) next[field] = ref; else delete next[field];
+    loginBanner = next.image || next.imageMobile ? [next] : [];
+    saveLoginBanner(); drawArt();
+  };
   art.addEventListener('click', (e) => {
     const b = e.target.closest('[data-art]'); if (!b || !isAdmin()) return;
-    if (b.dataset.art === 'pick') art.querySelector('input[type=file]').click();
-    if (b.dataset.art === 'clear') { loginBanner = []; saveLoginBanner(); drawArt(); }
+    if (b.dataset.art === 'clear') {
+      const phone = matchMedia(PHONE_MQ).matches;
+      return setBanner(phone && loginBanner[0]?.imageMobile ? 'imageMobile' : 'image', '');
+    }
+    editing = b.dataset.art;
+    art.querySelector('input[type=file]').click();
   });
   art.addEventListener('change', async (e) => {
     const f = e.target.files?.[0]; e.target.value = ''; if (!f || !isAdmin()) return;
     art.classList.add('busy');
-    try { loginBanner = [{ id: 'login', image: await storeImage(f, 'loginBanner') }]; saveLoginBanner(); drawArt(); }
+    try {
+      setBanner(editing, await storeImage(f, 'loginBanner'));
+      toast(editing === 'imageMobile' ? 'Imagem do celular salva.' : 'Imagem do computador salva.');
+    }
     catch { toast('Não foi possível usar essa imagem. Tente outra.'); }
     finally { art.classList.remove('busy'); }
   });

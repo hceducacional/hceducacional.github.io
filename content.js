@@ -396,5 +396,10 @@ window.HC_CONTENT = {
       "secaoComplemento": "As teclas básicas, uma lição de cada vez."
     }
   ],
-  "loginBanner": []
+  "loginBanner": [
+    {
+      "id": "login",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/9ea17470-1f5d-4150-98bc-ab3f422a267a.webp"
+    }
+  ]
 };
