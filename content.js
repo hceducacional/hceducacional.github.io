@@ -24,10 +24,11 @@ window.HC_CONTENT = {
     {
       "id": "t1794523998603oldn",
       "desc": "Já estão abertas as inscrições para a nova turma de Informática Básica. Entre em contato com o nosso time comercial e saiba mais!",
+      "logo": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/44bd4a8f-5650-49a8-bfbd-38ee06527f3c.webp",
       "pill": "Novidade",
       "image": "assets/conteudo/banner-t1794523998603oldn-358eaa5f.png",
       "title": "Nova turma de Informática",
-      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/7628e2d4-21a4-47e1-a4de-2084612feebb.webp"
+      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/0df7ee52-4b17-4409-8b8e-71af749b2251.webp"
     },
     {
       "id": "t17945765183277fhc",

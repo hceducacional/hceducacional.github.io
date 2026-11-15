@@ -91,6 +91,8 @@ function saveShared(key, value) {
 
 const MAX_BANNERS = 5;
 const SLIDE_MS = 10000;
+// tempo de cada banner na tela (definido em Configurações; padrão 10 s)
+const slideMs = (b) => Math.round(Math.min(60, Math.max(3, +b.secs || SLIDE_MS / 1000)) * 1000);
 const RECENT_MS = 16000; // tempo de cada notícia recente na tela inicial
 const RECENT_AUTO = 5;   // quantas notícias recentes se abrem sozinhas, em sequência
 const PHONE = () => matchMedia("(max-width: 860px)").matches; // celular (barra de abas embaixo)
@@ -349,7 +351,7 @@ function carouselHTML(list, key) {
       ${list.length ? `
         <div class="carousel-track">
           ${list.map((b, i) => `
-            <div class="slide${b.logo ? ' has-logo' : ''}" aria-roledescription="slide" aria-label="${i + 1} de ${list.length}">
+            <div class="slide${b.logo ? ' has-logo' : ''}" style="--slide-ms:${slideMs(b)}ms" aria-roledescription="slide" aria-label="${i + 1} de ${list.length}">
               <div class="slide-bg" style="--img:url('${esc(imgUrl(b.image))}')${b.imageMobile ? `;--img-m:url('${esc(imgUrl(b.imageMobile))}')` : ''}${b.imageMobile && VALID_POS.test(b.focusMobile || '') ? `;--pos-m:${b.focusMobile}` : ''}"></div>
               <div class="slide-text">
                 ${b.logo ? `<div class="slide-logo"><img src="${esc(imgUrl(b.logo))}" alt="" decoding="async"></div>` : ''}
@@ -366,7 +368,7 @@ function carouselHTML(list, key) {
       ` : `<div class="carousel-empty"><div><i data-icon="image"></i><strong>Nenhum banner cadastrado</strong><a href="#config">Adicionar banners em Configurações</a></div></div>`}
     </section>
     <div class="dots">
-      ${list.length > 1 ? list.map((_, i) => `<button class="dot" data-i="${i}" aria-label="Banner ${i + 1}"><span class="dot-fill"></span></button>`).join('') : ''}
+      ${list.length > 1 ? list.map((b, i) => `<button class="dot" data-i="${i}" style="--slide-ms:${slideMs(b)}ms" aria-label="Banner ${i + 1}"><span class="dot-fill"></span></button>`).join('') : ''}
     </div>
     </div>`;
 }
@@ -970,7 +972,11 @@ function initBannerEditor(key) {
       if (f.checked) { url.removeAttribute('tabindex'); setTimeout(() => url.focus(), 250); } else url.setAttribute('tabindex', '-1');
       set.save(); return;
     }
-    list[i][f.dataset.field] = f.value;
+    if (f.dataset.field === 'secs') {
+      const n = Math.round(+f.value);
+      if (!(n >= 3 && n <= 60)) return; // espera um número válido (de 3 a 60)
+      list[i].secs = n;
+    } else list[i][f.dataset.field] = f.value;
     if (f.dataset.field === 'title') panel.querySelector(`[data-sub="${i}"]`).textContent = f.value;
     clearTimeout(panel._t); panel._t = setTimeout(set.save, 300);
   });
@@ -1137,6 +1143,7 @@ function drawBannerPanel(key = 'top') {
           <div class="field"><label>Texto da pílula</label><input data-i="${i}" data-field="pill" value="${esc(b.pill)}"></div>
           <div class="field"><label>Título</label><input data-i="${i}" data-field="title" value="${esc(b.title)}"></div>
           <div class="field"><label>Descrição</label><input data-i="${i}" data-field="desc" value="${esc(b.desc)}"></div>
+          <div class="field bi-secs"><label>Tempo na tela <em>(segundos)</em></label><input data-i="${i}" data-field="secs" type="number" inputmode="numeric" min="3" max="60" step="1" value="${esc(String(b.secs || SLIDE_MS / 1000))}"></div>
           <div class="field full bi-logo">
             <span class="bi-logo-prev ${b.logo ? 'has' : ''}">${b.logo ? `<img src="${esc(imgUrl(b.logo))}" alt="">` : '<i data-icon="image"></i>'}</span>
             <div class="pref-text"><strong>Logo sem fundo <em>(celular)</em></strong><span>No celular, surge no centro do banner e sobe para cima do texto. Use PNG sem fundo.</span></div>
