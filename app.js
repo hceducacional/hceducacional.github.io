@@ -358,7 +358,9 @@ function carouselHTML(list, key) {
                 ${b.pill ? `<span class="pill">${esc(b.pill)}</span>` : ''}
                 <h2>${esc(b.title)}</h2>
                 <p>${esc(b.desc)}</p>
-                ${bannerLink(b) ? `<a class="slide-cta" href="${esc(bannerLink(b))}" target="_blank" rel="noopener noreferrer">Acessar ${CHEV_SVG}</a>` : ''}
+                ${bannerLink(b) ? (b.lockInfo
+                  ? `<a class="slide-cta" href="#informatica" data-info-url="${esc(bannerLink(b))}">Acessar ${CHEV_SVG}</a>` // só alunos de Informática entram direto
+                  : `<a class="slide-cta" href="${esc(bannerLink(b))}" target="_blank" rel="noopener noreferrer">Acessar ${CHEV_SVG}</a>`) : ''}
               </div>
             </div>`).join('')}
         </div>
@@ -964,6 +966,7 @@ function initBannerEditor(key) {
     const i = +f.dataset.i;
     if (f.type === 'checkbox') {
       list[i][f.dataset.field] = f.checked;
+      if (f.dataset.field !== 'linkOn') { f.closest('.bi-lock')?.classList.toggle('on', f.checked); set.save(); return; }
       const box = f.closest('.bi-link');
       box.classList.toggle('on', f.checked);
       const url = box.querySelector('[data-field="url"]');
@@ -1157,6 +1160,12 @@ function drawBannerPanel(key = 'top') {
               <label>Link de acesso</label>
               <input data-i="${i}" data-field="url" value="${esc(b.url || '')}" placeholder="https://www.exemplo.com.br" inputmode="url" ${b.linkOn ? '' : 'tabindex="-1"'}>
             </div></div>
+          </div>
+          <div class="field full bi-link bi-lock ${b.lockInfo ? 'on' : ''}">
+            <div class="bi-link-row">
+              <div class="pref-text"><strong>Só para alunos de Informática</strong><span>O botão “Acessar” abre o link só para quem está marcado como aluno de Informática em Usuários. Os demais veem a página de apresentação do curso.</span></div>
+              <label class="switch"><input type="checkbox" data-i="${i}" data-field="lockInfo" ${b.lockInfo ? 'checked' : ''}><span></span></label>
+            </div>
           </div>
         </div>
       </div>`).join('')}

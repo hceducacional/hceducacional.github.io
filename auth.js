@@ -107,7 +107,7 @@ async function setUser(user) {
   paintUser();
   if (isAdmin() && pending.size) [...pending].forEach((k) => queuePush(k)); // termina envios que ficaram pendentes
   const r = (location.hash || '').slice(1);
-  if ((changed || first) && (r === 'perfil' || r === 'usuarios' || r.startsWith('config') || r.startsWith('agendar') || r.startsWith('indicar'))) route(); // a página depende de quem entrou
+  if ((changed || first) && (r === 'perfil' || r === 'usuarios' || r.startsWith('config') || r.startsWith('agendar') || r.startsWith('indicar') || r === 'informatica')) route(); // a página depende de quem entrou
 }
 async function refreshMe() { await loadProfile(); paintUser(); }
 
@@ -528,7 +528,7 @@ function removeAvatarFile(url) {
 
 /* ---------- Painel mestre: usuários ---------- */
 let usersCache = [], usersFilter = 'all', usersQuery = '';
-const USER_FILTERS = [['all', 'Todos'], ['pending', 'Aguardando'], ['approved', 'Aprovados'], ['blocked', 'Bloqueados'], ['admin', 'Administradores']];
+const USER_FILTERS = [['all', 'Todos'], ['pending', 'Aguardando'], ['approved', 'Aprovados'], ['blocked', 'Bloqueados'], ['admin', 'Administradores'], ['info', 'Informática']];
 
 function renderUsers(view) {
   waitAuth(view, async () => {
@@ -568,7 +568,7 @@ async function loadUsers() {
 }
 function drawUsers() {
   const list = $('#us-list'); if (!list) return;
-  const match = (u, f) => f === 'all' || (f === 'admin' ? u.role === 'admin' : u.status === f);
+  const match = (u, f) => f === 'all' || (f === 'admin' ? u.role === 'admin' : f === 'info' ? !!u.informatica : u.status === f);
   USER_FILTERS.forEach(([k]) => { const el = document.querySelector(`[data-uc="${k}"]`); if (el) el.textContent = usersCache.filter((u) => match(u, k)).length; });
   const q = fold(usersQuery.trim());
   const rows = usersCache.filter((u) => match(u, usersFilter) && (!q || fold(`${u.name} ${u.email}`).includes(q)));
@@ -585,10 +585,12 @@ function drawUsers() {
       <div class="us-tags">
         <span class="us-pill s-${esc(u.status)}">${esc(STATUS_TXT[u.status])}</span>
         ${u.role === 'admin' ? '<span class="us-pill admin">Administrador</span>' : ''}
+        ${u.informatica ? '<span class="us-pill info"><i data-icon="monitor"></i>Aluno de Informática</span>' : ''}
       </div>
       <div class="us-actions">
         ${u.status !== 'approved' ? `<button class="btn-dark sm" type="button" data-ua="approve"><i data-icon="check"></i>Aprovar</button>` : ''}
         ${u.status !== 'blocked' && u.id !== me ? `<button class="btn-soft sm" type="button" data-ua="block"><i data-icon="lock"></i>Bloquear</button>` : ''}
+        <button class="btn-soft sm us-info-btn ${u.informatica ? 'on' : ''}" type="button" data-ua="info" aria-pressed="${!!u.informatica}" title="${u.informatica ? 'Tirar o acesso à Plataforma de Informática' : 'Marcar como aluno de Informática (libera a plataforma)'}"><i data-icon="monitor"></i>Informática</button>
         <button class="icon-btn" type="button" data-ua="reset" title="Enviar link de nova senha por e-mail"><i data-icon="mail"></i></button>
         <button class="icon-btn" type="button" data-ua="setpass" title="Definir uma senha nova"><i data-icon="key"></i></button>
         ${u.id !== me ? `<button class="icon-btn" type="button" data-ua="admin" title="${u.role === 'admin' ? 'Tirar de administrador' : 'Tornar administrador'}"><i data-icon="${u.role === 'admin' ? 'shieldOff' : 'shield'}"></i></button>
@@ -605,7 +607,7 @@ async function userAction(e) {
     b.disabled = true;
     const { error } = await sb.rpc(fn, args);
     b.disabled = false;
-    if (error) return toast(authError(error)), false;
+    if (error) return toast(/informatica/i.test(error.message || '') ? 'Falta atualizar o banco: rode o script 07-alunos-informatica.sql no Supabase.' : authError(error)), false;
     toast(okMsg); await loadUsers(); return true;
   };
   switch (b.dataset.ua) {
@@ -617,6 +619,12 @@ async function userAction(e) {
       const make = u.role !== 'admin';
       if (!(await confirmDialog({ title: make ? `Tornar ${who} administrador?` : `Tirar ${who} de administrador?`, sub: make ? 'Administradores veem todos os cadastros e podem aprovar, bloquear e trocar senhas.' : 'A pessoa continua com a conta, mas sem acesso ao painel mestre.', ok: make ? 'Tornar administrador' : 'Tirar acesso', icon: 'shield' }))) return;
       return rpc('admin_update_user', { target: u.id, new_role: make ? 'admin' : 'user', new_status: make ? 'approved' : null }, make ? `${who} agora é administrador.` : `${who} não é mais administrador.`);
+    }
+    case 'info': {
+      const on = !u.informatica;
+      if (!on && !(await confirmDialog({ title: `Tirar ${who} da Informática?`, sub: 'A pessoa deixa de entrar direto na Plataforma de Informática pelo banner.', ok: 'Tirar acesso', icon: 'monitor' }))) return;
+      return rpc('admin_set_informatica', { target: u.id, value: on }, on ? `${who} agora tem acesso à Plataforma de Informática.` : `${who} não tem mais acesso à Plataforma de Informática.`)
+        .then((ok) => { if (ok && u.id === auth.user.id) refreshMe(); });
     }
     case 'reset': {
       b.disabled = true;

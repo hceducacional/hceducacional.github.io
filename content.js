@@ -24,7 +24,7 @@ window.HC_CONTENT = {
     {
       "id": "t1794523998603oldn",
       "desc": "Já estão abertas as inscrições para a nova turma de Informática Básica. Entre em contato com o nosso time comercial e saiba mais!",
-      "logo": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/44bd4a8f-5650-49a8-bfbd-38ee06527f3c.webp",
+      "logo": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/f9ddfaa1-df8a-4cfd-af0d-13ffa46c7562.webp",
       "pill": "Novidade",
       "image": "assets/conteudo/banner-t1794523998603oldn-358eaa5f.png",
       "title": "Nova turma de Informática",
@@ -34,7 +34,7 @@ window.HC_CONTENT = {
       "id": "t17945765183277fhc",
       "url": "https://www.typing.com/br/student/login",
       "desc": "Acesse a plataforma de digitação do curso de Informática Básica com seu usuário e senha para continuar progredindo",
-      "logo": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/3d1205b6-ce05-4884-94a7-134c08042597.webp",
+      "logo": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/fe60251c-c8ed-4f7f-87bd-4b806b8cea06.webp",
       "pill": "Curso de Informática",
       "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/e362ad27-cabb-460e-979a-7d89e67a775c.png",
       "title": "Continue seu treinamento",
