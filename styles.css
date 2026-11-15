@@ -3545,11 +3545,14 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
    ========================================================= */
 .inf { max-width: 1040px; animation: none; }
 .inf-hero { position: relative; isolation: isolate; text-align: center; padding: 28px 0 40px; }
+.inf-logo { display: block; width: min(380px, 78%); height: auto; margin: 0 auto 22px; filter: drop-shadow(0 10px 18px rgba(249, 115, 22, .22));
+  opacity: 0; transform: translateY(14px) scale(.92); animation: infLogoIn .9s cubic-bezier(.2, .9, .3, 1.2) .25s forwards; }
+@keyframes infLogoIn { to { opacity: 1; transform: none; } }
 .inf-title { margin: 0; font-size: clamp(38px, 6.2vw, 78px); line-height: 1.04; font-weight: 700; letter-spacing: -.04em; }
 .inf-title > span { display: inline-block; opacity: 0; filter: blur(12px); transform: translateY(24px); animation: refWord 1s var(--ease) forwards; }
 .inf-title > span:nth-child(1) { animation-delay: .55s; }
 .inf-title > span:nth-child(2) { animation-delay: .75s; }
-.inf-sub { max-width: 640px; margin: 20px auto 0; font-size: 20px; line-height: 1.45; font-weight: 500; color: var(--ink-2); opacity: 0; animation: refUp .9s var(--ease) 1.1s forwards; }
+.inf-sub { max-width: 640px; margin: 20px auto 0; font-size: 20px; line-height: 1.45; text-align: justify; text-align-last: center; hyphens: auto; -webkit-hyphens: auto; font-weight: 500; color: var(--ink-2); opacity: 0; animation: refUp .9s var(--ease) 1.1s forwards; }
 
 /* código correndo ao fundo do topo */
 .inf-code { position: absolute; inset: -40px -40px 0; z-index: -1; display: flex; flex-direction: column; justify-content: space-around; overflow: hidden; pointer-events: none;
@@ -3570,10 +3573,56 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
 .inf-glyphs span:nth-child(3n+2) { color: #2563eb; } .inf-glyphs span:nth-child(3n) { color: #d97706; }
 @keyframes infFloat { 0% { opacity: 0; transform: translateY(0) rotate(0); } 20% { opacity: .5; } 80% { opacity: .35; } 100% { opacity: 0; transform: translateY(-420px) rotate(14deg); } }
 
-/* terminal: o código entra sendo digitado */
-.inf-term { position: relative; max-width: 620px; margin: 34px auto 18px; border-radius: 18px; overflow: hidden; text-align: left; background: #0d1117;
-  box-shadow: 0 30px 70px -30px rgba(5, 150, 105, .55), 0 0 0 1px rgba(52, 211, 153, .22), inset 0 1px 0 rgba(255, 255, 255, .06);
-  opacity: 0; transform: translateY(20px) scale(.97); animation: infRise 1s var(--ease) 1.25s forwards; }
+/* aviso no topo (título + botões), acima do notebook */
+.inf-gate { margin: 30px auto 0; opacity: 0; animation: refUp .9s var(--ease) 1.25s forwards; }
+.inf-gate h2 { display: inline-flex; align-items: center; gap: 12px; margin: 0; font-size: 26px; line-height: 1.2; letter-spacing: -.025em; }
+.inf-gate-ico { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; color: #fff; background: #1d1d1f; }
+.inf-gate-ico.gold { background: #111; color: #fcd34d; }
+.inf-gate-ico.ok { background: linear-gradient(160deg, #34d399, #059669); }
+.inf-gate-ico i[data-icon], .inf-gate-ico svg { width: 19px; height: 19px; }
+.inf-gate .inf-cta { margin-top: 18px; }
+/* botão principal: faixas verdes passando de um lado a outro, convidando ao clique */
+.inf-shine { position: relative; overflow: hidden; isolation: isolate; animation: infRing 2.8s ease-out 2.4s infinite; }
+.inf-shine::before { content: ''; position: absolute; z-index: -1; top: -20%; bottom: -20%; left: 0; width: 45%; transform: translateX(-120%) skewX(-22deg);
+  background: linear-gradient(90deg, transparent, rgba(52, 211, 153, .18) 30%, rgba(52, 211, 153, .65) 50%, rgba(52, 211, 153, .18) 70%, transparent);
+  animation: infShine 2.8s cubic-bezier(.45, 0, .2, 1) 2.2s infinite; }
+.inf-shine::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, #34d399 45%, #2dd4bf 55%, transparent) no-repeat; background-size: 40% 100%; background-position: -60% 0;
+  animation: infLine2 2.8s cubic-bezier(.45, 0, .2, 1) 2.35s infinite; }
+@keyframes infShine { 0% { transform: translateX(-120%) skewX(-22deg); } 55%, 100% { transform: translateX(330%) skewX(-22deg); } }
+@keyframes infLine2 { 0% { background-position: -60% 0; } 55%, 100% { background-position: 170% 0; } }
+@keyframes infRing { 0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, .55); } 70%, 100% { box-shadow: 0 0 0 12px rgba(52, 211, 153, 0); } }
+.inf-shine:hover { background: #062e22; }
+
+/* tela do notebook: mostra "Carregando curso…" e depois o código começa a ser digitado
+   linha do tempo: 1.2s tela aparece · 1.5s carregando · 3.3s some o carregando e o teclado sobe · 3.7s digitação */
+.inf-mac { position: relative; width: min(620px, 100%); aspect-ratio: 16 / 10; margin: 34px auto 26px;
+  opacity: 0; transform: translateY(24px) scale(.97); animation: infRise 1s var(--ease) 1.2s forwards; }
+.inf-lid-front { position: absolute; inset: 0; padding: 12px 12px 18px; border-radius: 20px 20px 6px 6px; background: #0b0b0d;
+  box-shadow: 0 0 0 2px #c9cacf, 0 0 0 3px #9fa1a8, 0 40px 80px -40px rgba(5, 150, 105, .6); }
+.inf-lid-front::before { content: ''; position: absolute; top: 5px; left: 50%; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: #1f2a33; box-shadow: inset 0 0 1px 1px #2c3e50; }
+.inf-lid-front::after { content: 'MacBook'; position: absolute; bottom: 3px; left: 0; right: 0; text-align: center; font: 600 8px/1 -apple-system, "SF Pro Text", sans-serif; letter-spacing: .08em; color: rgba(255, 255, 255, .28); }
+.inf-screen { position: relative; height: 100%; border-radius: 6px; overflow: hidden; background: #000; }
+.inf-screen::after { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; background: linear-gradient(115deg, rgba(255, 255, 255, .07), transparent 40%); }
+/* tela de carregamento */
+.inf-boot { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: #0d1117; color: #e6edf3;
+  opacity: 0; animation: infBootOn .5s ease 1.5s forwards, infBootOff .45s ease 3.25s forwards; }
+@keyframes infBootOn { 0% { opacity: 0; filter: brightness(3) saturate(0); } 40% { opacity: 1; } 100% { opacity: 1; filter: none; } }
+@keyframes infBootOff { from { opacity: 1; } to { opacity: 0; transform: scale(1.06); } }
+.inf-boot-msg { position: relative; height: 1.3em; width: 100%; font: 500 16px/1.3 ui-monospace, "SF Mono", Menlo, monospace; text-align: center; }
+.inf-boot-msg em { position: absolute; inset: 0; font-style: normal; animation: infMsgA .3s ease 2.6s forwards; }
+.inf-boot-msg em + em { opacity: 0; color: #34d399; animation: infMsgB .3s ease 2.7s forwards; }
+@keyframes infMsgA { to { opacity: 0; transform: translateY(-8px); } }
+@keyframes infMsgB { from { transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.inf-boot-bar { width: 46%; height: 5px; border-radius: 5px; overflow: hidden; background: rgba(255, 255, 255, .12); }
+.inf-boot-bar i { display: block; height: 100%; width: 100%; border-radius: 5px; background: linear-gradient(90deg, #34d399, #2dd4bf, #60a5fa); transform-origin: 0 50%; transform: scaleX(0);
+  animation: infLoad 1.5s cubic-bezier(.5, .1, .3, 1) 1.65s forwards; }
+@keyframes infLoad { 60% { transform: scaleX(.72); } to { transform: scaleX(1); } }
+
+/* terminal: o código entra sendo digitado (dentro da tela do notebook) */
+.inf-term { position: relative; display: flex; flex-direction: column; height: 100%; text-align: left; background: #0d1117;
+  opacity: 0; animation: infPowerOn .6s ease 1.5s forwards; }
+@keyframes infPowerOn { 0% { opacity: 0; filter: brightness(3) saturate(0); } 30% { opacity: 1; } 100% { opacity: 1; filter: none; } }
 .inf-term::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(180deg, rgba(255, 255, 255, .025) 0 1px, transparent 1px 3px); }
 .inf-term::before { content: ''; position: absolute; left: 0; right: 0; top: -40%; height: 40%; pointer-events: none; background: linear-gradient(180deg, transparent, rgba(52, 211, 153, .07), transparent); animation: infScan 4.5s linear infinite; }
 @keyframes infScan { to { top: 110%; } }
@@ -3581,7 +3630,7 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
 .inf-term-bar i { width: 11px; height: 11px; border-radius: 50%; background: #ff5f57; }
 .inf-term-bar i:nth-child(2) { background: #febc2e; } .inf-term-bar i:nth-child(3) { background: #28c840; }
 .inf-term-bar span { flex: 1; margin-right: 47px; text-align: center; font: 500 12px ui-monospace, "SF Mono", Menlo, monospace; color: rgba(255, 255, 255, .45); }
-.inf-term-body { height: calc(6 * 1.75em + 28px); padding: 14px 18px; font: 500 15px/1.75 ui-monospace, "SF Mono", Menlo, monospace; color: #e6edf3; transition: opacity .4s ease, transform .4s ease; }
+.inf-term-body { flex: 1; padding: 14px 18px; font: 500 16px/1.75 ui-monospace, "SF Mono", Menlo, monospace; color: #e6edf3; transition: opacity .4s ease, transform .4s ease; }
 .inf-term-body.wipe { opacity: 0; transform: translateY(-10px); filter: blur(2px); }
 .inf-term .tl { display: flex; white-space: pre; animation: infLine .25s ease-out; }
 @keyframes infLine { from { opacity: 0; transform: translateX(-6px); } }
@@ -3597,7 +3646,7 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
 .inf-caret { display: inline-block; flex: none; width: .55em; height: 1.15em; margin-left: 1px; border-radius: 2px; background: #34d399; box-shadow: 0 0 10px rgba(52, 211, 153, .8); animation: infBlink 1s steps(1) infinite; }
 @keyframes infBlink { 50% { opacity: 0; } }
 .inf-kb { display: inline-flex; flex-direction: column; align-items: center; gap: 7px; padding: 16px; border-radius: 22px; background: #1d1d1f;
-  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .08); opacity: 0; transform: translateY(20px) scale(.97); animation: infRise 1s var(--ease) 1.35s forwards; }
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .08); opacity: 0; transform: translateY(70px) scale(.94); animation: infRise .9s var(--ease) 3.3s forwards; }
 @keyframes infRise { to { opacity: 1; transform: none; } }
 .inf-row { display: flex; gap: 7px; }
 .inf-row:nth-child(2) { margin-left: 18px; }
@@ -3618,7 +3667,7 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
 .inf-card-ico.ok { background: linear-gradient(160deg, #34d399, #059669); }
 .inf-card-ico svg { width: 24px; height: 24px; }
 .inf-card h2 { margin: 0 0 10px; font-size: 26px; line-height: 1.15; letter-spacing: -.025em; }
-.inf-card p { margin: 0 auto; max-width: 600px; font-size: 16.5px; line-height: 1.5; color: var(--ink-2); }
+.inf-card p { margin: 0 auto; max-width: 600px; font-size: 17px; text-align: justify; text-align-last: center; hyphens: auto; -webkit-hyphens: auto; line-height: 1.5; color: var(--ink-2); }
 .inf-cta { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
 .inf-cta .btn-dark, .inf-cta .btn-soft { margin: 0; height: 46px; padding: 0 22px; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
 .inf-cta svg { width: 18px; height: 18px; }
@@ -3639,13 +3688,26 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
 @media (max-width: 960px) { .inf-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 860px) {
   .inf-hero { padding: 6px 0 28px; }
-  .inf-title { font-size: 36px; }
-  .inf-sub { font-size: 16.5px; margin-top: 14px; }
-  .inf-term { margin: 26px auto 14px; border-radius: 14px; }
+  .inf-logo { width: min(270px, 80%); margin-bottom: 16px; }
+  .inf-title { font-size: 32px; line-height: 1.06; }
+  .inf-sub { font-size: 15px; line-height: 1.5; margin-top: 12px; padding: 0 2px; color: var(--muted); }
+  .inf-mac { margin: 24px auto 18px; }
+  .inf-gate { margin-top: 20px; }
+  .inf-gate h2 { font-size: 16.5px; gap: 8px; letter-spacing: -.015em; }
+  .inf-gate-ico { width: 28px; height: 28px; border-radius: 8px; }
+  .inf-gate-ico i[data-icon], .inf-gate-ico svg { width: 15px; height: 15px; }
+  .inf-gate .inf-cta { margin-top: 12px; gap: 8px; }
+  .inf-gate .inf-cta .btn-dark, .inf-gate .inf-cta .btn-soft { height: 44px; font-size: 15px; }
+  .inf-lid-front { padding: 7px 7px 11px; border-radius: 13px 13px 4px 4px; }
+  .inf-lid-front::before { top: 2px; width: 3px; height: 3px; margin-left: -1.5px; }
+  .inf-lid-front::after { font-size: 5px; bottom: 3px; }
+  .inf-screen { border-radius: 4px; }
+  .inf-boot { gap: 10px; }
+  .inf-boot-msg { font-size: 11px; }
   .inf-term-bar { padding: 9px 12px; }
   .inf-term-bar i { width: 9px; height: 9px; }
   .inf-term-bar span { margin-right: 39px; font-size: 11px; }
-  .inf-term-body { padding: 10px 12px; font-size: 11.5px; height: calc(6 * 1.75em + 20px); }
+  .inf-term-body { padding: 8px 10px; font-size: 11px; line-height: 1.7; }
   .inf-term .ln { flex-basis: 20px; }
   .inf-code { font-size: 12px; }
   .inf-sep { width: 40px; }
@@ -3667,7 +3729,7 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
 }
 @media (prefers-reduced-motion: reduce) {
   .inf-title > span, .inf-sub, .inf-term, .inf-kb, .inf-card, .inf-ben { animation: none; opacity: 1; filter: none; transform: none; }
-  .inf-code-row > div, .inf-term::before { animation: none; } .inf-code { animation: none; opacity: .34; } .inf-glyphs { display: none; }
+  .inf-logo, .inf-gate, .inf-shine, .inf-shine::before, .inf-shine::after, .inf-mac, .inf-term, .inf-code-row > div, .inf-term::before { animation: none; opacity: 1; transform: none; filter: none; } .inf-boot, .inf-shine::before, .inf-shine::after { display: none; } .inf-code { animation: none; opacity: .34; } .inf-glyphs { display: none; }
 }
 .inf-card-ico i[data-icon] { width: 24px; height: 24px; }
 .inf-cta i[data-icon] { width: 18px; height: 18px; }

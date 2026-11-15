@@ -44,38 +44,28 @@ const infoIcon = (k) => INFO_ICONS[k]
 const INFO_ROWS = ['QWERTYUIOP', 'ASDFGHJKLÇ', 'ZXCVBNM'];
 const INFO_PHRASES = ['Aprenda a digitar sem olhar.', 'Ganhe velocidade a cada aula.', 'Domine o computador.'];
 
-function infoCard() {
+/* aviso conforme quem está vendo: o título e os botões vão para o topo (acima do notebook)
+   e o texto explicativo fica num card mais abaixo */
+function infoGate() {
   const first = (meName() || '').split(' ')[0];
-  if (!auth.user) return `
-    <section class="inf-card inf-in">
-      <span class="inf-card-ico"><i data-icon="lock"></i></span>
-      <h2>Exclusivo para alunos matriculados.</h2>
-      <p>A Plataforma de Informática está disponível só para os alunos matriculados no curso de Informática Básica do HC Instituto Educacional. Quer fazer parte? Fale com o nosso time comercial. Se você já é aluno, entre na sua conta para acessar.</p>
-      <div class="inf-cta">
-        <a class="btn-dark" href="${INFO_WA('Olá! Vi a Plataforma de Informática no site do HC Instituto Educacional e quero saber mais sobre o curso de Informática Básica.')}" target="_blank" rel="noopener"><i data-icon="chat"></i>Falar com o time comercial</a>
-        <button class="btn-soft" type="button" data-auth="login">Já sou aluno, entrar</button>
-      </div>
-    </section>`;
-  if (!infoAllowed()) return `
-    <section class="inf-card inf-in">
-      <span class="inf-card-ico gold"><i data-icon="star"></i></span>
-      <h2>${first ? esc(first) + ', este' : 'Este'} conteúdo é exclusivo dos alunos de Informática.</h2>
-      <p>Com o curso de Informática Básica você aprende a digitar com rapidez e segurança e ganha os conhecimentos que o mercado pede para usar o computador no trabalho e nos estudos. Faça a sua matrícula e tenha acesso liberado à plataforma.</p>
-      <div class="inf-cta">
-        <a class="btn-dark" href="${INFO_WA(`Olá! Sou ${meName()} e tenho cadastro no site do HC Instituto Educacional. Quero me matricular no curso de Informática Básica para ter acesso à plataforma.`)}" target="_blank" rel="noopener"><i data-icon="chat"></i>Quero me matricular</a>
-        <a class="btn-soft" href="${INFO_WA(`Olá! Sou ${meName()} (${auth.user.email}), já sou aluno do curso de Informática Básica e quero liberar o meu acesso à plataforma no site.`)}" target="_blank" rel="noopener">Já sou aluno, liberar acesso</a>
-      </div>
-    </section>`;
+  if (!auth.user) return {
+    ico: 'lock', tone: '', title: 'Exclusivo para alunos matriculados.',
+    text: 'A Plataforma de Informática está disponível só para os alunos matriculados no curso de Informática Básica do HC Instituto Educacional. Quer fazer parte? Fale com o nosso time comercial. Se você já é aluno, entre na sua conta para acessar.',
+    cta: `<a class="btn-dark inf-shine" href="${INFO_WA('Olá! Vi a Plataforma de Informática no site do HC Instituto Educacional e quero saber mais sobre o curso de Informática Básica.')}" target="_blank" rel="noopener"><i data-icon="chat"></i>Falar com o time comercial</a>
+        <button class="btn-soft" type="button" data-auth="login">Já sou aluno, entrar</button>`,
+  };
+  if (!infoAllowed()) return {
+    ico: 'star', tone: 'gold', title: `${first ? esc(first) + ', este' : 'Este'} conteúdo é exclusivo dos alunos de Informática.`,
+    text: 'Com o curso de Informática Básica você aprende a digitar com rapidez e segurança e ganha os conhecimentos que o mercado pede para usar o computador no trabalho e nos estudos. Faça a sua matrícula e tenha acesso liberado à plataforma.',
+    cta: `<a class="btn-dark inf-shine" href="${INFO_WA(`Olá! Sou ${meName()} e tenho cadastro no site do HC Instituto Educacional. Quero me matricular no curso de Informática Básica para ter acesso à plataforma.`)}" target="_blank" rel="noopener"><i data-icon="chat"></i>Quero me matricular</a>
+        <a class="btn-soft" href="${INFO_WA(`Olá! Sou ${meName()} (${auth.user.email}), já sou aluno do curso de Informática Básica e quero liberar o meu acesso à plataforma no site.`)}" target="_blank" rel="noopener">Já sou aluno, liberar acesso</a>`,
+  };
   const url = infoUrl();
-  return `
-    <section class="inf-card inf-in ok">
-      <span class="inf-card-ico ok"><i data-icon="check"></i></span>
-      <h2>Acesso liberado${first ? ', ' + esc(first) : ''}!</h2>
-      <p>Entre na plataforma com o seu usuário e senha de aluno e continue de onde parou.</p>
-      <div class="inf-cta">
-        ${url ? `<a class="btn-dark" href="${esc(url)}" target="_blank" rel="noopener noreferrer"><i data-icon="external"></i>Abrir a plataforma</a>` : '<p class="inf-note">O link da plataforma ainda não foi cadastrado no banner.</p>'}
-      </div>
-    </section>`;
+  return {
+    ico: 'check', tone: 'ok', title: `Acesso liberado${first ? ', ' + esc(first) : ''}!`,
+    text: 'Entre na plataforma com o seu usuário e senha de aluno e continue de onde parou.',
+    cta: url ? `<a class="btn-dark inf-shine" href="${esc(url)}" target="_blank" rel="noopener noreferrer"><i data-icon="external"></i>Abrir a plataforma</a>` : '<p class="inf-note">O link da plataforma ainda não foi cadastrado no banner.</p>',
+  };
 }
 
 /* código que corre ao fundo do topo (linhas de código em movimento) */
@@ -129,25 +119,41 @@ const INFO_SCRIPT = [
 let infoTyping = 0;
 function renderInformatica(view) {
   waitAuth(view, () => {
+    const g = infoGate();
     view.innerHTML = `
     <div class="wrap inf">
       <section class="inf-hero">
         <div class="ref-glow" aria-hidden="true"><span></span><span></span><span></span></div>
         <div class="inf-code" aria-hidden="true">${infoBgRows()}</div>
         <div class="inf-glyphs" aria-hidden="true">${INFO_GLYPHS.map((g, k) => `<span style="--k:${k}">${esc(g)}</span>`).join('')}</div>
-        <p class="ref-badge inf-badge"><span class="ref-dot"></span>Plataforma de Informática</p>
+        <img class="inf-logo" src="assets/plataforma-informatica.webp" width="900" height="184" alt="Plataforma de Informática" />
         <h1 class="inf-title"><span>Digite rápido.</span> <span class="ap-grad">Domine o computador.</span></h1>
         <p class="inf-sub">O curso de Informática Básica do HC Instituto Educacional ensina a digitar com os dez dedos e traz os conhecimentos essenciais para entender e usar a informática.</p>
-        <div class="inf-term" aria-hidden="true">
-          <div class="inf-term-bar"><i></i><i></i><i></i><span>aluno@hc: ~/informatica</span></div>
-          <div class="inf-term-body" id="inf-term"></div>
+        <div class="inf-gate${g.tone ? ' ' + g.tone : ''}">
+          <h2><span class="inf-gate-ico ${g.tone}"><i data-icon="${g.ico}"></i></span>${g.title}</h2>
+          <div class="inf-cta">${g.cta}</div>
+        </div>
+        <div class="inf-mac" aria-hidden="true">
+          <div class="inf-lid-front"><div class="inf-screen">
+            <div class="inf-term">
+              <div class="inf-term-bar"><i></i><i></i><i></i><span>aluno@hc: ~/informatica</span></div>
+              <div class="inf-term-body" id="inf-term"></div>
+            </div>
+            <div class="inf-boot">
+              <span class="inf-boot-msg"><em>Carregando curso…</em><em>Iniciando…</em></span>
+              <span class="inf-boot-bar"><i></i></span>
+            </div>
+          </div></div>
         </div>
         <div class="inf-kb" aria-hidden="true">
           ${INFO_ROWS.map((r) => `<div class="inf-row">${[...r].map((k) => `<span class="inf-key${'FJ'.includes(k) ? ' nub' : ''}" data-k="${k}">${k}</span>`).join('')}</div>`).join('')}
           <div class="inf-row"><span class="inf-key space" data-k=" "></span></div>
         </div>
       </section>
-      ${infoCard()}
+      <section class="inf-card inf-in${g.tone === 'ok' ? ' ok' : ''}">
+        <span class="inf-card-ico ${g.tone}"><i data-icon="${g.ico}"></i></span>
+        <p>${g.text}</p>
+      </section>
       <section class="inf-grid">
         ${INFO_BENEFITS.map(([ico, t, d], k) => `
         <article class="inf-ben" style="--k:${k}">
@@ -198,7 +204,7 @@ async function infoType(id) {
   const GLYPH = '01<>/{}[]#$%&*=+;:ABCDEFXZ';
   const rnd = () => GLYPH[Math.random() * GLYPH.length | 0];
 
-  await sleep(1500);
+  await sleep(3700); // espera a tela de "Carregando curso…" terminar
   for (let c = 0; alive(); c = (c + 1) % INFO_SCRIPT.length) {
     for (const [kind, a, b, u] of INFO_SCRIPT[c]) {
       if (!alive()) return;
