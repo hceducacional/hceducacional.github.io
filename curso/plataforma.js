@@ -64,7 +64,7 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
     const l = lessonAt(n);
     if (!l?.arquivo) { location.hash = '#informatica'; return toast('Esta lição será montada em breve.'); }
     view.innerHTML = '<div class="wrap"><p class="me-loading">Carregando a lição…</p></div>';
-    try { await Promise.all([load('curso/licao.css'), load('curso/licao.js'), load(l.arquivo)]); }
+    try { await Promise.all([load('curso/licao.css'), load('curso/teclado.js'), load('curso/licao.js'), load(l.arquivo)]); }
     catch { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir a lição. Verifique a internet e tente de novo.</p></div>'; return; }
     if (location.hash !== `#informatica/licao-${n}`) return;
     window.HC_licao.open(view, window.HC_LICOES[`licao-${n}`]);

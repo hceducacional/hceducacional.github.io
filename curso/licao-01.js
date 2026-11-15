@@ -4,7 +4,8 @@
    quem desenha e roda os níveis é o curso/licao.js (o mesmo para todas as lições).
 
    Tipos de nível:
-   - typing:  digitar o texto (cada tecla certa avança; a errada não avança)
+   - typing:  digitar o texto (cada tecla certa avança; a errada não avança).
+              Com nova: 'x', o nível começa apresentando a tecla nova ("Pressione a tecla X").
    - hacker:  "Varredura Hacker" — tecle o alvo antes do tempo acabar (meta = acertos)
    - fila:    "Fila de Ancoragem" — tecle a tecla que chega no alvo (meta = teclas)
    - memoria: "Eco da Memória" — repita a sequência que acende (uma rodada por tamanho)
@@ -21,10 +22,10 @@
     ['Minijogos', 'Desafios de reflexo, ritmo e memória: Varredura Hacker, Fila de Ancoragem e Eco da Memória.'],
   ],
   niveis: [
-    { tipo: 'typing', titulo: 'Introdução à tecla F (indicador esquerdo)', dica: 'Sinta a pequena saliência na tecla F. Posicione o seu dedo indicador esquerdo nela.', texto: 'f f f f f f f f f f f f' },
-    { tipo: 'typing', titulo: 'Introdução à tecla J (indicador direito)', dica: 'Sinta o relevo na tecla J. Posicione o seu dedo indicador direito nela.', texto: 'j j j j j j j j j j j j' },
+    { tipo: 'typing', titulo: 'Introdução à tecla F (indicador esquerdo)', nova: 'f', dica: 'Sinta a pequena saliência na tecla F. Posicione o seu dedo indicador esquerdo nela.', texto: 'f f f f f f f f f f f f' },
+    { tipo: 'typing', titulo: 'Introdução à tecla J (indicador direito)', nova: 'j', dica: 'Sinta o relevo na tecla J. Posicione o seu dedo indicador direito nela.', texto: 'j j j j j j j j j j j j' },
     { tipo: 'typing', titulo: 'Alternância inicial F e J', dica: 'Mantenha os dois dedos apoiados e alterne com ritmo entre a esquerda e a direita.', texto: 'f j f j f j f j f j f j' },
-    { tipo: 'typing', titulo: 'Ativação da barra de espaço (polegares)', dica: 'Use o polegar (direito ou esquerdo) para pressionar suavemente a barra de espaço.', texto: 'f j f j f j f j f j f j' },
+    { tipo: 'typing', titulo: 'Ativação da barra de espaço (polegares)', nova: ' ', dica: 'Use o polegar (direito ou esquerdo) para pressionar suavemente a barra de espaço.', texto: 'f j f j f j f j f j f j' },
     { tipo: 'hacker', titulo: 'Minijogo: Varredura Hacker inicial', dica: 'Destrua as ameaças virtuais! Tecle a tecla destacada na tela antes que o tempo acabe.', meta: 10, velocidade: 1.6 },
     { tipo: 'typing', titulo: 'Agrupamentos e cadência', dica: 'Dois toques rápidos com cada indicador antes de trocar de lado.', texto: 'ff jj ff jj ff jj ff jj' },
     { tipo: 'typing', titulo: 'O toque triplo de fixação', dica: 'Pratique o ritmo de três toques seguidos, mantendo os pulsos relaxados.', texto: 'fff jjj fff jjj fff jjj' },

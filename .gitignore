@@ -4,4 +4,9 @@ __pycache__/
 
 # vídeos de referência (não vão para o site)
 *.mp4
+*.MP4
 *.mov
+*.MOV
+
+# imagens de referência de terceiros (só para estudo das animações; não vão para o site)
+referencias/

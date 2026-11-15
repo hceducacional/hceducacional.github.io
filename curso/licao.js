@@ -9,7 +9,14 @@
    Ao voltar, o aluno continua do nível em que parou.
    ========================================================= */
 (() => {
-  const STAR_XP = 833;              // XP para encher cada uma das 3 estrelas
+  /* pontuação de cada nível, no estilo do Just Dance: até 13.000 pontos sem errar nada.
+     5 estrelas a cada 2.000 pontos; 11.000 = Superstar (azul-claro); 12.000 = Megastar (roxo). */
+  const PTS_MAX = 13000;
+  const STAR_AT = [2000, 4000, 6000, 8000, 10000];
+  const SUPER_AT = 11000, MEGA_AT = 12000;
+  const rankOf = (pts) => (pts >= MEGA_AT ? 'mega' : pts >= SUPER_AT ? 'super' : '');
+  const starsOf = (pts) => STAR_AT.filter((t) => pts >= t).length;
+  const RANK_NAME = { super: 'Superstar', mega: 'Megastar' };
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const keyLabel = (k) => (k === ' ' ? 'Espaço' : k.toUpperCase());
   const keyGlyph = (k) => (k === ' ' ? '␣' : k.toUpperCase());
@@ -27,6 +34,14 @@
     refresh: '<path d="M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.2L3 16M3 21v-5h5"/>',
     level: '<path d="M4 20V14M10 20V9M16 20V4M22 20H2"/>',
   };
+  /* estrela facetada, com 10 faces alternando claro e escuro (desenho próprio, no estilo das estrelas de jogos de dança) */
+  const FSTAR = (() => {
+    const P = (r, a) => [50 + r * Math.cos(a), 52 + r * Math.sin(a)];
+    const pts = Array.from({ length: 10 }, (_, i) => P(i % 2 ? 21 : 48, -Math.PI / 2 + i * Math.PI / 5));
+    const outline = pts.map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ');
+    const faces = pts.map((p, i) => { const q = pts[(i + 1) % 10]; return `<polygon class="f${i % 2}" points="50,52 ${p.join(',')} ${q.join(',')}"/>`; }).join('');
+    return `<svg viewBox="0 0 100 100" class="fstar"><polygon class="fs-glow" points="${outline}"/><polygon class="fs-base" points="${outline}"/>${faces}<polygon class="fs-edge" points="${outline}"/><circle class="fs-core" cx="50" cy="52" r="9"/></svg>`;
+  })();
   const svg = (k, fill) => `<svg viewBox="0 0 24 24" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg>`;
 
   /* grau de experiência: grau 1 precisa de 100 XP, cada grau seguinte +10 */
@@ -120,7 +135,9 @@
     if (!view.isConnected) return;
     const N = L.niveis.length;
     if (!window.HC_isComputer()) return computerOnly(view, L, saved);
-    const fresh = () => ({ lvl: 0, xp: 0, time: 0, hits: 0, errors: 0, levelTimes: [], done: false, total: N });
+    const fresh = () => ({ lvl: 0, xp: 0, time: 0, hits: 0, errors: 0, levelTimes: [], levelPts: [], done: false, total: N });
+    // progresso salvo antes da pontuação ser dividida entre os níveis: pontos de nível acima da parte de cada um são descartados
+    if (saved?.levelPts?.some((x) => x > PTS_MAX / N + 1)) saved.levelPts = [];
     let st = saved && !saved.done ? { ...fresh(), ...saved } : fresh();
     let alive = true, busy = false, phase = 'welcome', tick = null, lvlStart = 0;
     let game = {}; // estado do nível atual (minijogos)
@@ -176,10 +193,11 @@
       phase = 'play';
       body.innerHTML = `
       <div class="lc-grid">
+        <aside class="lc-gauge" id="lc-gauge" aria-label="Pontuação do nível"></aside>
         <section class="lc-card lc-main" id="lc-main"></section>
         <aside class="lc-side">
           <div class="lc-stat lc-xp">
-            <div class="lc-stars">${[2, 1, 0].map((i) => `<span class="lc-star" data-star="${i}"><span class="lc-star-fill">${svg('star', true)}</span>${svg('star')}</span>`).join('')}</div>
+            <span class="lc-stat-ico xp">${svg('zap')}</span>
             <strong id="lc-xp">0</strong><small>XP</small>
             <div class="lc-sparks" id="lc-sparks"></div>
           </div>
@@ -195,6 +213,7 @@
         if (v !== '') { busy = false; st.lvl = +v; level(); }
       });
       paintStats();
+      gaugeBuild();
       level();
       clearInterval(tick);
       tick = setInterval(() => {
@@ -206,13 +225,10 @@
     function paintStats() {
       const x = $q('#lc-xp'); if (!x) return;
       x.textContent = st.xp.toLocaleString('pt-BR');
-      view.querySelectorAll('[data-star]').forEach((s) => {
-        const i = +s.dataset.star; const pct = Math.min(100, Math.max(0, ((st.xp - i * STAR_XP) / STAR_XP) * 100));
-        s.style.setProperty('--fill', pct + '%'); s.classList.toggle('on', pct > 0);
-      });
       $q('#lc-time').textContent = fmt(st.time);
       const a = accuracy();
       $q('#lc-acc').textContent = Math.round(a) + '%';
+      const ka = $q('#lc-kacc'); if (ka) ka.textContent = Math.round(a) + '%';
       const tank = $q('#lc-tank'); tank.style.height = a + '%';
       tank.style.background = a >= 88 ? 'linear-gradient(0deg, #059669, #34d399)' : a >= 70 ? 'linear-gradient(0deg, #d97706, #fbbf24)' : 'linear-gradient(0deg, #dc2626, #fb7185)';
       const g = grade(st.xp);
@@ -222,11 +238,112 @@
 
     /* acerto e erro valem para todos os tipos de nível */
     function hit(k) {
-      st.hits++; st.xp += 5; paintStats(); spark(); drop(k, true);
+      st.hits++; st.xp += 5; paintStats(); spark(); drop(k, true); kb?.flash(k, true);
+      score(true);
     }
     function miss(k) {
-      st.errors++; st.xp = Math.max(0, st.xp - (1 + Math.floor(Math.random() * 6))); paintStats(); if (k) drop(k, false);
+      st.errors++; st.xp = Math.max(0, st.xp - (1 + Math.floor(Math.random() * 6))); paintStats(); if (k) { drop(k, false); kb?.flash(k, false); }
+      score(false);
     }
+
+    /* ---------- pontuação da lição e medidor de estrelas (à esquerda) ----------
+       Os 13.000 pontos são divididos entre todos os níveis da lição (13.000 ÷ nº de níveis cada).
+       Em cada nível: parte do nível já feita × precisão no nível × a parte dele nos 13.000.
+       Sem errar nada em nenhum nível, a lição termina com 13.000. O medidor nunca desce. */
+    const needOf = (lv) => (lv.tipo === 'typing' ? lv.texto.length : lv.tipo === 'memoria' ? lv.rodadas.reduce((a, b) => a + b, 0) : lv.meta);
+    const PER = PTS_MAX / N; // pontos que cada nível vale
+    const gs = { stars: 0, rank: '' }; // o que o medidor já mostrou (para animar só o que é novo)
+    const totalPts = () => Math.min(PTS_MAX, (st.levelPts || []).reduce((a, x, i) => a + (i === st.lvl && phase === 'play' ? 0 : (x || 0)), 0) + (phase === 'play' ? (game.lp || 0) : 0));
+    /* medidor no estilo da barra de estrelas do Just Dance: a moldura cresce para cima até a
+       próxima meta (com a estrela vazia esperando lá), a estrela conquistada "explode" de brilho,
+       e no Superstar/Megastar vem o clarão, as estrelas grandes e o nome escrito na vertical. */
+    const G_TOP = MEGA_AT; // o topo da barra é o Megastar (12.000)
+    const GOALS = [...STAR_AT, SUPER_AT, MEGA_AT];
+    const BAR_COLORS = ['#ffc400', '#ff4f9a', '#22d3ee', '#a3e635', '#ff8a00', '#a78bfa', '#34d399', '#f43f5e']; // sorteada a cada vez que a lição começa
+    const gPct = (v) => Math.min(100, (v / G_TOP) * 100);
+    function gaugeBuild() {
+      Object.assign(gs, { stars: 0, rank: '', ready: false });
+      const g = $q('#lc-gauge'); if (!g) return;
+      g.className = 'lc-gauge';
+      g.style.setProperty('--bar', BAR_COLORS[Math.floor(Math.random() * BAR_COLORS.length)]);
+      g.innerHTML = `
+        <div class="lc-g-area">
+          <div class="lc-g-frame" id="lc-gframe"></div>
+          <div class="lc-g-bar" id="lc-gbar"><i class="lc-g-shine"></i></div>
+          ${STAR_AT.map((t, i) => `<span class="lc-g-star" data-gs="${i}" style="--at:${gPct(t)}%;--i:${i}">${FSTAR}<b class="lc-g-glint"></b></span>`).join('')}
+          <div class="lc-g-word" id="lc-gword"></div>
+          <div class="lc-g-flash" id="lc-gflash"></div>
+        </div>
+        <strong class="lc-gauge-pts" id="lc-gpts">0</strong><small>de ${PTS_MAX.toLocaleString('pt-BR')}</small>`;
+      // brilhos que piscam de vez em quando nas estrelas já conquistadas
+      clearInterval(gs.glint);
+      gs.glint = setInterval(() => {
+        if (!g.isConnected) return clearInterval(gs.glint);
+        const on = g.querySelectorAll('.lc-g-star.on:not(.pop)'); if (!on.length) return;
+        const el = on[Math.floor(Math.random() * on.length)];
+        el.classList.remove('twinkle'); void el.offsetWidth; el.classList.add('twinkle');
+      }, 1300);
+    }
+    function gaugeLevel(lv) { game.need = needOf(lv); game.ph = 0; game.pe = 0; game.lp = 0; paintGauge(); }
+    function score(ok) {
+      if (!game.need || busy) return;
+      if (ok) game.ph++;
+      else { game.pe++; const g = $q('#lc-gauge'); g?.classList.remove('hurt'); void g?.offsetWidth; g?.classList.add('hurt'); }
+      const prog = Math.min(1, game.ph / game.need), acc = game.ph / Math.max(1, game.ph + game.pe);
+      game.lp = Math.min(PER, Math.max(game.lp, PER * prog * acc));
+      paintGauge();
+    }
+    function paintGauge() {
+      const g = $q('#lc-gauge'); if (!g) return;
+      const pts = Math.round(totalPts()), quiet = !gs.ready; // ao abrir/retomar, mostra o estado sem animar
+      $q('#lc-gbar').style.height = `${gPct(pts)}%`;
+      $q('#lc-gpts').textContent = pts.toLocaleString('pt-BR');
+      const next = GOALS.find((t) => t > pts);
+      $q('#lc-gframe').style.height = `${next ? gPct(next) : 100}%`; // a moldura cresce até a próxima meta
+      const stars = starsOf(pts);
+      g.querySelectorAll('.lc-g-star').forEach((el, i) => {
+        el.classList.toggle('on', i < stars);
+        el.classList.toggle('next', i === stars); // estrela vazia esperando na próxima meta
+        if (!quiet && i >= gs.stars && i < stars) { // estrela nova: surge com raios, cresce branca de brilho e assenta
+          el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+          const bar = $q('#lc-gbar'); bar.classList.remove('flash'); void bar.offsetWidth; bar.classList.add('flash');
+          setTimeout(() => el.classList.remove('pop'), 1100);
+        }
+      });
+      gs.stars = stars;
+      const rank = rankOf(pts);
+      if (rank !== gs.rank) {
+        gs.rank = rank;
+        if (quiet) { g.classList.toggle('super', rank === 'super'); g.classList.toggle('mega', rank === 'mega'); wordSet(rank, true); }
+        else rankShow(g, rank);
+      }
+      gs.ready = true;
+    }
+    function wordSet(rank, instant) {
+      const w = $q('#lc-gword'); if (!w) return;
+      const name = (RANK_NAME[rank] || '').toUpperCase();
+      w.className = 'lc-g-word ' + rank;
+      w.innerHTML = [...name].map((c, i) => `<span style="--i:${i}">${c}</span>`).join('');
+      w.classList.toggle('instant', !!instant);
+    }
+    /* Superstar / Megastar: clarão → estrelas grandes na cor nova → nome letra por letra → faíscas → assenta */
+    function rankShow(g, rank) {
+      const fl = $q('#lc-gflash');
+      fl.classList.remove('go'); void fl.offsetWidth; fl.classList.add('go');
+      setTimeout(() => {
+        g.classList.toggle('super', rank === 'super'); g.classList.toggle('mega', rank === 'mega');
+        g.classList.remove('big'); void g.offsetWidth; g.classList.add('big');
+        wordSet(rank);
+      }, 380);
+      setTimeout(() => {
+        g.classList.remove('big');
+        g.querySelectorAll('.lc-g-star.on').forEach((el, i) => setTimeout(() => { el.classList.remove('twinkle', 'burst'); void el.offsetWidth; el.classList.add('burst'); }, i * 70));
+      }, 1500);
+    }
+    const starsHTML = (pts, cls = '') => {
+      const n = starsOf(pts), rk = rankOf(pts);
+      return `<span class="lc-stars5 ${rk} ${cls}">${STAR_AT.map((_, i) => `<i class="${i < n ? 'on' : ''}" style="--i:${i}">${svg('star', true)}</i>`).join('')}</span>`;
+    };
     function spark() {
       const box = $q('#lc-sparks'); if (!box) return;
       for (let i = 0; i < 3; i++) setTimeout(() => {
@@ -242,18 +359,54 @@
       d.style.left = (6 + Math.random() * 88) + '%'; d.style.setProperty('--r', (Math.random() * 40 - 20) + 'deg');
       main.appendChild(d); setTimeout(() => d.remove(), 2600);
     }
-    function flashPad(k, cls = 'press') {
-      const b = view.querySelector(`.lc-pad [data-k="${k === ' ' ? 'space' : k}"]`); if (!b) return;
-      b.classList.remove(cls); void b.offsetWidth; b.classList.add(cls); setTimeout(() => b.classList.remove(cls), 220);
+    /* teclado virtual ABNT2 (curso/teclado.js); a preferência de mostrar ou não fica guardada no aparelho */
+    let kb = null;
+    const kbPrefs = (() => { try { return { kb: true, ...JSON.parse(localStorage.getItem('hc:kb') || '{}') }; } catch { return { kb: true }; } })();
+    const kbSave = () => { try { localStorage.setItem('hc:kb', JSON.stringify(kbPrefs)); } catch {} };
+    const kbHTML = () => `
+      <div class="lc-kbar">
+        <span class="lc-kbar-live"><b id="lc-ppm">—</b> PPM <i></i> <b id="lc-kacc">100%</b> precisão</span>
+        <span class="lc-kbar-opts">
+          <label><input type="checkbox" data-kbopt="kb" ${kbPrefs.kb ? 'checked' : ''}><span></span>Teclado</label>
+        </span>
+      </div>
+      <div class="lc-kb${kbPrefs.kb ? '' : ' off'}" id="lc-kb"></div>`;
+    function kbMount() {
+      kb?.destroy(); kb = null;
+      const box = $q('#lc-kb'); if (!box || !window.HC_teclado) return;
+      kb = window.HC_teclado(box);
+      view.querySelectorAll('[data-kbopt]').forEach((c) => c.addEventListener('change', () => {
+        kbPrefs[c.dataset.kbopt] = c.checked; kbSave();
+        box.classList.toggle('off', !kbPrefs.kb);
+        c.blur(); // a barra de espaço volta a digitar, e não a marcar a caixa
+      }));
     }
-    const padHTML = () => `
-      <div class="lc-pad" role="group" aria-label="Teclas">
-        ${L.teclas.map((k) => `<button type="button" class="lc-key${k === ' ' ? ' space' : ''}" data-k="${k === ' ' ? 'space' : k}"><b>${keyLabel(k)}</b><small>${finger[k] || ''}</small></button>`).join('')}
-      </div>`;
+    const kbTarget = (k) => kb?.target(k);
+
+    /* troca o conteúdo do cartão animando a mudança de altura; a barra de estrelas e o resto
+       da linha acompanham, porque a altura da linha segue a do cartão */
+    function smoothResize(fn) {
+      const main = $q('#lc-main');
+      if (!main || matchMedia('(prefers-reduced-motion: reduce)').matches) return fn();
+      const h0 = main.getBoundingClientRect().height;
+      main.style.transition = 'none'; main.style.height = '';
+      fn();
+      main.style.alignSelf = 'start'; const natural = main.getBoundingClientRect().height; main.style.alignSelf = '';
+      const side = view.querySelector('.lc-side');
+      const h1 = Math.max(natural, side && getComputedStyle(side).order === '0' ? side.getBoundingClientRect().height : 0);
+      if (!h0 || Math.abs(h1 - h0) < 2) return;
+      main.style.height = h0 + 'px'; void main.offsetHeight;
+      main.style.transition = 'height .55s cubic-bezier(.4, 0, .2, 1)'; main.style.height = h1 + 'px';
+      clearTimeout(main._rs);
+      main._rs = setTimeout(() => { main.style.transition = ''; main.style.height = ''; }, 600);
+    }
 
     /* ---------- um nível ---------- */
     function level() {
       if (st.lvl >= N) return results();
+      smoothResize(levelRender);
+    }
+    function levelRender() {
       busy = false; game = {}; lvlStart = st.time;
       const lv = L.niveis[st.lvl];
       const isGame = lv.tipo !== 'typing';
@@ -267,10 +420,10 @@
         <p class="lc-tip"><b>Dica</b>${esc(lv.dica)}</p>
         ${isGame ? `<div class="lc-goal"><span id="lc-goal-txt"></span><b><i id="lc-goal-bar"></i></b></div>` : ''}
         <div class="lc-stage" id="lc-stage"></div>
-        ${padHTML()}
+        ${kbHTML()}
         <div class="lc-over" id="lc-over" hidden></div>`;
-      main.querySelectorAll('.lc-key').forEach((b) => b.addEventListener('pointerdown', (e) => { e.preventDefault(); press(b.dataset.k === 'space' ? ' ' : b.dataset.k); }));
-      paintProgress();
+      kbMount();
+      paintProgress(); paintStats(); gaugeLevel(lv);
       ({ typing: typingInit, hacker: hackerInit, fila: filaInit, memoria: memoInit })[lv.tipo](lv);
     }
     function goal(n, total) {
@@ -283,31 +436,66 @@
       if (busy) return; busy = true;
       clearInterval(game.timer); game.timer = null;
       st.levelTimes[st.lvl] = Math.max(1, st.time - lvlStart);
+      const pts = Math.round((game.lp || 0) * 100) / 100; // com centavos: 30 × 433,33 fecha nos 13.000
+      st.levelPts = st.levelPts || [];
+      st.levelPts[st.lvl] = Math.max(st.levelPts[st.lvl] || 0, pts); // guarda a melhor pontuação do nível
       const over = $q('#lc-over'); const n = st.lvl + 1;
       st.lvl++;
       saveProgress(L.id, { ...st, done: false });
-      over.hidden = false; over.innerHTML = '<h3 class="lc-pop">Parabéns!</h3>';
-      await sleep(900); if (!alive || !over.isConnected) return;
+      over.hidden = false; over.innerHTML = `<div class="lc-done"><h3 class="lc-pop">Parabéns!</h3><p>+${Math.round(pts).toLocaleString('pt-BR')} pontos</p></div>`;
+      await sleep(1100); if (!alive || !over.isConnected) return;
       over.innerHTML = `<h3 class="lc-pop sub">Nível ${n} concluído</h3>`;
       await sleep(1100); if (!alive || !over.isConnected) return;
       level();
     }
 
     /* ---------- DIGITAÇÃO ---------- */
+    /* tecla nova: "Pressione a tecla F" → "Você a encontrou!" → Enter para começar */
+    function introInit(lv) {
+      game.intro = 'find'; game.nova = lv.nova;
+      const kbd = `<kbd>${esc(keyLabel(lv.nova))}</kbd>`;
+      $q('#lc-stage').innerHTML = `
+        <div class="lc-new" id="lc-new">
+          <p>É hora de aprender uma nova tecla!</p>
+          <h3>Pressione a tecla ${kbd}</h3>
+        </div>`;
+      kbTarget(lv.nova);
+      game.introFound = () => {
+        game.intro = 'found';
+        $q('#lc-new').outerHTML = `
+          <div class="lc-new ok">
+            <h3>Você a encontrou!</h3>
+            <p>Lembre-se de onde fica a tecla ${kbd}, pois vamos praticá-la agora!</p>
+            <p class="lc-new-go">Pressione <kbd>Enter</kbd> para começar</p>
+          </div>`;
+        kbTarget('enter');
+      };
+    }
     function typingInit(lv) {
+      if (lv.nova && !game.introDone) return introInit(lv);
+      game.intro = null; game.t0 = 0;
       game.pos = 0; game.text = lv.texto;
-      $q('#lc-stage').innerHTML = `<div class="lc-typing">${[...lv.texto].map((c, i) => `<span class="lc-ch${c === ' ' ? ' sp' : ''}" data-i="${i}">${c === ' ' ? '<small>Esp</small>' : c.toUpperCase()}</span>`).join('')}</div>`;
+      // o texto numa linha só; o cursor avança a cada tecla certa
+      $q('#lc-stage').innerHTML = `
+        <div class="lc-line">
+          <div class="lc-line-text">${[...lv.texto].map((c, i) => `<span class="lc-ch${c === ' ' ? ' sp' : ''}" data-i="${i}">${c === ' ' ? '&nbsp;' : esc(c)}</span>`).join('')}</div>
+          <span class="lc-start-tip" id="lc-start-tip">Comece a digitar</span>
+        </div>
+        <p class="lc-home">Volte os dedos para a posição inicial <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd> – <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>Ç</kbd> depois de cada tecla</p>`;
       typingPaint();
     }
     function typingPaint() {
       view.querySelectorAll('.lc-ch').forEach((el, i) => { el.classList.toggle('ok', i < game.pos); el.classList.toggle('cur', i === game.pos); });
-      const next = game.text[game.pos];
-      view.querySelectorAll('.lc-key').forEach((b) => b.classList.toggle('next', next !== undefined && (b.dataset.k === 'space' ? ' ' : b.dataset.k) === next));
+      if (game.pos > 0) $q('#lc-start-tip')?.remove();
+      kbTarget(game.text[game.pos] ?? null);
     }
     function typingKey(k) {
       const want = game.text[game.pos];
       if (k === want) {
+        if (!game.t0) game.t0 = performance.now();
         hit(k); game.pos++; typingPaint();
+        const min = (performance.now() - game.t0) / 60000;
+        if (min > .03) { const ppm = $q('#lc-ppm'); if (ppm) ppm.textContent = Math.round(game.pos / 5 / min); }
         if (game.pos >= game.text.length) setTimeout(complete, 250);
       } else {
         miss(k);
@@ -337,6 +525,7 @@
         el.classList.toggle('on', on); el.style.setProperty('--c', col); el.style.setProperty('--p', on ? pct : 0);
       });
       const l = $q('#lc-left'); if (l) l.textContent = `Tempo: ${game.left.toFixed(1)}s`;
+      kbTarget(game.target);
     }
     function hackerNext() { const pool = L.teclas.filter((k) => k !== game.target); game.target = pool[Math.floor(Math.random() * pool.length)]; game.left = game.limit; }
     function hackerBurst(k, ok) {
@@ -382,6 +571,7 @@
         if (!el) { el = document.createElement('span'); el.className = 'lc-fk'; el.dataset.id = q.id; el.textContent = keyGlyph(q.k); el.style.left = lane(q.k) + '%'; el.style.bottom = (18 + 5 * 52) + 'px'; box.appendChild(el); void el.offsetWidth; }
         el.style.bottom = (18 + i * 52) + 'px'; el.classList.toggle('on', i === 0);
       });
+      kbTarget(game.queue[0]?.k ?? null);
     }
     function filaKey(k) {
       const first = game.queue[0]; if (!first) return;
@@ -414,9 +604,9 @@
       await sleep(700);
       for (const k of game.seq) {
         if (!alive || !$q('#lc-memo-msg')) return;
-        const b = memoKey(k); b?.classList.add('lit'); await sleep(520); b?.classList.remove('lit'); await sleep(300);
+        const b = memoKey(k); b?.classList.add('lit'); kbTarget(k); await sleep(520); b?.classList.remove('lit'); kbTarget(null); await sleep(300);
       }
-      game.state = 'play'; memoMsg('Sua vez! Repita a sequência.', 'play');
+      game.state = 'play'; memoMsg('Sua vez! Repita a sequência.', 'play'); // na sua vez, o teclado não entrega a resposta
     }
     function memoPress(k) {
       if (game.state !== 'play') return;
@@ -449,7 +639,10 @@
     function press(k) {
       if (phase !== 'play' || busy) return;
       const lv = L.niveis[st.lvl]; if (!lv) return;
-      flashPad(k);
+      if (game.intro) { // apresentação da tecla nova: sem pontos nem erros
+        if (game.intro === 'find' && k === game.nova) { kb?.flash(k, true); return game.introFound(); }
+        kb?.flash(k, false); return shake('.lc-new h3 kbd');
+      }
       if (lv.tipo === 'typing') return typingKey(k);
       if (lv.tipo === 'memoria') return memoPress(k);
       if (lv.tipo === 'fila') return filaKey(k);
@@ -463,12 +656,14 @@
       if (phase !== 'play') return;
       const lv = L.niveis[st.lvl];
       if (k === 'enter' && lv?.tipo === 'hacker' && game.paused) { e.preventDefault(); return countdown(); }
+      if (game.intro === 'found' && k === 'enter') { e.preventDefault(); kb?.flash('enter', true); game.introDone = true; return smoothResize(() => typingInit(lv)); }
+      if (game.intro && k.length === 1) { e.preventDefault(); return press(k); }
       if (L.teclas.includes(k)) { e.preventDefault(); return press(k); }
       // outra letra durante a digitação conta como erro (como no treino original)
       if (lv?.tipo === 'typing' && k.length === 1 && /\S/.test(k) && !busy) { miss(k); shake(`.lc-ch[data-i="${game.pos}"]`); }
     }
     document.addEventListener('keydown', onKey);
-    function stop() { alive = false; clearInterval(tick); clearInterval(game.timer); document.removeEventListener('keydown', onKey); }
+    function stop() { alive = false; clearInterval(tick); clearInterval(game.timer); clearInterval(gs.glint); kb?.destroy(); document.removeEventListener('keydown', onKey); }
     window.addEventListener('hashchange', stop, { once: true });
 
     /* ---------- resultado ---------- */
@@ -488,6 +683,11 @@
         <span class="lc-res-ico">${svg('trophy')}</span>
         <h2>Atividade concluída!</h2>
         <p>Você superou os ${N} níveis da lição${first ? `, <b>${esc(first)}</b>` : ''}.</p>
+        ${(() => { // resumo da pontuação da lição: as estrelas acendem uma a uma
+          const pts = Math.min(PTS_MAX, Math.round((st.levelPts || []).reduce((t, x) => t + (x || 0), 0)));
+          const rk = rankOf(pts);
+          return `<div class="lc-sum ${rk}">${starsHTML(pts, 'big')}<strong>${rk ? RANK_NAME[rk] : `${starsOf(pts)} ${starsOf(pts) === 1 ? 'estrela' : 'estrelas'}`}</strong><span><b class="lc-count-up" data-to="${pts}">0</b> de ${PTS_MAX.toLocaleString('pt-BR')} pontos</span></div>`;
+        })()}
         <div class="lc-res-grid">
           <div class="lc-res big"><small>Desempenho de precisão</small><strong>${rating} · ${a.toFixed(1)}%</strong></div>
           <div class="lc-res xp"><small>XP conquistado</small><strong>${st.xp.toLocaleString('pt-BR')} XP</strong></div>
@@ -503,6 +703,8 @@
         </div>
       </section>`;
       body.querySelector('[data-r="again"]').addEventListener('click', () => { st = fresh(); play(); });
+      const cu = body.querySelector('.lc-count-up');
+      if (cu) { const to = +cu.dataset.to, t0 = performance.now(); const step = (now) => { const p = Math.min(1, (now - t0) / 1400); cu.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))).toLocaleString('pt-BR'); if (p < 1) requestAnimationFrame(step); }; requestAnimationFrame(step); }
       body.querySelector('[data-r="report"]').addEventListener('click', () => report(a, rating, fast, slow, g));
     }
     function report(a, rating, fast, slow, g) {
