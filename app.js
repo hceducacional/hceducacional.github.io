@@ -2401,31 +2401,31 @@ function renderNewsAdmin(view) {
     <a class="back-link" href="#config"><i data-icon="left"></i>Configurações</a>
     ${pageHead('Configurações', 'Notícias.', 'Publique e edite as notícias do polo e escolha quais aparecem na tela inicial.')}
 
-    <section class="panel ad-panel">
-      <header class="ad-head">
-        <span class="acc-icon ad-star"><i data-icon="star"></i></span>
+    <section class="panel na-panel">
+      <header class="na-head">
+        <span class="acc-icon na-star"><i data-icon="star"></i></span>
         <span class="acc-text"><strong>Notícias recentes da tela inicial</strong><span>Exibidas abaixo do Acesso rápido, nesta ordem</span></span>
         <span class="count-badge" id="count-recent"></span>
       </header>
-      <div class="ad-body" id="recent-panel"></div>
+      <div class="na-body" id="recent-panel"></div>
     </section>
 
-    <section class="panel ad-panel">
-      <header class="ad-head">
-        <span class="acc-icon ad-authors"><i data-icon="users"></i></span>
+    <section class="panel na-panel">
+      <header class="na-head">
+        <span class="acc-icon na-authors"><i data-icon="users"></i></span>
         <span class="acc-text"><strong>Autores</strong><span>Quem assina as notícias: foto de perfil e nome</span></span>
         <span class="count-badge" id="count-authors"></span>
       </header>
-      <div class="ad-body" id="authors-panel"></div>
+      <div class="na-body" id="authors-panel"></div>
     </section>
 
-    <section class="panel ad-panel">
-      <header class="ad-head">
-        <span class="acc-icon ad-news"><i data-icon="news"></i></span>
+    <section class="panel na-panel">
+      <header class="na-head">
+        <span class="acc-icon na-news"><i data-icon="news"></i></span>
         <span class="acc-text"><strong>Todas as notícias</strong><span>Publicações da página de Notícias</span></span>
         <span class="count-badge" id="count-news"></span>
       </header>
-      <div class="ad-body" id="news-panel"></div>
+      <div class="na-body" id="news-panel"></div>
     </section>
     <input type="file" id="file-news" accept="image/*" hidden>
     <input type="file" id="file-news-add" accept="image/*" multiple hidden>

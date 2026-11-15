@@ -1171,12 +1171,12 @@ body.modal-open { overflow: hidden; }
 .back-link:hover { text-decoration: underline; }
 .acc-go { text-decoration: none; }
 .acc-go:hover .acc-chev { color: var(--ink); transform: translateX(2px); }
-.ad-panel { margin-top: 20px; box-shadow: 0 1px 2px rgba(0, 0, 0, .04); }
-.ad-head { display: flex; align-items: center; gap: 16px; padding: 18px 22px 0; }
-.ad-star { background: #ffcc00; }
-.ad-news { background: #ff9f0a; }
-.ad-body { padding: 0 22px 22px; }
-.ad-body > .desc { padding-top: 16px; margin-top: 18px; border-top: 1px solid var(--line-soft); }
+.na-panel { margin-top: 20px; box-shadow: 0 1px 2px rgba(0, 0, 0, .04); }
+.na-head { display: flex; align-items: center; gap: 16px; padding: 18px 22px 0; }
+.na-star { background: #ffcc00; }
+.na-news { background: #ff9f0a; }
+.na-body { padding: 0 22px 22px; }
+.na-body > .desc { padding-top: 16px; margin-top: 18px; border-top: 1px solid var(--line-soft); }
 .star-inline { display: inline-grid; vertical-align: -3px; width: 16px; height: 16px; color: #ff9f0a; }
 .star-inline svg { fill: currentColor; }
 
@@ -1351,8 +1351,8 @@ body.modal-open { overflow: hidden; }
   .rn-paddles { display: none; }
   .rn-text { left: 20px; bottom: 22px; width: calc(var(--rn-open) - 84px); }
   .rn-plus { right: 16px; bottom: 22px; }
-  .ad-head, .ad-body { padding-left: 16px; padding-right: 16px; }
-  .ad-head .acc-text span { display: none; }
+  .na-head, .na-body { padding-left: 16px; padding-right: 16px; }
+  .na-head .acc-text span { display: none; }
   .rk-item { flex-wrap: wrap; gap: 10px; }
   .rk-thumb { width: 56px; height: 40px; }
   .rk-item .bi-actions { margin-left: auto; }
@@ -1599,7 +1599,7 @@ body.modal-open { overflow: hidden; }
 
 
 /* ---------- Autores (Configurações › Notícias) ---------- */
-.ad-authors { background: #af52de !important; }
+.na-authors { background: #af52de !important; }
 .au-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
 .au-item { display: flex; align-items: center; gap: 14px; padding: 12px 12px 12px 14px; border-radius: 16px; background: var(--bg); }
 .au-photo { position: relative; flex: none; padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer; }
