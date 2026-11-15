@@ -69,6 +69,9 @@ const userAvatar = (p, cls = '') => avatarHTML({ name: p?.name || p?.email || '?
 function authError(err) {
   const m = String(err?.message || err || '');
   if (/invalid login credentials/i.test(m)) return 'E-mail ou senha incorretos.';
+  if (/could not find the function public\.(login_email|username_available|admin_set_username)/i.test(m)) return 'O login com nome de usuário ainda não foi ativado no banco (script 12).';
+  if (/profiles_username_key|duplicate key.*username/i.test(m)) return 'Esse nome de usuário já está em uso. Escolha outro.';
+  if (/profiles_username_check/i.test(m)) return 'Nome de usuário inválido: use de 3 a 20 letras minúsculas, números, ponto ou _.';
   if (/email not confirmed/i.test(m)) return 'Confirme o seu e-mail antes de entrar. Procure o link que enviamos (veja também o spam).';
   if (/banned/i.test(m)) return 'Seu acesso está bloqueado. Fale com a secretaria do polo.';
   if (/already registered|already been registered/i.test(m)) return 'Este e-mail já tem cadastro. Use "Entrar" ou "Esqueci minha senha".';
@@ -136,6 +139,7 @@ function paintUser() {
       <a class="um-item" role="menuitem" href="#perfil"><i data-icon="user"></i>Meu perfil</a>
       ${isAdmin() ? `<a class="um-item" role="menuitem" href="#agendar/painel"><i data-icon="calendar"></i>Agendamentos</a>` : ''}
       ${isAdmin() ? `<a class="um-item" role="menuitem" href="#indicar/painel"><i data-icon="userPlus"></i>Indicações</a>` : ''}
+      ${isAdmin() ? `<button class="um-item" role="menuitem" type="button" data-auth="login"><i data-icon="image"></i>Tela de entrar</button>` : ''}
       ${isAdmin() ? `<a class="um-item" role="menuitem" href="#usuarios"><i data-icon="users"></i>Usuários${auth.pending ? `<b class="um-count">${auth.pending}</b>` : ''}</a>` : ''}
       <button class="um-item danger" role="menuitem" type="button" data-auth="logout"><i data-icon="logout"></i>Sair da conta</button>
     </div>`;
@@ -171,16 +175,20 @@ async function signOut() {
   if (['perfil', 'usuarios'].includes(location.hash.slice(1))) location.hash = '#dashboard';
 }
 
+/* ---------- Nome de usuário: minúsculas, números, ponto e _ (3 a 20) ---------- */
+const USERNAME_RE = /^[a-z0-9][a-z0-9._]{2,19}$/;
+const cleanUsername = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9._]/g, '').slice(0, 20);
+
 /* ---------- Janela de entrar / criar conta / recuperar senha ---------- */
 const eyeBtn = '<button type="button" class="lk-eye" aria-label="Mostrar senha"><i data-icon="eye"></i></button>';
 const AUTH_VIEWS = {
   login: () => `
     <span class="lk-icon au-ico"><i data-icon="user"></i></span>
     <h2 id="au-title">Entrar</h2>
-    <p class="lk-sub">Use o e-mail e a senha do seu cadastro no HC Instituto Educacional.</p>
+    <p class="lk-sub">Use o seu nome de usuário (ou e-mail) e a senha do seu cadastro no HC Instituto Educacional.</p>
     <div class="au-tabs" role="tablist"><button type="button" class="on" role="tab" aria-selected="true">Entrar</button><button type="button" role="tab" aria-selected="false" data-go="signup">Criar conta</button></div>
-    <label class="au-label" for="au-email">E-mail</label>
-    <div class="lk-field"><input type="email" id="au-email" name="email" autocomplete="email" placeholder="seuemail@exemplo.com" required></div>
+    <label class="au-label" for="au-email">Usuário ou e-mail</label>
+    <div class="lk-field"><input type="text" id="au-email" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="seu.usuario ou seuemail@exemplo.com" required></div>
     <label class="au-label" for="au-pass">Senha</label>
     <div class="lk-field"><input type="password" id="au-pass" name="password" autocomplete="current-password" placeholder="Sua senha" required>${eyeBtn}</div>
     <button type="button" class="au-link au-forgot" data-go="forgot">Esqueci minha senha</button>
@@ -193,6 +201,9 @@ const AUTH_VIEWS = {
     <div class="au-tabs" role="tablist"><button type="button" role="tab" aria-selected="false" data-go="login">Entrar</button><button type="button" class="on" role="tab" aria-selected="true">Criar conta</button></div>
     <label class="au-label" for="au-name">Nome</label>
     <div class="lk-field"><input type="text" id="au-name" name="name" autocomplete="name" maxlength="60" placeholder="Como você quer ser chamado" required></div>
+    <label class="au-label" for="au-user">Nome de usuário</label>
+    <div class="lk-field au-at"><input type="text" id="au-user" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="20" placeholder="ex.: maria.silva" required></div>
+    <small class="au-hint">Você poderá entrar com ele no lugar do e-mail. De 3 a 20 letras minúsculas, números, ponto ou _.</small>
     <label class="au-label" for="au-email">E-mail</label>
     <div class="lk-field"><input type="email" id="au-email" name="email" autocomplete="email" placeholder="seuemail@exemplo.com" required></div>
     <label class="au-label" for="au-pass">Senha</label>
@@ -241,19 +252,47 @@ function openAuth(mode = 'login', data = {}) {
   document.querySelector('.lk.au')?.remove();
   if (document.querySelector('.lk')) return;
   const wrap = document.createElement('div');
-  wrap.className = 'lk au';
-  wrap.innerHTML = '<div class="lk-backdrop"></div><form class="lk-card au-card" role="dialog" aria-modal="true" aria-labelledby="au-title" novalidate></form>';
+  wrap.className = 'lk au au-login';
+  wrap.innerHTML = '<div class="lk-backdrop"></div><div class="au-shell"><aside class="au-art"></aside><form class="lk-card au-card" role="dialog" aria-modal="true" aria-labelledby="au-title" novalidate></form></div>';
   document.body.appendChild(wrap);
   const card = wrap.querySelector('form');
+  const art = wrap.querySelector('.au-art');
   const lastFocus = document.activeElement;
   let current = mode, ctx = data;
 
+  /* banner do lado esquerdo: a imagem escolhida pelo administrador ou, sem ela, a marca do instituto */
+  const drawArt = () => {
+    const src = loginBanner[0]?.image || '';
+    art.innerHTML = (src
+      ? `<img src="${esc(imgUrl(src))}" alt="" decoding="async">`
+      : `<div class="au-art-def"><span class="au-art-logo"><b>H</b><b>C</b></span><strong>HC Instituto <br>Educacional</strong><small>Explore todas as suas possibilidades de estudo.</small></div>`)
+      + (isAdmin() ? `<div class="au-art-ed"><button type="button" data-art="pick"><i data-icon="edit"></i>Editar banner</button>${src ? '<button type="button" data-art="clear" aria-label="Remover banner"><i data-icon="trash"></i></button>' : ''}<input type="file" accept="image/*" hidden></div><span class="au-art-hint">Sugestão: 900 × 1300 (em pé)</span>` : '');
+    const img = art.querySelector('img');
+    if (img) { const ld = () => img.classList.add('ld'); img.complete ? ld() : img.addEventListener('load', ld); }
+    paintIcons(art);
+  };
+  drawArt();
+  art.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-art]'); if (!b || !isAdmin()) return;
+    if (b.dataset.art === 'pick') art.querySelector('input[type=file]').click();
+    if (b.dataset.art === 'clear') { loginBanner = []; saveLoginBanner(); drawArt(); }
+  });
+  art.addEventListener('change', async (e) => {
+    const f = e.target.files?.[0]; e.target.value = ''; if (!f || !isAdmin()) return;
+    art.classList.add('busy');
+    try { loginBanner = [{ id: 'login', image: await storeImage(f, 'loginBanner') }]; saveLoginBanner(); drawArt(); }
+    catch { toast('Não foi possível usar essa imagem. Tente outra.'); }
+    finally { art.classList.remove('busy'); }
+  });
+
   const draw = (m, d = {}) => {
-    const keepEmail = card.querySelector('#au-email')?.value || d.email || '';
+    const typed = card.querySelector('#au-email')?.value || '';
+    const keepEmail = (typed.includes('@') ? typed : '') || d.email || '';
     current = m; ctx = d;
     card.innerHTML = AUTH_VIEWS[m](d);
     card.dataset.mode = m;
     card.classList.remove('error');
+    [...card.children].forEach((el, i) => el.style.setProperty('--i', i)); // entrada em cascata
     paintIcons(card);
     const em = card.querySelector('#au-email'); if (em && keepEmail) em.value = keepEmail;
     setTimeout(() => (card.querySelector('input:not([type=checkbox])') || card.querySelector('button.lk-cancel'))?.focus(), 60);
@@ -301,22 +340,33 @@ function openAuth(mode = 'login', data = {}) {
       msg(error ? authError(error) : 'E-mail reenviado.', !error);
     }
   });
-  card.addEventListener('input', () => { msg(''); card.classList.remove('error'); });
+  card.addEventListener('input', (e) => {
+    msg(''); card.classList.remove('error');
+    if (e.target.id === 'au-user') { const v = cleanUsername(e.target.value); if (v !== e.target.value) e.target.value = v; }
+  });
 
   card.addEventListener('submit', async (e) => {
     e.preventDefault();
     const v = (id) => card.querySelector(id)?.value.trim() || '';
     const email = v('#au-email').toLowerCase(), pass = card.querySelector('#au-pass')?.value || '';
-    const needEmail = ['login', 'signup', 'forgot'].includes(current);
+    const loginByUser = current === 'login' && !email.includes('@');
+    const needEmail = ['login', 'signup', 'forgot'].includes(current) && !loginByUser;
     if (needEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg('Digite um e-mail válido.'); return card.querySelector('#au-email').focus(); }
 
     if (current === 'login') {
+      if (loginByUser && !USERNAME_RE.test(email)) { msg('Digite o seu nome de usuário ou e-mail.'); return card.querySelector('#au-email').focus(); }
       if (!pass) return msg('Digite a sua senha.');
       busy(true, 'Entrando…');
-      const { data: res, error } = await sb.auth.signInWithPassword({ email, password: pass });
+      let mail = email;
+      if (loginByUser) { // nome de usuário: o banco confere a senha e devolve o e-mail da conta
+        const { data: found, error: err } = await sb.rpc('login_email', { u: email, pass });
+        if (err || !found) { busy(false); return msg(err ? authError(err) : 'Usuário ou senha incorretos.'); }
+        mail = found;
+      }
+      const { data: res, error } = await sb.auth.signInWithPassword({ email: mail, password: pass });
       busy(false);
       if (error) {
-        msg(authError(error));
+        msg(loginByUser && /invalid login/i.test(error.message) ? 'Usuário ou senha incorretos.' : authError(error));
         if (/not confirmed/i.test(error.message)) { ctx = { email }; }
         return;
       }
@@ -330,10 +380,14 @@ function openAuth(mode = 'login', data = {}) {
     if (current === 'signup') {
       const name = v('#au-name');
       if (name.length < 2) { msg('Digite o seu nome.'); return card.querySelector('#au-name').focus(); }
+      const username = cleanUsername(v('#au-user'));
+      if (!USERNAME_RE.test(username)) { msg('Nome de usuário: de 3 a 20 letras minúsculas, números, ponto ou _ (começando por letra ou número).'); return card.querySelector('#au-user').focus(); }
       if (pass.length < 8) { msg('A senha precisa ter pelo menos 8 caracteres.'); return card.querySelector('#au-pass').focus(); }
       if (!card.querySelector('#au-ok').checked) return msg('Para criar a conta, aceite a Política de Privacidade.');
       busy(true, 'Criando…');
-      const { data: res, error } = await sb.auth.signUp({ email, password: pass, options: { data: { name }, emailRedirectTo: siteUrl() } });
+      const { data: free } = await sb.rpc('username_available', { u: username });
+      if (free === false) { busy(false); msg('Esse nome de usuário já está em uso. Escolha outro.'); return card.querySelector('#au-user').focus(); }
+      const { data: res, error } = await sb.auth.signUp({ email, password: pass, options: { data: { name, username }, emailRedirectTo: siteUrl() } });
       busy(false);
       if (error) return msg(authError(error));
       if (res.session) { await setUser(res.user); close(); return toast('Conta criada!'); }
@@ -360,11 +414,11 @@ function openAuth(mode = 'login', data = {}) {
   });
 
   draw(mode, data);
-  requestAnimationFrame(() => wrap.classList.add('in'));
+  requestAnimationFrame(() => requestAnimationFrame(() => wrap.classList.add('in')));
 }
 
 /* ---------- Pop-up simples com um campo (ex.: definir senha de alguém) ---------- */
-function inputDialog({ title, sub = '', placeholder = '', ok = 'Salvar', type = 'text', icon = 'key', min = 0 }) {
+function inputDialog({ title, sub = '', placeholder = '', ok = 'Salvar', type = 'text', icon = 'key', min = 0, value = '' }) {
   return new Promise((resolve) => {
     if (document.querySelector('.lk')) return resolve(null);
     const wrap = document.createElement('div');
@@ -375,7 +429,7 @@ function inputDialog({ title, sub = '', placeholder = '', ok = 'Salvar', type = 
         <span class="lk-icon au-ico"><i data-icon="${icon}"></i></span>
         <h2 id="in-title">${esc(title)}</h2>
         <p class="lk-sub">${sub}</p>
-        <div class="lk-field"><input type="${type}" id="in-val" placeholder="${esc(placeholder)}" autocomplete="${type === 'password' ? 'new-password' : 'off'}">${type === 'password' ? eyeBtn : ''}</div>
+        <div class="lk-field"><input type="${type}" id="in-val" value="${esc(value)}" placeholder="${esc(placeholder)}" autocomplete="${type === 'password' ? 'new-password' : 'off'}">${type === 'password' ? eyeBtn : ''}</div>
         <p class="lk-msg" role="alert"></p>
         <div class="lk-actions"><button type="button" class="btn-soft lk-cancel">Cancelar</button><button type="submit" class="btn-dark lk-go">${esc(ok)}</button></div>
       </form>`;
@@ -438,6 +492,8 @@ function renderProfile(view) {
           <h3>Seus dados</h3>
           <label class="au-label" for="me-name">Nome</label>
           <div class="lk-field"><input id="me-name" maxlength="60" value="${esc(p.name || '')}" placeholder="Seu nome" autocomplete="name"></div>
+          <label class="au-label" for="me-user">Nome de usuário</label>
+          <div class="lk-field au-at"><input id="me-user" maxlength="20" value="${esc(p.username || '')}" placeholder="ex.: maria.silva" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
           <label class="au-label" for="me-email">E-mail</label>
           <div class="lk-field"><input id="me-email" value="${esc(auth.user.email || '')}" disabled></div>
           <p class="me-hint">Dados do curso: preenchem o agendamento de provas e tutorias sozinhos.</p>
@@ -467,11 +523,14 @@ function renderProfile(view) {
       if (name.length < 2) return toast('Digite o seu nome.');
       const cpf = cpfDigits($('#me-cpf').value), course = $('#me-course').value.trim().slice(0, 80), college = $('#me-college').value;
       if (cpf && !cpfOk(cpf)) { $('#me-cpf').focus(); return toast('CPF inválido. Confira os números.'); }
-      const { error } = await sb.from('profiles').update({ name, cpf: cpf || null, course: course || null, college: college || null }).eq('id', auth.user.id);
-      if (error) return toast(/column|schema cache/i.test(error.message) ? 'Falta atualizar o banco para salvar CPF, curso e faculdade.' : authError(error));
+      const username = cleanUsername($('#me-user').value);
+      if (username && !USERNAME_RE.test(username)) { $('#me-user').focus(); return toast('Nome de usuário: de 3 a 20 letras minúsculas, números, ponto ou _.'); }
+      const { error } = await sb.from('profiles').update({ name, username: username || null, cpf: cpf || null, course: course || null, college: college || null }).eq('id', auth.user.id);
+      if (error) return toast(/column|schema cache/i.test(error.message) ? 'Falta atualizar o banco: rode o script 12-nome-de-usuario.sql no Supabase.' : authError(error));
       await refreshMe(); toast('Dados salvos.');
     });
     $('#me-cpf').addEventListener('input', (e) => { e.target.value = cpfMask(e.target.value); });
+    $('#me-user').addEventListener('input', (e) => { const v = cleanUsername(e.target.value); if (v !== e.target.value) e.target.value = v; });
     $('#me-pass').addEventListener('submit', async (e) => {
       e.preventDefault();
       const a = $('#me-p1').value, b = $('#me-p2').value;
@@ -571,7 +630,7 @@ function drawUsers() {
   const match = (u, f) => f === 'all' || (f === 'admin' ? u.role === 'admin' : f === 'info' ? !!u.informatica : u.status === f);
   USER_FILTERS.forEach(([k]) => { const el = document.querySelector(`[data-uc="${k}"]`); if (el) el.textContent = usersCache.filter((u) => match(u, k)).length; });
   const q = fold(usersQuery.trim());
-  const rows = usersCache.filter((u) => match(u, usersFilter) && (!q || fold(`${u.name} ${u.email}`).includes(q)));
+  const rows = usersCache.filter((u) => match(u, usersFilter) && (!q || fold(`${u.name} ${u.email} ${u.username || ''}`).includes(q)));
   if (!rows.length) { list.innerHTML = `<p class="us-empty">${usersCache.length ? 'Ninguém encontrado com esse filtro.' : 'Ainda não há cadastros.'}</p>`; return; }
   const me = auth.user.id;
   list.innerHTML = rows.map((u) => `
@@ -579,7 +638,7 @@ function drawUsers() {
       ${userAvatar(u, 'us-avatar')}
       <div class="us-who">
         <strong>${esc(u.name || 'Sem nome')}${u.id === me ? ' <em>(você)</em>' : ''}</strong>
-        <span>${esc(u.email)}</span>
+        <span>${u.username ? `<b class="us-user">@${esc(u.username)}</b> · ` : ''}${esc(u.email)}</span>
         <small>Cadastro em ${new Date(u.created_at).toLocaleDateString('pt-BR')}</small>
       </div>
       <div class="us-tags">
@@ -591,6 +650,7 @@ function drawUsers() {
         ${u.status !== 'approved' ? `<button class="btn-dark sm" type="button" data-ua="approve"><i data-icon="check"></i>Aprovar</button>` : ''}
         ${u.status !== 'blocked' && u.id !== me ? `<button class="btn-soft sm" type="button" data-ua="block"><i data-icon="lock"></i>Bloquear</button>` : ''}
         <button class="btn-soft sm us-info-btn ${u.informatica ? 'on' : ''}" type="button" data-ua="info" aria-pressed="${!!u.informatica}" title="${u.informatica ? 'Tirar o acesso à Plataforma de Informática' : 'Marcar como aluno de Informática (libera a plataforma)'}"><i data-icon="monitor"></i>Informática</button>
+        <button class="icon-btn us-at" type="button" data-ua="username" title="${u.username ? 'Trocar' : 'Definir'} o nome de usuário">@</button>
         <button class="icon-btn" type="button" data-ua="reset" title="Enviar link de nova senha por e-mail"><i data-icon="mail"></i></button>
         <button class="icon-btn" type="button" data-ua="setpass" title="Definir uma senha nova"><i data-icon="key"></i></button>
         ${u.id !== me ? `<button class="icon-btn" type="button" data-ua="admin" title="${u.role === 'admin' ? 'Tirar de administrador' : 'Tornar administrador'}"><i data-icon="${u.role === 'admin' ? 'shieldOff' : 'shield'}"></i></button>
@@ -637,6 +697,13 @@ async function userAction(e) {
       if (pass == null) return;
       return rpc('admin_set_password', { target: u.id, new_password: pass }, `Senha de ${who} alterada.`);
     }
+    case 'username': {
+      const raw = await inputDialog({ title: `Nome de usuário de ${who}`, sub: 'Com ele a pessoa entra no site no lugar do e-mail. Deixe vazio para tirar.', placeholder: 'ex.: maria.silva', value: u.username || '', ok: 'Salvar', icon: 'user' });
+      if (raw == null) return;
+      const name = cleanUsername(raw);
+      if (name && !USERNAME_RE.test(name)) return toast('Nome de usuário: de 3 a 20 letras minúsculas, números, ponto ou _.');
+      return rpc('admin_set_username', { target: u.id, value: name }, name ? `${who} agora entra como @${name}.` : `Nome de usuário de ${who} removido.`);
+    }
     case 'delete':
       if (!(await confirmDialog({ title: `Excluir a conta de ${who}?`, sub: 'O cadastro e os dados da pessoa serão apagados de vez. Não dá para desfazer.', image: u.avatar_url || '', ok: 'Excluir conta' }))) return;
       return rpc('admin_delete_user', { target: u.id }, `Conta de ${who} excluída.`);
@@ -671,6 +738,7 @@ const CONTENT = {
   brand: [() => brandList, (v) => { brandList = v; }], connect: [() => connect, (v) => { connect = v; }],
   authors: [() => authors, (v) => { authors = v; }], radar: [() => radar, (v) => { radar = v; }],
   cursoExtra: [() => cursoExtra, (v) => { cursoExtra = v; }], cursoEdit: [() => cursoEdit, (v) => { cursoEdit = v; }],
+  loginBanner: [() => loginBanner, (v) => { loginBanner = v; }],
 };
 // alterações que ainda não chegaram ao banco (sem internet, por exemplo): não são sobrescritas
 const pending = new Set(store.get('pending', []));

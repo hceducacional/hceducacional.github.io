@@ -377,5 +377,24 @@ window.HC_CONTENT = {
       "titulo": "Lição 06"
     }
   ],
-  "cursoEdit": []
+  "cursoEdit": [
+    {
+      "id": "l0-0",
+      "tag": "Introdução",
+      "desc": "Os primeiros toques: os indicadores nas teclas F e J e os polegares na barra de espaço.",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/d2f3ed4e-a0ba-4b9c-aab9-b25ba16f9184.webp",
+      "titulo": "Conhecendo J, F e Espaço"
+    },
+    {
+      "id": "m0",
+      "desc": "As primeiras teclas da linha de referência e da fileira de cima, uma lição de cada vez.",
+      "nome": "Primeiro comando",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/28118cab-d844-4c56-a8ba-8cdfd22f67ad.webp",
+      "nivel": "Nível iniciante",
+      "secao": "Primeiro comando.",
+      "texto": "Nesta etapa, você encontrará atividades elaboradas especialmente para introduzir os conceitos iniciais do teclado. É essencial compreender o funcionamento de cada tecla; por isso, cada seção é projetada com atenção para facilitar a aprendizagem e a memorização dos diferentes grupos de teclas a seguir.",
+      "secaoComplemento": "As teclas básicas, uma lição de cada vez."
+    }
+  ],
+  "loginBanner": []
 };

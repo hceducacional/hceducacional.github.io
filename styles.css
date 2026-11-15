@@ -3734,3 +3734,101 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
 .inf-card-ico i[data-icon] { width: 24px; height: 24px; }
 .inf-cta i[data-icon] { width: 18px; height: 18px; }
 .inf-ben-ico i[data-icon] { width: 22px; height: 22px; }
+
+/* =========================================================
+   JANELA DE ENTRAR — banner à esquerda que se revela ao abrir
+   A janela aparece com o tamanho do formulário e, logo depois, abre para a
+   esquerda mostrando o banner (a imagem desliza e se acomoda). Fica centralizada.
+   ========================================================= */
+.au-login .au-shell {
+  --art-w: 400px; --form-w: 420px;
+  position: relative; display: grid; grid-template-columns: 0px min(var(--form-w), calc(100vw - 48px));
+  max-height: calc(100dvh - 48px); border-radius: 28px; overflow: hidden;
+  background: #fff; color: var(--ink);
+  box-shadow: 0 50px 100px -30px rgba(0, 0, 0, .6), 0 0 0 1px rgba(0, 0, 0, .04);
+  opacity: 0; transform: translateY(22px) scale(.96);
+  transition: opacity .3s ease, transform .55s var(--ease), grid-template-columns .5s var(--ease);
+}
+.au-login.in .au-shell {
+  opacity: 1; transform: none; grid-template-columns: var(--art-w) min(var(--form-w), calc(100vw - 48px));
+  transition: opacity .35s ease, transform .7s var(--ease), grid-template-columns 1s cubic-bezier(.7, 0, .2, 1) .28s;
+}
+.au-login .au-card {
+  width: auto; max-height: none; min-height: 0; overflow-y: auto; padding: 40px 36px 30px;
+  background: none; box-shadow: none; border-radius: 0; opacity: 1; transform: none; transition: none;
+}
+/* conteúdo do formulário entra em cascata */
+.au-login .au-card > * { opacity: 0; transform: translateY(10px); transition: opacity .45s ease, transform .6s var(--ease); transition-delay: calc(.16s + var(--i, 0) * 35ms); }
+.au-login.in .au-card > * { opacity: 1; transform: none; }
+.au-login .au-card .lk-icon { width: 52px; height: 52px; border-radius: 15px; box-shadow: 0 10px 22px -10px rgba(0, 0, 0, .5); }
+.au-login .au-card h2 { font-size: 26px; letter-spacing: -.028em; }
+.au-login .lk-field input { height: 48px; border-radius: 14px; }
+.au-login .lk-actions button { height: 48px; border-radius: 999px; }
+
+.au-art { position: relative; min-width: 0; overflow: hidden; background: #0d1512; }
+.au-art img, .au-art-def {
+  position: absolute; top: 0; right: 0; bottom: 0; width: var(--art-w, 400px); height: 100%;
+}
+.au-art img { object-fit: cover; opacity: 0; transform: scale(1.14) translateX(28px); transition: opacity .6s ease .35s, transform 1.5s var(--ease) .28s; }
+.au-login.in .au-art img.ld { opacity: 1; transform: none; }
+.au-art::after { /* fio de luz na emenda com o formulário */
+  content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 1px; background: rgba(255, 255, 255, .18); pointer-events: none;
+}
+.au-art-def {
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; padding: 36px 34px; color: #fff;
+  background:
+    radial-gradient(120% 70% at 0% 0%, rgba(22, 199, 132, .38), transparent 60%),
+    radial-gradient(90% 60% at 100% 100%, rgba(6, 122, 87, .55), transparent 65%),
+    linear-gradient(160deg, #0f2a21, #0b0f0d 70%);
+  opacity: 0; transform: translateX(28px); transition: opacity .6s ease .4s, transform 1.4s var(--ease) .3s;
+}
+.au-login.in .au-art-def { opacity: 1; transform: none; }
+.au-art-logo { position: absolute; top: 32px; left: 34px; display: flex; gap: 1px; font: 800 30px/1 "Inter", sans-serif; letter-spacing: -.04em; }
+.au-art-logo b:last-child { color: #34d399; }
+.au-art-def strong { font-size: 32px; line-height: 1.05; font-weight: 700; letter-spacing: -.03em; }
+.au-art-def small { max-width: 260px; font-size: 14px; line-height: 1.45; color: rgba(255, 255, 255, .7); }
+
+/* botão de editar o banner (só administradores) */
+.au-art-ed { position: absolute; top: 14px; right: 14px; z-index: 2; display: flex; gap: 6px; }
+.au-art-ed button {
+  height: 36px; padding: 0 14px; border: 0; border-radius: 999px; display: inline-flex; align-items: center; gap: 7px;
+  background: rgba(0, 0, 0, .55); color: #fff; font: 600 13px/1 "Inter", sans-serif; cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .18) inset; transition: background .2s;
+}
+.au-art-ed button[data-art="clear"] { width: 36px; padding: 0; justify-content: center; }
+.au-art-ed button:hover { background: rgba(0, 0, 0, .78); }
+.au-art-ed i { width: 16px; height: 16px; display: grid; }
+.au-art-hint { position: absolute; left: 16px; bottom: 12px; z-index: 2; padding: 4px 9px; border-radius: 8px; background: rgba(0, 0, 0, .5); color: rgba(255, 255, 255, .85); font-size: 11.5px; }
+.au-art.busy::before { content: ""; position: absolute; inset: 0; z-index: 3; background: rgba(0, 0, 0, .35); animation: auPulse 1s ease-in-out infinite alternate; }
+@keyframes auPulse { to { background: rgba(0, 0, 0, .55); } }
+
+/* telas médias: sem espaço para os dois lados, só o formulário */
+@media (max-width: 900px) {
+  .au-login.in .au-shell { grid-template-columns: 0px min(var(--form-w), calc(100vw - 48px)); }
+}
+/* celular: o banner vira uma faixa no alto da janela */
+@media (max-width: 640px) {
+  .au-login { padding: 16px; }
+  .au-login .au-shell, .au-login.in .au-shell { grid-template-columns: calc(100vw - 32px); grid-template-rows: 0px auto; max-height: calc(100dvh - 32px); border-radius: 26px; }
+  .au-login.in .au-shell { grid-template-rows: 132px auto; transition: opacity .35s ease, transform .7s var(--ease), grid-template-rows .9s cubic-bezier(.7, 0, .2, 1) .25s; }
+  .au-login .au-shell { transition: opacity .3s ease, transform .55s var(--ease), grid-template-rows .45s var(--ease); }
+  .au-art img, .au-art-def { width: 100%; }
+  .au-art img { transform: scale(1.15) translateY(18px); }
+  .au-art-def { transform: translateY(18px); padding: 20px 22px; gap: 4px; }
+  .au-art-def strong { font-size: 22px; } .au-art-def small, .au-art-def strong br { display: none; }
+  .au-art-logo { top: 18px; left: 22px; font-size: 22px; }
+  .au-art::after { top: auto; left: 0; width: auto; height: 1px; }
+  .au-art-hint { display: none; }
+  .au-login .au-card { padding: 22px 20px 20px; }
+  .au-login .au-card:is([data-mode="login"], [data-mode="signup"]) .lk-icon { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .au-login .au-shell, .au-login .au-card > *, .au-art img, .au-art-def { transition-duration: .01s !important; transition-delay: 0s !important; }
+}
+
+/* nome de usuário: "@" fixo antes do campo */
+.au-at::before { content: "@"; position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 600; pointer-events: none; }
+.au-at input { padding-left: 34px !important; }
+.au-hint { display: block; margin-top: 6px; font-size: 12px; line-height: 1.4; color: var(--muted); }
+.us-user { font-weight: 600; color: var(--ink-2); }
+.icon-btn.us-at { font: 700 16px/1 "Inter", sans-serif; }

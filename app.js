@@ -130,6 +130,9 @@ const saveCursoExtra = () => saveShared('cursoExtra', cursoExtra);
 /* capas e textos dos módulos e lições alterados pelo administrador (botão de lápis na plataforma) */
 let cursoEdit = store.get('cursoEdit', PUBLISHED.cursoEdit || []);
 const saveCursoEdit = () => saveShared('cursoEdit', cursoEdit);
+/* banner do lado esquerdo da janela de entrar (um item só: { id: 'login', image }), trocado pelo administrador */
+let loginBanner = store.get('loginBanner', PUBLISHED.loginBanner || []);
+const saveLoginBanner = () => saveShared('loginBanner', loginBanner);
 const saveLinks = () => saveShared('links', links);
 /* Mantenha-se conectado: 4 blocos fixos (1 grande, 1 largo e 2 menores) */
 const DEFAULT_CONNECT = [
@@ -219,7 +222,7 @@ function toast(msg) {
    As imagens enviadas ficam no IndexedDB do navegador, que comporta
    centenas de MB. Os itens guardam só uma referência "idb:<chave>".
    ========================================================= */
-const IMG_MAX_W = { curso: 1400, banner: 2560, bannerLogo: 900, news: 1920, link: 1000, logo: 512, connect: 2000, author: 400 }; // largura máxima por tipo
+const IMG_MAX_W = { curso: 1400, banner: 2560, bannerLogo: 900, news: 1920, link: 1000, logo: 512, connect: 2000, author: 400, loginBanner: 1200 }; // largura máxima por tipo
 const IMG_QUALITY = 0.92;
 const imgCache = new Map(); // referência -> URL temporária para exibir
 const imgUrl = (ref = '') => imgCache.get(ref) || ref;
@@ -284,7 +287,7 @@ async function storeImage(file, kind) {
   return ref;
 }
 
-const allImageRefs = () => [...banners, ...exclusive, ...links, ...news, ...brandList, ...connect, ...authors, ...radar, ...cursoEdit, ...cursoExtra].flatMap((x) => [x.image, x.imageMobile, x.logo, x.avatar, ...(x.gallery || [])]).filter(Boolean);
+const allImageRefs = () => [...banners, ...exclusive, ...links, ...news, ...brandList, ...connect, ...authors, ...radar, ...cursoEdit, ...cursoExtra, ...loginBanner].flatMap((x) => [x.image, x.imageMobile, x.logo, x.avatar, ...(x.gallery || [])]).filter(Boolean);
 async function loadImages() {
   for (const ref of allImageRefs()) {
     if (!ref.startsWith('idb:') || imgCache.has(ref)) continue;
@@ -340,7 +343,7 @@ async function exportContent() {
     if (Array.isArray(it.gallery)) out.gallery = (await Promise.all(it.gallery.map(one))).filter(Boolean);
     return out;
   }));
-  return { banners: await conv(banners), exclusive: await conv(exclusive), links: await conv(links), news: await conv(news), brand: await conv(brandList), connect: await conv(connect), authors: await conv(authors), radar: await conv(radar), cursoExtra: await conv(cursoExtra), cursoEdit: await conv(cursoEdit) };
+  return { banners: await conv(banners), exclusive: await conv(exclusive), links: await conv(links), news: await conv(news), brand: await conv(brandList), connect: await conv(connect), authors: await conv(authors), radar: await conv(radar), cursoExtra: await conv(cursoExtra), cursoEdit: await conv(cursoEdit), loginBanner: await conv(loginBanner) };
 }
 window.HC_exportContent = exportContent;
 
