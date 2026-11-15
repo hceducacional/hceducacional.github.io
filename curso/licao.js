@@ -70,6 +70,48 @@
   window.HC_progressoLicao = (id) => readLocal(id);
 
   /* =========================================================
+     Celular e tablet: as lições são feitas só no computador.
+     Mostra uma animação (o celular dá lugar ao computador) e o progresso do aluno.
+     ========================================================= */
+  function computerOnly(view, L, p) {
+    const N = L.niveis.length;
+    const t = p ? p.hits + p.errors : 0;
+    const acc = t ? Math.round((p.hits / t) * 100) : null;
+    const lvl = p ? (p.done ? N : Math.min(p.lvl, N)) : 0;
+    const first = (meName() || '').split(' ')[0];
+    view.innerHTML = `
+    <div class="wrap lc">
+      <div class="lc-top">
+        <a class="lc-back" href="#informatica">${svg('back')}Lições</a>
+        <div class="lc-head"><small>Lição ${L.numero}</small><h1>${esc(L.titulo)}</h1></div>
+      </div>
+      <section class="lc-card lc-pc">
+        <div class="lc-pc-scene" aria-hidden="true">
+          <div class="lc-pc-phone"><span></span><i></i></div>
+          <div class="lc-pc-laptop">
+            <div class="lc-pc-screen"><div class="lc-pc-keys"><b>F</b><b class="sp">Espaço</b><b>J</b></div><div class="lc-pc-line"><span>f j f j ff jj</span><i></i></div></div>
+            <div class="lc-pc-base"></div>
+          </div>
+          <span class="lc-pc-spark s1"></span><span class="lc-pc-spark s2"></span><span class="lc-pc-spark s3"></span>
+        </div>
+        <h2>${first ? `${esc(first)}, esta` : 'Esta'} lição é feita no computador.</h2>
+        <p>As atividades de digitação precisam de um teclado de verdade e de uma tela maior. Continue nos computadores do HC Instituto Educacional nos dias de aula: o seu progresso fica salvo na sua conta e você retoma de onde parou.</p>
+        <div class="lc-pc-prog">
+          <div class="lc-pc-prog-head"><b>Seu progresso nesta lição</b><span>${p?.done ? 'Concluída' : p ? `Nível ${lvl + 1} de ${N}` : 'Ainda não iniciada'}</span></div>
+          <b class="lc-pc-bar"><i style="--w:${(lvl / N) * 100}%"></i></b>
+          <div class="lc-pc-stats">
+            <div><strong>${lvl}/${N}</strong><small>Níveis concluídos</small></div>
+            <div><strong>${p ? p.xp.toLocaleString('pt-BR') : 0}</strong><small>XP</small></div>
+            <div><strong>${acc === null ? '—' : acc + '%'}</strong><small>Precisão</small></div>
+            <div><strong>${p ? dur(p.time) : '—'}</strong><small>Tempo</small></div>
+          </div>
+        </div>
+        <div class="lc-cta"><a class="btn-dark" href="#informatica">Voltar às lições</a></div>
+      </section>
+    </div>`;
+  }
+
+  /* =========================================================
      Abrir uma lição
      ========================================================= */
   async function open(view, L) {
@@ -77,6 +119,7 @@
     const saved = await loadProgress(L.id);
     if (!view.isConnected) return;
     const N = L.niveis.length;
+    if (!window.HC_isComputer()) return computerOnly(view, L, saved);
     const fresh = () => ({ lvl: 0, xp: 0, time: 0, hits: 0, errors: 0, levelTimes: [], done: false, total: N });
     let st = saved && !saved.done ? { ...fresh(), ...saved } : fresh();
     let alive = true, busy = false, phase = 'welcome', tick = null, lvlStart = 0;

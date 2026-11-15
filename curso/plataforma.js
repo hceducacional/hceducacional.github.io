@@ -32,6 +32,9 @@ const HC_CURSO = {
   ],
 };
 
+/* as lições só rodam no computador (teclado físico e tela grande); no celular e no tablet o aluno vê o progresso */
+window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine)').matches;
+
 (() => {
   let mod = 0; // módulo aberto
   const ICO = {
@@ -91,7 +94,7 @@ const HC_CURSO = {
           <span class="pill">${esc(m.nivel)} · Módulo ${mod + 1}</span>
           <h2>${esc(m.titulo)}</h2>
           <p>${esc(m.subtitulo)}</p>
-          <button class="slide-cta" type="button" data-lesson="${first + 1}">Começar a lição ${String(first + 1).padStart(2, '0')} ${svg('next')}</button>
+          <button class="slide-cta" type="button" data-lesson="${first + 1}">${window.HC_isComputer() ? `Começar a lição ${String(first + 1).padStart(2, '0')}` : 'Ver meu progresso'} ${svg('next')}</button>
         </div>
       </section>
 
@@ -109,6 +112,7 @@ const HC_CURSO = {
       <section>
         <h2 class="shelf-title"><span class="ap-grad">${esc(m.secao)}</span><span> ${esc(m.secaoComplemento)}</span></h2>
         <p class="shelf-sub pf-sub">${esc(m.texto)}</p>
+        ${window.HC_isComputer() ? '' : `<div class="pf-pc-note"><span>${svg('keys')}</span><p><b>As lições são feitas no computador.</b> Por aqui você acompanha o seu progresso; para praticar, use os computadores da instituição nos dias de aula.</p></div>`}
         <ol class="pf-lessons">
           ${m.licoes.map((l, i) => `
           <li class="pf-lesson" style="--i:${i}">
@@ -116,7 +120,7 @@ const HC_CURSO = {
             <div class="pf-lesson-body">
               <span class="pf-tag">${esc(l.tag)}</span>${(() => { const p = progress(first + i + 1); return p ? `<span class="pf-state${p.done ? ' done' : ''}">${p.done ? 'Concluída' : `Nível ${Math.min(p.lvl + 1, p.total)} de ${p.total}`}</span>` : ''; })()}
               <h3>${esc(l.titulo)}</h3>
-              <button class="pf-go" type="button" data-lesson="${first + i + 1}">${(() => { const p = progress(first + i + 1); return p?.done ? 'Refazer' : p && p.lvl > 0 ? 'Continuar' : 'Acessar'; })()} ${svg('next')}</button>
+              <button class="pf-go" type="button" data-lesson="${first + i + 1}">${(() => { const p = progress(first + i + 1); return !window.HC_isComputer() ? 'Ver progresso' : p?.done ? 'Refazer' : p && p.lvl > 0 ? 'Continuar' : 'Acessar'; })()} ${svg('next')}</button>
             </div>
           </li>`).join('')}
         </ol>
@@ -147,5 +151,21 @@ const HC_CURSO = {
     }));
   }
 
-  window.HC_platform = { render };
+  /* traz da conta o progresso das lições (para aparecer igual no celular e em qualquer computador) */
+  let synced = false;
+  async function sync(view) {
+    if (synced || !auth?.user || typeof sb === 'undefined' || !sb) return;
+    synced = true;
+    const { data, error } = await sb.from('informatica_progresso').select('licao, dados').eq('user_id', auth.user.id);
+    if (error || !data?.length) return;
+    let changed = false;
+    data.forEach(({ licao, dados }) => {
+      const key = `hc:info:${auth.user.id}:${licao}`;
+      let local = null; try { local = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
+      if (!local || (dados?.savedAt || 0) > (local.savedAt || 0)) { try { localStorage.setItem(key, JSON.stringify(dados)); changed = true; } catch {} }
+    });
+    if (changed && view.isConnected && location.hash === '#informatica') render(view);
+  }
+
+  window.HC_platform = { render: (view, sub) => { render(view, sub); if (!sub) sync(view); } };
 })();

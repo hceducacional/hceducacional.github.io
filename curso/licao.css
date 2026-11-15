@@ -194,6 +194,59 @@
 .lc-res-i.slow { background: #ffedd5; color: #ea580c; }
 .lc-res-i svg { width: 18px; height: 18px; }
 
+/* celular e tablet: aviso de que a lição é feita no computador */
+.lc-pc { max-width: 760px; margin: 0 auto 20px; padding: 34px 40px 36px; text-align: center; }
+.lc-pc h2 { margin: 6px 0 10px; font-size: clamp(24px, 2.6vw, 32px); line-height: 1.15; letter-spacing: -.03em; animation: lcUp .7s var(--ease) 1.5s both; }
+.lc-pc > p { max-width: 560px; margin: 0 auto; font-size: 16px; line-height: 1.5; color: var(--ink-2); text-align: justify; text-align-last: center; hyphens: auto; -webkit-hyphens: auto; animation: lcUp .7s var(--ease) 1.65s both; }
+.lc-pc .lc-cta { animation: lcUp .7s var(--ease) 1.95s both; }
+.lc-pc-scene { position: relative; width: 300px; max-width: 100%; height: 190px; margin: 0 auto 8px; }
+/* o celular aparece e sai de cena */
+.lc-pc-phone { position: absolute; left: 50%; top: 22px; width: 64px; height: 118px; margin-left: -32px; border-radius: 16px; background: #1d1d1f; padding: 6px;
+  box-shadow: 0 16px 30px -16px rgba(0, 0, 0, .5); animation: lcPhoneIn .6s var(--ease) .1s both, lcPhoneOut .9s cubic-bezier(.6, 0, .3, 1) .95s forwards; }
+.lc-pc-phone span { display: block; height: 100%; border-radius: 11px; background: linear-gradient(160deg, #334155, #0f172a); }
+.lc-pc-phone i { position: absolute; top: -10px; right: -10px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #f43f5e; color: #fff; font: 800 15px/1 Inter, sans-serif; font-style: normal;
+  box-shadow: 0 6px 14px -4px rgba(244, 63, 94, .6); animation: lcPop .4s cubic-bezier(.18, .89, .32, 1.28) .6s both; }
+.lc-pc-phone i::before { content: '×'; }
+@keyframes lcPhoneIn { from { opacity: 0; transform: translateY(20px) scale(.8); } }
+@keyframes lcPhoneOut { to { opacity: .28; transform: translate(-112px, 30px) scale(.62) rotate(-12deg); } }
+/* o computador entra no lugar */
+.lc-pc-laptop { position: absolute; left: 50%; bottom: 8px; width: 230px; margin-left: -115px; animation: lcLaptopIn .9s cubic-bezier(.2, .9, .3, 1.15) 1.05s both; }
+@keyframes lcLaptopIn { from { opacity: 0; transform: translateY(36px) scale(.7); } }
+.lc-pc-screen { position: relative; height: 136px; margin: 0 14px; padding: 16px 12px 10px; border-radius: 12px 12px 3px 3px; background: #0d1117; border: 5px solid #1d1d1f;
+  box-shadow: 0 18px 40px -18px rgba(5, 150, 105, .7); display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+.lc-pc-screen::after { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, rgba(255, 255, 255, .08), transparent 45%); pointer-events: none; }
+.lc-pc-keys { display: flex; justify-content: center; gap: 6px; }
+.lc-pc-keys b { display: grid; place-items: center; width: 34px; height: 30px; border-radius: 7px; background: #2c2c2e; color: rgba(255, 255, 255, .85); font: 700 12px/1 Inter, sans-serif;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .4); animation: lcPcKey 2.4s ease-in-out infinite; }
+.lc-pc-keys b.sp { width: 74px; font-size: 10px; animation-delay: .8s; }
+.lc-pc-keys b:last-child { animation-delay: 1.6s; }
+@keyframes lcPcKey { 0%, 12%, 100% { background: #2c2c2e; color: rgba(255, 255, 255, .85); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .4); }
+  5% { background: #34d399; color: #04241a; box-shadow: 0 0 14px rgba(52, 211, 153, .7); } }
+.lc-pc-line { display: flex; align-items: center; justify-content: center; font: 600 13px ui-monospace, Menlo, monospace; color: #34d399; }
+.lc-pc-line span { display: inline-block; overflow: hidden; white-space: nowrap; width: 0; animation: lcType 3.2s steps(13) 1.9s infinite; }
+.lc-pc-line i { width: 7px; height: 14px; margin-left: 2px; background: #34d399; animation: infBlink 1s steps(1) infinite; }
+@keyframes lcType { 0% { width: 0; } 55%, 85% { width: 13ch; } 100% { width: 0; } }
+@keyframes infBlink { 50% { opacity: 0; } }
+.lc-pc-base { height: 11px; border-radius: 2px 2px 12px 12px; background: linear-gradient(180deg, #e5e7eb, #9ca3af); box-shadow: 0 12px 20px -10px rgba(0, 0, 0, .4); position: relative; }
+.lc-pc-base::after { content: ''; position: absolute; top: 0; left: 50%; width: 46px; height: 4px; margin-left: -23px; border-radius: 0 0 6px 6px; background: #b6b9bf; }
+.lc-pc-spark { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: #34d399; box-shadow: 0 0 12px rgba(52, 211, 153, .9); opacity: 0; animation: lcPcSpark 2.6s ease-in-out infinite; }
+.lc-pc-spark.s1 { left: 18%; top: 30%; animation-delay: 2s; }
+.lc-pc-spark.s2 { right: 14%; top: 18%; animation-delay: 2.6s; background: #60a5fa; box-shadow: 0 0 12px rgba(96, 165, 250, .9); }
+.lc-pc-spark.s3 { right: 22%; top: 62%; animation-delay: 3.2s; background: #fbbf24; box-shadow: 0 0 12px rgba(251, 191, 36, .9); }
+@keyframes lcPcSpark { 0% { opacity: 0; transform: translateY(10px) scale(.4); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(-26px) scale(1); } }
+/* progresso do aluno */
+.lc-pc-prog { margin: 24px 0 2px; padding: 18px 20px; border-radius: 20px; background: var(--bg); text-align: left; animation: lcUp .7s var(--ease) 1.8s both; }
+.lc-pc-prog-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.lc-pc-prog-head b { font-size: 15px; }
+.lc-pc-prog-head span { font-size: 13px; font-weight: 600; color: var(--accent); }
+.lc-pc-bar { display: block; height: 10px; border-radius: 10px; overflow: hidden; background: var(--line-soft); }
+.lc-pc-bar i { display: block; height: 100%; width: 0; border-radius: 10px; background: linear-gradient(90deg, #059669, #34d399); animation: lcBar 1.2s var(--ease) 2.1s forwards; }
+@keyframes lcBar { to { width: var(--w); } }
+.lc-pc-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px; }
+.lc-pc-stats div { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 14px; background: var(--card); }
+.lc-pc-stats strong { font-size: 19px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.lc-pc-stats small { font-size: 11.5px; font-weight: 600; color: var(--muted); }
+
 @media (max-width: 1100px) {
   .lc-grid { grid-template-columns: 1fr; }
   .lc-side { order: -1; display: grid; grid-template-columns: repeat(4, 1fr); }
@@ -243,10 +296,18 @@
   .lc-mk { width: 80px; height: 84px; }
   .lc-mk.space { width: 120px; }
   .lc-res-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .lc-pc { padding: 24px 18px 26px; border-radius: 22px; }
+  .lc-pc > p { font-size: 15px; }
+  .lc-pc-prog { padding: 14px; }
+  .lc-pc-stats { grid-template-columns: 1fr 1fr; gap: 8px; }
   .lc-res { padding: 14px; border-radius: 18px; }
   .lc-res strong { font-size: 19px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .lc-drop, .lc-sparks i { display: none; }
   .lc-intro, .lc-lv-title, .lc-results, .lc-pop, .lc-count, .lc-start > span { animation: none; }
+  .lc-pc *, .lc-pc { animation: none !important; }
+  .lc-pc-phone { display: none; }
+  .lc-pc-line span { width: 13ch; }
+  .lc-pc-bar i { width: var(--w); }
 }
