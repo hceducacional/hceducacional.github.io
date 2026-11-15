@@ -670,6 +670,7 @@ const CONTENT = {
   links: [() => links, (v) => { links = v; }], news: [() => news, (v) => { news = v; }],
   brand: [() => brandList, (v) => { brandList = v; }], connect: [() => connect, (v) => { connect = v; }],
   authors: [() => authors, (v) => { authors = v; }], radar: [() => radar, (v) => { radar = v; }],
+  cursoExtra: [() => cursoExtra, (v) => { cursoExtra = v; }],
 };
 // alterações que ainda não chegaram ao banco (sem internet, por exemplo): não são sobrescritas
 const pending = new Set(store.get('pending', []));

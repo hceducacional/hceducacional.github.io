@@ -7,7 +7,7 @@
 -- =========================================================
 
 create table if not exists public.site_content (
-  key        text primary key check (key in ('banners', 'exclusive', 'links', 'news', 'brand', 'connect', 'authors', 'radar')),
+  key        text primary key check (key in ('banners', 'exclusive', 'links', 'news', 'brand', 'connect', 'authors', 'radar', 'cursoExtra')),
   data       jsonb not null,
   updated_at timestamptz not null default now(),
   updated_by uuid references auth.users (id) on delete set null default auth.uid()

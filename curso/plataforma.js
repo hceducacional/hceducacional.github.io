@@ -57,6 +57,13 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
     book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5Z"/><path d="M4 19a2 2 0 0 1 2-2h13"/>',
     chart: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   };
+  /* lições criadas pelo administrador (botão "Nova lição"): ficam no banco, junto do conteúdo do site,
+     e entram no fim do módulo até serem configuradas aqui no código */
+  const BASE = HC_CURSO.modulos.map((m) => m.licoes.slice());
+  const extras = () => (typeof cursoExtra !== 'undefined' && Array.isArray(cursoExtra) ? cursoExtra : []);
+  const mergeExtras = () => HC_CURSO.modulos.forEach((m, i) => { m.licoes = BASE[i].concat(extras().filter((x) => x.mod === i).map((x) => ({ ...x, extra: true }))); });
+  const canOpen = (m) => m.licoes.some((l) => l.arquivo) || isAdmin(); // o administrador abre até módulo vazio, para criar lições
+  const PER_PAGE = 5; // lições por página; da 6ª em diante continuam para o lado
   const svg = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg>`;
 
   /* imagem, ou espaço reservado (com etiqueta para o administrador) */
@@ -104,18 +111,21 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
     const m = HC_CURSO.modulos[mi]; if (!m) return '';
     const first = HC_CURSO.modulos.slice(0, mi).reduce((a, x) => a + x.licoes.length, 0); // nº da 1ª lição do módulo - 1
     const nextM = HC_CURSO.modulos[mi + 1];
+    const pages = []; for (let k = 0; k < m.licoes.length; k += PER_PAGE) pages.push(m.licoes.slice(k, k + PER_PAGE));
     return `
       <section>
         <h2 class="shelf-title"><span class="ap-grad">${esc(m.secao || m.nome + '.')}</span><span> ${esc(m.secaoComplemento || '')}</span></h2>
         ${m.texto ? `<p class="shelf-sub pf-sub">${esc(m.texto)}</p>` : ''}
         ${window.HC_isComputer() ? '' : `<div class="pf-pc-note"><span>${svg('keys')}</span><p><b>As lições são feitas no computador.</b> Por aqui você acompanha o seu progresso; para praticar, use os computadores da instituição nos dias de aula.</p></div>`}
-        <ol class="pf-lessons">
-          ${m.licoes.map((l, i) => {
+        <div class="pf-lpages" id="pf-lpages">${pages.map((pg, pi) => `
+        <ol class="pf-lessons" aria-label="Lições ${pi * PER_PAGE + 1} a ${pi * PER_PAGE + pg.length}">
+          ${pg.map((l, k) => {
+            const i = pi * PER_PAGE + k;
             const n = first + i + 1, p = progress(n), num = String(n).padStart(2, '0');
             const state = !l.arquivo ? 'Em breve' : p?.done ? 'Concluída' : p ? `Nível ${Math.min(p.lvl + 1, p.total)} de ${p.total}` : `${HC_NIVEIS[n] || ''}`;
             const go = !l.arquivo ? 'Em breve' : !window.HC_isComputer() ? 'Ver' : p?.done ? 'Refazer' : p && p.lvl > 0 ? 'Continuar' : 'Acessar';
             return `
-          <li class="pf-lesson${l.arquivo ? '' : ' soon'}" style="--i:${i};--tint:${TINTS[i % TINTS.length]}" data-lesson="${n}" tabindex="0" aria-label="Lição ${num}: ${esc(l.titulo)}">
+          <li class="pf-lesson${l.arquivo ? '' : ' soon'}" style="--i:${k};--tint:${TINTS[i % TINTS.length]}" data-lesson="${n}" tabindex="0" aria-label="Lição ${num}: ${esc(l.titulo)}">
             <div class="pf-lesson-img">${slot(l.imagem, 'Imagem da lição', '1000 × 1000', i)}</div>
             <div class="pf-lesson-app">
               <div class="pf-lesson-text">
@@ -129,13 +139,21 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
                 <span class="pf-lesson-go">${go}</span>
               </div>
             </div>
+            ${l.extra && isAdmin() ? `<button class="pf-lesson-del" type="button" data-dellesson="${esc(l.id)}" aria-label="Apagar este card">×</button>` : ''}
             ${p ? `<b class="pf-lesson-prog" style="--w:${((p.done ? p.total : p.lvl) / p.total) * 100}%"></b>` : ''}
           </li>`;
           }).join('')}
-        </ol>
+        </ol>`).join('')}</div>
+        ${pages.length > 1 ? `<div class="ap-paddles pf-lpaddles">
+          <button class="ap-paddle" type="button" data-ldir="-1" aria-label="Lições anteriores" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+          <button class="ap-paddle" type="button" data-ldir="1" aria-label="Próximas lições"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+        </div>` : ''}
       </section>
       <section>
-        <h2 class="shelf-title"><span class="ap-grad">Próximo passo.</span><span> Terminou as lições? Siga para o próximo módulo.</span></h2>
+        <div class="pf-step-head">
+          <h2 class="shelf-title"><span class="ap-grad">Próximo passo.</span><span> Terminou as lições? Siga para o próximo módulo.</span></h2>
+          ${isAdmin() ? `<button class="pf-add-lesson" type="button" data-addlesson="${mi}" title="Só administradores veem este botão"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Nova lição</button>` : ''}
+        </div>
         <div class="pf-next-card">
           <div class="pf-next-text">
             <small>${nextM ? esc(nextM.nivel) : 'Em breve'}</small>
@@ -151,6 +169,7 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
 
   function render(view, sub = '') {
     const ln = /^licao-(\d+)$/.exec(sub);
+    mergeExtras();
     if (ln) return openLesson(view, +ln[1]);
     const m = HC_CURSO.modulos[mod];
     const first = HC_CURSO.modulos.slice(0, mod).reduce((a, x) => a + x.licoes.length, 0); // nº da 1ª lição do módulo - 1
@@ -190,7 +209,7 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
         <h2 class="shelf-title"><span class="ap-grad">Módulos.</span><span> Escolha um módulo para ver as lições.</span></h2>
         <div class="pf-mod-row" id="pf-mod-row">
           ${HC_CURSO.modulos.map((mm, i) => {
-            const ok = mm.licoes.some((l) => l.arquivo), num = String(i + 1).padStart(2, '0');
+            const ok = canOpen(mm), num = String(i + 1).padStart(2, '0');
             return `
           <article class="pf-lesson pf-modcard${ok ? '' : ' soon'}${openMod === i ? ' open' : ''}" style="--i:${i};--tint:${MTINTS[i % MTINTS.length]}" data-modcard="${i}" tabindex="0" role="button" aria-expanded="${openMod === i}" aria-label="Módulo ${i + 1}: ${esc(mm.nome)}">
             <div class="pf-lesson-img">${slot(mm.imagem, 'Imagem do módulo', '1000 × 1250', i + 2)}</div>
@@ -239,17 +258,80 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
       b.addEventListener('click', () => openN(+b.dataset.lesson));
       b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openN(+b.dataset.lesson); } });
     });
+    const pagesEl = root.querySelector('#pf-lpages');
+    if (pagesEl) {
+      const pads = root.querySelectorAll('[data-ldir]');
+      const upd = () => { if (!pads.length) return; pads[0].disabled = pagesEl.scrollLeft < 4; pads[1].disabled = pagesEl.scrollLeft + pagesEl.clientWidth >= pagesEl.scrollWidth - 4; };
+      pads.forEach((b) => b.addEventListener('click', () => pagesEl.scrollBy({ left: +b.dataset.ldir * pagesEl.clientWidth, behavior: 'smooth' })));
+      pagesEl.addEventListener('scroll', upd, { passive: true }); upd();
+    }
+    root.querySelectorAll('[data-addlesson]').forEach((b) => b.addEventListener('click', () => addLesson(view, +b.dataset.addlesson)));
+    root.querySelectorAll('[data-dellesson]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); delLesson(view, b.dataset.dellesson); }));
     root.querySelectorAll('[data-gomod]').forEach((b) => b.addEventListener('click', () => {
       const i = +b.dataset.gomod;
-      if (!HC_CURSO.modulos[i]?.licoes.some((l) => l.arquivo)) return toast(`O módulo ${i + 1} será liberado em breve.`);
+      if (!HC_CURSO.modulos[i] || !canOpen(HC_CURSO.modulos[i])) return toast(`O módulo ${i + 1} será liberado em breve.`);
       toggleMod(view, i); view.querySelector(`[data-modcard="${i}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
     }));
+  }
+
+  /* administrador: cria um card de lição provisório no fim do módulo (configurado depois no código) */
+  function refillMod(view, mi, toEnd) {
+    const inner = view.querySelector('#pf-mod-inner'); if (!inner || openMod !== mi) return;
+    mergeExtras();
+    const keep = view.querySelector('#pf-lpages')?.scrollLeft || 0;
+    inner.classList.remove('enter'); inner.innerHTML = modBody(mi); bindLessons(view, inner);
+    const pg = inner.querySelector('#pf-lpages');
+    if (pg) { pg.scrollLeft = keep; if (toEnd) requestAnimationFrame(() => pg.scrollTo({ left: pg.scrollWidth, behavior: 'smooth' })); }
+    const card = view.querySelector(`[data-modcard="${mi}"] .pf-lesson-who small`); if (card) card.textContent = `${HC_CURSO.modulos[mi].licoes.length} lições`;
+  }
+  function addLesson(view, mi) {
+    if (!isAdmin() || typeof saveCursoExtra !== 'function') return;
+    const first = HC_CURSO.modulos.slice(0, mi).reduce((a, x) => a + x.licoes.length, 0);
+    const num = String(first + HC_CURSO.modulos[mi].licoes.length + 1).padStart(2, '0');
+    cursoExtra = [...extras(), { id: 'l' + Date.now().toString(36), mod: mi, tag: 'Nova lição', titulo: `Lição ${num}`, desc: 'Card criado pelo administrador. O conteúdo desta lição ainda será configurado.', imagem: '' }];
+    saveCursoExtra(); refillMod(view, mi, true);
+    toast('Card da nova lição criado. Agora é só configurar o conteúdo.');
+  }
+  /* apagar um card pede confirmação e a senha mestra (só a impressão digital SHA-256 dela fica no código).
+     É uma trava contra cliques sem querer; quem pode gravar no banco continua sendo só o administrador. */
+  const MASTER_SHA = '618a865ecfa5327507b402d6a4d9bdfa52745e6da3296eb5ffcb5ec3add5d563';
+  const sha256 = async (t) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map((b) => b.toString(16).padStart(2, '0')).join('');
+  function delLesson(view, id) {
+    if (!isAdmin() || document.querySelector('.lk')) return;
+    const l = extras().find((x) => x.id === id); if (!l) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'lk au';
+    wrap.innerHTML = `<div class="lk-backdrop"></div>
+      <form class="lk-card au-card" role="dialog" aria-modal="true" aria-labelledby="dl-t" novalidate>
+        <span class="lk-icon au-ico pf-del-ico"><i data-icon="trash"></i></span>
+        <h2 id="dl-t">Apagar “${esc(l.titulo)}”?</h2>
+        <p class="lk-sub">O card sai do módulo para todos os alunos e não dá para desfazer. Para confirmar, digite a senha mestra.</p>
+        <label class="au-label" for="dl-pw">Senha mestra</label>
+        <div class="lk-field"><input type="password" id="dl-pw" autocomplete="off" autocapitalize="off" spellcheck="false" required></div>
+        <p class="lk-msg" role="alert"></p>
+        <div class="lk-actions"><button type="button" class="btn-soft lk-cancel">Cancelar</button><button type="submit" class="btn-dark btn-danger lk-go">Apagar</button></div>
+      </form>`;
+    document.body.appendChild(wrap); if (typeof paintIcons === 'function') paintIcons(wrap);
+    const close = () => { wrap.classList.remove('in'); setTimeout(() => wrap.remove(), 300); };
+    wrap.querySelector('.lk-backdrop').addEventListener('click', close);
+    wrap.querySelector('.lk-cancel').addEventListener('click', close);
+    wrap.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    const pw = wrap.querySelector('#dl-pw'), msg = wrap.querySelector('.lk-msg');
+    wrap.querySelector('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!pw.value) { msg.textContent = 'Digite a senha mestra.'; return pw.focus(); }
+      if (await sha256(pw.value) !== MASTER_SHA) { msg.textContent = 'Senha mestra incorreta.'; pw.select(); return; }
+      cursoExtra = extras().filter((x) => x.id !== id);
+      saveCursoExtra(); close(); refillMod(view, openMod, false);
+      toast('Card da lição apagado.');
+    });
+    requestAnimationFrame(() => { wrap.classList.add('in'); pw.focus(); });
   }
 
   /* abre um módulo (ou fecha, se já estiver aberto): a área cresce suavemente e as lições entram */
   function toggleMod(view, i) {
     const mm = HC_CURSO.modulos[i];
-    if (!mm.licoes.some((l) => l.arquivo)) return toast(`O módulo ${i + 1} será liberado em breve.`);
+    if (!canOpen(mm)) return toast(`O módulo ${i + 1} será liberado em breve.`);
     const box = view.querySelector('#pf-mod-open'), inner = view.querySelector('#pf-mod-inner');
     const cards = view.querySelectorAll('[data-modcard]');
     const setCards = () => cards.forEach((c) => {

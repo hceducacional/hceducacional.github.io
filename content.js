@@ -366,5 +366,15 @@ window.HC_CONTENT = {
       "name": "Bruno Ferreira",
       "image": ""
     }
+  ],
+  "cursoExtra": [
+    {
+      "id": "lmwhrc4wj",
+      "mod": 0,
+      "tag": "Nova lição",
+      "desc": "Card criado pelo administrador. O conteúdo desta lição ainda será configurado.",
+      "imagem": "",
+      "titulo": "Lição 06"
+    }
   ]
 };

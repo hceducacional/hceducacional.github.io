@@ -97,13 +97,72 @@
 .pf-mods.has-open .pf-modcard:not(.open) { opacity: .55; filter: saturate(.7); }
 .pf-mods.has-open .pf-modcard:not(.open):hover { opacity: .85; filter: none; }
 .pf-modcard.soon { cursor: default; }
-/* área do módulo aberto: cresce e encolhe com animação (de 0 até a altura do conteúdo) */
-.pf-mod-open { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .6s cubic-bezier(.4, 0, .2, 1), opacity .45s ease; }
-.pf-mod-open.show { grid-template-rows: 1fr; opacity: 1; }
-.pf-mod-inner { min-height: 0; overflow: hidden; }
-.pf-mod-inner.enter > section { animation: pfUp .6s var(--ease) both; }
-.pf-mod-inner.enter > section + section { animation-delay: .12s; }
-.pf-mod-inner .pf-lesson { animation-delay: calc(.2s + var(--i) * .07s); }
+/* área do módulo aberto: painel preto que cresce e encolhe como o menu "Acesso rápido"
+   (de 0 até a altura do conteúdo); ao abrir, os cards entram em cascata com um brilho */
+.pf-mod-open { --qa-ease: cubic-bezier(.32, .72, 0, 1);
+  display: grid; grid-template-rows: 0fr; margin-top: 6px; border-radius: 30px; color: #fff;
+  background: rgba(22, 22, 23, .97); border: 1px solid rgba(255, 255, 255, .08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .08), 0 22px 44px -22px rgba(0, 0, 0, .55);
+  opacity: 0; transform: translateY(10px) scale(.985); transform-origin: top center;
+  transition: grid-template-rows .55s var(--qa-ease), opacity .3s ease .25s, transform .55s var(--qa-ease); }
+.pf-mod-open.show { grid-template-rows: 1fr; opacity: 1; transform: none; transition: grid-template-rows .55s var(--qa-ease), opacity .2s ease, transform .55s var(--qa-ease); }
+.pf-mod-inner { min-height: 0; overflow: hidden; border-radius: inherit; }
+.pf-mod-inner > section { padding: 0 30px; }
+.pf-mod-inner > section:first-child { padding-top: 4px; }
+.pf-mod-inner > section:last-child { padding-bottom: 30px; }
+.pf-mod-inner.enter > section > :not(.pf-lpages) { animation: pfUp .6s var(--qa-ease) both; }
+.pf-mod-inner.enter > section + section > * { animation-delay: .25s; }
+.pf-mod-inner .pf-lesson { animation: none; }
+.pf-mod-inner.enter .pf-lesson { animation: pfQaIn .75s var(--qa-ease) calc(var(--i) * 55ms + 80ms) backwards; }
+.pf-mod-inner .pf-lesson::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 60%; z-index: 2; pointer-events: none;
+  background: linear-gradient(105deg, rgba(255, 255, 255, 0) 20%, rgba(255, 255, 255, .32) 50%, rgba(255, 255, 255, 0) 80%);
+  transform: translateX(-120%) skewX(-12deg); opacity: 0; }
+.pf-mod-inner.enter .pf-lesson::after { animation: pfQaShine 1.1s cubic-bezier(.4, 0, .2, 1) calc(var(--i) * 60ms + .35s) both; }
+@keyframes pfQaIn { from { opacity: 0; transform: translateY(18px) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes pfQaShine { 0% { opacity: 1; transform: translateX(-120%) skewX(-12deg); } 100% { opacity: 1; transform: translateX(260%) skewX(-12deg); } }
+/* textos e blocos claros por dentro do painel preto */
+.pf-mod-inner .shelf-title { margin-top: 26px; }
+.pf-mod-inner > section + section .shelf-title { margin-top: 34px; }
+.pf-mod-inner .shelf-title .ap-grad { background-image: linear-gradient(90deg, #34d399 0%, #2dd4bf 45%, #60a5fa 100%); }
+.pf-mod-inner .shelf-title span:not(.ap-grad), .pf-mod-inner .shelf-sub { color: rgba(255, 255, 255, .62); }
+.pf-mod-inner .shelf-title::before { background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .14) 18%, rgba(255, 255, 255, .14) 82%, rgba(255, 255, 255, 0)); }
+.pf-mod-inner .pf-pc-note { background: rgba(52, 211, 153, .12); color: rgba(255, 255, 255, .75); }
+.pf-mod-inner .pf-pc-note b { color: #fff; }
+.pf-mod-inner .pf-lesson { box-shadow: inset 0 0 0 .5px rgba(255, 255, 255, .16), 0 18px 40px -26px rgba(0, 0, 0, .8); }
+.pf-mod-inner .pf-next-card { margin-bottom: 0; background: rgba(255, 255, 255, .07); box-shadow: inset 0 0 0 .5px rgba(255, 255, 255, .1); }
+.pf-mod-inner .pf-next-text small { color: rgba(255, 255, 255, .6); }
+.pf-mod-inner .pf-next-actions .btn-dark { background: #fff; color: #111; }
+.pf-mod-inner .pf-next-actions .btn-dark:hover { background: #e9e9ec; }
+/* lições em páginas de 5: da 6ª em diante continuam para o lado, com as setinhas no canto */
+.pf-lpages { display: flex; gap: 30px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding: 4px 0 6px; margin: -4px 0 -6px; }
+.pf-lpages::-webkit-scrollbar { display: none; }
+.pf-lpages > .pf-lessons { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; }
+.pf-lpaddles { margin-top: 16px; }
+.pf-mod-inner .ap-paddle { background: rgba(255, 255, 255, .12); color: #fff; }
+.pf-mod-inner .ap-paddle:hover:not(:disabled) { background: rgba(255, 255, 255, .22); }
+/* "Próximo passo." com o botão de nova lição (só administradores) à direita */
+.pf-step-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.pf-step-head .shelf-title { flex: 1; min-width: 0; }
+.pf-add-lesson { flex: none; display: inline-flex; align-items: center; gap: 8px; height: 40px; margin-bottom: 18px; padding: 0 18px 0 14px; border-radius: 999px; cursor: pointer;
+  border: 1px dashed rgba(52, 211, 153, .7); background: rgba(52, 211, 153, .12); color: #a7f3d0; font: inherit; font-size: 14.5px; font-weight: 700;
+  transition: background .2s, transform .2s var(--ease); }
+.pf-add-lesson svg { width: 17px; height: 17px; }
+.pf-add-lesson:hover { background: rgba(52, 211, 153, .22); }
+.pf-add-lesson:active { transform: scale(.96); }
+/* apagar um card criado pelo administrador (antes de ser configurado) */
+.pf-lesson-del { position: absolute; top: 12px; right: 12px; z-index: 3; width: 32px; height: 32px; border-radius: 50%; border: 0; cursor: pointer;
+  display: grid; place-items: center; background: rgba(0, 0, 0, .45); color: #fff; font-size: 20px; line-height: 1; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  transition: background .2s; }
+.pf-lesson-del:hover { background: rgba(220, 38, 38, .85); }
+/* computador: título à esquerda e texto à direita, ocupando a largura do painel */
+@media (min-width: 861px) {
+  .pf-mod-inner > section:has(> .shelf-sub) { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: 48px; align-items: start; }
+  .pf-mod-inner > section:has(> .shelf-sub) > * { grid-column: 1 / -1; }
+  .pf-mod-inner > section:has(> .shelf-sub) > .shelf-title { grid-column: 1; margin-bottom: 26px; }
+  .pf-mod-inner > section:has(> .shelf-sub) > .shelf-sub { grid-column: 2; max-width: none; margin: 30px 0 26px; font-size: 16.5px; }
+  .pf-mod-inner > section:has(> .shelf-sub) > .shelf-title .ap-grad { display: block; font-size: clamp(30px, 2.8vw, 40px); line-height: 1.05; letter-spacing: -.035em; padding-bottom: .12em; margin-bottom: -.12em; }
+  .pf-mod-inner > section:has(> .shelf-sub) > .shelf-title span:not(.ap-grad) { display: block; margin-top: 8px; }
+}
 
 /* barrinha de progresso no rodapé do card */
 .pf-lesson-prog { position: absolute; left: 0; bottom: 0; height: 4px; width: var(--w); background: linear-gradient(90deg, #34d399, #a7f3d0); }
@@ -169,8 +228,18 @@
   .pf-next-actions { flex-direction: column; }
   .pf-next-actions .btn-dark, .pf-next-actions .btn-soft { justify-content: center; width: 100%; }
   .pf-mascot { align-self: center; width: 150px; height: 130px; }
+  .pf-mod-open { margin: 4px -4px 0; border-radius: 26px; }
+  .pf-mod-inner > section { padding: 0 14px; }
+  .pf-mod-inner > section:last-child { padding-bottom: 14px; }
+  .pf-mod-inner .shelf-title { padding-left: 4px; padding-right: 4px; }
+  .pf-mod-inner .shelf-sub, .pf-mod-inner .pf-pc-note { margin-left: 4px; margin-right: 4px; }
+  .pf-lpages { gap: 14px; }
+  .pf-step-head { display: block; }
+  .pf-add-lesson { margin: -4px 4px 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .pf-hero, .pf-hero-bg, .pf-hero-text > *, .pf-stat, .pf-lesson, .pf-mod-inner.enter > section { animation: none; }
-  .pf-mod-open { transition: none; }
+  .pf-mod-open, .pf-mod-open.show { transition: none; transform: none; }
+  .pf-mod-inner.enter .pf-lesson, .pf-mod-inner.enter .pf-lesson::after { animation: none; }
 }
+.lk-icon.au-ico.pf-del-ico { color: var(--danger); background: rgba(227, 0, 0, .1); }

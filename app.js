@@ -124,6 +124,9 @@ const DEFAULT_LINKS = [
   { id: 'l6', name: 'EDUCA NEXUS', url: '', image: '', c1: '#ffe27a', c2: '#f5b51f' },
 ];
 let links = store.get('links', PUBLISHED.links || DEFAULT_LINKS);
+/* lições criadas pelo administrador na Plataforma de Informática (cards provisórios, configurados depois no código) */
+let cursoExtra = store.get('cursoExtra', PUBLISHED.cursoExtra || []);
+const saveCursoExtra = () => saveShared('cursoExtra', cursoExtra);
 const saveLinks = () => saveShared('links', links);
 /* Mantenha-se conectado: 4 blocos fixos (1 grande, 1 largo e 2 menores) */
 const DEFAULT_CONNECT = [
@@ -334,7 +337,7 @@ async function exportContent() {
     if (Array.isArray(it.gallery)) out.gallery = (await Promise.all(it.gallery.map(one))).filter(Boolean);
     return out;
   }));
-  return { banners: await conv(banners), exclusive: await conv(exclusive), links: await conv(links), news: await conv(news), brand: await conv(brandList), connect: await conv(connect), authors: await conv(authors), radar: await conv(radar) };
+  return { banners: await conv(banners), exclusive: await conv(exclusive), links: await conv(links), news: await conv(news), brand: await conv(brandList), connect: await conv(connect), authors: await conv(authors), radar: await conv(radar), cursoExtra };
 }
 window.HC_exportContent = exportContent;
 
