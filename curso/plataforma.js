@@ -149,7 +149,7 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
           <button class="ap-paddle" type="button" data-ldir="1" aria-label="Próximas lições"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
         </div>` : ''}
       </section>
-      <section>
+      <section style="--n:${pages[0]?.length || 0}">
         <div class="pf-step-head">
           <h2 class="shelf-title"><span class="ap-grad">Próximo passo.</span><span> Terminou as lições? Siga para o próximo módulo.</span></h2>
           ${isAdmin() ? `<button class="pf-add-lesson" type="button" data-addlesson="${mi}" title="Só administradores veem este botão"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Nova lição</button>` : ''}
@@ -343,15 +343,15 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
     if (openMod === i) { // fechar
       openMod = null; saveOpen(); setCards();
       box.classList.remove('show');
-      setTimeout(() => { if (openMod === null) inner.innerHTML = ''; }, 650);
+      setTimeout(() => { if (openMod === null) inner.innerHTML = ''; }, 850);
       return;
     }
     const swap = openMod !== null; // trocando de um módulo para outro
     openMod = i; saveOpen(); setCards();
     const fill = () => { inner.innerHTML = modBody(i); bindLessons(view, inner); inner.classList.remove('enter'); void inner.offsetWidth; inner.classList.add('enter'); };
-    if (swap) { box.classList.remove('show'); setTimeout(() => { fill(); box.classList.add('show'); }, 450); }
+    if (swap) { box.classList.remove('show'); setTimeout(() => { fill(); box.classList.add('show'); }, 650); }
     else { fill(); box.classList.add('show'); }
-    setTimeout(() => box.scrollIntoView({ behavior: 'smooth', block: 'start' }), swap ? 650 : 250);
+    setTimeout(() => box.scrollIntoView({ behavior: 'smooth', block: 'start' }), swap ? 900 : 300);
   }
 
   /* traz da conta o progresso das lições (para aparecer igual no celular e em qualquer computador) */
