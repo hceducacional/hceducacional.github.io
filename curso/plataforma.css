@@ -59,7 +59,7 @@
 .pf-lesson { position: relative; isolation: isolate; overflow: hidden; border-radius: 28px; background: rgb(var(--tint)); color: #fff; cursor: pointer; outline: none;
   box-shadow: 0 2px 6px rgba(0, 0, 0, .04), 0 18px 40px -26px rgba(0, 0, 0, .4); transition: box-shadow .5s var(--ease), transform .5s var(--ease);
   animation: pfUp .7s var(--ease) both; animation-delay: calc(.1s + var(--i) * .07s); }
-.pf-lesson:first-child { grid-row: span 2; }
+.pf-lessons .pf-lesson:first-child { grid-row: span 2; }
 .pf-lesson:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0, 0, 0, .06), 0 26px 50px -26px rgba(0, 0, 0, .5); }
 .pf-lesson:focus-visible { box-shadow: 0 0 0 3px var(--accent), 0 18px 40px -26px rgba(0, 0, 0, .4); }
 .pf-lesson-img { position: absolute; inset: 0 0 22% 0; z-index: -1; transition: transform 1.4s var(--ease); }
@@ -71,7 +71,7 @@
 .pf-lesson-text { padding: 0 22px 16px; }
 .pf-lesson-tag { display: block; font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; opacity: .78; }
 .pf-lesson-text h3 { margin: 4px 0 6px; font-size: clamp(21px, 1.7vw, 26px); line-height: 1.1; font-weight: 700; letter-spacing: -.025em; }
-.pf-lesson:first-child .pf-lesson-text h3 { font-size: clamp(26px, 2.4vw, 34px); }
+.pf-lessons .pf-lesson:first-child .pf-lesson-text h3 { font-size: clamp(26px, 2.4vw, 34px); }
 .pf-lesson-text p { margin: 0; font-size: 14.5px; line-height: 1.35; opacity: .86; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .pf-lesson-bar { display: flex; align-items: center; gap: 12px; padding: 13px 16px 15px; background: rgba(0, 0, 0, .16); border-top: 1px solid rgba(255, 255, 255, .1); }
 .pf-lesson-av { flex: none; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 13px; background: rgba(255, 255, 255, .2); box-shadow: 0 0 0 1px rgba(255, 255, 255, .14);
@@ -85,6 +85,26 @@
 .pf-lesson:active .pf-lesson-go { transform: scale(.95); }
 .pf-lesson.soon .pf-lesson-go { background: rgba(255, 255, 255, .14); opacity: .8; }
 .pf-lesson.soon:hover .pf-lesson-go { background: rgba(255, 255, 255, .14); color: #fff; }
+/* módulos: cards grandes numa fileira (passa para o lado), no mesmo estilo dos cards de lição */
+.pf-mod-row { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 2px; padding: 4px 2px 18px; margin: 0 -2px; scrollbar-width: none; }
+.pf-mod-row::-webkit-scrollbar { display: none; }
+.pf-modcard { flex: 0 0 calc((100% - 32px) / 3); aspect-ratio: 4 / 5; scroll-snap-align: start; transition: box-shadow .5s var(--ease), transform .5s var(--ease), opacity .4s ease, filter .4s ease; }
+.pf-modcard .pf-lesson-text h3 { font-size: clamp(26px, 2.3vw, 34px); }
+.pf-mod-paddles { margin-top: -6px; }
+/* card aberto: contorno na cor do site; os outros ficam mais apagados */
+.pf-modcard.open { box-shadow: 0 0 0 3px var(--accent), 0 22px 44px -24px rgba(6, 122, 87, .6); transform: translateY(-4px); }
+.pf-modcard.open .pf-lesson-go { background: #fff; color: rgb(var(--tint)); }
+.pf-mods.has-open .pf-modcard:not(.open) { opacity: .55; filter: saturate(.7); }
+.pf-mods.has-open .pf-modcard:not(.open):hover { opacity: .85; filter: none; }
+.pf-modcard.soon { cursor: default; }
+/* área do módulo aberto: cresce e encolhe com animação (de 0 até a altura do conteúdo) */
+.pf-mod-open { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .6s cubic-bezier(.4, 0, .2, 1), opacity .45s ease; }
+.pf-mod-open.show { grid-template-rows: 1fr; opacity: 1; }
+.pf-mod-inner { min-height: 0; overflow: hidden; }
+.pf-mod-inner.enter > section { animation: pfUp .6s var(--ease) both; }
+.pf-mod-inner.enter > section + section { animation-delay: .12s; }
+.pf-mod-inner .pf-lesson { animation-delay: calc(.2s + var(--i) * .07s); }
+
 /* barrinha de progresso no rodapé do card */
 .pf-lesson-prog { position: absolute; left: 0; bottom: 0; height: 4px; width: var(--w); background: linear-gradient(90deg, #34d399, #a7f3d0); }
 
@@ -103,7 +123,8 @@
 
 @media (max-width: 1180px) {
   .pf-lessons { grid-template-columns: 1fr 1fr; }
-  .pf-lesson:first-child { grid-row: span 1; grid-column: span 2; }
+  .pf-modcard { flex-basis: calc((100% - 16px) / 2); }
+  .pf-lessons .pf-lesson:first-child { grid-row: span 1; grid-column: span 2; }
   .pf-stats { grid-template-columns: repeat(2, 1fr); }
 }
 /* celular: igual ao banner do topo da tela de início — de ponta a ponta, passando por trás
@@ -132,12 +153,13 @@
   .pf-stat-txt small { font-size: 12px; }
   .pf-stat-txt strong { font-size: 18px; }
   .pf-sub { font-size: 15px; }
+  .pf-modcard { flex-basis: 82%; }
   /* celular: um card por linha, alto, como os de "Mantenha-se conectado" */
   .pf-lessons { grid-template-columns: 1fr; grid-auto-rows: auto; }
   .pf-lesson, .pf-lesson:first-child { grid-column: auto; grid-row: auto; aspect-ratio: 4 / 5; border-radius: 26px; }
   .pf-lesson-img { inset: 0 0 18% 0; }
   .pf-lesson-text { padding: 0 20px 16px; }
-  .pf-lesson-text h3, .pf-lesson:first-child .pf-lesson-text h3 { font-size: 28px; line-height: 1.08; }
+  .pf-lesson-text h3, .pf-lessons .pf-lesson:first-child .pf-lesson-text h3 { font-size: 28px; line-height: 1.08; }
   .pf-lesson-text p { font-size: 15px; }
   .pf-lesson-av { width: 52px; height: 52px; }
   .pf-lesson-who strong { font-size: 15.5px; }
@@ -149,5 +171,6 @@
   .pf-mascot { align-self: center; width: 150px; height: 130px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pf-hero, .pf-hero-bg, .pf-hero-text > *, .pf-stat, .pf-lesson { animation: none; }
+  .pf-hero, .pf-hero-bg, .pf-hero-text > *, .pf-stat, .pf-lesson, .pf-mod-inner.enter > section { animation: none; }
+  .pf-mod-open { transition: none; }
 }

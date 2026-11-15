@@ -13,6 +13,9 @@ const HC_CURSO = {
   mascote: '', // personagem no card do próximo módulo (sugestão: PNG sem fundo, 600 × 600)
   modulos: [
     {
+      nome: 'Primeiro comando',
+      desc: 'As primeiras teclas da linha de referência e da fileira de cima, uma lição de cada vez.',
+      imagem: '',        // imagem do card do módulo (sugestão: 1000 × 1250)
       banner: '',        // imagem do banner do módulo (sugestão: 1600 × 420; no celular é cortada pelo centro)
       nivel: 'Nível iniciante',
       titulo: 'Vamos começar.',
@@ -29,6 +32,11 @@ const HC_CURSO = {
         { tag: 'Revisão', titulo: 'Revisão Geral 1', desc: 'Uma revisão completa de todas as teclas aprendidas no módulo.', imagem: '' },
       ],
     },
+    // próximos módulos: aparecem como "Em breve" até receberem as lições
+    { nome: 'Formando palavras', desc: 'Juntando as teclas aprendidas para escrever as primeiras palavras.', imagem: '', nivel: 'Nível iniciante', totalNiveis: 170, licoes: [] },
+    { nome: 'Mais veloz que nunca', desc: 'Exercícios de ritmo e velocidade para ganhar palavras por minuto.', imagem: '', nivel: 'Nível intermediário', totalNiveis: 230, licoes: [] },
+    { nome: 'Digitando sem parar', desc: 'Textos mais longos para digitar com fluidez, sem olhar para o teclado.', imagem: '', nivel: 'Nível intermediário', totalNiveis: 230, licoes: [] },
+    { nome: 'Regiões do teclado', desc: 'Números, símbolos e as teclas de cada região do teclado ABNT2.', imagem: '', nivel: 'Nível avançado', totalNiveis: 150, licoes: [] },
   ],
 };
 
@@ -36,7 +44,10 @@ const HC_CURSO = {
 window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine)').matches;
 
 (() => {
-  let mod = 0; // módulo aberto
+  let mod = 0; // módulo do aluno (banner e "Seu curso")
+  // módulo aberto (expandido) na lista; fica guardado enquanto a aba estiver aberta, para voltar da lição com ele aberto
+  let openMod = (() => { try { const v = sessionStorage.getItem('hc:pf:open'); return v === null ? null : +v; } catch { return null; } })();
+  const saveOpen = () => { try { openMod === null ? sessionStorage.removeItem('hc:pf:open') : sessionStorage.setItem('hc:pf:open', String(openMod)); } catch {} };
   const ICO = {
     next: '<path d="M5 12h14M13 6l6 6-6 6"/>',
     prev: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
@@ -86,6 +97,58 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
   const TINTS = ['22, 60, 48', '24, 46, 110', '70, 32, 120', '120, 40, 30', '30, 70, 90'];
   const HC_NIVEIS = { 1: '30 níveis' }; // quantos níveis cada lição tem (mostrado antes de começar)
 
+  const MTINTS = ['22, 60, 48', '36, 40, 110', '86, 30, 110', '120, 50, 24', '24, 80, 96'];
+
+  /* módulo expandido: as lições do módulo e o próximo passo */
+  function modBody(mi) {
+    const m = HC_CURSO.modulos[mi]; if (!m) return '';
+    const first = HC_CURSO.modulos.slice(0, mi).reduce((a, x) => a + x.licoes.length, 0); // nº da 1ª lição do módulo - 1
+    const nextM = HC_CURSO.modulos[mi + 1];
+    return `
+      <section>
+        <h2 class="shelf-title"><span class="ap-grad">${esc(m.secao || m.nome + '.')}</span><span> ${esc(m.secaoComplemento || '')}</span></h2>
+        ${m.texto ? `<p class="shelf-sub pf-sub">${esc(m.texto)}</p>` : ''}
+        ${window.HC_isComputer() ? '' : `<div class="pf-pc-note"><span>${svg('keys')}</span><p><b>As lições são feitas no computador.</b> Por aqui você acompanha o seu progresso; para praticar, use os computadores da instituição nos dias de aula.</p></div>`}
+        <ol class="pf-lessons">
+          ${m.licoes.map((l, i) => {
+            const n = first + i + 1, p = progress(n), num = String(n).padStart(2, '0');
+            const state = !l.arquivo ? 'Em breve' : p?.done ? 'Concluída' : p ? `Nível ${Math.min(p.lvl + 1, p.total)} de ${p.total}` : `${HC_NIVEIS[n] || ''}`;
+            const go = !l.arquivo ? 'Em breve' : !window.HC_isComputer() ? 'Ver' : p?.done ? 'Refazer' : p && p.lvl > 0 ? 'Continuar' : 'Acessar';
+            return `
+          <li class="pf-lesson${l.arquivo ? '' : ' soon'}" style="--i:${i};--tint:${TINTS[i % TINTS.length]}" data-lesson="${n}" tabindex="0" aria-label="Lição ${num}: ${esc(l.titulo)}">
+            <div class="pf-lesson-img">${slot(l.imagem, 'Imagem da lição', '1000 × 1000', i)}</div>
+            <div class="pf-lesson-app">
+              <div class="pf-lesson-text">
+                <span class="pf-lesson-tag">${esc(l.tag)}</span>
+                <h3>${esc(l.titulo)}</h3>
+                ${l.desc ? `<p>${esc(l.desc)}</p>` : ''}
+              </div>
+              <div class="pf-lesson-bar">
+                <span class="pf-lesson-av">${num}</span>
+                <span class="pf-lesson-who"><strong>Lição ${num}</strong><small>${esc(state)}</small></span>
+                <span class="pf-lesson-go">${go}</span>
+              </div>
+            </div>
+            ${p ? `<b class="pf-lesson-prog" style="--w:${((p.done ? p.total : p.lvl) / p.total) * 100}%"></b>` : ''}
+          </li>`;
+          }).join('')}
+        </ol>
+      </section>
+      <section>
+        <h2 class="shelf-title"><span class="ap-grad">Próximo passo.</span><span> Terminou as lições? Siga para o próximo módulo.</span></h2>
+        <div class="pf-next-card">
+          <div class="pf-next-text">
+            <small>${nextM ? esc(nextM.nivel) : 'Em breve'}</small>
+            <strong>Módulo ${mi + 2}${nextM ? ` · ${esc(nextM.nome)}` : ''}</strong>
+            <div class="pf-next-actions">
+              <button class="btn-dark inf-shine" type="button" data-gomod="${mi + 1}">Continuar para o módulo ${mi + 2} ${svg('next')}</button>
+            </div>
+          </div>
+          <div class="pf-mascot">${slot(HC_CURSO.mascote, 'Mascote', 'PNG sem fundo', 2)}</div>
+        </div>
+      </section>`;
+  }
+
   function render(view, sub = '') {
     const ln = /^licao-(\d+)$/.exec(sub);
     if (ln) return openLesson(view, +ln[1]);
@@ -123,59 +186,90 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
         </div>
       </section>
 
-      <section>
-        <h2 class="shelf-title"><span class="ap-grad">${esc(m.secao)}</span><span> ${esc(m.secaoComplemento)}</span></h2>
-        <p class="shelf-sub pf-sub">${esc(m.texto)}</p>
-        ${window.HC_isComputer() ? '' : `<div class="pf-pc-note"><span>${svg('keys')}</span><p><b>As lições são feitas no computador.</b> Por aqui você acompanha o seu progresso; para praticar, use os computadores da instituição nos dias de aula.</p></div>`}
-        <ol class="pf-lessons">
-          ${m.licoes.map((l, i) => {
-            const n = first + i + 1, p = progress(n), num = String(n).padStart(2, '0');
-            const state = !l.arquivo ? 'Em breve' : p?.done ? 'Concluída' : p ? `Nível ${Math.min(p.lvl + 1, p.total)} de ${p.total}` : `${HC_NIVEIS[n] || ''}`;
-            const go = !l.arquivo ? 'Em breve' : !window.HC_isComputer() ? 'Ver' : p?.done ? 'Refazer' : p && p.lvl > 0 ? 'Continuar' : 'Acessar';
+      <section class="pf-mods">
+        <h2 class="shelf-title"><span class="ap-grad">Módulos.</span><span> Escolha um módulo para ver as lições.</span></h2>
+        <div class="pf-mod-row" id="pf-mod-row">
+          ${HC_CURSO.modulos.map((mm, i) => {
+            const ok = mm.licoes.some((l) => l.arquivo), num = String(i + 1).padStart(2, '0');
             return `
-          <li class="pf-lesson${l.arquivo ? '' : ' soon'}" style="--i:${i};--tint:${TINTS[i % TINTS.length]}" data-lesson="${n}" tabindex="0" aria-label="Lição ${num}: ${esc(l.titulo)}">
-            <div class="pf-lesson-img">${slot(l.imagem, 'Imagem da lição', '1000 × 1000', i)}</div>
+          <article class="pf-lesson pf-modcard${ok ? '' : ' soon'}${openMod === i ? ' open' : ''}" style="--i:${i};--tint:${MTINTS[i % MTINTS.length]}" data-modcard="${i}" tabindex="0" role="button" aria-expanded="${openMod === i}" aria-label="Módulo ${i + 1}: ${esc(mm.nome)}">
+            <div class="pf-lesson-img">${slot(mm.imagem, 'Imagem do módulo', '1000 × 1250', i + 2)}</div>
             <div class="pf-lesson-app">
               <div class="pf-lesson-text">
-                <span class="pf-lesson-tag">${esc(l.tag)}</span>
-                <h3>${esc(l.titulo)}</h3>
-                ${l.desc ? `<p>${esc(l.desc)}</p>` : ''}
+                <span class="pf-lesson-tag">Módulo ${i + 1} · ${esc(mm.nivel.replace(/^Nível\s+/i, ''))}</span>
+                <h3>${esc(mm.nome)}</h3>
+                <p>${esc(mm.desc)}</p>
               </div>
               <div class="pf-lesson-bar">
                 <span class="pf-lesson-av">${num}</span>
-                <span class="pf-lesson-who"><strong>Lição ${num}</strong><small>${esc(state)}</small></span>
-                <span class="pf-lesson-go">${go}</span>
+                <span class="pf-lesson-who"><strong>${mm.totalNiveis} níveis</strong><small>${ok ? `${mm.licoes.length} lições` : 'Em breve'}</small></span>
+                <span class="pf-lesson-go">${!ok ? 'Em breve' : openMod === i ? 'Fechar' : 'Abrir'}</span>
               </div>
             </div>
-            ${p ? `<b class="pf-lesson-prog" style="--w:${((p.done ? p.total : p.lvl) / p.total) * 100}%"></b>` : ''}
-          </li>`;
+          </article>`;
           }).join('')}
-        </ol>
-      </section>
-
-      <section>
-        <h2 class="shelf-title"><span class="ap-grad">Próximo passo.</span><span> Terminou as lições? Siga para o próximo módulo.</span></h2>
-        <div class="pf-next-card">
-          <div class="pf-next-text">
-            <small>${nextM ? esc(nextM.nivel) : 'Em breve'}</small>
-            <strong>Módulo ${mod + 2}${nextM ? ` · ${esc(nextM.titulo)}` : ''}</strong>
-            <div class="pf-next-actions">
-              ${mod > 0 ? `<button class="btn-soft" type="button" data-mod="${mod - 1}">${svg('prev')}Voltar ao módulo ${mod}</button>` : ''}
-              <button class="btn-dark inf-shine" type="button" ${nextM ? `data-mod="${mod + 1}"` : 'data-soon'}>Continuar para o módulo ${mod + 2} ${svg('next')}</button>
-            </div>
-          </div>
-          <div class="pf-mascot">${slot(HC_CURSO.mascote, 'Mascote', 'PNG sem fundo', 2)}</div>
         </div>
+        <div class="ap-paddles pf-mod-paddles">
+          <button class="ap-paddle" data-mdir="-1" aria-label="Módulos anteriores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+          <button class="ap-paddle" data-mdir="1" aria-label="Próximos módulos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+        </div>
+        <div class="pf-mod-open${openMod !== null ? ' show' : ''}" id="pf-mod-open"><div class="pf-mod-inner" id="pf-mod-inner">${openMod !== null ? modBody(openMod) : ''}</div></div>
       </section>
     </div>`;
 
-    view.querySelectorAll('[data-mod]').forEach((b) => b.addEventListener('click', () => { mod = +b.dataset.mod; render(view); window.scrollTo({ top: 0, behavior: 'smooth' }); }));
-    view.querySelector('[data-soon]')?.addEventListener('click', () => toast(`O módulo ${mod + 2} será liberado em breve.`));
-    const openN = (n) => { if (!lessonAt(n)?.arquivo) return toast('Esta lição será montada em breve.'); location.hash = `#informatica/licao-${n}`; };
-    view.querySelectorAll('[data-lesson]').forEach((b) => {
-      b.addEventListener('click', () => openN(+b.dataset.lesson));
-      if (b.tagName === 'LI') b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openN(+b.dataset.lesson); } });
+    bindLessons(view, view);
+    view.querySelector('.slide-cta[data-lesson]')?.addEventListener('click', (e) => openN(+e.currentTarget.dataset.lesson));
+
+    /* cards dos módulos: abrir/fechar revela as lições logo abaixo, com animação */
+    const row = view.querySelector('#pf-mod-row');
+    view.querySelectorAll('[data-modcard]').forEach((c) => {
+      const act = () => toggleMod(view, +c.dataset.modcard);
+      c.addEventListener('click', act);
+      c.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
     });
+    view.querySelectorAll('[data-mdir]').forEach((b) => b.addEventListener('click', () => row.scrollBy({ left: +b.dataset.mdir * row.clientWidth * .8, behavior: 'smooth' })));
+    const paddles = () => { const [p, n] = view.querySelectorAll('[data-mdir]'); if (!p) return; p.disabled = row.scrollLeft < 4; n.disabled = row.scrollLeft + row.clientWidth >= row.scrollWidth - 4; };
+    row.addEventListener('scroll', paddles, { passive: true }); paddles();
+    view.querySelector('.pf-mods').classList.toggle('has-open', openMod !== null);
+  }
+
+  const openN = (n) => { if (!lessonAt(n)?.arquivo) return toast('Esta lição será montada em breve.'); location.hash = `#informatica/licao-${n}`; };
+  function bindLessons(view, root) {
+    root.querySelectorAll('.pf-lesson[data-lesson]').forEach((b) => {
+      b.addEventListener('click', () => openN(+b.dataset.lesson));
+      b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openN(+b.dataset.lesson); } });
+    });
+    root.querySelectorAll('[data-gomod]').forEach((b) => b.addEventListener('click', () => {
+      const i = +b.dataset.gomod;
+      if (!HC_CURSO.modulos[i]?.licoes.some((l) => l.arquivo)) return toast(`O módulo ${i + 1} será liberado em breve.`);
+      toggleMod(view, i); view.querySelector(`[data-modcard="${i}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+    }));
+  }
+
+  /* abre um módulo (ou fecha, se já estiver aberto): a área cresce suavemente e as lições entram */
+  function toggleMod(view, i) {
+    const mm = HC_CURSO.modulos[i];
+    if (!mm.licoes.some((l) => l.arquivo)) return toast(`O módulo ${i + 1} será liberado em breve.`);
+    const box = view.querySelector('#pf-mod-open'), inner = view.querySelector('#pf-mod-inner');
+    const cards = view.querySelectorAll('[data-modcard]');
+    const setCards = () => cards.forEach((c) => {
+      const on = +c.dataset.modcard === openMod;
+      c.classList.toggle('open', on); c.setAttribute('aria-expanded', on);
+      const go = c.querySelector('.pf-lesson-go'); if (!c.classList.contains('soon')) go.textContent = on ? 'Fechar' : 'Abrir';
+    });
+    view.querySelector('.pf-mods').classList.toggle('has-open', openMod !== i);
+    if (openMod === i) { // fechar
+      openMod = null; saveOpen(); setCards();
+      box.classList.remove('show');
+      setTimeout(() => { if (openMod === null) inner.innerHTML = ''; }, 650);
+      return;
+    }
+    const swap = openMod !== null; // trocando de um módulo para outro
+    openMod = i; saveOpen(); setCards();
+    const fill = () => { inner.innerHTML = modBody(i); bindLessons(view, inner); inner.classList.remove('enter'); void inner.offsetWidth; inner.classList.add('enter'); };
+    if (swap) { box.classList.remove('show'); setTimeout(() => { fill(); box.classList.add('show'); }, 450); }
+    else { fill(); box.classList.add('show'); }
+    setTimeout(() => box.scrollIntoView({ behavior: 'smooth', block: 'start' }), swap ? 650 : 250);
   }
 
   /* traz da conta o progresso das lições (para aparecer igual no celular e em qualquer computador) */
