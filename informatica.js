@@ -11,12 +11,6 @@
 const infoAllowed = () => !!(auth.profile?.informatica || isAdmin());
 window.HC_infoAccess = () => auth.ready && infoAllowed();
 
-// link da plataforma: o do banner marcado como "só para alunos de Informática"
-const infoUrl = () => {
-  const b = [...banners, ...exclusive].find((x) => x.lockInfo && bannerLink(x));
-  return b ? bannerLink(b) : '';
-};
-
 // aluno (ou administrador) que toca em "Acessar" no banner vai direto para a plataforma
 document.addEventListener('click', (e) => {
   const a = e.target.closest('[data-info-url]'); if (!a) return;
@@ -54,17 +48,11 @@ function infoGate() {
     cta: `<a class="btn-dark inf-shine" href="${INFO_WA('Olá! Vi a Plataforma de Informática no site do HC Instituto Educacional e quero saber mais sobre o curso de Informática Básica.')}" target="_blank" rel="noopener"><i data-icon="chat"></i>Falar com o time comercial</a>
         <button class="btn-soft" type="button" data-auth="login">Já sou aluno, entrar</button>`,
   };
-  if (!infoAllowed()) return {
+  return { // tem conta, mas não é aluno
     ico: 'star', tone: 'gold', title: `${first ? esc(first) + ', este' : 'Este'} conteúdo é exclusivo dos alunos de Informática.`,
     text: 'Com o curso de Informática Básica você aprende a digitar com rapidez e segurança e ganha os conhecimentos que o mercado pede para usar o computador no trabalho e nos estudos. Faça a sua matrícula e tenha acesso liberado à plataforma.',
     cta: `<a class="btn-dark inf-shine" href="${INFO_WA(`Olá! Sou ${meName()} e tenho cadastro no site do HC Instituto Educacional. Quero me matricular no curso de Informática Básica para ter acesso à plataforma.`)}" target="_blank" rel="noopener"><i data-icon="chat"></i>Quero me matricular</a>
         <a class="btn-soft" href="${INFO_WA(`Olá! Sou ${meName()} (${auth.user.email}), já sou aluno do curso de Informática Básica e quero liberar o meu acesso à plataforma no site.`)}" target="_blank" rel="noopener">Já sou aluno, liberar acesso</a>`,
-  };
-  const url = infoUrl();
-  return {
-    ico: 'check', tone: 'ok', title: `Acesso liberado${first ? ', ' + esc(first) : ''}!`,
-    text: 'Entre na plataforma com o seu usuário e senha de aluno e continue de onde parou.',
-    cta: url ? `<a class="btn-dark inf-shine" href="${esc(url)}" target="_blank" rel="noopener noreferrer"><i data-icon="external"></i>Abrir a plataforma</a>` : '<p class="inf-note">O link da plataforma ainda não foi cadastrado no banner.</p>',
   };
 }
 
@@ -117,8 +105,29 @@ const INFO_SCRIPT = [
 ];
 
 let infoTyping = 0;
+/* alunos (e administradores) veem a plataforma do curso, que fica em arquivos próprios
+   (curso/plataforma.js e .css) baixados só nessa hora */
+let infoPlatform = null;
+const infoLoadPlatform = () => infoPlatform ||= new Promise((ok, fail) => {
+  const css = document.createElement('link');
+  css.rel = 'stylesheet'; css.href = 'curso/plataforma.css';
+  const js = document.createElement('script');
+  js.src = 'curso/plataforma.js';
+  js.onload = () => ok();
+  js.onerror = () => { infoPlatform = null; fail(); };
+  document.head.append(css); document.body.append(js);
+});
+
 function renderInformatica(view) {
   waitAuth(view, () => {
+    if (infoAllowed()) {
+      ++infoTyping; // para a animação do terminal, se estava rodando
+      view.innerHTML = '<div class="wrap"><p class="me-loading">Carregando a plataforma…</p></div>';
+      infoLoadPlatform()
+        .then(() => { if (view.isConnected && location.hash.slice(1) === 'informatica') window.HC_platform.render(view); })
+        .catch(() => { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir a plataforma. Verifique a internet e tente de novo.</p></div>'; });
+      return;
+    }
     const g = infoGate();
     view.innerHTML = `
     <div class="wrap inf">

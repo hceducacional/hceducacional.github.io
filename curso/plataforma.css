@@ -1,0 +1,122 @@
+/* =========================================================
+   PLATAFORMA DE INFORMÁTICA — tela inicial do curso (curso/plataforma.js)
+   Só é baixado quando um aluno abre a plataforma.
+   Mesma linguagem da tela de início: banner arredondado no topo, títulos de seção
+   (.shelf-title) e cards brancos sobre o fundo claro do site.
+   ========================================================= */
+
+/* espaço reservado de imagem */
+.pf-img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.pf-ph { position: relative; display: grid; place-items: center; width: 100%; height: 100%; color: rgba(255, 255, 255, .55);
+  background: linear-gradient(135deg, hsl(calc(160 + var(--k) * 34) 62% 42%), hsl(calc(205 + var(--k) * 30) 70% 32%)); }
+.pf-ph svg { width: 30%; max-width: 72px; height: auto; }
+.pf-ph em { position: absolute; left: 10px; top: 10px; display: flex; flex-direction: column; padding: 4px 8px; border-radius: 8px; font: 600 11px/1.25 Inter, system-ui, sans-serif; font-style: normal;
+  color: #fff; background: rgba(0, 0, 0, .45); border: 1px dashed rgba(255, 255, 255, .5); }
+.pf-ph em small { font-size: 10px; opacity: .75; }
+
+/* banner do módulo (como o carrossel da tela de início) */
+.pf-hero { position: relative; isolation: isolate; aspect-ratio: 1597 / 420; border-radius: 28px; overflow: hidden; background: #111;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .04), 0 18px 40px -24px rgba(0, 0, 0, .35); }
+.pf-hero-bg { position: absolute; inset: 0; animation: pfKen 12s linear both; }
+.pf-hero-bg .pf-ph { background: linear-gradient(120deg, #0b3b2e, #065f46 35%, #1d4ed8 80%, #4338ca); }
+.pf-hero-bg .pf-ph svg { position: absolute; right: 12%; top: 50%; width: 22%; max-width: 220px; transform: translateY(-50%); color: rgba(255, 255, 255, .18); }
+.pf-hero-bg .pf-ph em { left: auto; right: 14px; }
+@keyframes pfKen { from { transform: scale(1.05); } to { transform: scale(1); } }
+.pf-hero::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(90deg, rgba(0, 0, 0, .7) 0%, rgba(0, 0, 0, .46) 34%, rgba(0, 0, 0, .16) 52%, rgba(0, 0, 0, 0) 64%); }
+.pf-hero-text { position: absolute; z-index: 2; left: 64px; top: 50%; transform: translateY(-50%); max-width: 46%; color: #fff; }
+.pf-hero-text > * { animation: pfUp .8s var(--ease) both; }
+.pf-hero-text > :nth-child(2) { animation-delay: .1s; } .pf-hero-text > :nth-child(3) { animation-delay: .2s; }
+.pf-hero-text > :nth-child(4) { animation-delay: .3s; } .pf-hero-text > :nth-child(5) { animation-delay: .4s; }
+@keyframes pfUp { from { opacity: 0; transform: translateY(14px); } }
+.pf-hero-logo { display: block; width: min(250px, 70%); height: auto; margin-bottom: 14px; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .35)); }
+.pf-hero-text h2 { margin: 8px 0 12px; font-size: clamp(26px, 3vw, 48px); line-height: 1.06; font-weight: 700; letter-spacing: -.032em; }
+.pf-hero-text p { margin: 0; max-width: 520px; font-size: clamp(14px, 1.2vw, 19px); line-height: 1.42; color: rgba(255, 255, 255, .88); }
+.pf-hero .slide-cta { border: 0; cursor: pointer; font-family: inherit; }
+
+/* "Seu curso": blocos coloridos, como o Acesso rápido */
+.pf-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.pf-stat { display: flex; align-items: center; gap: 14px; height: 88px; padding: 0 20px; border-radius: 18px; color: #fff;
+  background: linear-gradient(135deg, var(--c1), var(--c2)); box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 8px 20px -14px rgba(0, 0, 0, .35);
+  animation: pfUp .7s var(--ease) both; animation-delay: calc(var(--k) * .06s); }
+.pf-stat-ico { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 13px; background: rgba(255, 255, 255, .2); }
+.pf-stat-ico svg { width: 22px; height: 22px; }
+.pf-stat-txt { display: flex; flex-direction: column; min-width: 0; }
+.pf-stat-txt small { font-size: 13px; font-weight: 600; opacity: .85; }
+.pf-stat-txt strong { font-size: 22px; line-height: 1.15; font-weight: 700; letter-spacing: -.02em; }
+
+/* lições do módulo */
+.pf-sub { text-align: justify; hyphens: auto; -webkit-hyphens: auto; }
+.pf-lessons { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin: 0; padding: 0; list-style: none; }
+.pf-lesson { display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; background: var(--card);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 12px 28px -20px rgba(0, 0, 0, .35); transition: transform .45s var(--ease), box-shadow .45s var(--ease);
+  animation: pfUp .7s var(--ease) both; animation-delay: calc(.1s + var(--i) * .07s); }
+.pf-lesson:hover { transform: translateY(-4px); box-shadow: 0 2px 4px rgba(0, 0, 0, .05), 0 22px 40px -22px rgba(0, 0, 0, .45); }
+.pf-lesson-img { position: relative; aspect-ratio: 3 / 2; overflow: hidden; }
+.pf-lesson-img .pf-img { transition: transform .8s var(--ease); }
+.pf-lesson:hover .pf-lesson-img .pf-img { transform: scale(1.05); }
+.pf-num { position: absolute; left: 12px; bottom: 12px; display: grid; place-items: center; min-width: 46px; height: 38px; padding: 0 10px; border-radius: 12px;
+  background: rgba(255, 255, 255, .94); color: var(--ink); font-size: 19px; font-weight: 700; letter-spacing: -.02em; box-shadow: 0 6px 16px -8px rgba(0, 0, 0, .4); }
+.pf-lesson-body { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px 18px 18px; }
+.pf-tag { padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 600; }
+.pf-lesson-body h3 { flex: 1; margin: 0; font-size: 17px; line-height: 1.25; font-weight: 700; letter-spacing: -.015em; }
+.pf-go { display: inline-flex; align-items: center; gap: 6px; height: 36px; margin-top: 4px; padding: 0 14px 0 16px; border: 0; border-radius: 999px; cursor: pointer;
+  background: #1d1d1f; color: #fff; font-family: inherit; font-size: 14px; font-weight: 600; transition: background .2s ease, transform .2s var(--ease); }
+.pf-go svg { width: 15px; height: 15px; transition: transform .35s var(--ease); }
+.pf-go:hover { background: #000; }
+.pf-go:hover svg { transform: translateX(3px); }
+.pf-go:active { transform: scale(.97); }
+
+/* próximo módulo */
+.pf-next-card { position: relative; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; min-height: 180px; margin-bottom: 20px; padding: 30px 0 0 34px;
+  border-radius: 28px; overflow: hidden; background: var(--card); box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 12px 28px -20px rgba(0, 0, 0, .35); }
+.pf-next-text { align-self: center; padding-bottom: 30px; }
+.pf-next-text small { font-size: 14px; font-weight: 600; color: var(--muted); }
+.pf-next-text strong { display: block; margin: 4px 0 18px; font-size: clamp(22px, 2vw, 30px); line-height: 1.1; font-weight: 700; letter-spacing: -.028em; }
+.pf-next-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.pf-next-actions .btn-dark, .pf-next-actions .btn-soft { margin: 0; height: 46px; padding: 0 20px; display: inline-flex; align-items: center; gap: 8px; }
+.pf-next-actions svg { width: 17px; height: 17px; }
+.pf-mascot { flex: none; width: 200px; height: 180px; }
+.pf-mascot .pf-ph { border-radius: 100px 100px 0 0; }
+.pf-mascot .pf-img { object-fit: contain; object-position: bottom; }
+
+@media (max-width: 1180px) {
+  .pf-lessons { grid-template-columns: repeat(3, 1fr); }
+  .pf-stats { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 860px) {
+  .pf-hero { aspect-ratio: auto; height: 300px; border-radius: 20px; }
+  .pf-hero::before { background: linear-gradient(0deg, rgba(0, 0, 0, .72) 0%, rgba(0, 0, 0, .2) 70%); }
+  .pf-hero-text { left: 22px; right: 22px; top: auto; bottom: 24px; transform: none; max-width: none; }
+  .pf-hero-logo { width: 170px; margin-bottom: 10px; }
+  .pf-hero-text h2 { margin: 4px 0 6px; font-size: 30px; }
+  .pf-hero-text p { font-size: 15px; }
+  .pf-hero .slide-cta { margin-top: 14px; height: 38px; font-size: 14.5px; }
+  .pf-hero-bg .pf-ph svg { top: 30%; right: 10%; width: 30%; }
+}
+@media (max-width: 640px) {
+  .pf-hero { height: 340px; }
+  .pf-stats { gap: 10px; }
+  .pf-stat { flex-direction: column; align-items: flex-start; justify-content: center; gap: 8px; height: auto; padding: 14px; border-radius: 16px; }
+  .pf-stat-ico { width: 34px; height: 34px; border-radius: 10px; }
+  .pf-stat-ico svg { width: 18px; height: 18px; }
+  .pf-stat-txt small { font-size: 12px; }
+  .pf-stat-txt strong { font-size: 18px; }
+  .pf-sub { font-size: 15px; }
+  /* lições viram uma lista: imagem à esquerda, texto à direita */
+  .pf-lessons { grid-template-columns: 1fr; gap: 10px; }
+  .pf-lesson { flex-direction: row; border-radius: 18px; }
+  .pf-lesson-img { flex: none; width: 112px; aspect-ratio: auto; }
+  .pf-num { left: 8px; bottom: 8px; min-width: 36px; height: 30px; font-size: 15px; border-radius: 9px; }
+  .pf-lesson-body { gap: 5px; padding: 12px 14px; }
+  .pf-lesson-body h3 { font-size: 15.5px; }
+  .pf-go { height: 32px; font-size: 13px; }
+  .pf-next-card { flex-direction: column; align-items: stretch; padding: 22px 20px 0; border-radius: 22px; }
+  .pf-next-text { padding-bottom: 0; }
+  .pf-next-actions { flex-direction: column; }
+  .pf-next-actions .btn-dark, .pf-next-actions .btn-soft { justify-content: center; width: 100%; }
+  .pf-mascot { align-self: center; width: 150px; height: 130px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pf-hero-bg, .pf-hero-text > *, .pf-stat, .pf-lesson { animation: none; }
+}
