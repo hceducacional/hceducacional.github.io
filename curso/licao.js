@@ -34,14 +34,6 @@
     refresh: '<path d="M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.2L3 16M3 21v-5h5"/>',
     level: '<path d="M4 20V14M10 20V9M16 20V4M22 20H2"/>',
   };
-  /* estrela facetada, com 10 faces alternando claro e escuro (desenho próprio, no estilo das estrelas de jogos de dança) */
-  const FSTAR = (() => {
-    const P = (r, a) => [50 + r * Math.cos(a), 52 + r * Math.sin(a)];
-    const pts = Array.from({ length: 10 }, (_, i) => P(i % 2 ? 21 : 48, -Math.PI / 2 + i * Math.PI / 5));
-    const outline = pts.map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ');
-    const faces = pts.map((p, i) => { const q = pts[(i + 1) % 10]; return `<polygon class="f${i % 2}" points="50,52 ${p.join(',')} ${q.join(',')}"/>`; }).join('');
-    return `<svg viewBox="0 0 100 100" class="fstar"><polygon class="fs-glow" points="${outline}"/><polygon class="fs-base" points="${outline}"/>${faces}<polygon class="fs-edge" points="${outline}"/><circle class="fs-core" cx="50" cy="52" r="9"/></svg>`;
-  })();
   const svg = (k, fill) => `<svg viewBox="0 0 24 24" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg>`;
 
   /* grau de experiência: grau 1 precisa de 100 XP, cada grau seguinte +10 */
@@ -235,25 +227,27 @@
         <aside class="lc-gauge" id="lc-gauge" aria-label="Pontuação do nível"></aside>
         <section class="lc-card lc-main" id="lc-main"></section>
         <aside class="lc-side">
-          <div class="lc-stat lc-xp">
-            <span class="lc-stat-ico xp">${svg('zap')}</span>
-            <strong id="lc-xp">0</strong><small>XP</small>
+          <div class="lc-stat lc-w" style="--wc:#ff9f0a">
+            <span class="lc-w-label">${svg('zap')}XP</span>
+            <strong id="lc-xp">0</strong><small>Pontos de experiência</small>
             <div class="lc-sparks" id="lc-sparks"></div>
           </div>
-          <div class="lc-stat"><span class="lc-stat-ico">${svg('clock')}</span><strong id="lc-time" class="lc-mono">00:00</strong><small>Tempo</small></div>
-          <div class="lc-stat lc-acc"><div class="lc-tank"><i id="lc-tank"></i><strong id="lc-acc">100%</strong></div><small>Precisão</small></div>
-          <div class="lc-stat"><span class="lc-stat-ico">${svg('level')}</span><strong id="lc-grade">01</strong><small>Grau de experiência</small><b class="lc-mini"><i id="lc-grade-bar"></i></b></div>
-          ${isAdmin() ? `<label class="lc-admin"><small>Administrador: ir para</small><select id="lc-jump"><option value="">Escolha…</option>${L.niveis.map((n, i) => `<option value="${i}">Nível ${i + 1}</option>`).join('')}<option value="r">Resultado</option></select></label>` : ''}
+          <div class="lc-stat lc-w" style="--wc:#0a84ff"><span class="lc-w-label">${svg('clock')}Tempo</span><strong id="lc-time">00:00</strong><small>Tempo nesta lição</small></div>
+          <div class="lc-stat lc-w lc-w-ring" id="lc-acc-card" style="--wc:#30d158">
+            <div><span class="lc-w-label">${svg('target')}Precisão</span><strong id="lc-acc">100%</strong><small id="lc-acc-txt">Excelente</small></div>
+            <svg class="lc-ring2" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="18" pathLength="100"/><circle class="v" id="lc-acc-ring" cx="22" cy="22" r="18" pathLength="100"/></svg>
+          </div>
+          <div class="lc-stat lc-w" style="--wc:#bf5af2"><span class="lc-w-label">${svg('level')}Grau de experiência</span><strong id="lc-grade">01</strong><b class="lc-mini"><i id="lc-grade-bar"></i></b><small id="lc-grade-txt"></small></div>
         </aside>
       </div>`;
-      $q('#lc-jump')?.addEventListener('change', (e) => {
-        const v = e.target.value; e.target.value = '';
-        if (v === 'r') return results();
-        if (v !== '') { busy = false; st.lvl = +v; level(); }
-      });
       paintStats();
       gaugeBuild();
+      // só ao começar do nível 1 o teclado aparece por 5 s (para o aluno ver que ele existe);
+      // ao continuar a lição, já começa recolhido
+      kbOpen = st.lvl === 0;
+      presses = []; speedShown = 0; speedRun();
       level();
+      if (kbOpen) kbTimer = setTimeout(() => kbShow(false), 5000);
       clearInterval(tick);
       tick = setInterval(() => {
         if (!view.isConnected || !alive) return stop();
@@ -267,16 +261,19 @@
       $q('#lc-time').textContent = fmt(st.time);
       const a = accuracy();
       $q('#lc-acc').textContent = Math.round(a) + '%';
-      const ka = $q('#lc-kacc'); if (ka) ka.textContent = Math.round(a) + '%';
-      const tank = $q('#lc-tank'); tank.style.height = a + '%';
-      tank.style.background = a >= 88 ? 'linear-gradient(0deg, #059669, #34d399)' : a >= 70 ? 'linear-gradient(0deg, #d97706, #fbbf24)' : 'linear-gradient(0deg, #dc2626, #fb7185)';
+      // anel de precisão (como os anéis de atividade): verde, amarelo ou vermelho
+      $q('#lc-acc-ring').style.setProperty('--p', a.toFixed(1));
+      $q('#lc-acc-card').style.setProperty('--wc', a >= 88 ? '#30d158' : a >= 70 ? '#ffd60a' : '#ff453a');
+      $q('#lc-acc-txt').textContent = a >= 88 ? 'Excelente' : a >= 70 ? 'Bom' : 'Atenção aos erros';
       const g = grade(st.xp);
       $q('#lc-grade').textContent = String(g.g).padStart(2, '0');
       $q('#lc-grade-bar').style.width = g.pct + '%';
+      $q('#lc-grade-txt').textContent = `${Math.max(1, Math.round(100 - g.pct))}% para o grau ${g.g + 1}`;
     }
 
     /* acerto e erro valem para todos os tipos de nível */
     function hit(k) {
+      presses.push(performance.now());
       st.hits++; st.xp += 5; paintStats(); spark(); drop(k, true); kb?.flash(k, true);
       score(true);
     }
@@ -306,22 +303,24 @@
       g.className = 'lc-gauge';
       g.style.setProperty('--bar', BAR_COLORS[Math.floor(Math.random() * BAR_COLORS.length)]);
       g.innerHTML = `
+        <div class="lc-g-code" aria-hidden="true">${typeof infoBgRows === 'function' ? infoBgRows(16) : ''}</div>
         <div class="lc-g-area">
           <div class="lc-g-frame" id="lc-gframe"></div>
-          <div class="lc-g-bar" id="lc-gbar"><i class="lc-g-shine"></i></div>
-          ${STAR_AT.map((t, i) => `<span class="lc-g-star" data-gs="${i}" style="--at:${gPct(t)}%;--i:${i}">${FSTAR}<b class="lc-g-glint"></b></span>`).join('')}
+          <div class="lc-g-bar" id="lc-gbar"><i class="lc-g-shine"></i><b class="lc-g-beam" id="lc-gbeam"></b></div>
+          ${STAR_AT.map((t, i) => `<span class="lc-g-star" data-gs="${i}" style="--at:${gPct(t)}%;--i:${i}"><img class="lc-g-edge" src="assets/estrelas/estrela-amarela.png" alt="" draggable="false">${['vazia', 'amarela', 'superstar', 'megastar'].map((k) => `<img class="s-${k}" src="assets/estrelas/estrela-${k}.png" alt="" draggable="false">`).join('')}</span>`).join('')}
           <div class="lc-g-word" id="lc-gword"></div>
           <div class="lc-g-flash" id="lc-gflash"></div>
         </div>
-        <strong class="lc-gauge-pts" id="lc-gpts">0</strong><small>de ${PTS_MAX.toLocaleString('pt-BR')}</small>`;
-      // brilhos que piscam de vez em quando nas estrelas já conquistadas
+        <strong class="lc-gauge-pts" id="lc-gpts">0</strong>`;
+      // a cada 5 s, um pulsar suave com brilho no contorno passa pelas estrelas conquistadas,
+      // de baixo para cima, uma depois da outra (quanto mais estrelas, mais longa a onda)
       clearInterval(gs.glint);
       gs.glint = setInterval(() => {
         if (!g.isConnected) return clearInterval(gs.glint);
-        const on = g.querySelectorAll('.lc-g-star.on:not(.pop)'); if (!on.length) return;
-        const el = on[Math.floor(Math.random() * on.length)];
-        el.classList.remove('twinkle'); void el.offsetWidth; el.classList.add('twinkle');
-      }, 1300);
+        g.querySelectorAll('.lc-g-star.on:not(.pop)').forEach((el, i) => setTimeout(() => {
+          el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse');
+        }, i * 280));
+      }, 5000);
     }
     function gaugeLevel(lv) { game.need = needOf(lv); game.ph = 0; game.pe = 0; game.lp = 0; paintGauge(); }
     function score(ok) {
@@ -346,6 +345,7 @@
         if (!quiet && i >= gs.stars && i < stars) { // estrela nova: surge com raios, cresce branca de brilho e assenta
           el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
           const bar = $q('#lc-gbar'); bar.classList.remove('flash'); void bar.offsetWidth; bar.classList.add('flash');
+          const beam = $q('#lc-gbeam'); beam.classList.remove('go'); void beam.offsetWidth; beam.classList.add('go'); // feixe branco subindo pela barra
           setTimeout(() => el.classList.remove('pop'), 1100);
         }
       });
@@ -376,7 +376,7 @@
       }, 380);
       setTimeout(() => {
         g.classList.remove('big');
-        g.querySelectorAll('.lc-g-star.on').forEach((el, i) => setTimeout(() => { el.classList.remove('twinkle', 'burst'); void el.offsetWidth; el.classList.add('burst'); }, i * 70));
+        g.querySelectorAll('.lc-g-star.on').forEach((el, i) => setTimeout(() => { el.classList.remove('pulse', 'burst'); void el.offsetWidth; el.classList.add('burst'); }, i * 70));
       }, 1500);
     }
     const starsHTML = (pts, cls = '') => {
@@ -400,25 +400,46 @@
     }
     /* teclado virtual ABNT2 (curso/teclado.js); a preferência de mostrar ou não fica guardada no aparelho */
     let kb = null;
-    const kbPrefs = (() => { try { return { kb: true, ...JSON.parse(localStorage.getItem('hc:kb') || '{}') }; } catch { return { kb: true }; } })();
-    const kbSave = () => { try { localStorage.setItem('hc:kb', JSON.stringify(kbPrefs)); } catch {} };
+    let kbOpen = false, kbTimer = null;
+    /* medidor de velocidade (pílula ao lado do botão do teclado): conta as teclas certas dos
+       últimos 3 segundos; enche quando o aluno digita rápido e vai esvaziando quando ele para.
+       Cor de azul (devagar) a vermelho (bem rápido); PPM = (teclas por minuto) ÷ 5. */
+    const SPEED_WIN = 3000, SPEED_MAX = 60; // PPM em que a pílula fica cheia
+    let presses = [], speedShown = 0, speedTick = null;
+    function speedRun() {
+      clearInterval(speedTick);
+      speedTick = setInterval(() => {
+        if (!view.isConnected || !alive) return clearInterval(speedTick);
+        const now = performance.now();
+        while (presses.length && now - presses[0] > SPEED_WIN) presses.shift();
+        const target = presses.length ? (presses.length / (SPEED_WIN / 1000)) * 60 / 5 : 0;
+        speedShown += (target - speedShown) * .18; // anda devagar até o valor, sem saltos
+        if (speedShown < .4) speedShown = 0;
+        const fill = $q('#lc-speed-fill'), num = $q('#lc-ppm'); if (!fill || !num) return;
+        const t = Math.min(1, speedShown / SPEED_MAX);
+        fill.style.width = `${(t * 100).toFixed(1)}%`;
+        fill.style.setProperty('--h', Math.round(215 - 215 * t)); // 215 = azul … 0 = vermelho
+        num.textContent = Math.round(speedShown);
+      }, 80);
+    }
+    const KB_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>';
     const kbHTML = () => `
       <div class="lc-kbar">
-        <span class="lc-kbar-live"><b id="lc-ppm">—</b> PPM <i></i> <b id="lc-kacc">100%</b> precisão</span>
-        <span class="lc-kbar-opts">
-          <label><input type="checkbox" data-kbopt="kb" ${kbPrefs.kb ? 'checked' : ''}><span></span>Teclado</label>
-        </span>
+        <span class="lc-speed" role="img" aria-label="Velocidade de digitação"><span class="lc-speed-pill"><i id="lc-speed-fill"></i></span><b id="lc-ppm">0</b><small>PPM</small></span>
+        <button type="button" class="lc-kbtn${kbOpen ? ' open' : ''}" id="lc-kbtn" aria-expanded="${kbOpen}" aria-controls="lc-kbwrap">${KB_ICO}<span>${kbOpen ? 'Ocultar teclado' : 'Ver teclado virtual'}</span><b aria-hidden="true">⌄</b></button>
       </div>
-      <div class="lc-kb${kbPrefs.kb ? '' : ' off'}" id="lc-kb"></div>`;
+      <div class="lc-kbwrap${kbOpen ? ' open' : ''}" id="lc-kbwrap"><div class="lc-kb" id="lc-kb"></div></div>`;
+    function kbShow(open) {
+      kbOpen = open; clearTimeout(kbTimer);
+      const w = $q('#lc-kbwrap'), b = $q('#lc-kbtn'); if (!w || !b) return;
+      w.classList.toggle('open', open); b.classList.toggle('open', open);
+      b.setAttribute('aria-expanded', open); b.querySelector('span').textContent = open ? 'Ocultar teclado' : 'Ver teclado virtual';
+    }
     function kbMount() {
       kb?.destroy(); kb = null;
       const box = $q('#lc-kb'); if (!box || !window.HC_teclado) return;
       kb = window.HC_teclado(box);
-      view.querySelectorAll('[data-kbopt]').forEach((c) => c.addEventListener('change', () => {
-        kbPrefs[c.dataset.kbopt] = c.checked; kbSave();
-        box.classList.toggle('off', !kbPrefs.kb);
-        c.blur(); // a barra de espaço volta a digitar, e não a marcar a caixa
-      }));
+      $q('#lc-kbtn')?.addEventListener('click', (e) => { kbShow(!kbOpen); e.currentTarget.blur(); }); // a barra de espaço volta a digitar, e não a apertar o botão
     }
     const kbTarget = (k) => kb?.target(k);
 
@@ -459,6 +480,7 @@
         <div class="lc-lv-head">
           <span class="lc-lv-av">${nn}</span>
           <span class="lc-lv-who"><strong>Nível ${nn}</strong><small>de ${N} · Lição ${L.numero}</small></span>
+          <div class="lc-sup" id="lc-sup"></div>
           <span class="lc-kind${isGame ? ' game' : ''}">${isGame ? 'Minijogo' : 'Digitação'}</span>
         </div>
         <h2 class="lc-lv-title">${esc(lv.titulo)}</h2>
@@ -467,7 +489,7 @@
         <div class="lc-stage" id="lc-stage"></div>
         ${kbHTML()}
         <div class="lc-over" id="lc-over" hidden></div>`;
-      kbMount();
+      kbMount(); supRender();
       paintProgress(); paintStats(); gaugeLevel(lv);
       ({ typing: typingInit, hacker: hackerInit, fila: filaInit, memoria: memoInit })[lv.tipo](lv);
     }
@@ -475,6 +497,56 @@
       const t = $q('#lc-goal-txt'), b = $q('#lc-goal-bar'); if (!t) return;
       t.textContent = `Progresso: ${n}/${total}`; b.style.width = `${Math.min(100, (n / total) * 100)}%`;
     }
+
+    /* ---------- pílula de suporte (no cabeçalho do nível) ----------
+       Se o aluno travar num nível por algum erro, quem dá suporte digita a senha e pula para
+       qualquer nível ou para o resultado. O administrador já entra liberado e define a senha.
+       A senha não fica salva: só o resumo SHA-256 dela, junto das edições da plataforma (cursoEdit). */
+    const SUP_ID = 'suporteNivel';
+    const supHash = () => (typeof cursoEdit !== 'undefined' && Array.isArray(cursoEdit) ? cursoEdit.find((x) => x?.id === SUP_ID)?.hash : '') || '';
+    const sha = async (t) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('hc-suporte:' + t)))].map((x) => x.toString(16).padStart(2, '0')).join('');
+    const LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+    const UNLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>';
+    let supOk = isAdmin(), supMode = supOk ? 'go' : 'idle', supTries = 0, supWait = 0;
+    function supRender(focus) {
+      const box = $q('#lc-sup'); if (!box) return;
+      if (!supOk && !supHash()) { box.hidden = true; return; } // sem senha definida, o aluno não vê a pílula
+      box.hidden = false; box.className = 'lc-sup ' + supMode;
+      if (supMode === 'idle') {
+        box.innerHTML = `<button type="button" class="lc-sup-btn" data-sup="open" title="Suporte: pular de nível com a senha">${LOCK}<span>Suporte</span></button>`;
+      } else if (supMode === 'ask' || supMode === 'set') {
+        box.innerHTML = `<form class="lc-sup-form">${LOCK}<input type="password" autocomplete="off" enterkeyhint="go" aria-label="${supMode === 'set' ? 'Nova senha do suporte' : 'Senha do suporte'}" placeholder="${supMode === 'set' ? 'Nova senha (4+ caracteres)' : 'Senha do suporte'}"><button type="submit" class="lc-sup-ok" aria-label="Confirmar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button><button type="button" class="lc-sup-x" data-sup="close" aria-label="Fechar">×</button></form>`;
+      } else {
+        box.innerHTML = `<label class="lc-sup-go">${UNLOCK}<select id="lc-jump" aria-label="Ir para o nível"><option value="">Ir para…</option>${L.niveis.map((n, i) => `<option value="${i}">Nível ${i + 1}${n.tipo === 'typing' ? '' : ' · minijogo'}</option>`).join('')}<option value="r">Resultado</option>${isAdmin() ? `<option value="pin">${supHash() ? 'Trocar' : 'Definir'} a senha do suporte…</option>` : ''}</select></label>${isAdmin() ? '' : '<button type="button" class="lc-sup-x" data-sup="lock" aria-label="Bloquear de novo">×</button>'}`;
+      }
+      box.querySelector('[data-sup="open"]')?.addEventListener('click', () => { supMode = 'ask'; supRender(true); });
+      box.querySelector('[data-sup="close"]')?.addEventListener('click', () => { supMode = supOk ? 'go' : 'idle'; supRender(); });
+      box.querySelector('[data-sup="lock"]')?.addEventListener('click', () => { supOk = false; supMode = 'idle'; supRender(); });
+      box.querySelector('#lc-jump')?.addEventListener('change', (e) => {
+        const v = e.target.value; e.target.value = ''; e.target.blur();
+        if (v === 'pin') { supMode = 'set'; return supRender(true); }
+        if (v === 'r') return results();
+        if (v !== '') { busy = false; st.lvl = +v; level(); }
+      });
+      const form = box.querySelector('form'), inp = form?.querySelector('input');
+      form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const val = inp.value.trim();
+        if (supMode === 'set') {
+          if (val.length < 4) return supBad(box, inp);
+          const next = [...(cursoEdit || []).filter((x) => x?.id !== SUP_ID), { id: SUP_ID, hash: await sha(val) }];
+          cursoEdit = next;
+          try { await saveCursoEdit(); toast?.('Senha do suporte salva.'); } catch { toast?.('Não foi possível salvar a senha. Tente de novo.'); }
+          supMode = 'go'; return supRender();
+        }
+        if (Date.now() < supWait) return supBad(box, inp);
+        if (val && (await sha(val)) === supHash()) { supOk = true; supTries = 0; supMode = 'go'; supRender(); return $q('#lc-jump')?.focus(); }
+        if (++supTries >= 5) { supTries = 0; supWait = Date.now() + 30000; inp.placeholder = 'Aguarde 30 segundos'; } // muitas tentativas: espera um pouco
+        supBad(box, inp);
+      });
+      if (focus) setTimeout(() => inp?.focus(), 80);
+    }
+    function supBad(box, inp) { inp.value = ''; box.classList.remove('bad'); void box.offsetWidth; box.classList.add('bad'); }
 
     /* nível concluído: "Parabéns!" → "Nível X concluído" → próximo */
     async function complete() {
@@ -540,7 +612,6 @@
         if (!game.t0) game.t0 = performance.now();
         hit(k); game.pos++; typingPaint();
         const min = (performance.now() - game.t0) / 60000;
-        if (min > .03) { const ppm = $q('#lc-ppm'); if (ppm) ppm.textContent = Math.round(game.pos / 5 / min); }
         if (game.pos >= game.text.length) setTimeout(complete, 250);
       } else {
         miss(k);
@@ -708,7 +779,7 @@
       if (lv?.tipo === 'typing' && k.length === 1 && /\S/.test(k) && !busy) { miss(k); shake(`.lc-ch[data-i="${game.pos}"]`); }
     }
     document.addEventListener('keydown', onKey);
-    function stop() { alive = false; clearInterval(tick); clearInterval(game.timer); clearInterval(gs.glint); kb?.destroy(); document.removeEventListener('keydown', onKey); }
+    function stop() { alive = false; clearTimeout(kbTimer); clearInterval(speedTick); clearInterval(tick); clearInterval(game.timer); clearInterval(gs.glint); kb?.destroy(); document.removeEventListener('keydown', onKey); }
     window.addEventListener('hashchange', stop, { once: true });
 
     /* ---------- resultado ---------- */
