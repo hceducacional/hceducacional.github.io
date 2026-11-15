@@ -376,5 +376,6 @@ window.HC_CONTENT = {
       "imagem": "",
       "titulo": "Lição 06"
     }
-  ]
+  ],
+  "cursoEdit": []
 };

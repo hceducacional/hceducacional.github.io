@@ -678,34 +678,120 @@
       const slow = times.length ? times.reduce((m, x) => (x[0] > m[0] ? x : m)) : [st.time, 0];
       const g = grade(st.xp);
       const first = (meName() || '').split(' ')[0];
-      body.innerHTML = `
-      <section class="lc-results">
-        <span class="lc-res-ico">${svg('trophy')}</span>
-        <h2>Atividade concluída!</h2>
-        <p>Você superou os ${N} níveis da lição${first ? `, <b>${esc(first)}</b>` : ''}.</p>
-        ${(() => { // resumo da pontuação da lição: as estrelas acendem uma a uma
-          const pts = Math.min(PTS_MAX, Math.round((st.levelPts || []).reduce((t, x) => t + (x || 0), 0)));
-          const rk = rankOf(pts);
-          return `<div class="lc-sum ${rk}">${starsHTML(pts, 'big')}<strong>${rk ? RANK_NAME[rk] : `${starsOf(pts)} ${starsOf(pts) === 1 ? 'estrela' : 'estrelas'}`}</strong><span><b class="lc-count-up" data-to="${pts}">0</b> de ${PTS_MAX.toLocaleString('pt-BR')} pontos</span></div>`;
-        })()}
-        <div class="lc-res-grid">
-          <div class="lc-res big"><small>Desempenho de precisão</small><strong>${rating} · ${a.toFixed(1)}%</strong></div>
-          <div class="lc-res xp"><small>XP conquistado</small><strong>${st.xp.toLocaleString('pt-BR')} XP</strong></div>
-          <div class="lc-res"><small>Tempo total</small><strong>${dur(st.time)}</strong></div>
-          <div class="lc-res"><span class="lc-res-i">${svg('zap')}</span><small>Mais rápido · nível ${fast[1] + 1}</small><strong>${dur(fast[0])}</strong></div>
-          <div class="lc-res"><span class="lc-res-i slow">${svg('snail')}</span><small>Mais demorado · nível ${slow[1] + 1}</small><strong>${dur(slow[0])}</strong></div>
-          <div class="lc-res"><small>Grau de experiência</small><strong>Grau ${g.g}</strong><b class="lc-mini"><i style="width:${g.pct}%"></i></b></div>
+      // todas as informações ficam só na tela final animada; por baixo fica apenas um espaço vazio
+      body.innerHTML = '<section class="lc-results-blank" aria-hidden="true"></section>';
+      showFinale({ a, rating, fast, slow, g });
+    }
+
+    /* ---------- tela final animada (por cima da área da plataforma) ----------
+       Faixas brancas → fundo de cor vibrante sorteada → "Parabéns!" e a faixa com a foto e o nome →
+       a barra de pontos enche, as estrelas acendem e, se der, explode o Superstar/Megastar →
+       o "carregando" vira o botão Continuar e os outros resultados aparecem embaixo. */
+    const LR_COLORS = [
+      ['#e11d48', '#7f1028'], ['#db2777', '#6b0f4a'], ['#7c3aed', '#2e1065'], ['#2563eb', '#172554'],
+      ['#0891b2', '#083344'], ['#ea580c', '#7c2d12'], ['#16a34a', '#14532d'], ['#c026d3', '#4a044e'],
+    ];
+    function showFinale({ a, rating, fast, slow, g }) {
+      document.querySelector('.lr')?.remove();
+      const pts = Math.min(PTS_MAX, Math.round((st.levelPts || []).reduce((t, x) => t + (x || 0), 0)));
+      const rk = rankOf(pts);
+      let ci; try { const last = +sessionStorage.getItem('hc:lr:c'); do { ci = Math.floor(Math.random() * LR_COLORS.length); } while (ci === last && LR_COLORS.length > 1); sessionStorage.setItem('hc:lr:c', ci); } catch { ci = Math.floor(Math.random() * LR_COLORS.length); }
+      const [c1, c2] = LR_COLORS[ci];
+      const sb = document.querySelector('.sidebar');
+      const left = sb && getComputedStyle(sb).display !== 'none' ? Math.max(0, Math.round(sb.getBoundingClientRect().right)) : 0;
+      const name = meName() || 'Aluno';
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const el = document.createElement('div');
+      el.className = 'lr'; el.style.cssText = `left:${left}px;--c1:${c1};--c2:${c2}`;
+      el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Resultado da lição');
+      el.innerHTML = `
+        <div class="lr-bg"></div>
+        <div class="lr-panel"><div class="lr-rays">${[0, 1, 2, 3, 4, 5].map((k) => `<i style="--k:${k}"></i>`).join('')}</div></div>
+        <div class="lr-scroll">
+          <div class="lr-stage">
+            <h2 class="lr-congrats">Parabéns!</h2>
+            <div class="lr-ribbon">
+              <span class="lr-tab"></span>
+              ${userAvatar(auth.profile || { name }, 'lr-av')}
+              <div class="lr-who"><strong>${esc(name)}</strong><small>Lição ${L.numero} · ${esc(L.titulo)}</small><div class="lr-bar"><i class="lr-fill"></i></div></div>
+              <div class="lr-score">
+                <div class="lr-stars">${STAR_AT.map(() => `<span class="lr-star">${FSTAR}</span>`).join('')}</div>
+                <b class="lr-num">0</b>
+                <span class="lr-badge">${rk ? RANK_NAME[rk] : `${starsOf(pts)} ${starsOf(pts) === 1 ? 'estrela' : 'estrelas'}`}</span>
+              </div>
+              <div class="lr-burst" aria-hidden="true"><i class="lr-ring"></i><i class="lr-ring r2"></i>${Array.from({ length: 10 }, (_, k) => `<i class="lr-spark" style="--a:${k * 36}deg"></i>`).join('')}<span class="lr-word"></span></div>
+            </div>
+            <div class="lr-more">
+              <div class="lr-cards">
+                <div class="lr-card wide" style="--w1:#10b981;--w2:#047857"><span class="lr-ci">${svg('target')}</span><small>Desempenho de precisão</small><strong>${rating} · ${a.toFixed(1)}%</strong><b class="lr-mini"><i style="width:${Math.min(100, a)}%"></i></b></div>
+                <div class="lr-card" style="--w1:#fbbf24;--w2:#d97706"><span class="lr-ci">${svg('star', true)}</span><small>Pontuação</small><strong>${pts.toLocaleString('pt-BR')}<em> de ${PTS_MAX.toLocaleString('pt-BR')}</em></strong></div>
+                <div class="lr-card" style="--w1:#a78bfa;--w2:#6d28d9"><span class="lr-ci">${svg('trophy')}</span><small>XP conquistado</small><strong>${st.xp.toLocaleString('pt-BR')} XP</strong></div>
+                <div class="lr-card" style="--w1:#38bdf8;--w2:#0369a1"><span class="lr-ci">${svg('clock')}</span><small>Tempo total</small><strong>${dur(st.time)}</strong></div>
+                <div class="lr-card" style="--w1:#fb923c;--w2:#c2410c"><span class="lr-ci">${svg('zap')}</span><small>Mais rápido · nível ${fast[1] + 1}</small><strong>${dur(fast[0])}</strong></div>
+                <div class="lr-card" style="--w1:#f472b6;--w2:#be185d"><span class="lr-ci">${svg('snail')}</span><small>Mais demorado · nível ${slow[1] + 1}</small><strong>${dur(slow[0])}</strong></div>
+                <div class="lr-card" style="--w1:#2dd4bf;--w2:#0f766e"><span class="lr-ci">${svg('level')}</span><small>Grau de experiência</small><strong>Grau ${g.g}</strong><b class="lr-mini"><i style="width:${g.pct}%"></i></b></div>
+              </div>
+              <div class="lr-acts">
+                <button type="button" class="lr-btn" data-lr="report">${svg('download')}Baixar relatório</button>
+                <button type="button" class="lr-btn" data-lr="again">${svg('refresh')}Refazer a lição</button>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="lc-cta">
-          <a class="btn-dark" href="#informatica">Voltar às lições</a>
-          <button class="btn-soft" type="button" data-r="report">${svg('download')}Baixar relatório</button>
-          <button class="btn-soft" type="button" data-r="again">${svg('refresh')}Refazer a lição</button>
-        </div>
-      </section>`;
-      body.querySelector('[data-r="again"]').addEventListener('click', () => { st = fresh(); play(); });
-      const cu = body.querySelector('.lc-count-up');
-      if (cu) { const to = +cu.dataset.to, t0 = performance.now(); const step = (now) => { const p = Math.min(1, (now - t0) / 1400); cu.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))).toLocaleString('pt-BR'); if (p < 1) requestAnimationFrame(step); }; requestAnimationFrame(step); }
-      body.querySelector('[data-r="report"]').addEventListener('click', () => report(a, rating, fast, slow, g));
+        <div class="lr-foot"><span class="lr-spin" aria-label="Calculando"></span><button type="button" class="lr-go" data-lr="go">Continuar ${svg('play', true)}</button></div>
+        <div class="lr-bands">${[0, 1, 2, 3, 4, 5, 6].map((k) => `<i style="--k:${k}"></i>`).join('')}</div>`;
+      document.body.append(el);
+      requestAnimationFrame(() => el.classList.add('in'));
+
+      const num = el.querySelector('.lr-num'), fill = el.querySelector('.lr-fill'), stars = el.querySelectorAll('.lr-star');
+      const burst = el.querySelector('.lr-burst'), word = el.querySelector('.lr-word');
+      const showRank = (r) => {
+        el.classList.remove('super', 'mega'); el.classList.add(r);
+        word.textContent = RANK_NAME[r]; burst.classList.remove('go'); void burst.offsetWidth; burst.classList.add('go');
+      };
+      const paint = (v) => {
+        num.textContent = Math.round(v).toLocaleString('pt-BR');
+        fill.style.transform = `scaleX(${(v / PTS_MAX).toFixed(4)})`;
+        stars.forEach((s, i) => { if (v >= STAR_AT[i] && !s.classList.contains('on')) s.classList.add('on'); });
+        if (v >= MEGA_AT && !el.classList.contains('mega')) showRank('mega');
+        else if (v >= SUPER_AT && v < MEGA_AT && !el.classList.contains('super')) showRank('super');
+      };
+      const finish = () => { paint(pts); el.classList.add('done'); };
+      const D = 1600 + 3600 * (pts / PTS_MAX), START = reduce ? 0 : 2300;
+      setTimeout(() => {
+        if (!el.isConnected) return;
+        if (reduce || !pts) return finish();
+        el.classList.add('counting');
+        const t0 = performance.now();
+        const step = (now) => {
+          if (!el.isConnected) return;
+          const p = Math.min(1, (now - t0) / D);
+          paint(pts * (p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2)); // começa devagar, acelera e assenta
+          if (p < 1) requestAnimationFrame(step); else setTimeout(finish, rk ? 900 : 300);
+        };
+        requestAnimationFrame(step);
+      }, START);
+
+      const close = (then) => {
+        if (el.classList.contains('out')) return;
+        el.classList.add('out');
+        setTimeout(() => { then?.(); el.classList.add('gone'); setTimeout(() => el.remove(), 700); }, reduce ? 0 : 1100);
+      };
+      // Continuar: a mesma abertura do início da lição, com "Retornando à plataforma" embaixo do logo
+      el.querySelector('[data-lr="go"]').addEventListener('click', () => {
+        const I = window.HC_intro;
+        if (reduce || !I) return close(() => { location.hash = '#informatica'; });
+        if (el.dataset.leaving) return;
+        el.dataset.leaving = '1'; // as faixas da abertura passam por cima da tela de resultado
+        const n = parseInt(String(L.id).split('-')[1], 10) || 1;
+        I.play(n, L, { label: 'Retornando à plataforma', sub: 'Lição concluída' });
+        setTimeout(() => { el.remove(); location.hash = '#informatica'; I.end(); }, I.PEAK + 200);
+      });
+      el.querySelector('[data-lr="again"]').addEventListener('click', () => close(() => { st = fresh(); play(); }));
+      el.querySelector('[data-lr="report"]').addEventListener('click', () => report(a, rating, fast, slow, g));
+      const onHash = () => { if (!el.classList.contains('out')) el.remove(); }; // saiu por outro caminho (menu, voltar)
+      window.addEventListener('hashchange', onHash, { once: true });
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter' && el.classList.contains('done') && e.target === el) el.querySelector('[data-lr="go"]').click(); });
     }
     function report(a, rating, fast, slow, g) {
       const name = meName() || 'Aluno';

@@ -56,19 +56,36 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
     stack: '<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/>',
     book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5Z"/><path d="M4 19a2 2 0 0 1 2-2h13"/>',
     chart: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    pen: '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/>',
+    photo: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 8"/>',
   };
   /* lições criadas pelo administrador (botão "Nova lição"): ficam no banco, junto do conteúdo do site,
      e entram no fim do módulo até serem configuradas aqui no código */
-  const BASE = HC_CURSO.modulos.map((m) => m.licoes.slice());
+  /* capas e textos trocados pelo administrador (botão de lápis): ficam no banco (chave cursoEdit) e
+     valem por cima do que está escrito em HC_CURSO; campo vazio volta ao texto original */
+  const BASE_M = HC_CURSO.modulos.map((m) => ({ ...m, licoes: m.licoes.map((l) => ({ ...l })) }));
   const extras = () => (typeof cursoExtra !== 'undefined' && Array.isArray(cursoExtra) ? cursoExtra : []);
-  const mergeExtras = () => HC_CURSO.modulos.forEach((m, i) => { m.licoes = BASE[i].concat(extras().filter((x) => x.mod === i).map((x) => ({ ...x, extra: true }))); });
+  const edits = () => (typeof cursoEdit !== 'undefined' && Array.isArray(cursoEdit) ? cursoEdit : []);
+  const M_FIELDS = ['nome', 'nivel', 'desc', 'secao', 'secaoComplemento', 'texto'], L_FIELDS = ['tag', 'titulo', 'desc'];
+  const over = (base, o, fields) => {
+    const r = { ...base }; if (!o) return r;
+    fields.forEach((f) => { if (typeof o[f] === 'string' && o[f].trim()) r[f] = o[f].trim(); });
+    if (typeof o.image === 'string') r.imagem = o.image;
+    return r;
+  };
+  const mergeExtras = () => HC_CURSO.modulos.forEach((m, i) => {
+    const b = BASE_M[i], ed = edits();
+    Object.assign(m, over(b, ed.find((x) => x.id === 'm' + i), M_FIELDS));
+    m.licoes = b.licoes.map((l, k) => over(l, ed.find((x) => x.id === `l${i}-${k}`), L_FIELDS))
+      .concat(extras().filter((x) => x.mod === i).map((x) => ({ ...x, imagem: x.image ?? x.imagem ?? '', extra: true })));
+  });
   const canOpen = (m) => m.licoes.some((l) => l.arquivo) || isAdmin(); // o administrador abre até módulo vazio, para criar lições
   const PER_PAGE = 5; // lições por página; da 6ª em diante continuam para o lado
   const svg = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg>`;
 
   /* imagem, ou espaço reservado (com etiqueta para o administrador) */
   const slot = (src, label, size, k = 0) => src
-    ? `<img class="pf-img" src="${esc(src)}" alt="" loading="lazy" />`
+    ? `<img class="pf-img" src="${esc(imgUrl(src))}" alt="" loading="lazy" />`
     : `<span class="pf-ph" style="--k:${k}">${svg('keys')}${isAdmin() ? `<em>${label}<small>${size}</small></em>` : ''}</span>`;
 
   /* lições: o motor (licao.js/.css) e os dados de cada lição só são baixados quando o aluno abre uma */
@@ -80,13 +97,85 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
   const lessonAt = (n) => HC_CURSO.modulos.flatMap((m) => m.licoes)[n - 1];
   async function openLesson(view, n) {
     const l = lessonAt(n);
-    if (!l?.arquivo) { location.hash = '#informatica'; return toast('Esta lição será montada em breve.'); }
+    if (!l?.arquivo) { introEnd(); location.hash = '#informatica'; return toast('Esta lição será montada em breve.'); }
     view.innerHTML = '<div class="wrap"><p class="me-loading">Carregando a lição…</p></div>';
     try { await Promise.all([load('curso/licao.css'), load('curso/teclado.js'), load('curso/licao.js'), load(l.arquivo)]); }
-    catch { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir a lição. Verifique a internet e tente de novo.</p></div>'; return; }
-    if (location.hash !== `#informatica/licao-${n}`) return;
+    catch { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir a lição. Verifique a internet e tente de novo.</p></div>'; return introEnd(); }
+    if (location.hash !== `#informatica/licao-${n}`) return introEnd();
     window.HC_licao.open(view, window.HC_LICOES[`licao-${n}`]);
+    introEnd();
   }
+
+  /* ---------- Abertura da lição ----------
+     Ao começar ou continuar uma lição, faixas brancas diagonais cobrem a área da plataforma
+     (a barra de cima e a lateral continuam por cima), o logo da Plataforma de Informática
+     aparece com um brilho e um selo mostra a lição. Com a tela branca, a lição carrega por
+     trás; depois as faixas saem varrendo para a esquerda e revelam a lição.
+     Só transform e opacity, para rodar leve; quem pede "reduzir movimento" não vê. */
+  const INTRO_PEAK = 1900, INTRO_MIN = 6900; // ms: quando a tela fica branca / tempo mínimo na tela
+  const LOAD_AT = 2100, LOAD_MS = 4500; // barrinha de carregamento: quando começa e quanto dura
+  /* ritmos da barrinha (momento, quanto já encheu): cada abertura sorteia um e varia um pouco,
+     para parecer um carregamento de verdade e não sempre a mesma animação */
+  const LOAD_PROFILES = [
+    [[0, 0], [.22, .46], [.55, .74], [.82, .9], [1, 1]],                         // começa rápido e vai reduzindo
+    [[0, 0], [.35, .12], [.62, .33], [.84, .7], [1, 1]],                         // começa devagar e acelera no fim
+    [[0, 0], [.18, .3], [.42, .37], [.54, .63], [.8, .82], [1, 1]],              // para um pouco no meio e dá um salto
+    [[0, 0], [.14, .2], [.3, .23], [.48, .55], [.62, .58], [.86, .94], [1, 1]],  // em etapas, como arquivos baixando
+    [[0, 0], [.1, .06], [.4, .58], [.7, .66], [.9, .97], [1, 1]],                // arranque, pausa longa e final rápido
+  ];
+  const LOAD_EASES = ['cubic-bezier(.2, .7, .3, 1)', 'cubic-bezier(.6, 0, .8, .4)', 'cubic-bezier(.45, 0, .2, 1)', 'linear', 'cubic-bezier(.3, .1, .3, 1)'];
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  function loadFrames() {
+    let last = 0;
+    return pick(LOAD_PROFILES).map(([t, p], i, arr) => {
+      const end = i === arr.length - 1;
+      const v = end ? 1 : i === 0 ? 0 : Math.min(.97, Math.max(last + .02, p + (Math.random() - .5) * .1));
+      last = v;
+      return { offset: t, transform: `scaleX(${v.toFixed(3)})`, easing: pick(LOAD_EASES) };
+    });
+  }
+  let intro = null;
+  function introStart(n, l, opt = {}) {
+    introEnd(true);
+    const p = progress(n), num = String(n).padStart(2, '0');
+    const what = opt.sub || (p?.done ? 'Refazer a lição' : p && p.lvl > 0 ? `Continuando · Nível ${Math.min(p.lvl + 1, p.total)} de ${p.total}` : 'Começando agora');
+    const sb = document.querySelector('.sidebar');
+    const left = sb && getComputedStyle(sb).display !== 'none' ? Math.max(0, Math.round(sb.getBoundingClientRect().right)) : 0;
+    const el = document.createElement('div');
+    el.className = 'pfi'; el.style.left = left + 'px'; el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = `
+      <div class="pfi-bands">${[0, 1, 2, 3, 4, 5, 6].map((k) => `<i style="--k:${k}"></i>`).join('')}</div>
+      <div class="pfi-white"></div>
+      <div class="pfi-halo"></div>
+      <div class="pfi-logo"><img src="assets/plataforma-informatica.webp" width="900" height="184" alt=""><span class="pfi-shine"></span>
+        <div class="pfi-load"><div class="pfi-track"><i class="pfi-fill"></i></div><span class="pfi-load-txt"><em>${esc(opt.label || 'Carregando a atividade')}</em><b>0%</b></span></div>
+      </div>
+      <div class="pfi-chip"><b>${num}</b><span><strong>${esc(l.titulo)}</strong><small>Lição ${num} · ${esc(what)}</small></span></div>`;
+    document.body.append(el);
+    intro = { el, t0: performance.now(), done: false };
+    intro.safety = setTimeout(() => introEnd(), 12000); // nunca fica presa na tela
+    requestAnimationFrame(() => el.classList.add('in'));
+    // barrinha de carregamento: enche em LOAD_MS com um ritmo sorteado; a porcentagem acompanha
+    const fill = el.querySelector('.pfi-fill'), pct = el.querySelector('.pfi-load-txt b');
+    const anim = fill.animate(loadFrames(), { duration: LOAD_MS, delay: LOAD_AT, fill: 'both' });
+    const tick = () => {
+      if (!el.isConnected) return;
+      const m = /matrix\(([^,]+)/.exec(getComputedStyle(fill).transform);
+      pct.textContent = Math.round((m ? +m[1] : 0) * 100) + '%';
+      if (anim.playState !== 'finished') requestAnimationFrame(tick);
+      else { pct.textContent = '100%'; el.querySelector('.pfi-load').classList.add('done'); }
+    };
+    requestAnimationFrame(tick);
+  }
+  function introEnd(now = false) {
+    const it = intro; if (!it || it.done) return;
+    it.done = true; intro = null; clearTimeout(it.safety);
+    if (now) return it.el.remove();
+    const wait = Math.max(0, INTRO_MIN - (performance.now() - it.t0));
+    setTimeout(() => { it.el.classList.add('out'); setTimeout(() => it.el.remove(), 2300); }, wait);
+  }
+  // a mesma abertura, usada também na saída da tela de resultado ("Retornando à plataforma")
+  window.HC_intro = { play: (n, l, opt) => introStart(n, l, opt), end: () => introEnd(), PEAK: INTRO_PEAK };
   // progresso salvo de cada lição (para mostrar no card); antes de abrir a 1ª lição ainda não há nada
   const progress = (n) => { try { return JSON.parse(localStorage.getItem(`hc:info:${auth?.user?.id || 'anon'}:licao-${n}`) || 'null'); } catch { return null; } };
 
@@ -139,7 +228,7 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
                 <span class="pf-lesson-go">${go}</span>
               </div>
             </div>
-            ${l.extra && isAdmin() ? `<button class="pf-lesson-del" type="button" data-dellesson="${esc(l.id)}" aria-label="Apagar este card">×</button>` : ''}
+            ${isAdmin() ? `<div class="pf-adm"><button class="pf-adm-btn" type="button" data-editlesson="${l.extra ? 'x:' + esc(l.id) : `l${mi}-${i}`}" aria-label="Editar a capa da lição" title="Editar capa">${svg('pen')}</button>${l.extra ? `<button class="pf-adm-btn pf-lesson-del" type="button" data-dellesson="${esc(l.id)}" aria-label="Apagar este card" title="Apagar card">×</button>` : ''}</div>` : ''}
             ${p ? `<b class="pf-lesson-prog" style="--w:${((p.done ? p.total : p.lvl) / p.total) * 100}%"></b>` : ''}
           </li>`;
           }).join('')}
@@ -225,6 +314,7 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
                 <span class="pf-lesson-go">${!ok ? 'Em breve' : openMod === i ? 'Fechar' : 'Abrir'}</span>
               </div>
             </div>
+            ${isAdmin() ? `<div class="pf-adm"><button class="pf-adm-btn" type="button" data-editmod="${i}" aria-label="Editar o módulo ${i + 1}" title="Editar módulo">${svg('pen')}</button></div>` : ''}
           </article>`;
           }).join('')}
         </div>
@@ -244,15 +334,25 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
     view.querySelectorAll('[data-modcard]').forEach((c) => {
       const act = () => toggleMod(view, +c.dataset.modcard);
       c.addEventListener('click', act);
-      c.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
+      c.addEventListener('keydown', (e) => { if (e.target !== c) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
     });
+    view.querySelectorAll('[data-editmod]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); editCard(view, 'm' + b.dataset.editmod); }));
     view.querySelectorAll('[data-mdir]').forEach((b) => b.addEventListener('click', () => row.scrollBy({ left: +b.dataset.mdir * row.clientWidth * .8, behavior: 'smooth' })));
     const paddles = () => { const [p, n] = view.querySelectorAll('[data-mdir]'); if (!p) return; p.disabled = row.scrollLeft < 4; n.disabled = row.scrollLeft + row.clientWidth >= row.scrollWidth - 4; };
     row.addEventListener('scroll', paddles, { passive: true }); paddles();
     view.querySelector('.pf-mods').classList.toggle('has-open', openMod !== null);
   }
 
-  const openN = (n) => { if (!lessonAt(n)?.arquivo) return toast('Esta lição será montada em breve.'); location.hash = `#informatica/licao-${n}`; };
+  const openN = (n) => {
+    const l = lessonAt(n);
+    if (!l?.arquivo) return toast('Esta lição será montada em breve.');
+    const go = () => { location.hash = `#informatica/licao-${n}`; };
+    if (intro || !window.HC_isComputer() || matchMedia('(prefers-reduced-motion: reduce)').matches) return go();
+    introStart(n, l);
+    // já vai baixando a lição enquanto a animação roda
+    Promise.all([load('curso/licao.css'), load('curso/teclado.js'), load('curso/licao.js'), load(l.arquivo)]).catch(() => {});
+    setTimeout(go, INTRO_PEAK);
+  };
   function bindLessons(view, root) {
     root.querySelectorAll('.pf-lesson[data-lesson]').forEach((b) => {
       b.addEventListener('click', () => openN(+b.dataset.lesson));
@@ -266,6 +366,7 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
       pagesEl.addEventListener('scroll', upd, { passive: true }); upd();
     }
     root.querySelectorAll('[data-addlesson]').forEach((b) => b.addEventListener('click', () => addLesson(view, +b.dataset.addlesson)));
+    root.querySelectorAll('[data-editlesson]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); editCard(view, b.dataset.editlesson); }));
     root.querySelectorAll('[data-dellesson]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); delLesson(view, b.dataset.dellesson); }));
     root.querySelectorAll('[data-gomod]').forEach((b) => b.addEventListener('click', () => {
       const i = +b.dataset.gomod;
@@ -292,6 +393,72 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
     saveCursoExtra(); refillMod(view, mi, true);
     toast('Card da nova lição criado. Agora é só configurar o conteúdo.');
   }
+  /* administrador: janela para trocar a foto de capa e os textos de um módulo ('m0') ou lição ('l0-2' ou 'x:<id>') */
+  function editCard(view, target) {
+    if (!isAdmin() || document.querySelector('.lk')) return;
+    const isMod = target[0] === 'm';
+    let cur, title, fields, size, ratio;
+    if (isMod) {
+      const mi = +target.slice(1); cur = HC_CURSO.modulos[mi]; title = `Módulo ${mi + 1}`; size = '1000 × 1250'; ratio = '4 / 5';
+      fields = [['nome', 'Nome do módulo'], ['nivel', 'Nível (ex.: Nível iniciante)'], ['desc', 'Descrição no card', 1], ['secao', 'Título ao abrir (ex.: Primeiro comando.)'], ['secaoComplemento', 'Complemento do título'], ['texto', 'Texto de apresentação', 1]];
+    } else {
+      if (target.startsWith('x:')) { const x = extras().find((e) => e.id === target.slice(2)); if (!x) return; cur = { ...x, imagem: x.image ?? x.imagem ?? '' }; }
+      else { const [, mi, k] = /^l(\d+)-(\d+)$/.exec(target) || []; cur = HC_CURSO.modulos[+mi]?.licoes[+k]; }
+      if (!cur) return;
+      title = cur.titulo || 'Lição'; size = '1000 × 1000'; ratio = '1 / 1';
+      fields = [['tag', 'Etiqueta (ex.: Introdução)'], ['titulo', 'Título da lição'], ['desc', 'Descrição', 1]];
+    }
+    let img; // undefined = sem troca; '' = remover; 'idb:…' = nova foto
+    const wrap = document.createElement('div');
+    wrap.className = 'lk au';
+    wrap.innerHTML = `<div class="lk-backdrop"></div>
+      <form class="lk-card au-card pf-ed" role="dialog" aria-modal="true" aria-labelledby="ed-t" novalidate>
+        <h2 id="ed-t">Editar ${isMod ? 'módulo' : 'lição'}</h2>
+        <p class="lk-sub">${esc(title)} · as mudanças aparecem para todos os alunos.</p>
+        <div class="pf-ed-cover" style="aspect-ratio:${ratio}"><div class="pf-ed-prev"></div>
+          <div class="pf-ed-acts"><button type="button" class="pf-ed-btn" data-ed="pick">${svg('photo')}Trocar foto</button><button type="button" class="pf-ed-btn" data-ed="clear">Remover</button></div>
+        </div>
+        <small class="pf-ed-hint">Tamanho sugerido: ${size} (JPG, PNG ou WebP)</small>
+        <input type="file" accept="image/*" hidden>
+        ${fields.map(([k, label, area]) => `<label class="au-label" for="ed-${k}">${label}</label><div class="lk-field">${area ? `<textarea id="ed-${k}" rows="3">${esc(cur[k] || '')}</textarea>` : `<input id="ed-${k}" value="${esc(cur[k] || '')}" autocomplete="off">`}</div>`).join('')}
+        <p class="lk-msg" role="alert"></p>
+        <div class="lk-actions"><button type="button" class="btn-soft lk-cancel">Cancelar</button><button type="submit" class="btn-dark lk-go">Salvar</button></div>
+      </form>`;
+    document.body.appendChild(wrap);
+    const prev = wrap.querySelector('.pf-ed-prev'), file = wrap.querySelector('input[type=file]'), msg = wrap.querySelector('.lk-msg');
+    const show = () => { const src = img === undefined ? cur.imagem : img; prev.innerHTML = src ? `<img src="${esc(imgUrl(src))}" alt="">` : `<span>${svg('photo')}Sem foto de capa</span>`; wrap.querySelector('[data-ed="clear"]').hidden = !src; };
+    show();
+    const close = () => { wrap.classList.remove('in'); setTimeout(() => wrap.remove(), 300); };
+    wrap.querySelector('.lk-backdrop').addEventListener('click', close);
+    wrap.querySelector('.lk-cancel').addEventListener('click', close);
+    wrap.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    wrap.querySelector('[data-ed="pick"]').addEventListener('click', () => file.click());
+    wrap.querySelector('[data-ed="clear"]').addEventListener('click', () => { img = ''; show(); });
+    file.addEventListener('change', async () => {
+      const f = file.files[0]; file.value = ''; if (!f) return;
+      msg.textContent = '';
+      try { prev.classList.add('busy'); img = await storeImage(f, 'curso'); show(); }
+      catch { msg.textContent = 'Não foi possível usar essa imagem. Tente outra.'; }
+      finally { prev.classList.remove('busy'); }
+    });
+    wrap.querySelector('form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const vals = Object.fromEntries(fields.map(([k]) => [k, wrap.querySelector('#ed-' + k).value.trim()]));
+      if (target.startsWith('x:')) {
+        cursoExtra = extras().map((x) => (x.id === target.slice(2) ? { ...x, ...Object.fromEntries(Object.entries(vals).filter(([, v]) => v)), ...(img !== undefined ? { image: img } : {}) } : x));
+        saveCursoExtra();
+      } else {
+        const prevEd = edits().find((x) => x.id === target) || {};
+        const next = { ...prevEd, id: target, ...vals, ...(img !== undefined ? { image: img } : {}) };
+        cursoEdit = [...edits().filter((x) => x.id !== target), next];
+        saveCursoEdit();
+      }
+      close(); render(view);
+      toast('Alterações salvas.');
+    });
+    requestAnimationFrame(() => wrap.classList.add('in'));
+  }
+
   /* apagar um card pede confirmação e a senha mestra (só a impressão digital SHA-256 dela fica no código).
      É uma trava contra cliques sem querer; quem pode gravar no banco continua sendo só o administrador. */
   const MASTER_SHA = '618a865ecfa5327507b402d6a4d9bdfa52745e6da3296eb5ffcb5ec3add5d563';

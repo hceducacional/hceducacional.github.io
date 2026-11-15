@@ -153,11 +153,36 @@
 .pf-add-lesson svg { width: 17px; height: 17px; }
 .pf-add-lesson:hover { background: rgba(52, 211, 153, .22); }
 .pf-add-lesson:active { transform: scale(.96); }
-/* apagar um card criado pelo administrador (antes de ser configurado) */
-.pf-lesson-del { position: absolute; top: 12px; right: 12px; z-index: 3; width: 32px; height: 32px; border-radius: 50%; border: 0; cursor: pointer;
-  display: grid; place-items: center; background: rgba(0, 0, 0, .45); color: #fff; font-size: 20px; line-height: 1; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-  transition: background .2s; }
+/* botões só de administrador no canto do card: editar capa (lápis) e apagar card criado (×) */
+.pf-adm { position: absolute; top: 12px; right: 12px; z-index: 3; display: flex; gap: 8px; }
+.pf-adm-btn { width: 36px; height: 36px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center;
+  background: rgba(0, 0, 0, .45); color: #fff; font-size: 20px; line-height: 1; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  box-shadow: inset 0 0 0 .5px rgba(255, 255, 255, .25); transition: background .2s, transform .2s var(--ease); }
+.pf-adm-btn svg { width: 17px; height: 17px; }
+.pf-adm-btn:hover { background: rgba(0, 0, 0, .7); }
+.pf-adm-btn:active { transform: scale(.92); }
 .pf-lesson-del:hover { background: rgba(220, 38, 38, .85); }
+/* janela de edição da capa */
+.lk-card.pf-ed { width: min(520px, 100%); max-height: calc(100dvh - 48px); overflow-y: auto; text-align: left; padding: 28px 26px 22px; }
+.pf-ed h2, .pf-ed .lk-sub { text-align: center; }
+.pf-ed .lk-sub { margin-bottom: 18px; }
+.pf-ed-cover { position: relative; width: min(240px, 70%); margin: 0 auto; border-radius: 20px; overflow: hidden; background: #e8e8ed; }
+.pf-ed-prev { position: absolute; inset: 0; display: grid; place-items: center; transition: opacity .2s; }
+.pf-ed-prev.busy { opacity: .4; }
+.pf-ed-prev img { width: 100%; height: 100%; object-fit: cover; }
+.pf-ed-prev span { display: grid; justify-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.pf-ed-prev span svg { width: 30px; height: 30px; }
+.pf-ed-acts { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; gap: 8px; justify-content: center; }
+.pf-ed-btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border: 0; border-radius: 999px; cursor: pointer;
+  background: rgba(0, 0, 0, .62); color: #fff; font: inherit; font-size: 13.5px; font-weight: 600; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.pf-ed-btn svg { width: 16px; height: 16px; }
+.pf-ed-btn:hover { background: rgba(0, 0, 0, .8); }
+.pf-ed-btn[hidden] { display: none; }
+.pf-ed-hint { display: block; margin: 8px 0 4px; text-align: center; font-size: 12.5px; color: var(--muted); }
+.pf-ed .lk-field input { padding-right: 16px; }
+.pf-ed .lk-field textarea { width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--line); background: #fff; color: var(--ink);
+  font: inherit; font-size: 15px; line-height: 1.45; resize: vertical; transition: border-color .2s, box-shadow .2s; }
+.pf-ed .lk-field textarea:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
 /* computador: título à esquerda e texto à direita, ocupando a largura do painel */
 @media (min-width: 861px) {
   .pf-mod-inner > section:has(> .shelf-sub) { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: 48px; align-items: start; }
@@ -247,3 +272,78 @@
   .pf-mod-inner.enter .pf-lesson, .pf-mod-inner.enter .pf-lesson::after, .pf-mod-inner.enter > section > * { animation: none !important; }
 }
 .lk-icon.au-ico.pf-del-ico { color: var(--danger); background: rgba(227, 0, 0, .1); }
+
+/* =========================================================
+   ABERTURA DA LIÇÃO — faixas brancas diagonais, logo e selo da lição
+   Cobre só a área da plataforma (fica abaixo da barra de cima e da lateral).
+   ========================================================= */
+.pfi { position: fixed; top: 0; right: 0; bottom: 0; z-index: 35; overflow: hidden; pointer-events: auto; cursor: progress; }
+/* faixas: entram pela direita, uma atrás da outra */
+.pfi-bands { position: absolute; inset: -12% -20%; transform: skewX(-17deg); }
+.pfi-bands i { position: absolute; top: 0; bottom: 0; background: #fff; transform: translate3d(110vw, 0, 0); will-change: transform; }
+.pfi-bands i:nth-child(1) { left: 74%; width: 14%; opacity: .95; }
+.pfi-bands i:nth-child(2) { left: 66%; width: 3%; opacity: .7; }
+.pfi-bands i:nth-child(3) { left: 50%; width: 12%; opacity: .9; }
+.pfi-bands i:nth-child(4) { left: 42%; width: 5%; opacity: .6; }
+.pfi-bands i:nth-child(5) { left: 24%; width: 15%; opacity: .95; }
+.pfi-bands i:nth-child(6) { left: 16%; width: 3%; opacity: .7; }
+.pfi-bands i:nth-child(7) { left: 0; width: 13%; opacity: .9; }
+.pfi.in .pfi-bands i { animation: pfiBandIn 1.5s cubic-bezier(.22, .9, .3, 1) calc(var(--k) * 95ms) both; }
+.pfi.out .pfi-bands i { animation: pfiBandOut 1.6s cubic-bezier(.55, 0, .25, 1) calc(var(--k) * 90ms) both; }
+@keyframes pfiBandIn { from { transform: translate3d(110vw, 0, 0); } to { transform: none; } }
+@keyframes pfiBandOut { from { transform: none; } to { transform: translate3d(-160vw, 0, 0); } }
+/* fundo branco que completa a cobertura */
+.pfi-white { position: absolute; inset: 0; background: #fff; opacity: 0; }
+.pfi.in .pfi-white { animation: pfiFade .8s ease-in-out 1s both; }
+.pfi.out .pfi-white { animation: pfiFadeOut 1s ease-in-out .25s both; }
+/* halo suave nas cores do site atrás do logo */
+.pfi-halo { position: absolute; left: 50%; top: 50%; width: min(900px, 90%); aspect-ratio: 2 / 1; transform: translate(-50%, -50%) scale(.8); opacity: 0;
+  background: radial-gradient(closest-side, rgba(52, 211, 153, .22), rgba(56, 189, 248, .12) 55%, rgba(255, 255, 255, 0)); }
+.pfi.in .pfi-halo { animation: pfiHalo 2s cubic-bezier(.22, 1, .36, 1) 1.4s both; }
+.pfi.out .pfi-halo { animation: pfiFadeOut .7s ease both; }
+@keyframes pfiHalo { from { opacity: 0; transform: translate(-50%, -50%) scale(.8); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+/* logo: cresce e aparece; um brilho atravessa uma vez */
+.pfi-logo { position: absolute; left: 50%; top: 50%; width: min(620px, 62%); transform: translate(-50%, -50%) scale(.84); opacity: 0; }
+.pfi-logo img { display: block; width: 100%; height: auto; }
+.pfi.in .pfi-logo { animation: pfiLogo 1.4s cubic-bezier(.22, 1, .36, 1) 1.4s both; }
+.pfi.out .pfi-logo { animation: pfiLogoOut .6s cubic-bezier(.4, 0, .8, .6) both; }
+@keyframes pfiLogo { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.84); } 60% { opacity: 1; } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes pfiLogoOut { from { opacity: 1; transform: translate(-50%, -50%) scale(1); } to { opacity: 0; transform: translate(-50%, -50%) scale(1.08); } }
+/* brilho recortado no formato do logo (a máscara é o próprio logo), sem nenhum fundo atrás */
+.pfi-shine { position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+  -webkit-mask: url(../assets/plataforma-informatica.webp) center / 100% 100% no-repeat; mask: url(../assets/plataforma-informatica.webp) center / 100% 100% no-repeat; }
+.pfi-shine::before { content: ""; position: absolute; top: -20%; bottom: -20%; left: 0; width: 30%; transform: translateX(-150%) skewX(-18deg);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .85), rgba(255, 255, 255, 0)); }
+.pfi.in .pfi-shine::before { animation: pfiShine 1.5s cubic-bezier(.45, 0, .2, 1) 2.4s both; }
+@keyframes pfiShine { to { transform: translateX(480%) skewX(-18deg); } }
+/* selo da lição no canto de baixo */
+.pfi-chip { position: absolute; left: 40px; bottom: 34px; display: flex; align-items: center; gap: 14px; max-width: calc(100% - 80px); opacity: 0; transform: translateY(14px); color: #1d1d1f; }
+.pfi-chip b { flex: none; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 16px; color: #fff; font-size: 20px; font-weight: 800; letter-spacing: -.02em;
+  background: linear-gradient(135deg, #0f9b6c, #2563eb); box-shadow: 0 10px 22px -12px rgba(37, 99, 235, .7); }
+.pfi-chip span { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding-left: 14px; border-left: 2px solid #1d1d1f; }
+.pfi-chip strong { font-size: 19px; font-weight: 800; letter-spacing: -.02em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pfi-chip small { font-size: 13px; font-weight: 600; color: #6e6e73; }
+.pfi.in .pfi-chip { animation: pfiChip 1.1s cubic-bezier(.22, 1, .36, 1) 1.8s both; }
+.pfi.out .pfi-chip { animation: pfiFadeOut .5s ease both; }
+@keyframes pfiChip { to { opacity: 1; transform: none; } }
+@keyframes pfiFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pfiFadeOut { from { opacity: 1; } to { opacity: 0; } }
+/* barrinha de carregamento embaixo do logo */
+.pfi-load { position: absolute; left: 50%; top: calc(100% + 34px); width: 58%; transform: translate(-50%, 10px); opacity: 0; }
+.pfi.in .pfi-load { animation: pfiLoadIn .9s cubic-bezier(.22, 1, .36, 1) 1.9s both; }
+@keyframes pfiLoadIn { to { opacity: 1; transform: translate(-50%, 0); } }
+.pfi-track { position: relative; height: 8px; border-radius: 999px; overflow: hidden; background: rgba(29, 29, 31, .08); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .06); }
+.pfi-fill { position: absolute; inset: 0; border-radius: inherit; transform: scaleX(0); transform-origin: left center; overflow: hidden;
+  background: linear-gradient(90deg, #0f9b6c, #14b8a6 50%, #2563eb); }
+/* reflexo que corre por dentro da barra enquanto carrega */
+.pfi-fill::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 40%; transform: translateX(-100%);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .55), rgba(255, 255, 255, 0)); animation: pfiGloss 1.3s ease-in-out infinite; }
+@keyframes pfiGloss { to { transform: translateX(260%); } }
+.pfi-load.done .pfi-fill::after { animation: none; opacity: 0; }
+.pfi-load.done .pfi-track { animation: pfiDone .6s ease; }
+@keyframes pfiDone { 50% { box-shadow: 0 0 0 4px rgba(20, 184, 166, .18); } }
+.pfi-load-txt { display: flex; justify-content: space-between; margin-top: 10px; font-size: 13px; font-weight: 600; color: #6e6e73; font-variant-numeric: tabular-nums; }
+.pfi-load-txt em { font-style: normal; }
+.pfi-load-txt b { color: #1d1d1f; }
+.pfi.out .pfi-load { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { .pfi { display: none; } }
