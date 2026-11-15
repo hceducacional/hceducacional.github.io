@@ -10,3 +10,6 @@ __pycache__/
 
 # imagens de referência de terceiros (só para estudo das animações; não vão para o site)
 referencias/
+
+# chaves secretas dos avisos (ficam só no computador e no Supabase)
+*.local.txt

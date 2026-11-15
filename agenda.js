@@ -17,7 +17,8 @@ const AG = {
   address: 'Rua Santa Cruz, São Bernardo, Humberto de Campos – MA', manager: 'Adriane Carvalho',
   maxDays: 120,
 };
-const AG_STATUS = { confirmado: 'Confirmado', compareceu: 'Compareceu', faltou: 'Não compareceu', cancelado: 'Cancelado' };
+const AG_STATUS = { pendente: 'Aguardando', confirmado: 'Confirmado', compareceu: 'Compareceu', faltou: 'Não compareceu', cancelado: 'Cancelado' };
+const agActive = (a) => a.status === 'pendente' || a.status === 'confirmado'; // ocupa a vaga e ainda vai acontecer
 const MESES_AG = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
 /* datas no fuso do polo (Maranhão) */
@@ -361,8 +362,8 @@ function agSuccess(a) {
   agMorph(box, () => { box.innerHTML = `
     <div class="ag-done">
       <span class="ag-check"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="m15 27 7 7 15-16"/></svg></span>
-      <h2>Agendamento confirmado!</h2>
-      <p>Compareça ao Polo Faveni Humberto de Campos no dia e horário abaixo.</p>
+      <h2>Agendamento recebido!</h2>
+      <p>Sua vaga está reservada. O polo vai conferir e confirmar o seu agendamento.</p>
       <div class="ag-ticket">
         <div class="ag-ticket-top"><span>${k.label}</span><strong>${new Date(a.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</strong><em>${s.label} · início às ${s.time}</em></div>
         <dl>
@@ -372,6 +373,7 @@ function agSuccess(a) {
           <div><dt>Faculdade</dt><dd>${esc(a.college)}</dd></div>
         </dl>
       </div>
+      <div class="ag-push" id="ag-push"></div>
       <p class="ag-small">Envie o agendamento para o suporte no WhatsApp para concluir.</p>
       <div class="ag-done-actions">
         <a class="ag-submit ag-wa" href="${esc(wa)}" target="_blank" rel="noopener">${WA_SVG}Enviar para o suporte no WhatsApp</a>
@@ -380,6 +382,7 @@ function agSuccess(a) {
     </div>`; });
   if (box.classList.contains('expanded')) box.scrollTo({ top: 0, behavior: 'smooth' }); else box.scrollIntoView({ behavior: 'smooth', block: 'start' });
   $('#ag-new').addEventListener('click', () => { agExpand(false, true); route(); }); // recomeça o assistente na etapa 1
+  paintPushCard($('#ag-push'), { compact: true }); // oferece os avisos de confirmação no celular
   window.open(wa, '_blank', 'noopener'); // tenta abrir o WhatsApp sozinho; se o navegador bloquear, fica o botão
 }
 
@@ -401,7 +404,7 @@ function renderAgendaAdmin(view) {
   waitAuth(view, async () => {
     if (!isAdmin()) return adminOnly(view, 'Agendamentos');
     // sempre que o painel abre, começa em "Hoje", sem filtros
-    Object.assign(agAdm, { tab: 'agendados', day: '', f: { range: 'hoje', d1: '', d2: '', kind: '', shift: '', q: '' } });
+    Object.assign(agAdm, { list: [], tab: 'agendados', day: '', f: { range: 'hoje', d1: '', d2: '', kind: '', shift: '', q: '' } });
     const now = agNow().date, m1 = now.slice(0, 8) + '01';
     const mEnd = isoAdd(isoAdd(m1, 32).slice(0, 8) + '01', -1);
     view.innerHTML = `
@@ -494,7 +497,7 @@ function renderAgendaAdmin(view) {
       if (!date) return toast('Escolha a data para bloquear.');
       const { error } = await sb.from('blocked_dates').insert({ date, scope, reason });
       if (error) return toast(/duplicate/i.test(error.message) ? 'Essa data já está bloqueada.' : authError(error));
-      const busy = agAdm.list.filter((a) => a.date === date && a.status === 'confirmado' && (scope === 'todos' || a.kind === scope)).length;
+      const busy = agAdm.list.filter((a) => a.date === date && agActive(a) && (scope === 'todos' || a.kind === scope)).length;
       toast(busy ? `Data bloqueada. Atenção: ${busy} agendamento(s) já marcados nesse dia.` : 'Data bloqueada');
       $('#bl-d').value = ''; $('#bl-r').value = ''; agReload();
     });
@@ -509,17 +512,19 @@ async function agReload() {
     sb.from('blocked_dates').select('*').order('date'),
   ]);
   if (a.error) { $('#ag-list') && ($('#ag-list').innerHTML = `<p class="me-loading">${esc(authError(a.error))}</p>`); return; }
+  const first = !agAdm.list.length;
   agAdm.list = a.data || []; agAdm.blocked = b.data || [];
+  if (first && agAdm.tab === 'agendados' && agAdm.list.some((x) => x.status === 'pendente')) agAdm.tab = 'aguardando';
   agDraw();
 }
-const agTabOf = (a) => (a.status === 'confirmado' ? 'agendados' : a.status === 'cancelado' ? 'cancelados' : 'realizados');
+const agTabOf = (a) => (a.status === 'pendente' ? 'aguardando' : a.status === 'confirmado' ? 'agendados' : a.status === 'cancelado' ? 'cancelados' : 'realizados');
 /* alunos de uma aba, com os filtros: "Agendados" segue o período escolhido; "Realizados" e
    "Cancelados" mostram também os dias passados (a não ser que um dia ou datas estejam escolhidos).
    Cada aba é contada com a sua própria regra, então os números batem com o que aparece ao abri-la. */
 function agFiltered(tab = agAdm.tab) {
   const f = agAdm.f, q = fold(f.q.trim()), qd = cpfDigits(f.q);
   const [d1, d2] = agAdm.day ? [agAdm.day, agAdm.day] : agRange();
-  const todasAsDatas = tab !== 'agendados' && !agAdm.day && !f.d1 && !f.d2;
+  const todasAsDatas = tab !== 'agendados' && !agAdm.day && !f.d1 && !f.d2; // "Aguardando" mostra todos os que faltam confirmar
   return agAdm.list.filter((a) => agTabOf(a) === tab && (todasAsDatas ? true : a.date >= d1 && a.date <= d2)
     && (!f.kind || a.kind === f.kind) && (!f.shift || a.shift === f.shift)
     && (!q || fold(a.name).includes(q) || (qd.length >= 3 && a.cpf.includes(qd))));
@@ -530,7 +535,7 @@ function agDraw() {
   const used = (d, k, s) => agAdm.list.filter((a) => a.date === d && a.kind === k && a.shift === s && a.status !== 'cancelado').length;
 
   // números do topo
-  const conf = agAdm.list.filter((a) => a.status === 'confirmado');
+  const conf = agAdm.list.filter(agActive);
   const pres = agAdm.list.filter((a) => a.status === 'compareceu').length, falt = agAdm.list.filter((a) => a.status === 'faltou').length;
   const kpi = (ico, c, n, t, s) => `<div class="aa-kpi" style="--a:${c[0]};--b:${c[1]}"><span class="aa-kpi-ico"><i data-icon="${ico}"></i></span><b>${n}</b><span>${t}</span>${s ? `<small>${s}</small>` : ''}</div>`;
   $('#aa-kpis').innerHTML =
@@ -573,10 +578,10 @@ function agDraw() {
 
   // lista de alunos, agrupada por dia
   const count = (t) => agFiltered(t).length;
-  $('#ag-tabs').innerHTML = [['agendados', 'Agendados'], ['realizados', 'Realizados'], ['cancelados', 'Cancelados']].map(([t, l]) => `<button type="button" data-tab="${t}" class="${agAdm.tab === t ? 'on' : ''}">${l} <b>${count(t)}</b></button>`).join('');
+  $('#ag-tabs').innerHTML = [['aguardando', 'Aguardando'], ['agendados', 'Agendados'], ['realizados', 'Realizados'], ['cancelados', 'Cancelados']].map(([t, l]) => `<button type="button" data-tab="${t}" class="${agAdm.tab === t ? 'on' : ''} ${t === 'aguardando' && count(t) ? 'hot' : ''}">${l} <b>${count(t)}</b></button>`).join('');
   $('#aa-dayfilter').innerHTML = agAdm.day ? `<span class="aa-chip">${agDayLong(agAdm.day)}<button type="button" data-clearday aria-label="Ver todos os dias"><i data-icon="x"></i></button></span>` : '';
   const list = agFiltered(agAdm.tab);
-  if (agAdm.tab !== 'agendados') list.reverse();
+  if (agAdm.tab === 'realizados' || agAdm.tab === 'cancelados') list.reverse();
   const groups = [];
   list.forEach((a) => { const g = groups.at(-1); if (g && g.date === a.date) g.items.push(a); else groups.push({ date: a.date, items: [a] }); });
   $('#ag-list').innerHTML = groups.length ? groups.map((g) => `
@@ -589,7 +594,10 @@ function agDraw() {
         <span class="aa-when"><span class="ag-tag t-${a.kind}">${AG.kinds[a.kind].short}</span><span class="aa-time"><i data-icon="${a.shift === 'manha' ? 'sun' : 'clock'}"></i>${AG.shifts[a.shift].label} · ${AG.shifts[a.shift].time}</span></span>
         <span class="ag-st s-${a.status}">${AG_STATUS[a.status]}</span>
         <span class="ag-acts">
-          ${a.status === 'confirmado' ? `
+          ${a.status === 'pendente' ? `
+            <button class="aa-btn ok" data-ag="confirmar" title="Confirmar e avisar o aluno"><i data-icon="check"></i><span>Confirmar</span></button>
+            <button class="icon-btn neutral" data-ag="remarcar" title="Remarcar"><i data-icon="calendar"></i></button>
+            <button class="icon-btn" data-ag="cancelar" title="Cancelar agendamento"><i data-icon="trash"></i></button>` : a.status === 'confirmado' ? `
             <button class="aa-btn ok" data-ag="compareceu" title="Compareceu"><i data-icon="check"></i><span>Veio</span></button>
             <button class="aa-btn no" data-ag="faltou" title="Não compareceu"><i data-icon="x"></i><span>Faltou</span></button>
             <button class="icon-btn neutral" data-ag="remarcar" title="Remarcar"><i data-icon="calendar"></i></button>
@@ -598,7 +606,7 @@ function agDraw() {
           ${a.history?.length ? `<button class="icon-btn neutral" data-ag="hist" title="Histórico"><i data-icon="clock"></i></button>` : ''}
         </span>
       </div>`).join('')}
-    </div>`).join('') : `<p class="us-empty">Nenhum agendamento ${agAdm.tab === 'agendados' ? 'marcado' : agAdm.tab === 'realizados' ? 'realizado' : 'cancelado'} ${agAdm.day ? 'nesse dia' : 'nesse período'}.</p>`;
+    </div>`).join('') : (agAdm.tab === 'aguardando' ? `<p class="us-empty">Nenhum agendamento esperando confirmação${agAdm.day ? ' nesse dia' : ''}.</p>` : `<p class="us-empty">Nenhum agendamento ${agAdm.tab === 'agendados' ? 'marcado' : agAdm.tab === 'realizados' ? 'realizado' : 'cancelado'} ${agAdm.day ? 'nesse dia' : 'nesse período'}.</p>`);
   paintIcons($('.ag-adm'));
 }
 async function agUpdate(a, patch, note) {
@@ -607,6 +615,14 @@ async function agUpdate(a, patch, note) {
   if (error) { toast(authError(error)); return false; }
   Object.assign(a, patch, { history }); agDraw(); return true;
 }
+/* manda o aviso para o celular do aluno e conta no toast se chegou */
+async function agAvisar(a, tipo, txt) {
+  toast(txt);
+  const r = await pushNotifyAppointment(a.id, tipo);
+  if (!r) return;
+  if (r.enviados) toast(`${txt} · aviso enviado para o celular`);
+  else if (tipo === 'confirmado') toast(`${txt} · ${r.conta ? 'o aluno não ativou os avisos' : 'agendado sem conta, sem aviso no celular'}`);
+}
 async function agAction(e) {
   const b = e.target.closest('[data-ag]'); if (!b) return;
   const a = agAdm.list.find((x) => x.id === b.closest('[data-id]').dataset.id); if (!a) return;
@@ -614,10 +630,11 @@ async function agAction(e) {
   if (act === 'compareceu' || act === 'faltou') {
     if (await agUpdate(a, { status: act }, { acao: AG_STATUS[act] })) toast(`${a.name.split(' ')[0]}: ${AG_STATUS[act].toLowerCase()}`);
   }
+  if (act === 'confirmar' && await agUpdate(a, { status: 'confirmado' }, { acao: 'Confirmado' })) agAvisar(a, 'confirmado', `${a.name.split(' ')[0]}: confirmado`);
   if (act === 'desfazer' && await agUpdate(a, { status: 'confirmado' }, { acao: 'Voltou para agendado' })) toast('Voltou para agendados');
   if (act === 'cancelar') {
     if (!(await confirmDialog({ title: `Cancelar o agendamento de ${a.name.split(' ')[0]}?`, sub: `${AG.kinds[a.kind].label} em ${brDate(a.date)}, ${AG.shifts[a.shift].label.toLowerCase()}. A vaga fica livre de novo.`, ok: 'Cancelar agendamento' }))) return;
-    if (await agUpdate(a, { status: 'cancelado' }, { acao: 'Cancelado' })) toast('Agendamento cancelado');
+    if (await agUpdate(a, { status: 'cancelado' }, { acao: 'Cancelado' })) agAvisar(a, 'cancelado', 'Agendamento cancelado');
   }
   if (act === 'remarcar') agRemarcar(a);
   if (act === 'hist') {
@@ -652,7 +669,7 @@ function agRemarcar(a) {
     if (!cap) return (msg.textContent = `Não há ${AG.kinds[a.kind].short.toLowerCase()} nesse dia e turno.`);
     const u = agAdm.list.filter((x) => x.id !== a.id && x.date === date && x.kind === a.kind && x.shift === shift && x.status !== 'cancelado').length;
     if (u >= cap && !msg.dataset.force) { msg.textContent = `Esse turno já está lotado (${u}/${cap}). Clique em Remarcar de novo para encaixar mesmo assim.`; msg.dataset.force = '1'; return; }
-    if (await agUpdate(a, { date, shift }, { acao: 'Remarcado', de: { date: a.date, shift: a.shift }, para: { date, shift } })) { close(); toast('Agendamento remarcado'); }
+    if (await agUpdate(a, { date, shift }, { acao: 'Remarcado', de: { date: a.date, shift: a.shift }, para: { date, shift } })) { close(); agAvisar(a, 'remarcado', 'Agendamento remarcado'); }
   });
   requestAnimationFrame(() => wrap.classList.add('in'));
 }
@@ -672,7 +689,7 @@ async function agReport(d1, d2, kind) {
   td small{color:#777}@page{margin:14mm}</style></head><body>
   <h1>Agendamentos — Polo Faveni Humberto de Campos</h1>
   <p>${kind ? AG.kinds[kind].label + 's' : 'Provas e tutorias'} · ${brDate(d1)} a ${brDate(d2)} · gerado em ${new Date().toLocaleString('pt-BR')}</p>
-  <div class="k"><div><b>${data.length}</b>Total</div><div><b>${tot('confirmado')}</b>Agendados</div><div><b>${tot('compareceu')}</b>Compareceram</div><div><b>${tot('faltou')}</b>Não compareceram</div><div><b>${tot('cancelado')}</b>Cancelados</div></div>
+  <div class="k"><div><b>${data.length}</b>Total</div><div><b>${tot('pendente')}</b>Aguardando</div><div><b>${tot('confirmado')}</b>Agendados</div><div><b>${tot('compareceu')}</b>Compareceram</div><div><b>${tot('faltou')}</b>Não compareceram</div><div><b>${tot('cancelado')}</b>Cancelados</div></div>
   <table><thead><tr><th>Data</th><th>Turno</th><th>Tipo</th><th>Nome</th><th>CPF</th><th>Curso</th><th>Faculdade</th><th>Status</th></tr></thead><tbody>
   ${data.map((a) => `<tr><td>${brDate(a.date)}</td><td>${AG.shifts[a.shift].label}</td><td>${AG.kinds[a.kind].short}</td><td>${esc(a.name)}${a.history?.some((h) => h.de) ? '<br><small>remarcado</small>' : ''}</td><td>${cpfMask(a.cpf)}</td><td>${esc(a.course)}</td><td>${esc(a.college)}</td><td>${AG_STATUS[a.status]}</td></tr>`).join('') || '<tr><td colspan="8">Nenhum agendamento no período.</td></tr>'}
   </tbody></table></body></html>`;

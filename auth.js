@@ -170,6 +170,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleMenu
 window.addEventListener('hashchange', () => toggleMenu(false));
 
 async function signOut() {
+  if (typeof pushDisable === 'function') await pushDisable(true).catch(() => {}); // desliga os avisos deste aparelho antes de sair
   await sb?.auth.signOut({ scope: 'local' }); // sai só deste aparelho; os outros continuam conectados
   toast('Você saiu da sua conta.');
   if (['perfil', 'usuarios'].includes(location.hash.slice(1))) location.hash = '#dashboard';
@@ -537,9 +538,11 @@ function renderProfile(view) {
           <div class="lk-field"><input type="password" id="me-p2" minlength="8" autocomplete="new-password" placeholder="Digite de novo"></div>
           <div class="me-foot"><button class="btn-dark" type="submit">Trocar senha</button></div>
         </form>
+        <section class="me-card me-push" id="me-push"><h3>Avisos no celular</h3><div id="me-push-card"></div></section>
       </div>
     </div>`;
     paintIcons(view);
+    paintPushCard($('#me-push-card'));
 
     $('#me-form').addEventListener('submit', async (e) => {
       e.preventDefault();

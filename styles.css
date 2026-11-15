@@ -3846,3 +3846,31 @@ html.lk-lock, html.lk-lock body { overflow: hidden; }
   .au-login.in .au-art { height: 132px; transition: height .9s cubic-bezier(.7, 0, .2, 1) .25s; }
   .au-login .au-card { flex: 1 1 auto; min-height: 0; max-height: none; }
 }
+
+/* ===== Avisos no celular (avisos.js) ===== */
+.ag-st.s-pendente { background: #fff4e0; color: #b45309; }
+.ag-tabs button.hot b { min-width: 20px; height: 20px; padding: 0 6px; display: inline-grid; place-items: center; border-radius: 999px; background: #f59e0b; color: #fff; font-size: 12px; }
+.pc { display: grid; grid-template-columns: auto 1fr; gap: 12px 14px; align-items: center; }
+.pc-ico { position: relative; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; color: #fff; background: linear-gradient(145deg, #fbbf24, #f97316); box-shadow: 0 8px 18px -10px rgba(249, 115, 22, .8); }
+.pc-ico i { width: 22px; height: 22px; display: grid; }
+.pc.s-on .pc-ico { background: linear-gradient(145deg, #34d399, #059669); box-shadow: 0 8px 18px -10px rgba(5, 150, 105, .8); }
+.pc.s-denied .pc-ico, .pc.s-unsupported .pc-ico { background: linear-gradient(145deg, #a1a1aa, #71717a); box-shadow: none; }
+.pc-dot { position: absolute; top: -3px; right: -3px; width: 12px; height: 12px; border-radius: 50%; background: #34d399; border: 2px solid var(--card); animation: pcPulse 2.4s ease-in-out infinite; }
+@keyframes pcPulse { 50% { box-shadow: 0 0 0 5px rgba(52, 211, 153, .25); } }
+.pc-txt { display: grid; gap: 3px; min-width: 0; }
+.pc-txt strong { font-size: 15.5px; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+.pc-txt span { font-size: 13.5px; line-height: 1.4; color: var(--muted); }
+.pc-btns { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.pc-btns button { height: 40px; padding: 0 18px; }
+.pc-btns i { width: 16px; height: 16px; display: grid; }
+.ag-push { max-width: 520px; margin: 22px auto 0; padding: 16px; border-radius: 20px; background: var(--bg); text-align: left; }
+.ag-push:empty { display: none; }
+.pc.compact .pc-btns button { flex: 1; }
+.pc-steps { display: grid; gap: 10px; text-align: left; }
+.pc-steps > span { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: center; line-height: 1.45; }
+.pc-steps strong { color: var(--ink); font-weight: 600; }
+.pc-steps b { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); font-size: 13px; }
+.pc-share { display: inline-block; width: 15px; height: 17px; vertical-align: -3px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v12M7 8l5-5 5 5M20 14v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v12M7 8l5-5 5 5M20 14v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5'/%3E%3C/svg%3E") center / contain no-repeat; }
+@media (min-width: 1201px) { .me-grid { grid-template-rows: auto 1fr; } .me-grid > #me-form, .me-grid > .me-id { grid-row: span 2; } .me-grid > .me-push { grid-column: 3; } } /* avisos logo abaixo de "Trocar senha" */

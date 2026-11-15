@@ -11,6 +11,8 @@ Site estático (HTML, CSS e JavaScript), publicado pelo GitHub Pages.
 | `styles.css` | Visual do site |
 | `app.js` | Páginas, carrossel, notícias e Configurações |
 | `content.js` | Conteúdo publicado: banners, botões e notícias |
+| `avisos.js` + `sw.js` | Avisos no celular (notificações) do agendamento |
+| `supabase/functions/avisos` | Função do Supabase que envia os avisos |
 | `assets/` | Imagens |
 | `scripts/exportar_conteudo.py` | Copia o que foi editado em Configurações para `content.js` |
 
