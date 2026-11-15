@@ -71,8 +71,8 @@ const INFO_BG = [
 ];
 const INFO_GLYPHS = ['</>', '{ }', '01', '=>', ';', '#', '[ ]', '()', '&&', '10'];
 const infoTok = (toks) => toks.map(([c, t]) => `<span class="t-${c || 'v'}">${esc(t)}</span>`).join('');
-function infoBgRows() {
-  return Array.from({ length: 7 }, (_, r) => {
+function infoBgRows(rows = 7) {
+  return Array.from({ length: rows }, (_, r) => {
     const line = Array.from({ length: 5 }, (_, i) => infoTok(INFO_BG[(r * 3 + i) % INFO_BG.length])).join('<b class="inf-sep"></b>');
     return `<div class="inf-code-row" style="--r:${r}"><div>${line}<b class="inf-sep"></b>${line}<b class="inf-sep"></b></div></div>`;
   }).join('');

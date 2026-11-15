@@ -691,6 +691,33 @@
       ['#e11d48', '#7f1028'], ['#db2777', '#6b0f4a'], ['#7c3aed', '#2e1065'], ['#2563eb', '#172554'],
       ['#0891b2', '#083344'], ['#ea580c', '#7c2d12'], ['#16a34a', '#14532d'], ['#c026d3', '#4a044e'],
     ];
+    /* "Parabéns!" entra decifrando: cada letra troca por letras e símbolos até achar a certa (da esquerda para a direita) */
+    function decode(h, delay) {
+      if (!h) return;
+      const word = h.textContent.trim(), POOL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<>/{}[]#$%&*+=?;:_';
+      h.setAttribute('aria-label', word);
+      h.innerHTML = [...word].map((c) => `<span class="lr-ch" aria-hidden="true">${esc(c)}</span>`).join('');
+      const spans = [...h.children];
+      spans.forEach((s) => { s.style.width = `${s.getBoundingClientRect().width}px`; }); // trava a largura de cada letra para nada pular
+      const rnd = () => POOL[Math.floor(Math.random() * POOL.length)];
+      spans.forEach((s) => { s.classList.add('scr'); s.textContent = rnd(); });
+      const at = spans.map((_, i) => 350 + i * 120 + Math.random() * 90); // quando cada letra se acerta
+      let t0 = 0, last = 0;
+      const tick = (now) => {
+        if (!h.isConnected) return;
+        if (!t0) t0 = now;
+        const t = now - t0, swap = now - last > 55;
+        if (swap) last = now;
+        let left = 0;
+        spans.forEach((s, i) => {
+          if (!s.classList.contains('scr')) return;
+          if (t >= at[i]) { s.classList.remove('scr'); s.classList.add('ok'); s.textContent = word[i]; }
+          else { left++; if (swap) s.textContent = rnd(); }
+        });
+        if (left) requestAnimationFrame(tick);
+      };
+      setTimeout(() => requestAnimationFrame(tick), delay);
+    }
     function showFinale({ a, rating, fast, slow, g }) {
       document.querySelector('.lr')?.remove();
       const pts = Math.min(PTS_MAX, Math.round((st.levelPts || []).reduce((t, x) => t + (x || 0), 0)));
@@ -706,14 +733,14 @@
       el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Resultado da lição');
       el.innerHTML = `
         <div class="lr-bg"></div>
-        <div class="lr-panel"><div class="lr-rays">${[0, 1, 2, 3, 4, 5].map((k) => `<i style="--k:${k}"></i>`).join('')}</div></div>
+        <div class="lr-panel"><div class="lr-code" aria-hidden="true">${typeof infoBgRows === 'function' ? infoBgRows(14) : ''}</div><div class="lr-rays">${[0, 1, 2, 3, 4, 5].map((k) => `<i style="--k:${k}"></i>`).join('')}</div></div>
         <div class="lr-scroll">
           <div class="lr-stage">
             <h2 class="lr-congrats">Parabéns!</h2>
             <div class="lr-ribbon">
               <span class="lr-tab"></span>
               ${userAvatar(auth.profile || { name }, 'lr-av')}
-              <div class="lr-who"><strong>${esc(name)}</strong><small>Lição ${L.numero} · ${esc(L.titulo)}</small><div class="lr-bar"><i class="lr-fill"></i></div></div>
+              <div class="lr-who"><strong>${esc(name)}</strong><small>Lição ${L.numero} · ${esc(L.titulo)}</small><div class="lr-track"><div class="lr-bar"><i class="lr-fill"><b class="lr-beam"></b></i></div><div class="lr-rstars">${STAR_AT.map((_, i) => `<span class="lr-rstar" style="--i:${i}">${['amarela', 'superstar', 'megastar'].map((k) => `<img class="s-${k}" src="assets/estrelas/estrela-${k}.png" alt="" draggable="false">`).join('')}</span>`).join('')}</div><b class="lr-rnum">0</b></div></div>
               <div class="lr-score">
                 <div class="lr-stars">${STAR_AT.map((_, i) => `<span class="lr-star" style="--i:${i}">${['vazia', 'amarela', 'superstar', 'megastar'].map((k) => `<img class="s-${k}" src="assets/estrelas/estrela-${k}.png" alt="" draggable="false">`).join('')}</span>`).join('')}</div>
                 <b class="lr-num">0</b>
@@ -742,22 +769,35 @@
         <div class="lr-bands">${[0, 1, 2, 3, 4, 5, 6].map((k) => `<i style="--k:${k}"></i>`).join('')}</div>`;
       document.body.append(el);
       requestAnimationFrame(() => el.classList.add('in'));
+      if (!reduce) decode(el.querySelector('.lr-congrats'), 2000);
       ['superstar', 'megastar'].forEach((k) => { new Image().src = `assets/estrelas/titulo-${k}.png`; }); // já deixa as imagens prontas
 
       const num = el.querySelector('.lr-num'), fill = el.querySelector('.lr-fill'), stars = el.querySelectorAll('.lr-star');
+      const track = el.querySelector('.lr-track'), rnum = el.querySelector('.lr-rnum'), rstars = el.querySelectorAll('.lr-rstar'), beam = el.querySelector('.lr-beam');
       const burst = el.querySelector('.lr-burst'), word = el.querySelector('.lr-word');
       const showRank = (r) => {
         el.classList.remove('super', 'mega'); el.classList.add(r);
         word.innerHTML = `<img src="assets/estrelas/titulo-${r === 'mega' ? 'megastar' : 'superstar'}.png" alt="${RANK_NAME[r]}">`; burst.classList.remove('go'); void burst.offsetWidth; burst.classList.add('go');
       };
       const paint = (v) => {
-        num.textContent = Math.round(v).toLocaleString('pt-BR');
+        num.textContent = rnum.textContent = Math.round(v).toLocaleString('pt-BR');
+        track.style.setProperty('--p', (v / PTS_MAX).toFixed(4)); // estrelas e pontos andam junto com a ponta da barra
         fill.style.transform = `scaleX(${(v / PTS_MAX).toFixed(4)})`;
-        stars.forEach((s, i) => { if (v >= STAR_AT[i] && !s.classList.contains('on')) s.classList.add('on'); });
+        // cada estrela nova surge na ponta da barra (as antigas vão ficando atrás) e um feixe de brilho corre pela parte cheia
+        rstars.forEach((s, i) => { if (v >= STAR_AT[i] && !s.classList.contains('on')) { s.classList.add('on'); beam.classList.remove('go'); void beam.offsetWidth; beam.classList.add('go'); } });
         if (v >= MEGA_AT && !el.classList.contains('mega')) showRank('mega');
         else if (v >= SUPER_AT && v < MEGA_AT && !el.classList.contains('super')) showRank('super');
       };
-      const finish = () => { paint(pts); el.classList.add('done'); if (!reduce) setTimeout(() => confetti(el), 500); };
+      // no fim: as estrelas da barra dão um pulinho e somem encolhendo para trás; só então aparecem no lugar delas, ao lado dos pontos
+      const land = () => { el.classList.add('land'); stars.forEach((s, i) => s.classList.toggle('on', pts >= STAR_AT[i])); };
+      const finish = () => {
+        paint(pts);
+        if (reduce) { land(); el.classList.add('done'); return; }
+        const n = starsOf(pts);
+        el.classList.add('leave');
+        const wait = 650 + n * 110;
+        setTimeout(() => { if (!el.isConnected) return; land(); setTimeout(() => { el.classList.add('done'); setTimeout(() => confetti(el), 500); }, n ? 500 + n * 140 : 0); }, wait);
+      };
       const D = 15000, START = reduce ? 0 : 3200; // a barra leva 15 s para encher, com as estrelas acendendo no caminho
       setTimeout(() => {
         if (!el.isConnected) return;

@@ -497,12 +497,28 @@
   background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .1), rgba(255, 255, 255, 0)); animation: lrRay calc(6s + var(--k) * 1.3s) ease-in-out infinite alternate; }
 .lr.in .lr-rays { animation: lrFade 1.6s ease 2s both; }
 @keyframes lrRay { to { transform: skewX(-6deg) translateX(60px); opacity: .5; } }
+/* linhas de código correndo bem de leve no painel colorido (as mesmas da pré-tela da Informática) */
+.lr-code { position: absolute; inset: -6% -10%; display: flex; flex-direction: column; justify-content: space-around; overflow: hidden; pointer-events: none; transform: skewX(-10deg);
+  font: 500 15px/1 ui-monospace, "SF Mono", Menlo, monospace; color: #fff; opacity: 0;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 85%, transparent); mask-image: linear-gradient(90deg, transparent, #000 18%, #000 85%, transparent); }
+.lr.in .lr-code { animation: lrCodeIn 2.4s ease 2.4s both; }
+@keyframes lrCodeIn { from { opacity: 0; } to { opacity: .2; } }
+.lr-code .inf-code-row { white-space: nowrap; }
+.lr-code .inf-code-row > div { display: inline-block; will-change: transform; animation: lrMarquee calc(70s + var(--r) * 10s) linear infinite; }
+.lr-code .inf-code-row:nth-child(even) > div { animation-direction: reverse; }
+@keyframes lrMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.lr-code .inf-sep { display: inline-block; width: 64px; }
+.lr-code .t-v { opacity: .65; } .lr-code .t-c { opacity: .45; } .lr-code .t-k, .lr-code .t-f { font-weight: 700; }
 /* conteúdo */
 .lr-scroll { position: absolute; inset: 0; z-index: 2; overflow-y: auto; scrollbar-width: none; }
 .lr-scroll::-webkit-scrollbar { display: none; }
 .lr-stage { min-height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 110px 0 120px; }
 .lr-congrats { margin: 0 0 16px 25%; font-size: clamp(60px, 6.4vw, 104px); font-weight: 700; letter-spacing: -.035em; line-height: 1; color: rgba(255, 255, 255, .7); text-shadow: 0 10px 40px rgba(0, 0, 0, .12); opacity: 0; transform: translateX(-40px); }
 .lr.in .lr-congrats { animation: lrIn 1.4s var(--e) 2s both; }
+.lr-ch { display: inline-block; text-align: center; white-space: pre; }
+.lr-ch.scr { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-weight: 600; font-size: .78em; color: rgba(255, 255, 255, .55); text-shadow: 0 0 18px rgba(255, 255, 255, .35); }
+.lr-ch.ok { animation: lrChOk .45s var(--e) both; }
+@keyframes lrChOk { from { transform: translateY(-6px) scale(1.12); color: #fff; text-shadow: 0 0 26px rgba(255, 255, 255, .8); } }
 .lr-ribbon { position: relative; display: grid; grid-template-columns: 22% auto minmax(0, 1fr) auto; align-items: center; gap: 20px; min-height: 108px; margin-right: 5%; padding-right: 30px;
   background: linear-gradient(90deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .1)); border-radius: 0 26px 26px 0; box-shadow: 0 24px 50px -30px rgba(0, 0, 0, .6);
   transform: translateX(-105%); }
@@ -521,7 +537,8 @@
 .lr-who { min-width: 0; }
 .lr-who strong { display: block; font-size: clamp(22px, 2vw, 30px); font-weight: 800; letter-spacing: -.02em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lr-who small { display: block; margin-top: 2px; font-size: 13.5px; font-weight: 600; opacity: .72; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lr-bar { position: relative; height: 24px; margin-top: 14px; border-radius: 999px; overflow: hidden; background: rgba(0, 0, 0, .18); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .25); }
+.lr-track { position: relative; margin-top: 14px; }
+.lr-bar { position: relative; height: 24px; border-radius: 999px; overflow: hidden; background: rgba(0, 0, 0, .18); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .25); }
 .lr-fill { position: absolute; inset: 0; border-radius: inherit; transform: scaleX(0); transform-origin: left; background: linear-gradient(90deg, #ffb703, #ffe066); box-shadow: 0 0 16px rgba(255, 214, 10, .75); transition: box-shadow .9s ease; will-change: transform; }
 .lr-fill::before, .lr-fill::after { content: ""; position: absolute; inset: 0; border-radius: inherit; opacity: 0; transition: opacity .9s ease; }
 .lr-fill::before { background: linear-gradient(90deg, #38bdf8, #e0f7ff); }
@@ -529,12 +546,44 @@
 .lr.super .lr-fill::before, .lr.mega .lr-fill::after { opacity: 1; }
 .lr.super .lr-fill { box-shadow: 0 0 18px rgba(125, 211, 252, .9); }
 .lr.mega .lr-fill { box-shadow: 0 0 20px rgba(216, 120, 255, .95); }
+/* feixe de brilho que corre da esquerda para a direita na parte cheia, a cada estrela conquistada */
+.lr-fill { overflow: hidden; }
+.lr-beam { position: absolute; z-index: 1; top: 0; bottom: 0; left: -40%; width: 40%; opacity: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .95) 55%, rgba(255, 255, 255, 0)); }
+.lr-beam.go { animation: lrBeam .95s cubic-bezier(.4, 0, .2, 1) both; }
+@keyframes lrBeam { 0% { opacity: 0; transform: translateX(0); } 15% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; transform: translateX(350%); } }
+/* estrelas e pontos que andam grudados na ponta da barra enquanto ela enche */
+.lr-track { --p: 0; }
+.lr-rstars { position: absolute; top: 50%; right: calc(100% - var(--p) * 100% - 22px); display: flex; transform: translateY(-50%); pointer-events: none; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .3)); }
+/* a estrela nova abre espaço aos poucos na ponta, empurrando as anteriores para trás num deslize suave */
+.lr-rstar { position: relative; flex: none; width: 0; height: 62px; opacity: 0; transform-origin: calc(100% - 31px) 50%; transition: width .6s cubic-bezier(.22, 1, .36, 1), margin-left .6s cubic-bezier(.22, 1, .36, 1); }
+.lr-rstar.on { width: 62px; opacity: 1; animation: lrBStar .8s cubic-bezier(.34, 1.4, .64, 1) both; }
+.lr-rstar.on ~ .lr-rstar.on { margin-left: -24px; }
+.lr-rstar img, .lr-star img { rotate: -14deg; } /* estrelas mais juntas, uma um pouco sobre a outra, e inclinadas */
+.lr-rstar img { position: absolute; top: 0; right: 0; width: 62px; height: 62px; opacity: 0; transition: opacity .6s ease; }
+.lr-rstar .s-amarela { opacity: 1; }
+.lr.super .lr-rstar .s-amarela, .lr.mega .lr-rstar .s-amarela { opacity: 0; }
+.lr.super .lr-rstar .s-superstar, .lr.mega .lr-rstar .s-megastar { opacity: 1; }
+.lr-rstar::after { content: ""; position: absolute; top: -34px; right: -34px; width: 130px; height: 130px; border-radius: 50%; opacity: 0;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, .95), rgba(255, 236, 150, .5) 45%, rgba(255, 255, 255, 0)); }
+.lr-rstar.on::after { animation: lrFlash .9s ease-out; }
+@keyframes lrBStar { 0% { opacity: 0; transform: scale(.2) rotate(-120deg); } 60% { opacity: 1; transform: scale(1.3) rotate(10deg); } 100% { opacity: 1; transform: none; } }
+.lr-rnum { position: absolute; top: 50%; left: calc(var(--p) * 100% + 30px); transform: translateY(-50%); white-space: nowrap; pointer-events: none; opacity: 0;
+  font-size: 22px; font-weight: 800; letter-spacing: -.01em; font-variant-numeric: tabular-nums; text-shadow: 0 2px 10px rgba(0, 0, 0, .35); transition: opacity .4s ease; }
+.lr.counting .lr-rnum { opacity: 1; }
+/* no fim, estrelas e pontos da barra dão um pulinho e somem encolhendo para trás */
+.lr.leave .lr-rstar.on { animation: lrBLeave .75s cubic-bezier(.5, 0, .4, 1) calc((4 - var(--i)) * 90ms) both; }
+.lr.leave .lr-rnum { animation: lrBLeave .75s cubic-bezier(.5, 0, .4, 1) both; transform-origin: left center; }
+@keyframes lrBLeave { 0% { opacity: 1; translate: 0 0; scale: 1; } 35% { opacity: 1; translate: 0 -22px; scale: 1.2; } 100% { opacity: 0; translate: 0 -8px; scale: 0; filter: blur(2px); } }
 .lr-score { display: grid; justify-items: end; gap: 4px; opacity: 0; }
 .lr.in .lr-score { animation: lrFade 1s ease 2.5s both; }
 .lr-stars { display: flex; margin: -26px -8px -6px 0; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25)); } /* maiores que a faixa e encostadas */
 /* estrelas da tela final: imagens empilhadas (vazia, amarela, Superstar, Megastar); a do momento aparece */
-.lr-star { position: relative; width: 62px; height: 62px; display: block; }
-.lr-star + .lr-star { margin-left: -14px; }
+.lr-star { position: relative; width: 62px; height: 62px; display: block; opacity: 0; transform: scale(0); }
+.lr.lr.land .lr-star.lr-star { animation: lrLand .9s cubic-bezier(.34, 1.4, .64, 1) calc(var(--i) * 140ms) both; }
+.lr.lr.land .lr-star.lr-star.on::after { animation: lrFlash 1s ease-out calc(var(--i) * 140ms) both; }
+@keyframes lrLand { 0% { opacity: 0; transform: scale(.2) rotate(-90deg); } 55% { opacity: 1; transform: scale(1.35) rotate(10deg); } 100% { opacity: 1; transform: none; } }
+.lr-star + .lr-star { margin-left: -24px; }
 .lr-star img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity .8s ease, transform .8s ease; pointer-events: none; }
 .lr-star .s-vazia { opacity: .75; }
 .lr-star.on .s-vazia { opacity: 0; }
@@ -562,8 +611,12 @@
 /* no fim, um brilho suave que pulsa nas estrelas conquistadas */
 .lr.done .lr-star.on img { animation: lrGlow 3s ease-in-out calc(var(--i) * .2s) infinite; }
 @keyframes lrGlow { 50% { filter: brightness(1.25) drop-shadow(0 0 6px rgba(255, 255, 255, .7)); } }
+.lr-num { opacity: 0; transform: scale(.4); transition: opacity .6s ease, transform .8s cubic-bezier(.34, 1.4, .64, 1); }
+.lr.land .lr-num { opacity: 1; transform: none; transition-delay: .5s; }
 .lr-num { font-size: clamp(28px, 2.6vw, 38px); font-weight: 800; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 4px 18px rgba(0, 0, 0, .25); }
-.lr-badge img { display: block; height: 28px; width: auto; margin-top: 2px; }
+/* título Superstar/Megastar grande, ocupando a largura das estrelas até quase encostar na barra (pode vazar da faixa) */
+.lr-badge:has(img) { justify-self: stretch; position: relative; height: 30px; }
+.lr-badge img { position: absolute; top: -2px; right: -6px; display: block; width: calc(100% + 20px); height: auto; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .3)); }
 .lr-badge { font-size: 13px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; opacity: 0; transform: translateY(8px); transition: opacity .9s ease, transform .9s var(--e); }
 .lr.done .lr-badge { opacity: 1; transform: none; }
 .lr.super .lr-badge { color: #bae6fd; } .lr.mega .lr-badge { color: #f5d0fe; }
@@ -637,5 +690,5 @@
 @media (prefers-reduced-motion: reduce) {
   .lr *, .lr *::before, .lr *::after { animation: none !important; transition: none !important; }
   .lr-bands { display: none; } .lr-bg, .lr-rays, .lr-congrats, .lr-score, .lr .avatar.lr-av { opacity: 1; transform: none; } .lr-ribbon, .lr-panel { transform: none; }
-  .lr-panel { transform: skewX(10deg); } .lr.done .lr-card, .lr.done .lr-acts { opacity: 1; transform: none; }
+  .lr-panel { transform: skewX(10deg); } .lr-code { opacity: .2; } .lr-star, .lr-num { opacity: 1; transform: none; } .lr-rstars, .lr-rnum { display: none; } .lr.done .lr-card, .lr.done .lr-acts { opacity: 1; transform: none; }
 }
