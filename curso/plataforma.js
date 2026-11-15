@@ -90,9 +90,10 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
 
   /* lições: o motor (licao.js/.css) e os dados de cada lição só são baixados quando o aluno abre uma */
   const loaded = {};
-  const load = (src) => loaded[src] ||= new Promise((ok, fail) => {
-    if (src.endsWith('.css')) { const l = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: src }); l.onload = ok; l.onerror = ok; document.head.append(l); return; }
-    const sc = Object.assign(document.createElement('script'), { src }); sc.onload = ok; sc.onerror = () => { delete loaded[src]; fail(); }; document.body.append(sc);
+  const load = (file) => loaded[file] ||= new Promise((ok, fail) => {
+    const src = `${file}?v=${window.HC_V || ''}`; // versão nova a cada publicação: o navegador não usa a cópia antiga
+    if (file.endsWith('.css')) { const l = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: src }); l.onload = ok; l.onerror = ok; document.head.append(l); return; }
+    const sc = Object.assign(document.createElement('script'), { src }); sc.onload = ok; sc.onerror = () => { delete loaded[file]; fail(); }; document.body.append(sc);
   });
   const lessonAt = (n) => HC_CURSO.modulos.flatMap((m) => m.licoes)[n - 1];
   async function openLesson(view, n) {

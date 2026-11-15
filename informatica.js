@@ -110,9 +110,9 @@ let infoTyping = 0;
 let infoPlatform = null;
 const infoLoadPlatform = () => infoPlatform ||= new Promise((ok, fail) => {
   const css = document.createElement('link');
-  css.rel = 'stylesheet'; css.href = 'curso/plataforma.css';
+  css.rel = 'stylesheet'; css.href = `curso/plataforma.css?v=${window.HC_V || ''}`;
   const js = document.createElement('script');
-  js.src = 'curso/plataforma.js';
+  js.src = `curso/plataforma.js?v=${window.HC_V || ''}`;
   js.onload = () => ok();
   js.onerror = () => { infoPlatform = null; fail(); };
   document.head.append(css); document.body.append(js);
