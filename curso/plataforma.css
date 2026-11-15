@@ -280,7 +280,7 @@
 .pfi { position: fixed; top: 0; right: 0; bottom: 0; z-index: 35; overflow: hidden; pointer-events: auto; cursor: progress; }
 /* faixas: entram pela direita, uma atrás da outra */
 .pfi-bands { position: absolute; inset: -12% -20%; transform: skewX(-17deg); }
-.pfi-bands i { position: absolute; top: 0; bottom: 0; background: #fff; transform: translate3d(110vw, 0, 0); will-change: transform; }
+.pfi-bands i { position: absolute; top: 0; bottom: 0; background: #fff; transform: translate3d(160vw, 0, 0); will-change: transform; }
 .pfi-bands i:nth-child(1) { left: 74%; width: 14%; opacity: .95; }
 .pfi-bands i:nth-child(2) { left: 66%; width: 3%; opacity: .7; }
 .pfi-bands i:nth-child(3) { left: 50%; width: 12%; opacity: .9; }
@@ -290,7 +290,7 @@
 .pfi-bands i:nth-child(7) { left: 0; width: 13%; opacity: .9; }
 .pfi.in .pfi-bands i { animation: pfiBandIn 1.5s cubic-bezier(.22, .9, .3, 1) calc(var(--k) * 95ms) both; }
 .pfi.out .pfi-bands i { animation: pfiBandOut 1.6s cubic-bezier(.55, 0, .25, 1) calc(var(--k) * 90ms) both; }
-@keyframes pfiBandIn { from { transform: translate3d(110vw, 0, 0); } to { transform: none; } }
+@keyframes pfiBandIn { from { transform: translate3d(160vw, 0, 0); } to { transform: none; } }
 @keyframes pfiBandOut { from { transform: none; } to { transform: translate3d(-160vw, 0, 0); } }
 /* fundo branco que completa a cobertura */
 .pfi-white { position: absolute; inset: 0; background: #fff; opacity: 0; }

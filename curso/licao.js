@@ -715,9 +715,9 @@
               ${userAvatar(auth.profile || { name }, 'lr-av')}
               <div class="lr-who"><strong>${esc(name)}</strong><small>Lição ${L.numero} · ${esc(L.titulo)}</small><div class="lr-bar"><i class="lr-fill"></i></div></div>
               <div class="lr-score">
-                <div class="lr-stars">${STAR_AT.map(() => `<span class="lr-star">${FSTAR}</span>`).join('')}</div>
+                <div class="lr-stars">${STAR_AT.map((_, i) => `<span class="lr-star" style="--i:${i}">${['vazia', 'amarela', 'superstar', 'megastar'].map((k) => `<img class="s-${k}" src="assets/estrelas/estrela-${k}.png" alt="" draggable="false">`).join('')}</span>`).join('')}</div>
                 <b class="lr-num">0</b>
-                <span class="lr-badge">${rk ? RANK_NAME[rk] : `${starsOf(pts)} ${starsOf(pts) === 1 ? 'estrela' : 'estrelas'}`}</span>
+                <span class="lr-badge">${rk ? `<img src="assets/estrelas/titulo-${rk === 'mega' ? 'megastar' : 'superstar'}.png" alt="${RANK_NAME[rk]}">` : `${starsOf(pts)} ${starsOf(pts) === 1 ? 'estrela' : 'estrelas'}`}</span>
               </div>
               <div class="lr-burst" aria-hidden="true"><i class="lr-ring"></i><i class="lr-ring r2"></i>${Array.from({ length: 10 }, (_, k) => `<i class="lr-spark" style="--a:${k * 36}deg"></i>`).join('')}<span class="lr-word"></span></div>
             </div>
@@ -742,12 +742,13 @@
         <div class="lr-bands">${[0, 1, 2, 3, 4, 5, 6].map((k) => `<i style="--k:${k}"></i>`).join('')}</div>`;
       document.body.append(el);
       requestAnimationFrame(() => el.classList.add('in'));
+      ['superstar', 'megastar'].forEach((k) => { new Image().src = `assets/estrelas/titulo-${k}.png`; }); // já deixa as imagens prontas
 
       const num = el.querySelector('.lr-num'), fill = el.querySelector('.lr-fill'), stars = el.querySelectorAll('.lr-star');
       const burst = el.querySelector('.lr-burst'), word = el.querySelector('.lr-word');
       const showRank = (r) => {
         el.classList.remove('super', 'mega'); el.classList.add(r);
-        word.textContent = RANK_NAME[r]; burst.classList.remove('go'); void burst.offsetWidth; burst.classList.add('go');
+        word.innerHTML = `<img src="assets/estrelas/titulo-${r === 'mega' ? 'megastar' : 'superstar'}.png" alt="${RANK_NAME[r]}">`; burst.classList.remove('go'); void burst.offsetWidth; burst.classList.add('go');
       };
       const paint = (v) => {
         num.textContent = Math.round(v).toLocaleString('pt-BR');
@@ -756,8 +757,8 @@
         if (v >= MEGA_AT && !el.classList.contains('mega')) showRank('mega');
         else if (v >= SUPER_AT && v < MEGA_AT && !el.classList.contains('super')) showRank('super');
       };
-      const finish = () => { paint(pts); el.classList.add('done'); };
-      const D = 1600 + 3600 * (pts / PTS_MAX), START = reduce ? 0 : 2300;
+      const finish = () => { paint(pts); el.classList.add('done'); if (!reduce) setTimeout(() => confetti(el), 500); };
+      const D = 15000, START = reduce ? 0 : 3200; // a barra leva 15 s para encher, com as estrelas acendendo no caminho
       setTimeout(() => {
         if (!el.isConnected) return;
         if (reduce || !pts) return finish();
@@ -767,7 +768,7 @@
           if (!el.isConnected) return;
           const p = Math.min(1, (now - t0) / D);
           paint(pts * (p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2)); // começa devagar, acelera e assenta
-          if (p < 1) requestAnimationFrame(step); else setTimeout(finish, rk ? 900 : 300);
+          if (p < 1) requestAnimationFrame(step); else setTimeout(finish, rk ? 1500 : 600);
         };
         requestAnimationFrame(step);
       }, START);
@@ -792,6 +793,35 @@
       const onHash = () => { if (!el.classList.contains('out')) el.remove(); }; // saiu por outro caminho (menu, voltar)
       window.addEventListener('hashchange', onHash, { once: true });
       el.addEventListener('keydown', (e) => { if (e.key === 'Enter' && el.classList.contains('done') && e.target === el) el.querySelector('[data-lr="go"]').click(); });
+    }
+    /* confetes: papeizinhos coloridos caindo de cima, num <canvas> leve; param sozinhos depois de alguns segundos */
+    function confetti(host) {
+      if (!host.isConnected) return;
+      const cv = document.createElement('canvas'); cv.className = 'lr-confetti'; host.append(cv);
+      const ctx = cv.getContext('2d'), dpr = Math.min(2, devicePixelRatio || 1);
+      const size = () => { cv.width = cv.clientWidth * dpr; cv.height = cv.clientHeight * dpr; };
+      size(); addEventListener('resize', size);
+      const COLORS = ['#ffd60a', '#ff4d8d', '#38bdf8', '#a855f7', '#34d399', '#fb923c', '#ffffff', '#f472b6'];
+      const W = () => cv.width, H = () => cv.height, rnd = (a, b) => a + Math.random() * (b - a);
+      const make = (y) => ({ x: rnd(0, W()), y, w: rnd(6, 11) * dpr, h: rnd(3, 6) * dpr, vy: rnd(1.6, 3.4) * dpr, vx: rnd(-.6, .6) * dpr,
+        r: rnd(0, 6.28), vr: rnd(-.12, .12), sw: rnd(0, 6.28), c: COLORS[Math.floor(Math.random() * COLORS.length)], round: Math.random() < .25 });
+      let parts = Array.from({ length: 90 }, () => make(rnd(-H() * .9, -10)));
+      const SPAWN_MS = 4200, t0 = performance.now(); let last = t0;
+      const frame = (now) => {
+        if (!cv.isConnected) return removeEventListener('resize', size);
+        const dt = Math.min(3, (now - last) / 16.7); last = now;
+        if (now - t0 < SPAWN_MS && parts.length < 220) for (let k = 0; k < 2; k++) parts.push(make(rnd(-40, -10) * dpr));
+        ctx.clearRect(0, 0, W(), H());
+        parts = parts.filter((q) => q.y < H() + 30 * dpr);
+        for (const q of parts) {
+          q.sw += .05 * dt; q.y += q.vy * dt; q.x += (q.vx + Math.sin(q.sw) * .9 * dpr) * dt; q.r += q.vr * dt;
+          ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.r); ctx.scale(1, Math.cos(q.sw * 1.6)); ctx.fillStyle = q.c;
+          if (q.round) { ctx.beginPath(); ctx.arc(0, 0, q.h, 0, 6.28); ctx.fill(); } else ctx.fillRect(-q.w / 2, -q.h / 2, q.w, q.h);
+          ctx.restore();
+        }
+        if (parts.length || now - t0 < SPAWN_MS) requestAnimationFrame(frame); else { cv.remove(); removeEventListener('resize', size); }
+      };
+      requestAnimationFrame(frame);
     }
     function report(a, rating, fast, slow, g) {
       const name = meName() || 'Aluno';
