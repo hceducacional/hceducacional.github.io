@@ -2830,6 +2830,7 @@ function route() {
     if (n) setTimeout(() => openNews(n, view.querySelector(`[data-news="${n.id}"]`)), 350);
   }
   else if (window.HC_ROUTES?.[r]) window.HC_ROUTES[r](view);
+  else if (window.HC_ROUTES?.[r.split('/')[0]]) window.HC_ROUTES[r.split('/')[0]](view, r); // subpáginas, ex.: #informatica/licao-1
   else if (TITLES[r]) renderPlaceholder(view, r);
   else renderDashboard(view);
   window.scrollTo(0, 0);

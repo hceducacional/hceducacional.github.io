@@ -22,7 +22,7 @@ const HC_CURSO = {
       texto: 'Nesta etapa, você encontrará atividades elaboradas especialmente para introduzir os conceitos iniciais do teclado. É essencial compreender o funcionamento de cada tecla; por isso, cada seção é projetada com atenção para facilitar a aprendizagem e a memorização dos diferentes grupos de teclas a seguir.',
       totalNiveis: 170,
       licoes: [
-        { tag: 'Introdução', titulo: 'Conhecendo J, F e Espaço', imagem: '' },
+        { tag: 'Introdução', titulo: 'Conhecendo J, F e Espaço', imagem: '', arquivo: 'curso/licao-01.js' },
         { tag: 'Introdução', titulo: 'Teclas U, R e K', imagem: '' },
         { tag: 'Introdução', titulo: 'Teclas D, E e I', imagem: '' },
         { tag: 'Introdução', titulo: 'Teclas C, G e N', imagem: '' },
@@ -50,8 +50,30 @@ const HC_CURSO = {
     ? `<img class="pf-img" src="${esc(src)}" alt="" loading="lazy" />`
     : `<span class="pf-ph" style="--k:${k}">${svg('keys')}${isAdmin() ? `<em>${label}<small>${size}</small></em>` : ''}</span>`;
 
-  function render(view) {
+  /* lições: o motor (licao.js/.css) e os dados de cada lição só são baixados quando o aluno abre uma */
+  const loaded = {};
+  const load = (src) => loaded[src] ||= new Promise((ok, fail) => {
+    if (src.endsWith('.css')) { const l = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: src }); l.onload = ok; l.onerror = ok; document.head.append(l); return; }
+    const sc = Object.assign(document.createElement('script'), { src }); sc.onload = ok; sc.onerror = () => { delete loaded[src]; fail(); }; document.body.append(sc);
+  });
+  const lessonAt = (n) => HC_CURSO.modulos.flatMap((m) => m.licoes)[n - 1];
+  async function openLesson(view, n) {
+    const l = lessonAt(n);
+    if (!l?.arquivo) { location.hash = '#informatica'; return toast('Esta lição será montada em breve.'); }
+    view.innerHTML = '<div class="wrap"><p class="me-loading">Carregando a lição…</p></div>';
+    try { await Promise.all([load('curso/licao.css'), load('curso/licao.js'), load(l.arquivo)]); }
+    catch { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir a lição. Verifique a internet e tente de novo.</p></div>'; return; }
+    if (location.hash !== `#informatica/licao-${n}`) return;
+    window.HC_licao.open(view, window.HC_LICOES[`licao-${n}`]);
+  }
+  // progresso salvo de cada lição (para mostrar no card); antes de abrir a 1ª lição ainda não há nada
+  const progress = (n) => { try { return JSON.parse(localStorage.getItem(`hc:info:${auth?.user?.id || 'anon'}:licao-${n}`) || 'null'); } catch { return null; } };
+
+  function render(view, sub = '') {
+    const ln = /^licao-(\d+)$/.exec(sub);
+    if (ln) return openLesson(view, +ln[1]);
     const m = HC_CURSO.modulos[mod];
+    const first = HC_CURSO.modulos.slice(0, mod).reduce((a, x) => a + x.licoes.length, 0); // nº da 1ª lição do módulo - 1
     const nextM = HC_CURSO.modulos[mod + 1];
     const n = m.licoes.length;
     const stats = [
@@ -69,7 +91,7 @@ const HC_CURSO = {
           <span class="pill">${esc(m.nivel)} · Módulo ${mod + 1}</span>
           <h2>${esc(m.titulo)}</h2>
           <p>${esc(m.subtitulo)}</p>
-          <button class="slide-cta" type="button" data-lesson="0">Começar a lição 01 ${svg('next')}</button>
+          <button class="slide-cta" type="button" data-lesson="${first + 1}">Começar a lição ${String(first + 1).padStart(2, '0')} ${svg('next')}</button>
         </div>
       </section>
 
@@ -92,9 +114,9 @@ const HC_CURSO = {
           <li class="pf-lesson" style="--i:${i}">
             <div class="pf-lesson-img">${slot(l.imagem, 'Imagem da lição', '900 × 600', i)}<span class="pf-num">${String(i + 1).padStart(2, '0')}</span></div>
             <div class="pf-lesson-body">
-              <span class="pf-tag">${esc(l.tag)}</span>
+              <span class="pf-tag">${esc(l.tag)}</span>${(() => { const p = progress(first + i + 1); return p ? `<span class="pf-state${p.done ? ' done' : ''}">${p.done ? 'Concluída' : `Nível ${Math.min(p.lvl + 1, p.total)} de ${p.total}`}</span>` : ''; })()}
               <h3>${esc(l.titulo)}</h3>
-              <button class="pf-go" type="button" data-lesson="${i}">Acessar ${svg('next')}</button>
+              <button class="pf-go" type="button" data-lesson="${first + i + 1}">${(() => { const p = progress(first + i + 1); return p?.done ? 'Refazer' : p && p.lvl > 0 ? 'Continuar' : 'Acessar'; })()} ${svg('next')}</button>
             </div>
           </li>`).join('')}
         </ol>
@@ -118,7 +140,11 @@ const HC_CURSO = {
 
     view.querySelectorAll('[data-mod]').forEach((b) => b.addEventListener('click', () => { mod = +b.dataset.mod; render(view); window.scrollTo({ top: 0, behavior: 'smooth' }); }));
     view.querySelector('[data-soon]')?.addEventListener('click', () => toast(`O módulo ${mod + 2} será liberado em breve.`));
-    view.querySelectorAll('[data-lesson]').forEach((b) => b.addEventListener('click', () => toast('Este nível será montado em breve.')));
+    view.querySelectorAll('[data-lesson]').forEach((b) => b.addEventListener('click', () => {
+      const n = +b.dataset.lesson;
+      if (!lessonAt(n)?.arquivo) return toast('Esta lição será montada em breve.');
+      location.hash = `#informatica/licao-${n}`;
+    }));
   }
 
   window.HC_platform = { render };

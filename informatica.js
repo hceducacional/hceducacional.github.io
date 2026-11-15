@@ -118,13 +118,13 @@ const infoLoadPlatform = () => infoPlatform ||= new Promise((ok, fail) => {
   document.head.append(css); document.body.append(js);
 });
 
-function renderInformatica(view) {
+function renderInformatica(view, route = 'informatica') {
   waitAuth(view, () => {
     if (infoAllowed()) {
       ++infoTyping; // para a animação do terminal, se estava rodando
       view.innerHTML = '<div class="wrap"><p class="me-loading">Carregando a plataforma…</p></div>';
       infoLoadPlatform()
-        .then(() => { if (view.isConnected && location.hash.slice(1) === 'informatica') window.HC_platform.render(view); })
+        .then(() => { if (view.isConnected && location.hash.slice(1) === route) window.HC_platform.render(view, route.split('/')[1] || ''); })
         .catch(() => { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir a plataforma. Verifique a internet e tente de novo.</p></div>'; });
       return;
     }
