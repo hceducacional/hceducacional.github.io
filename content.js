@@ -399,7 +399,8 @@ window.HC_CONTENT = {
   "loginBanner": [
     {
       "id": "login",
-      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/9ea17470-1f5d-4150-98bc-ab3f422a267a.webp"
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/9ea17470-1f5d-4150-98bc-ab3f422a267a.webp",
+      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/5c3e1f51-7013-458f-9fb0-f6e39916caec.webp"
     }
   ]
 };

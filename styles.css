@@ -3835,3 +3835,14 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
 .au-art picture { display: contents; }
 .au-art-ed { flex-wrap: wrap; justify-content: flex-end; max-width: calc(100% - 28px); }
 @media (max-width: 640px) { .au-art-ed { top: 10px; right: 10px; } .au-art-ed button { height: 32px; padding: 0 11px; font-size: 12px; } .au-art-ed button[data-art="clear"] { width: 32px; } }
+
+/* janela de entrar: o formulário rola dentro da janela (antes ficava cortado e quem rolava era o site do fundo) */
+.au-login .au-card { max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.lk-backdrop { touch-action: none; }
+html.lk-lock, html.lk-lock body { overflow: hidden; }
+@media (max-width: 640px) {
+  .au-login .au-shell, .au-login.in .au-shell { display: flex; flex-direction: column; width: calc(100vw - 32px); max-height: calc(100dvh - 32px); }
+  .au-login .au-art { flex: none; height: 0; transition: height .45s var(--ease); }
+  .au-login.in .au-art { height: 132px; transition: height .9s cubic-bezier(.7, 0, .2, 1) .25s; }
+  .au-login .au-card { flex: 1 1 auto; min-height: 0; max-height: none; }
+}

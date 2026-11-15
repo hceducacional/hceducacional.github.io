@@ -329,8 +329,10 @@ function openAuth(mode = 'login', data = {}) {
     if (on) { go.dataset.label = go.textContent; go.textContent = label; } else go.textContent = go.dataset.label || go.textContent;
     go.disabled = on;
   };
+  document.documentElement.classList.add('lk-lock'); // o site do fundo não rola com a janela aberta
   const close = () => {
     document.removeEventListener('keydown', onKey);
+    document.documentElement.classList.remove('lk-lock');
     wrap.classList.remove('in');
     setTimeout(() => wrap.remove(), 300);
     lastFocus?.focus?.({ preventScroll: true });
