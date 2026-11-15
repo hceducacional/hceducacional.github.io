@@ -25,7 +25,8 @@ document.addEventListener('click', (e) => {
   window.open(a.dataset.infoUrl, '_blank', 'noopener');
 });
 
-const INFO_WA = (txt) => `https://wa.me/${AG.phone}?text=${encodeURIComponent(txt)}`;
+const INFO_PHONE = '5598988650472'; // time comercial: (98) 98865-0472
+const INFO_WA = (txt) => `https://wa.me/${INFO_PHONE}?text=${encodeURIComponent(txt)}`;
 const INFO_BENEFITS = [
   ['keyboard', 'Digitação com os dez dedos', 'Lições curtas, do básico ao avançado, para você digitar sem olhar para o teclado.'],
   ['speed', 'Velocidade e precisão medidas', 'A plataforma mostra suas palavras por minuto e seus acertos, para você ver a evolução a cada aula.'],

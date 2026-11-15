@@ -39,6 +39,7 @@ window.HC_CONTENT = {
       "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/e362ad27-cabb-460e-979a-7d89e67a775c.png",
       "title": "Continue seu treinamento",
       "linkOn": true,
+      "lockInfo": true,
       "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/cdb9f986-5ae4-4f55-a4d4-d9d3a3941a3a.webp"
     }
   ],
