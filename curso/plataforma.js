@@ -177,6 +177,17 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
   // a mesma abertura, usada também na saída da tela de resultado ("Retornando à plataforma")
   window.HC_intro = { play: (n, l, opt) => introStart(n, l, opt), end: () => introEnd(), PEAK: INTRO_PEAK };
   // progresso salvo de cada lição (para mostrar no card); antes de abrir a 1ª lição ainda não há nada
+  // estrelas do card (mesmas metas da tela de resultado): quantas o aluno pegou e se são amarelas, Superstar ou Megastar
+  const PTS_MAX = 13000, STAR_AT = [2000, 4000, 6000, 8000, 10000], SUPER_AT = 11000, MEGA_AT = 12000;
+  function cardStars(p) {
+    if (!p) return '';
+    const pts = Math.min(PTS_MAX, (p.levelPts || []).reduce((t, x) => t + (x || 0), 0));
+    const n = STAR_AT.filter((t) => pts >= t).length;
+    if (!n && !p.done) return '';
+    const kind = pts >= MEGA_AT ? 'megastar' : pts >= SUPER_AT ? 'superstar' : 'amarela';
+    const label = `${n} de 5 estrelas${kind === 'megastar' ? ' · Megastar' : kind === 'superstar' ? ' · Superstar' : ''}`;
+    return `<span class="pf-lesson-stars" role="img" aria-label="${label}" title="${label}">${STAR_AT.map((_, i) => `<img src="assets/estrelas/estrela-${i < n ? kind : 'vazia'}.png" alt="" draggable="false"${i < n ? '' : ' class="off"'}>`).join('')}</span>`;
+  }
   const progress = (n) => { try { return JSON.parse(localStorage.getItem(`hc:info:${auth?.user?.id || 'anon'}:licao-${n}`) || 'null'); } catch { return null; } };
 
   /* fundo do banner do módulo: a imagem própria do módulo ou, se não houver, a do banner
@@ -225,6 +236,7 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
               <div class="pf-lesson-bar">
                 <span class="pf-lesson-av">${num}</span>
                 <span class="pf-lesson-who"><strong>Lição ${num}</strong><small>${esc(state)}</small></span>
+                ${l.arquivo ? cardStars(p) : ''}
                 <span class="pf-lesson-go">${go}</span>
               </div>
             </div>

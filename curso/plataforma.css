@@ -77,6 +77,17 @@
 .pf-lesson-av { flex: none; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 13px; background: rgba(255, 255, 255, .2); box-shadow: 0 0 0 1px rgba(255, 255, 255, .14);
   font-size: 17px; font-weight: 700; letter-spacing: -.02em; }
 .pf-lesson-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+/* estrelas conquistadas no card, entre o nome e o botão: juntas, uma um pouco sobre a outra, e inclinadas */
+.pf-lesson-bar:has(.pf-lesson-stars) .pf-lesson-who { flex: 0 1 auto; }
+.pf-lesson-stars { flex: 1 0 auto; display: flex; justify-content: center; padding-left: 8px; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .3)); }
+.pf-lesson-stars img { flex: none; width: 50px; height: 50px; margin: -8px 0; rotate: -14deg; } /* no computador, bem maiores (podem passar da faixa) */
+.pf-lesson-stars img + img { margin-left: -19px; }
+.pf-lesson-stars img.off { opacity: .55; }
+@media (max-width: 560px) {
+  .pf-lesson-bar:has(.pf-lesson-stars) .pf-lesson-av { display: none; } /* o "Lição 01" ao lado já diz o número */
+  .pf-lesson-stars { padding-left: 0; }
+  .pf-lesson-stars img { width: 27px; height: 27px; margin: 0; } .pf-lesson-stars img + img { margin-left: -10px; }
+}
 .pf-lesson-who strong { font-size: 15px; font-weight: 600; }
 .pf-lesson-who small { font-size: 13px; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pf-lesson-go { flex: none; display: inline-grid; place-items: center; height: 34px; padding: 0 18px; border-radius: 999px; background: rgba(255, 255, 255, .26); font-size: 14.5px; font-weight: 700;
