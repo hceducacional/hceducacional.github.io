@@ -53,27 +53,40 @@
 .pf-pc-note span svg { width: 20px; height: 20px; }
 .pf-pc-note p { margin: 0; font-size: 14.5px; line-height: 1.45; }
 .pf-pc-note b { color: var(--ink); }
-.pf-lessons { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin: 0; padding: 0; list-style: none; }
-.pf-lesson { display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; background: var(--card);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 12px 28px -20px rgba(0, 0, 0, .35); transition: transform .45s var(--ease), box-shadow .45s var(--ease);
+/* lições no estilo dos cards de "Mantenha-se conectado" (como os cartões da App Store):
+   imagem em cima, degradê na cor do card, texto e uma barra com o número e o botão */
+.pf-lessons { display: grid; grid-template-columns: 1.15fr 1fr 1fr; grid-auto-rows: clamp(260px, 20vw, 330px); gap: 16px; margin: 0; padding: 0; list-style: none; }
+.pf-lesson { position: relative; isolation: isolate; overflow: hidden; border-radius: 28px; background: rgb(var(--tint)); color: #fff; cursor: pointer; outline: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .04), 0 18px 40px -26px rgba(0, 0, 0, .4); transition: box-shadow .5s var(--ease), transform .5s var(--ease);
   animation: pfUp .7s var(--ease) both; animation-delay: calc(.1s + var(--i) * .07s); }
-.pf-lesson:hover { transform: translateY(-4px); box-shadow: 0 2px 4px rgba(0, 0, 0, .05), 0 22px 40px -22px rgba(0, 0, 0, .45); }
-.pf-lesson-img { position: relative; aspect-ratio: 3 / 2; overflow: hidden; }
-.pf-lesson-img .pf-img { transition: transform .8s var(--ease); }
-.pf-lesson:hover .pf-lesson-img .pf-img { transform: scale(1.05); }
-.pf-num { position: absolute; left: 12px; bottom: 12px; display: grid; place-items: center; min-width: 46px; height: 38px; padding: 0 10px; border-radius: 12px;
-  background: rgba(255, 255, 255, .94); color: var(--ink); font-size: 19px; font-weight: 700; letter-spacing: -.02em; box-shadow: 0 6px 16px -8px rgba(0, 0, 0, .4); }
-.pf-lesson-body { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px 18px 18px; }
-.pf-tag { padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 600; }
-.pf-state { margin-top: -2px; font-size: 12px; font-weight: 600; color: var(--muted); }
-.pf-state.done { color: var(--accent); }
-.pf-lesson-body h3 { flex: 1; margin: 0; font-size: 17px; line-height: 1.25; font-weight: 700; letter-spacing: -.015em; }
-.pf-go { display: inline-flex; align-items: center; gap: 6px; height: 36px; margin-top: 4px; padding: 0 14px 0 16px; border: 0; border-radius: 999px; cursor: pointer;
-  background: #1d1d1f; color: #fff; font-family: inherit; font-size: 14px; font-weight: 600; transition: background .2s ease, transform .2s var(--ease); }
-.pf-go svg { width: 15px; height: 15px; transition: transform .35s var(--ease); }
-.pf-go:hover { background: #000; }
-.pf-go:hover svg { transform: translateX(3px); }
-.pf-go:active { transform: scale(.97); }
+.pf-lesson:first-child { grid-row: span 2; }
+.pf-lesson:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0, 0, 0, .06), 0 26px 50px -26px rgba(0, 0, 0, .5); }
+.pf-lesson:focus-visible { box-shadow: 0 0 0 3px var(--accent), 0 18px 40px -26px rgba(0, 0, 0, .4); }
+.pf-lesson-img { position: absolute; inset: 0 0 22% 0; z-index: -1; transition: transform 1.4s var(--ease); }
+.pf-lesson:hover .pf-lesson-img { transform: scale(1.05); }
+.pf-lesson-img .pf-ph { background: linear-gradient(150deg, rgba(var(--tint), .35), rgba(var(--tint), .9)), linear-gradient(135deg, hsl(calc(160 + var(--k) * 40) 70% 45%), hsl(calc(220 + var(--k) * 30) 70% 35%)); }
+.pf-lesson-img .pf-ph svg { position: absolute; top: 18%; left: 50%; width: 26%; max-width: 90px; transform: translateX(-50%); color: rgba(255, 255, 255, .3); }
+.pf-lesson-app { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end;
+  background: linear-gradient(to bottom, rgba(var(--tint), 0) 30%, rgba(var(--tint), .78) 54%, rgb(var(--tint)) 72%); }
+.pf-lesson-text { padding: 0 22px 16px; }
+.pf-lesson-tag { display: block; font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; opacity: .78; }
+.pf-lesson-text h3 { margin: 4px 0 6px; font-size: clamp(21px, 1.7vw, 26px); line-height: 1.1; font-weight: 700; letter-spacing: -.025em; }
+.pf-lesson:first-child .pf-lesson-text h3 { font-size: clamp(26px, 2.4vw, 34px); }
+.pf-lesson-text p { margin: 0; font-size: 14.5px; line-height: 1.35; opacity: .86; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pf-lesson-bar { display: flex; align-items: center; gap: 12px; padding: 13px 16px 15px; background: rgba(0, 0, 0, .16); border-top: 1px solid rgba(255, 255, 255, .1); }
+.pf-lesson-av { flex: none; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 13px; background: rgba(255, 255, 255, .2); box-shadow: 0 0 0 1px rgba(255, 255, 255, .14);
+  font-size: 17px; font-weight: 700; letter-spacing: -.02em; }
+.pf-lesson-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pf-lesson-who strong { font-size: 15px; font-weight: 600; }
+.pf-lesson-who small { font-size: 13px; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-lesson-go { flex: none; display: inline-grid; place-items: center; height: 34px; padding: 0 18px; border-radius: 999px; background: rgba(255, 255, 255, .26); font-size: 14.5px; font-weight: 700;
+  transition: background .2s, transform .2s var(--ease); }
+.pf-lesson:hover .pf-lesson-go { background: #fff; color: rgb(var(--tint)); }
+.pf-lesson:active .pf-lesson-go { transform: scale(.95); }
+.pf-lesson.soon .pf-lesson-go { background: rgba(255, 255, 255, .14); opacity: .8; }
+.pf-lesson.soon:hover .pf-lesson-go { background: rgba(255, 255, 255, .14); color: #fff; }
+/* barrinha de progresso no rodapé do card */
+.pf-lesson-prog { position: absolute; left: 0; bottom: 0; height: 4px; width: var(--w); background: linear-gradient(90deg, #34d399, #a7f3d0); }
 
 /* próximo módulo */
 .pf-next-card { position: relative; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; min-height: 180px; margin-bottom: 20px; padding: 30px 0 0 34px;
@@ -89,7 +102,8 @@
 .pf-mascot .pf-img { object-fit: contain; object-position: bottom; }
 
 @media (max-width: 1180px) {
-  .pf-lessons { grid-template-columns: repeat(3, 1fr); }
+  .pf-lessons { grid-template-columns: 1fr 1fr; }
+  .pf-lesson:first-child { grid-row: span 1; grid-column: span 2; }
   .pf-stats { grid-template-columns: repeat(2, 1fr); }
 }
 /* celular: igual ao banner do topo da tela de início — de ponta a ponta, passando por trás
@@ -118,14 +132,16 @@
   .pf-stat-txt small { font-size: 12px; }
   .pf-stat-txt strong { font-size: 18px; }
   .pf-sub { font-size: 15px; }
-  /* lições viram uma lista: imagem à esquerda, texto à direita */
-  .pf-lessons { grid-template-columns: 1fr; gap: 10px; }
-  .pf-lesson { flex-direction: row; border-radius: 18px; }
-  .pf-lesson-img { flex: none; width: 112px; aspect-ratio: auto; }
-  .pf-num { left: 8px; bottom: 8px; min-width: 36px; height: 30px; font-size: 15px; border-radius: 9px; }
-  .pf-lesson-body { gap: 5px; padding: 12px 14px; }
-  .pf-lesson-body h3 { font-size: 15.5px; }
-  .pf-go { height: 32px; font-size: 13px; }
+  /* celular: um card por linha, alto, como os de "Mantenha-se conectado" */
+  .pf-lessons { grid-template-columns: 1fr; grid-auto-rows: auto; }
+  .pf-lesson, .pf-lesson:first-child { grid-column: auto; grid-row: auto; aspect-ratio: 4 / 5; border-radius: 26px; }
+  .pf-lesson-img { inset: 0 0 18% 0; }
+  .pf-lesson-text { padding: 0 20px 16px; }
+  .pf-lesson-text h3, .pf-lesson:first-child .pf-lesson-text h3 { font-size: 28px; line-height: 1.08; }
+  .pf-lesson-text p { font-size: 15px; }
+  .pf-lesson-av { width: 52px; height: 52px; }
+  .pf-lesson-who strong { font-size: 15.5px; }
+  .pf-lesson-go { height: 36px; font-size: 15px; }
   .pf-next-card { flex-direction: column; align-items: stretch; padding: 22px 20px 0; border-radius: 22px; }
   .pf-next-text { padding-bottom: 0; }
   .pf-next-actions { flex-direction: column; }

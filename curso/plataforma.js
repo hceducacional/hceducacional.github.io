@@ -22,11 +22,11 @@ const HC_CURSO = {
       texto: 'Nesta etapa, você encontrará atividades elaboradas especialmente para introduzir os conceitos iniciais do teclado. É essencial compreender o funcionamento de cada tecla; por isso, cada seção é projetada com atenção para facilitar a aprendizagem e a memorização dos diferentes grupos de teclas a seguir.',
       totalNiveis: 170,
       licoes: [
-        { tag: 'Introdução', titulo: 'Conhecendo J, F e Espaço', imagem: '', arquivo: 'curso/licao-01.js' },
-        { tag: 'Introdução', titulo: 'Teclas U, R e K', imagem: '' },
-        { tag: 'Introdução', titulo: 'Teclas D, E e I', imagem: '' },
-        { tag: 'Introdução', titulo: 'Teclas C, G e N', imagem: '' },
-        { tag: 'Revisão', titulo: 'Revisão Geral 1', imagem: '' },
+        { tag: 'Introdução', titulo: 'Conhecendo J, F e Espaço', desc: 'Os primeiros toques: os indicadores nas teclas F e J e os polegares na barra de espaço.', imagem: '', arquivo: 'curso/licao-01.js' },
+        { tag: 'Introdução', titulo: 'Teclas U, R e K', desc: 'Os indicadores sobem para U e R, e o dedo médio direito chega ao K.', imagem: '' },
+        { tag: 'Introdução', titulo: 'Teclas D, E e I', desc: 'O dedo médio esquerdo no D e no E, e o médio direito no I.', imagem: '' },
+        { tag: 'Introdução', titulo: 'Teclas C, G e N', desc: 'O médio esquerdo desce ao C, e os indicadores alcançam o G e o N.', imagem: '' },
+        { tag: 'Revisão', titulo: 'Revisão Geral 1', desc: 'Uma revisão completa de todas as teclas aprendidas no módulo.', imagem: '' },
       ],
     },
   ],
@@ -82,6 +82,10 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
     return `<span class="pf-hero-img" style="--img:url('${esc(imgUrl(b.image || b.imageMobile))}')${b.imageMobile ? `;--img-m:url('${esc(imgUrl(b.imageMobile))}')` : ''}${pos}"></span>`;
   }
 
+  /* cor de fundo dos cards (degradê embaixo), como nos cards de "Mantenha-se conectado" */
+  const TINTS = ['22, 60, 48', '24, 46, 110', '70, 32, 120', '120, 40, 30', '30, 70, 90'];
+  const HC_NIVEIS = { 1: '30 níveis' }; // quantos níveis cada lição tem (mostrado antes de começar)
+
   function render(view, sub = '') {
     const ln = /^licao-(\d+)$/.exec(sub);
     if (ln) return openLesson(view, +ln[1]);
@@ -124,15 +128,28 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
         <p class="shelf-sub pf-sub">${esc(m.texto)}</p>
         ${window.HC_isComputer() ? '' : `<div class="pf-pc-note"><span>${svg('keys')}</span><p><b>As lições são feitas no computador.</b> Por aqui você acompanha o seu progresso; para praticar, use os computadores da instituição nos dias de aula.</p></div>`}
         <ol class="pf-lessons">
-          ${m.licoes.map((l, i) => `
-          <li class="pf-lesson" style="--i:${i}">
-            <div class="pf-lesson-img">${slot(l.imagem, 'Imagem da lição', '900 × 600', i)}<span class="pf-num">${String(i + 1).padStart(2, '0')}</span></div>
-            <div class="pf-lesson-body">
-              <span class="pf-tag">${esc(l.tag)}</span>${(() => { const p = progress(first + i + 1); return p ? `<span class="pf-state${p.done ? ' done' : ''}">${p.done ? 'Concluída' : `Nível ${Math.min(p.lvl + 1, p.total)} de ${p.total}`}</span>` : ''; })()}
-              <h3>${esc(l.titulo)}</h3>
-              <button class="pf-go" type="button" data-lesson="${first + i + 1}">${(() => { const p = progress(first + i + 1); return !window.HC_isComputer() ? 'Ver progresso' : p?.done ? 'Refazer' : p && p.lvl > 0 ? 'Continuar' : 'Acessar'; })()} ${svg('next')}</button>
+          ${m.licoes.map((l, i) => {
+            const n = first + i + 1, p = progress(n), num = String(n).padStart(2, '0');
+            const state = !l.arquivo ? 'Em breve' : p?.done ? 'Concluída' : p ? `Nível ${Math.min(p.lvl + 1, p.total)} de ${p.total}` : `${HC_NIVEIS[n] || ''}`;
+            const go = !l.arquivo ? 'Em breve' : !window.HC_isComputer() ? 'Ver' : p?.done ? 'Refazer' : p && p.lvl > 0 ? 'Continuar' : 'Acessar';
+            return `
+          <li class="pf-lesson${l.arquivo ? '' : ' soon'}" style="--i:${i};--tint:${TINTS[i % TINTS.length]}" data-lesson="${n}" tabindex="0" aria-label="Lição ${num}: ${esc(l.titulo)}">
+            <div class="pf-lesson-img">${slot(l.imagem, 'Imagem da lição', '1000 × 1000', i)}</div>
+            <div class="pf-lesson-app">
+              <div class="pf-lesson-text">
+                <span class="pf-lesson-tag">${esc(l.tag)}</span>
+                <h3>${esc(l.titulo)}</h3>
+                ${l.desc ? `<p>${esc(l.desc)}</p>` : ''}
+              </div>
+              <div class="pf-lesson-bar">
+                <span class="pf-lesson-av">${num}</span>
+                <span class="pf-lesson-who"><strong>Lição ${num}</strong><small>${esc(state)}</small></span>
+                <span class="pf-lesson-go">${go}</span>
+              </div>
             </div>
-          </li>`).join('')}
+            ${p ? `<b class="pf-lesson-prog" style="--w:${((p.done ? p.total : p.lvl) / p.total) * 100}%"></b>` : ''}
+          </li>`;
+          }).join('')}
         </ol>
       </section>
 
@@ -154,11 +171,11 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
 
     view.querySelectorAll('[data-mod]').forEach((b) => b.addEventListener('click', () => { mod = +b.dataset.mod; render(view); window.scrollTo({ top: 0, behavior: 'smooth' }); }));
     view.querySelector('[data-soon]')?.addEventListener('click', () => toast(`O módulo ${mod + 2} será liberado em breve.`));
-    view.querySelectorAll('[data-lesson]').forEach((b) => b.addEventListener('click', () => {
-      const n = +b.dataset.lesson;
-      if (!lessonAt(n)?.arquivo) return toast('Esta lição será montada em breve.');
-      location.hash = `#informatica/licao-${n}`;
-    }));
+    const openN = (n) => { if (!lessonAt(n)?.arquivo) return toast('Esta lição será montada em breve.'); location.hash = `#informatica/licao-${n}`; };
+    view.querySelectorAll('[data-lesson]').forEach((b) => {
+      b.addEventListener('click', () => openN(+b.dataset.lesson));
+      if (b.tagName === 'LI') b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openN(+b.dataset.lesson); } });
+    });
   }
 
   /* traz da conta o progresso das lições (para aparecer igual no celular e em qualquer computador) */
