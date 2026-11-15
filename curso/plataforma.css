@@ -335,7 +335,11 @@
 .pfi-chip strong { font-size: 19px; font-weight: 800; letter-spacing: -.02em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pfi-chip small { font-size: 13px; font-weight: 600; color: #6e6e73; }
 .pfi.in .pfi-chip { animation: pfiChip 1.1s cubic-bezier(.22, 1, .36, 1) 1.8s both; }
-.pfi.out .pfi-chip { animation: pfiFadeOut .5s ease both; }
+/* saída do selo: o número e o texto descem, perdem o foco e somem suavemente, um logo depois do outro */
+.pfi.out .pfi-chip { opacity: 1; transform: none; animation: none; }
+.pfi.out .pfi-chip b { animation: pfiChipOut 1.1s cubic-bezier(.4, 0, .2, 1) both; }
+.pfi.out .pfi-chip span { animation: pfiChipOut 1.1s cubic-bezier(.4, 0, .2, 1) .12s both; }
+@keyframes pfiChipOut { 0% { opacity: 1; transform: none; filter: blur(0); } 100% { opacity: 0; transform: translateY(16px) scale(.97); filter: blur(6px); } }
 @keyframes pfiChip { to { opacity: 1; transform: none; } }
 @keyframes pfiFade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pfiFadeOut { from { opacity: 1; } to { opacity: 0; } }

@@ -103,8 +103,20 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
     try { await Promise.all([load('curso/licao.css'), load('curso/teclado.js'), load('curso/licao.js'), load(l.arquivo)]); }
     catch { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir a lição. Verifique a internet e tente de novo.</p></div>'; return introEnd(); }
     if (location.hash !== `#informatica/licao-${n}`) return introEnd();
-    window.HC_licao.open(view, window.HC_LICOES[`licao-${n}`]);
+    window.HC_licao.open(view, window.HC_LICOES[`licao-${n}`], lessonMeta(n));
     introEnd();
+  }
+  /* o que a tela da lição herda do card: etiqueta, texto, foto de capa, cor e estrelas */
+  function lessonMeta(n) {
+    let c = 0;
+    for (const m of HC_CURSO.modulos) {
+      if (n - 1 < c + m.licoes.length) {
+        const i = n - 1 - c, l = m.licoes[i];
+        return { tag: l.tag || '', desc: l.desc || '', imagem: l.imagem ? imgUrl(l.imagem) : '', tint: TINTS[i % TINTS.length], k: i, stars: (p) => cardStars(p) };
+      }
+      c += m.licoes.length;
+    }
+    return {};
   }
 
   /* ---------- Abertura da lição ----------

@@ -84,23 +84,33 @@
   /* resumo para os cards da tela inicial */
   window.HC_progressoLicao = (id) => readLocal(id);
 
+  /* ---------- visual escuro, herdado dos cards das lições ---------- */
+  const TINT0 = '22, 60, 48';
+  /* cor do cartão de cada tipo de nível (a de digitação é a do card da lição) */
+  const KIND_TINT = { hacker: '24, 46, 110', fila: '30, 70, 90', memoria: '70, 32, 120' };
+  const CARD_TINTS = ['24, 46, 110', '70, 32, 120', '120, 40, 30', '30, 70, 90'];
+  const topHTML = (L, prog) => `
+      <div class="lc-top">
+        <a class="lc-back" href="#informatica">${svg('back')}Lições</a>
+        <h1 class="lc-head"><span class="lc-grad">Lição ${L.numero}.</span> <span>${esc(L.titulo)}</span></h1>
+        ${prog ? `<div class="lc-prog" aria-label="Progresso da lição"><span id="lc-prog-txt"></span><div class="lc-segs" id="lc-segs">${L.niveis.map((n) => `<i class="${n.tipo === 'typing' ? '' : 'g'}"></i>`).join('')}</div></div>` : ''}
+      </div>`;
+
   /* =========================================================
      Celular e tablet: as lições são feitas só no computador.
      Mostra uma animação (o celular dá lugar ao computador) e o progresso do aluno.
      ========================================================= */
-  function computerOnly(view, L, p) {
+  function computerOnly(view, L, p, meta = {}) {
     const N = L.niveis.length;
     const t = p ? p.hits + p.errors : 0;
     const acc = t ? Math.round((p.hits / t) * 100) : null;
     const lvl = p ? (p.done ? N : Math.min(p.lvl, N)) : 0;
     const first = (meName() || '').split(' ')[0];
     view.innerHTML = `
-    <div class="wrap lc">
-      <div class="lc-top">
-        <a class="lc-back" href="#informatica">${svg('back')}Lições</a>
-        <div class="lc-head"><small>Lição ${L.numero}</small><h1>${esc(L.titulo)}</h1></div>
-      </div>
-      <section class="lc-card lc-pc">
+    <div class="wrap lc" style="--tint:${meta.tint || TINT0}">
+     <div class="lc-shell">
+      ${topHTML(L)}
+      <section class="lc-pc">
         <div class="lc-pc-scene" aria-hidden="true">
           <div class="lc-pc-phone"><span></span><i></i></div>
           <div class="lc-pc-laptop">
@@ -123,18 +133,19 @@
         </div>
         <div class="lc-cta"><a class="btn-dark" href="#informatica">Voltar às lições</a></div>
       </section>
+     </div>
     </div>`;
   }
 
   /* =========================================================
      Abrir uma lição
      ========================================================= */
-  async function open(view, L) {
+  async function open(view, L, meta = {}) {
     view.innerHTML = '<div class="wrap"><p class="me-loading">Carregando a lição…</p></div>';
     const saved = await loadProgress(L.id);
     if (!view.isConnected) return;
     const N = L.niveis.length;
-    if (!window.HC_isComputer()) return computerOnly(view, L, saved);
+    if (!window.HC_isComputer()) return computerOnly(view, L, saved, meta);
     const fresh = () => ({ lvl: 0, xp: 0, time: 0, hits: 0, errors: 0, levelTimes: [], levelPts: [], done: false, total: N });
     // progresso salvo antes da pontuação ser dividida entre os níveis: pontos de nível acima da parte de cada um são descartados
     if (saved?.levelPts?.some((x) => x > PTS_MAX / N + 1)) saved.levelPts = [];
@@ -142,23 +153,24 @@
     let alive = true, busy = false, phase = 'welcome', tick = null, lvlStart = 0;
     let game = {}; // estado do nível atual (minijogos)
 
+    const tint = meta.tint || TINT0;
     view.innerHTML = `
-    <div class="wrap lc">
-      <div class="lc-top">
-        <a class="lc-back" href="#informatica">${svg('back')}Lições</a>
-        <div class="lc-head"><small>Lição ${L.numero}</small><h1>${esc(L.titulo)}</h1></div>
-        <div class="lc-prog" aria-label="Progresso da lição"><span id="lc-prog-txt"></span><b><i id="lc-prog-bar"></i></b></div>
+    <div class="wrap lc" style="--tint:${tint}">
+      <div class="lc-shell">
+        ${topHTML(L, true)}
+        <div id="lc-body"></div>
       </div>
-      <div id="lc-body"></div>
     </div>`;
     const body = view.querySelector('#lc-body');
     const $q = (s) => view.querySelector(s);
 
     const accuracy = () => { const t = st.hits + st.errors; return t ? Math.max(0, (st.hits / t) * 100) : 100; };
     function paintProgress() {
-      const done = phase === 'results' ? N : st.lvl;
-      $q('#lc-prog-txt').textContent = phase === 'results' ? 'Lição concluída' : `Nível ${Math.min(st.lvl + 1, N)} de ${N}`;
-      $q('#lc-prog-bar').style.width = `${(done / N) * 100}%`;
+      const over = phase === 'results' || (phase === 'welcome' && saved?.done); // na abertura de uma lição já concluída, tudo cheio
+      const done = over ? N : st.lvl;
+      $q('#lc-prog-txt').textContent = over ? 'Lição concluída' : `Nível ${Math.min(st.lvl + 1, N)} de ${N}`;
+      // uma barrinha por nível: feitos em verde, o atual pulsando (os minijogos ficam num tom próprio)
+      $q('#lc-segs')?.querySelectorAll('i').forEach((el, i) => { el.classList.toggle('on', i < done); el.classList.toggle('cur', phase === 'play' && i === st.lvl); });
     }
 
     /* ---------- tela de boas-vindas ---------- */
@@ -166,21 +178,48 @@
       phase = 'welcome'; paintProgress();
       const resume = saved && !saved.done && st.lvl > 0;
       const finished = saved?.done;
+      const p = saved || null, tot = p ? p.hits + p.errors : 0;
+      const doneN = p ? (p.done ? N : Math.min(p.lvl, N)) : 0;
+      const status = finished ? 'Concluída' : resume ? `Nível ${st.lvl + 1} de ${N}` : `${N} níveis`;
+      const stars = p && meta.stars ? meta.stars(p) : '';
       body.innerHTML = `
-      <section class="lc-card lc-welcome">
-        <span class="lc-welcome-ico">${svg('play', true)}</span>
-        <h2>${resume ? 'Continue de onde parou.' : finished ? 'Lição concluída!' : 'Vamos começar.'}</h2>
-        <p>${esc(L.intro)}</p>
-        <div class="lc-intro-grid">
-          ${L.cards.map(([t, d], i) => `<div class="lc-intro" style="--i:${i}"><b>${String.fromCharCode(65 + i)}</b><h3>${esc(t)}</h3><p>${esc(d)}</p></div>`).join('')}
+      <div class="lc-wel">
+        <article class="lc-hero">
+          <div class="lc-hero-img">${meta.imagem ? `<img src="${esc(meta.imagem)}" alt="">` : `<span class="lc-hero-ph" style="--k:${meta.k || 0}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg></span>`}</div>
+          <div class="lc-hero-app">
+            <div class="lc-hero-text">
+              ${meta.tag ? `<span class="lc-hero-tag">${esc(meta.tag)}</span>` : ''}
+              <h2>${esc(L.titulo)}</h2>
+              <p>${esc(meta.desc || L.intro)}</p>
+            </div>
+            <div class="lc-hero-bar">
+              <span class="lc-hero-av">${L.numero}</span>
+              <span class="lc-hero-who"><strong>Lição ${L.numero}</strong><small>${esc(status)}</small></span>
+              ${stars}
+            </div>
+          </div>
+          ${p ? `<b class="lc-hero-prog" style="--w:${(doneN / N) * 100}%"></b>` : ''}
+        </article>
+        <div class="lc-wel-side">
+          <h2 class="lc-wel-title"><span class="lc-grad">${resume ? 'Continue de onde parou.' : finished ? 'Lição concluída!' : 'Vamos começar.'}</span></h2>
+          <p class="lc-wel-intro">${esc(L.intro)}</p>
+          <div class="lc-intro-grid">
+            ${L.cards.map(([t, d], i) => `<div class="lc-intro" style="--i:${i};--tint:${CARD_TINTS[i % CARD_TINTS.length]}"><b>${String.fromCharCode(65 + i)}</b><h3>${esc(t)}</h3><p>${esc(d)}</p></div>`).join('')}
+          </div>
+          ${p ? `<div class="lc-wel-stats">
+            <div><strong>${doneN}/${N}</strong><small>Níveis</small></div>
+            <div><strong>${(p.xp || 0).toLocaleString('pt-BR')}</strong><small>XP</small></div>
+            <div><strong>${tot ? Math.round((p.hits / tot) * 100) + '%' : '—'}</strong><small>Precisão</small></div>
+            <div><strong>${p.time ? dur(p.time) : '—'}</strong><small>Tempo</small></div>
+          </div>` : ''}
+          <div class="lc-cta">
+            ${resume ? `<button class="btn-dark inf-shine" type="button" data-go="resume">${svg('play', true)}Continuar do nível ${st.lvl + 1}</button><button class="btn-soft" type="button" data-go="restart">Recomeçar a lição</button>`
+              : finished ? `<button class="btn-dark inf-shine" type="button" data-go="restart">${svg('refresh')}Refazer a lição</button><button class="btn-soft" type="button" data-go="last">Ver o último resultado</button>`
+              : `<button class="btn-dark inf-shine" type="button" data-go="restart">${svg('play', true)}Iniciar atividade</button>`}
+          </div>
+          <p class="lc-note">Use as teclas ${L.teclas.map((k) => `<kbd>${esc(keyLabel(k))}</kbd>`).join('')} com os dedos na posição inicial.</p>
         </div>
-        <div class="lc-cta">
-          ${resume ? `<button class="btn-dark inf-shine" type="button" data-go="resume">Continuar do nível ${st.lvl + 1}</button><button class="btn-soft" type="button" data-go="restart">Recomeçar a lição</button>`
-            : finished ? `<button class="btn-dark inf-shine" type="button" data-go="restart">Refazer a lição</button><button class="btn-soft" type="button" data-go="last">Ver o último resultado</button>`
-            : `<button class="btn-dark inf-shine" type="button" data-go="restart">Iniciar atividade</button>`}
-        </div>
-        <p class="lc-note">Use as teclas <b>F</b>, <b>J</b> e a <b>barra de espaço</b>. No celular, toque nas teclas da tela.</p>
-      </section>`;
+      </div>`;
       body.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
         if (b.dataset.go === 'restart') st = fresh();
         if (b.dataset.go === 'last') { st = { ...fresh(), ...saved }; return results(); }
@@ -411,10 +450,16 @@
       const lv = L.niveis[st.lvl];
       const isGame = lv.tipo !== 'typing';
       const main = $q('#lc-main');
+      const t = (KIND_TINT[lv.tipo] || tint).split(',').map(Number);
+      main.style.setProperty('--c1', `rgb(${t.join(' ')})`); // a cor do cartão desliza de um nível para o outro
+      main.classList.remove('enter'); void main.offsetWidth; main.classList.add('enter');
+      const nn = String(st.lvl + 1).padStart(2, '0');
       main.innerHTML = `
+        <span class="lc-lv-mark" aria-hidden="true">${nn}</span>
         <div class="lc-lv-head">
+          <span class="lc-lv-av">${nn}</span>
+          <span class="lc-lv-who"><strong>Nível ${nn}</strong><small>de ${N} · Lição ${L.numero}</small></span>
           <span class="lc-kind${isGame ? ' game' : ''}">${isGame ? 'Minijogo' : 'Digitação'}</span>
-          <span class="lc-lv-n">Nível ${st.lvl + 1} de ${N}</span>
         </div>
         <h2 class="lc-lv-title">${esc(lv.titulo)}</h2>
         <p class="lc-tip"><b>Dica</b>${esc(lv.dica)}</p>
