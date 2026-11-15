@@ -351,7 +351,12 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
     const fill = () => { inner.innerHTML = modBody(i); bindLessons(view, inner); inner.classList.remove('enter'); void inner.offsetWidth; inner.classList.add('enter'); };
     if (swap) { box.classList.remove('show'); setTimeout(() => { fill(); box.classList.add('show'); }, 650); }
     else { fill(); box.classList.add('show'); }
-    setTimeout(() => box.scrollIntoView({ behavior: 'smooth', block: 'start' }), swap ? 900 : 300);
+    // rola até o painel, mas para logo abaixo da barra de cima (que fica fixa), sem esconder o título
+    setTimeout(() => {
+      const bar = document.querySelector('.topbar-wrap, .topbar');
+      const gap = (bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0) + 20;
+      window.scrollTo({ top: Math.max(0, box.getBoundingClientRect().top + scrollY - gap), behavior: 'smooth' });
+    }, swap ? 900 : 300);
   }
 
   /* traz da conta o progresso das lições (para aparecer igual no celular e em qualquer computador) */
