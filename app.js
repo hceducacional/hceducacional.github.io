@@ -211,7 +211,7 @@ function toast(msg) {
    As imagens enviadas ficam no IndexedDB do navegador, que comporta
    centenas de MB. Os itens guardam só uma referência "idb:<chave>".
    ========================================================= */
-const IMG_MAX_W = { banner: 2560, news: 1920, link: 1000, logo: 512, connect: 2000, author: 400 }; // largura máxima por tipo
+const IMG_MAX_W = { banner: 2560, bannerLogo: 900, news: 1920, link: 1000, logo: 512, connect: 2000, author: 400 }; // largura máxima por tipo
 const IMG_QUALITY = 0.92;
 const imgCache = new Map(); // referência -> URL temporária para exibir
 const imgUrl = (ref = '') => imgCache.get(ref) || ref;
@@ -276,7 +276,7 @@ async function storeImage(file, kind) {
   return ref;
 }
 
-const allImageRefs = () => [...banners, ...exclusive, ...links, ...news, ...brandList, ...connect, ...authors, ...radar].flatMap((x) => [x.image, x.imageMobile, x.avatar, ...(x.gallery || [])]).filter(Boolean);
+const allImageRefs = () => [...banners, ...exclusive, ...links, ...news, ...brandList, ...connect, ...authors, ...radar].flatMap((x) => [x.image, x.imageMobile, x.logo, x.avatar, ...(x.gallery || [])]).filter(Boolean);
 async function loadImages() {
   for (const ref of allImageRefs()) {
     if (!ref.startsWith('idb:') || imgCache.has(ref)) continue;
@@ -327,6 +327,7 @@ async function exportContent() {
   const conv = (list) => Promise.all(list.map(async (it) => {
     const out = { ...it, image: await one(it.image) };
     if (it.imageMobile) out.imageMobile = await one(it.imageMobile);
+    if (it.logo) out.logo = await one(it.logo);
     if (it.avatar) out.avatar = await one(it.avatar);
     if (Array.isArray(it.gallery)) out.gallery = (await Promise.all(it.gallery.map(one))).filter(Boolean);
     return out;
@@ -348,9 +349,10 @@ function carouselHTML(list, key) {
       ${list.length ? `
         <div class="carousel-track">
           ${list.map((b, i) => `
-            <div class="slide" aria-roledescription="slide" aria-label="${i + 1} de ${list.length}">
+            <div class="slide${b.logo ? ' has-logo' : ''}" aria-roledescription="slide" aria-label="${i + 1} de ${list.length}">
               <div class="slide-bg" style="--img:url('${esc(imgUrl(b.image))}')${b.imageMobile ? `;--img-m:url('${esc(imgUrl(b.imageMobile))}')` : ''}${b.imageMobile && VALID_POS.test(b.focusMobile || '') ? `;--pos-m:${b.focusMobile}` : ''}"></div>
               <div class="slide-text">
+                ${b.logo ? `<div class="slide-logo"><img src="${esc(imgUrl(b.logo))}" alt="" decoding="async"></div>` : ''}
                 ${b.pill ? `<span class="pill">${esc(b.pill)}</span>` : ''}
                 <h2>${esc(b.title)}</h2>
                 <p>${esc(b.desc)}</p>
@@ -727,6 +729,22 @@ function loopTrack(track, onChange) {
   };
 }
 
+/* Logo do banner (só no celular): ela surge no centro do banner e depois sobe para o lugar
+   dela, acima do texto. Aqui medimos quanto cada logo precisa se deslocar para começar no centro. */
+function placeBannerLogos(box) {
+  const place = () => box.querySelectorAll('.slide-logo img').forEach((img) => {
+    const slide = img.closest('.slide'), wrap = img.parentElement;
+    if (!img.offsetWidth) return;
+    // começa centralizada no espaço onde o texto vai aparecer e, depois, sobe para o lugar dela
+    const s = slide.getBoundingClientRect(), w = wrap.getBoundingClientRect(), t = wrap.parentElement.getBoundingClientRect();
+    img.style.setProperty('--lx', `${Math.round(s.left + s.width / 2 - (w.left + img.offsetWidth / 2))}px`);
+    img.style.setProperty('--ly', `${Math.round((w.bottom + t.bottom) / 2 - (w.top + img.offsetHeight / 2))}px`);
+  });
+  box.querySelectorAll('.slide-logo img').forEach((img) => { if (!img.complete) img.addEventListener('load', place, { once: true }); });
+  place();
+  if (!box._logoResize) { box._logoResize = true; addEventListener('resize', () => box.isConnected && place()); }
+}
+
 function initCarousel(box, list, key) {
   carIndex[key] = Math.min(carIndex[key] || 0, Math.max(list.length - 1, 0));
   const track = box.querySelector('.carousel-track');
@@ -755,6 +773,7 @@ function initCarousel(box, list, key) {
   car.addEventListener('click', (e) => {
     const b = e.target.closest('.car-arrow'); if (b) go(carIndex[key] + +b.dataset.dir);
   });
+  placeBannerLogos(box);
   car.addEventListener('mouseenter', () => box.classList.add('paused'));
   car.addEventListener('mouseleave', () => box.classList.remove('paused'));
 
@@ -894,8 +913,9 @@ function initBannerEditor(key) {
   const fileAdd = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*', multiple: true, hidden: true });
   const fileReplace = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*', hidden: true });
   const fileMobile = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*', hidden: true });
-  panel.after(fileAdd, fileReplace, fileMobile);
-  let replaceIdx = -1, mobileIdx = -1;
+  const fileLogo = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/png,image/webp,image/svg+xml,image/*', hidden: true });
+  panel.after(fileAdd, fileReplace, fileMobile, fileLogo);
+  let replaceIdx = -1, mobileIdx = -1, logoIdx = -1;
   drawBannerPanel(key);
 
   panel.addEventListener('click', (e) => {
@@ -905,6 +925,9 @@ function initBannerEditor(key) {
     const add = e.target.closest('[data-badd]');
     const mthumb = e.target.closest('[data-mthumb]'), mdel = e.target.closest('[data-mdel]'), mfocus = e.target.closest('[data-mfocus]');
     if (mthumb) { mobileIdx = +mthumb.dataset.mthumb; fileMobile.click(); return; }
+    const lthumb = e.target.closest('[data-lthumb]'), ldel = e.target.closest('[data-ldel]');
+    if (lthumb) { logoIdx = +lthumb.dataset.lthumb; fileLogo.click(); return; }
+    if (ldel) { delete list[+ldel.dataset.ldel].logo; set.save(); drawBannerPanel(key); toast('Logo removida do banner'); return; }
     if (mdel) {
       const b = list[+mdel.dataset.mdel]; delete b.imageMobile; delete b.focusMobile;
       set.save(); drawBannerPanel(key); toast('No celular, este banner volta a usar a imagem do computador'); return;
@@ -974,6 +997,18 @@ function initBannerEditor(key) {
     const old = b.imageMobile, oldFocus = b.focusMobile;
     b.imageMobile = await storeImage(file, 'banner'); delete b.focusMobile;
     if (set.save()) toast('Imagem do celular salva'); else { b.imageMobile = old; b.focusMobile = oldFocus; }
+    drawBannerPanel(key);
+  });
+
+  fileLogo.addEventListener('change', async (e) => {
+    const list = set.list();
+    const file = e.target.files[0]; e.target.value = '';
+    const b = list[logoIdx];
+    if (!file || !b) return;
+    if (file.type === 'image/jpeg') toast('Dica: JPG sempre tem fundo. Para ficar sem fundo, use PNG.');
+    const old = b.logo;
+    b.logo = await storeImage(file, 'bannerLogo');
+    if (set.save()) toast('Logo salva'); else b.logo = old;
     drawBannerPanel(key);
   });
 
@@ -1102,6 +1137,12 @@ function drawBannerPanel(key = 'top') {
           <div class="field"><label>Texto da pílula</label><input data-i="${i}" data-field="pill" value="${esc(b.pill)}"></div>
           <div class="field"><label>Título</label><input data-i="${i}" data-field="title" value="${esc(b.title)}"></div>
           <div class="field"><label>Descrição</label><input data-i="${i}" data-field="desc" value="${esc(b.desc)}"></div>
+          <div class="field full bi-logo">
+            <span class="bi-logo-prev ${b.logo ? 'has' : ''}">${b.logo ? `<img src="${esc(imgUrl(b.logo))}" alt="">` : '<i data-icon="image"></i>'}</span>
+            <div class="pref-text"><strong>Logo sem fundo <em>(celular)</em></strong><span>No celular, surge no centro do banner e sobe para cima do texto. Use PNG sem fundo.</span></div>
+            <button class="btn-soft" type="button" data-lthumb="${i}">${b.logo ? 'Trocar' : 'Enviar logo'}</button>
+            ${b.logo ? `<button class="icon-btn" type="button" data-ldel="${i}" title="Remover logo"><i data-icon="x"></i></button>` : ''}
+          </div>
           <div class="field full bi-link ${b.linkOn ? 'on' : ''}">
             <div class="bi-link-row">
               <div class="pref-text"><strong>Botão “Acessar”</strong><span>Mostra um botão no banner que abre o link em uma nova guia</span></div>

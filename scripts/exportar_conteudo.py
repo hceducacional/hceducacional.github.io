@@ -52,6 +52,8 @@ def save_images(items, kind):
             item["image"] = save_image(item["image"], kind, safe_id)
         if item.get("avatar"):
             item["avatar"] = save_image(item["avatar"], kind, f"{safe_id}-av")
+        if item.get("logo"):
+            item["logo"] = save_image(item["logo"], kind, f"{safe_id}-logo")
         if item.get("imageMobile"):
             item["imageMobile"] = save_image(item["imageMobile"], kind, f"{safe_id}-m")
         if isinstance(item.get("gallery"), list):

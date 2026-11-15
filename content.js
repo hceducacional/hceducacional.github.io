@@ -19,14 +19,15 @@ window.HC_CONTENT = {
       "image": "assets/conteudo/banner-b2-d7cd48a9.webp",
       "title": "Conquiste seus sonhos",
       "linkOn": false,
-      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/90f8507b-dd4e-4f75-94cf-544254784523.webp"
+      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/1848d7bb-1603-42c1-9d70-5a7670cafbd6.webp"
     },
     {
       "id": "t1794523998603oldn",
       "desc": "Já estão abertas as inscrições para a nova turma de Informática Básica. Entre em contato com o nosso time comercial e saiba mais!",
       "pill": "Novidade",
       "image": "assets/conteudo/banner-t1794523998603oldn-358eaa5f.png",
-      "title": "Nova turma de Informática"
+      "title": "Nova turma de Informática",
+      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/7628e2d4-21a4-47e1-a4de-2084612feebb.webp"
     },
     {
       "id": "t17945765183277fhc",
