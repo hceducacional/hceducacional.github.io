@@ -3516,20 +3516,18 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
   .slide.has-logo .slide-logo { display: block; margin-bottom: 4px; opacity: 1; transform: none; transition: none; }
   .slide-logo img { display: block; height: 76px; width: auto; max-width: 78%; object-fit: contain; object-position: left center;
     opacity: 0; backface-visibility: hidden; }
-  .slide.active .slide-logo img, .slide.leaving .slide-logo img { animation: bannerLogo 3s cubic-bezier(.45, 0, .2, 1) .95s both; /* espera o banner terminar de entrar */ }
+  .slide.active .slide-logo img, .slide.leaving .slide-logo img { animation: bannerLogo 1.1s cubic-bezier(.45, 0, .2, 1) .95s both; /* sobe quando o banner termina de entrar */ }
   .slide.leaving:not(.active) .slide-logo img { animation-play-state: paused; }
   /* o texto só aparece depois que a logo sobe */
-  .slide.has-logo.active .slide-text > * { transition-duration: 1s, 1.1s; }
-  .slide.has-logo.active .slide-text > :nth-child(2) { transition-delay: 3s; }
-  .slide.has-logo.active .slide-text > :nth-child(3) { transition-delay: 3.15s; }
-  .slide.has-logo.active .slide-text > :nth-child(4) { transition-delay: 3.3s; }
-  .slide.has-logo.active .slide-text > .slide-cta { transition: opacity 1s var(--ease) 3.45s, transform 1.1s var(--ease) 3.45s, background .2s; }
+  .slide.has-logo.active .slide-text > * { transition-duration: .85s, .95s; }
+  .slide.has-logo.active .slide-text > :nth-child(2) { transition-delay: 1.65s; }
+  .slide.has-logo.active .slide-text > :nth-child(3) { transition-delay: 1.77s; }
+  .slide.has-logo.active .slide-text > :nth-child(4) { transition-delay: 1.89s; }
+  .slide.has-logo.active .slide-text > .slide-cta { transition: opacity .85s var(--ease) 2.01s, transform .95s var(--ease) 2.01s, background .2s; }
 }
 @keyframes bannerLogo {
-  0% { opacity: 0; transform: translate(var(--lx, 0), var(--ly, 0)) scale(.9); }
-  32% { opacity: 1; transform: translate(var(--lx, 0), var(--ly, 0)) scale(1.2); }
-  48% { opacity: 1; transform: translate(var(--lx, 0), var(--ly, 0)) scale(1.2); }
-  100% { opacity: 1; transform: none; }
+  from { opacity: 1; transform: translateY(var(--ly, 0)); }
+  to { opacity: 1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .slide.active .slide-logo img { animation: none; opacity: 1; }

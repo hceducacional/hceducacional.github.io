@@ -731,16 +731,14 @@ function loopTrack(track, onChange) {
   };
 }
 
-/* Logo do banner (só no celular): ela surge no centro do banner e depois sobe para o lugar
-   dela, acima do texto. Aqui medimos quanto cada logo precisa se deslocar para começar no centro. */
+/* Logo do banner (só no celular): ela entra junto com o banner, no pé da área do texto, e,
+   quando o banner para, sobe para o lugar dela, acima do texto. Aqui medimos essa distância. */
 function placeBannerLogos(box) {
   const place = () => box.querySelectorAll('.slide-logo img').forEach((img) => {
     const slide = img.closest('.slide'), wrap = img.parentElement;
     if (!img.offsetWidth) return;
-    // começa centralizada no espaço onde o texto vai aparecer e, depois, sobe para o lugar dela
-    const s = slide.getBoundingClientRect(), w = wrap.getBoundingClientRect(), t = wrap.parentElement.getBoundingClientRect();
-    img.style.setProperty('--lx', `${Math.round(s.left + s.width / 2 - (w.left + img.offsetWidth / 2))}px`);
-    img.style.setProperty('--ly', `${Math.round((w.bottom + t.bottom) / 2 - (w.top + img.offsetHeight / 2))}px`);
+    const w = wrap.getBoundingClientRect(), t = wrap.parentElement.getBoundingClientRect();
+    img.style.setProperty('--ly', `${Math.round(t.bottom - w.top - img.offsetHeight)}px`);
   });
   box.querySelectorAll('.slide-logo img').forEach((img) => { if (!img.complete) img.addEventListener('load', place, { once: true }); });
   place();

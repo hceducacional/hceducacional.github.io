@@ -34,10 +34,12 @@ window.HC_CONTENT = {
       "id": "t17945765183277fhc",
       "url": "https://www.typing.com/br/student/login",
       "desc": "Acesse a plataforma de digitação do curso de Informática Básica com seu usuário e senha para continuar progredindo",
+      "logo": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/3d1205b6-ce05-4884-94a7-134c08042597.webp",
       "pill": "Curso de Informática",
       "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/e362ad27-cabb-460e-979a-7d89e67a775c.png",
       "title": "Continue seu treinamento",
-      "linkOn": true
+      "linkOn": true,
+      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/cdb9f986-5ae4-4f55-a4d4-d9d3a3941a3a.webp"
     }
   ],
   "exclusive": [
