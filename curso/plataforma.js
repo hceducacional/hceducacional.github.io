@@ -72,6 +72,16 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
   // progresso salvo de cada lição (para mostrar no card); antes de abrir a 1ª lição ainda não há nada
   const progress = (n) => { try { return JSON.parse(localStorage.getItem(`hc:info:${auth?.user?.id || 'anon'}:licao-${n}`) || 'null'); } catch { return null; } };
 
+  /* fundo do banner do módulo: a imagem própria do módulo ou, se não houver, a do banner
+     da Plataforma de Informática da tela de início (com a versão de celular dele) */
+  function heroBg(m) {
+    if (m.banner) return slot(m.banner, '', '');
+    const b = [...(typeof banners !== 'undefined' ? banners : []), ...(typeof exclusive !== 'undefined' ? exclusive : [])].find((x) => x.lockInfo && (x.image || x.imageMobile));
+    if (!b) return slot('', 'Banner do módulo', '1600 × 420');
+    const pos = b.imageMobile && /^\d{1,3}% \d{1,3}%$/.test(b.focusMobile || '') ? `;--pos-m:${b.focusMobile}` : '';
+    return `<span class="pf-hero-img" style="--img:url('${esc(imgUrl(b.image || b.imageMobile))}')${b.imageMobile ? `;--img-m:url('${esc(imgUrl(b.imageMobile))}')` : ''}${pos}"></span>`;
+  }
+
   function render(view, sub = '') {
     const ln = /^licao-(\d+)$/.exec(sub);
     if (ln) return openLesson(view, +ln[1]);
@@ -88,7 +98,7 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
     view.innerHTML = `
     <div class="wrap pf">
       <section class="pf-hero">
-        <div class="pf-hero-bg">${slot(m.banner, 'Banner do módulo', '1600 × 420')}</div>
+        <div class="pf-hero-bg">${heroBg(m)}</div>
         <div class="pf-hero-text">
           <img class="pf-hero-logo" src="assets/plataforma-informatica.webp" width="900" height="184" alt="Plataforma de Informática" />
           <span class="pill">${esc(m.nivel)} · Módulo ${mod + 1}</span>

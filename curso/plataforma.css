@@ -21,6 +21,7 @@
 .pf-hero-bg .pf-ph { background: linear-gradient(120deg, #0b3b2e, #065f46 35%, #1d4ed8 80%, #4338ca); }
 .pf-hero-bg .pf-ph svg { position: absolute; right: 12%; top: 50%; width: 22%; max-width: 220px; transform: translateY(-50%); color: rgba(255, 255, 255, .18); }
 .pf-hero-bg .pf-ph em { left: auto; right: 14px; }
+.pf-hero-img { position: absolute; inset: 0; background-image: var(--img); background-size: cover; background-position: center; }
 @keyframes pfKen { from { transform: scale(1.05); } to { transform: scale(1); } }
 .pf-hero::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background: linear-gradient(90deg, rgba(0, 0, 0, .7) 0%, rgba(0, 0, 0, .46) 34%, rgba(0, 0, 0, .16) 52%, rgba(0, 0, 0, 0) 64%); }
@@ -91,18 +92,25 @@
   .pf-lessons { grid-template-columns: repeat(3, 1fr); }
   .pf-stats { grid-template-columns: repeat(2, 1fr); }
 }
+/* celular: igual ao banner do topo da tela de início — de ponta a ponta, passando por trás
+   da barra de cima, com a imagem de celular e o texto embaixo */
 @media (max-width: 860px) {
-  .pf-hero { aspect-ratio: auto; height: 300px; border-radius: 20px; }
-  .pf-hero::before { background: linear-gradient(0deg, rgba(0, 0, 0, .72) 0%, rgba(0, 0, 0, .2) 70%); }
-  .pf-hero-text { left: 22px; right: 22px; top: auto; bottom: 24px; transform: none; max-width: none; }
-  .pf-hero-logo { width: 170px; margin-bottom: 10px; }
-  .pf-hero-text h2 { margin: 4px 0 6px; font-size: 30px; }
-  .pf-hero-text p { font-size: 15px; }
-  .pf-hero .slide-cta { margin-top: 14px; height: 38px; font-size: 14.5px; }
+  .pf-hero { aspect-ratio: 4 / 5; height: auto; margin: calc(-1 * (var(--tb-top, 10px) + 56px + 20px)) -16px 0; border-radius: 0; box-shadow: 0 18px 40px -26px rgba(0, 0, 0, .5);
+    animation: heroDrop 1.25s cubic-bezier(.22, 1, .36, 1) both; }
+  .pf-hero-img { background-image: var(--img-m, var(--img)); background-position: var(--pos-m, center); }
+  .pf-hero::before { background:
+    linear-gradient(to bottom, rgba(0, 0, 0, .38) 0%, rgba(0, 0, 0, 0) 24%),
+    linear-gradient(to top, rgba(0, 0, 0, .82) 0%, rgba(0, 0, 0, .55) 26%, rgba(0, 0, 0, .12) 50%, rgba(0, 0, 0, 0) 62%); }
+  .pf-hero-text { left: 22px; right: 22px; top: auto; bottom: 26px; transform: none; max-width: none; }
+  .pf-hero-logo { width: 190px; margin-bottom: 10px; }
+  .pf-hero-text .pill { font-size: 13px; }
+  .pf-hero-text h2 { margin: 4px 0 8px; font-size: 32px; letter-spacing: -.03em; }
+  .pf-hero-text p { font-size: 15px; line-height: 1.4; }
+  .pf-hero .slide-cta { margin-top: 16px; height: 38px; font-size: 14.5px; }
   .pf-hero-bg .pf-ph svg { top: 30%; right: 10%; width: 30%; }
+  .pf-hero + section .shelf-title { margin-top: 30px; }
 }
 @media (max-width: 640px) {
-  .pf-hero { height: 340px; }
   .pf-stats { gap: 10px; }
   .pf-stat { flex-direction: column; align-items: flex-start; justify-content: center; gap: 8px; height: auto; padding: 14px; border-radius: 16px; }
   .pf-stat-ico { width: 34px; height: 34px; border-radius: 10px; }
@@ -125,5 +133,5 @@
   .pf-mascot { align-self: center; width: 150px; height: 130px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pf-hero-bg, .pf-hero-text > *, .pf-stat, .pf-lesson { animation: none; }
+  .pf-hero, .pf-hero-bg, .pf-hero-text > *, .pf-stat, .pf-lesson { animation: none; }
 }
