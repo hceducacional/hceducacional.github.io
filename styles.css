@@ -3515,7 +3515,7 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
 @media (max-width: 860px) {
   .slide.has-logo .slide-logo { display: block; margin-bottom: 4px; opacity: 1; transform: none; transition: none; }
   .slide-logo img { display: block; height: 76px; width: auto; max-width: 78%; object-fit: contain; object-position: left center;
-    filter: drop-shadow(0 8px 22px rgba(0, 0, 0, .45)); opacity: 0; }
+    opacity: 0; backface-visibility: hidden; }
   .slide.active .slide-logo img, .slide.leaving .slide-logo img { animation: bannerLogo 3s cubic-bezier(.45, 0, .2, 1) .95s both; /* espera o banner terminar de entrar */ }
   .slide.leaving:not(.active) .slide-logo img { animation-play-state: paused; }
   /* o texto só aparece depois que a logo sobe */
@@ -3526,10 +3526,10 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
   .slide.has-logo.active .slide-text > .slide-cta { transition: opacity 1s var(--ease) 3.45s, transform 1.1s var(--ease) 3.45s, background .2s; }
 }
 @keyframes bannerLogo {
-  0% { opacity: 0; transform: translate(var(--lx, 0), var(--ly, 0)) scale(.9); filter: blur(8px) drop-shadow(0 8px 22px rgba(0, 0, 0, .45)); }
-  32% { opacity: 1; transform: translate(var(--lx, 0), var(--ly, 0)) scale(1.2); filter: blur(0) drop-shadow(0 8px 22px rgba(0, 0, 0, .45)); }
+  0% { opacity: 0; transform: translate(var(--lx, 0), var(--ly, 0)) scale(.9); }
+  32% { opacity: 1; transform: translate(var(--lx, 0), var(--ly, 0)) scale(1.2); }
   48% { opacity: 1; transform: translate(var(--lx, 0), var(--ly, 0)) scale(1.2); }
-  100% { opacity: 1; transform: none; filter: drop-shadow(0 8px 22px rgba(0, 0, 0, .45)); }
+  100% { opacity: 1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .slide.active .slide-logo img { animation: none; opacity: 1; }
