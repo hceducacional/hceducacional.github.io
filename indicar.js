@@ -136,8 +136,11 @@ async function refLoadMine(id) {
         </div>`}
       </div>
     </section>
+    <section class="rf-card rf-in rf-push" id="rf-push" style="--d:${done ? 2 : 1}" hidden></section>
     <div class="rf-in" style="--d:${done ? 2 : 1}">${refSteps()}</div>`;
   paintIcons(body);
+  // oferece os avisos no celular só para quem ainda não ativou
+  pushState().then((st) => { const el = $('#rf-push'); if (!el || st === 'on' || st === 'unsupported') return; el.hidden = false; paintPushCard(el, { compact: true }); });
 }
 
 /* ---------- Painel dos administradores ---------- */
@@ -248,6 +251,14 @@ async function refUpdate(r, patch, acao) {
   if (error) { toast(refError(error)); return false; }
   Object.assign(r, patch, { history }); refDraw(); return true;
 }
+/* indicação confirmada: avisa no celular de quem indicou e conta no toast se chegou */
+async function refAvisar(r, txt) {
+  toast(txt);
+  const res = await pushNotifyReferral(r.id);
+  if (!res) return;
+  const who = (refPerson(r.referrer_id).name || 'o aluno').split(' ')[0];
+  toast(res.enviados ? `${txt} · ${who} foi avisado no celular` : `${txt} · ${who} não ativou os avisos`);
+}
 function refError(err) {
   if (/referrals_cpf_unico|duplicate/i.test(err?.message || '')) return 'Essa pessoa (CPF) já foi indicada por outro aluno.';
   return authError(err);
@@ -258,7 +269,7 @@ async function refAction(e) {
   const r = refAdm.list.find((x) => x.id === b.closest('[data-id]')?.dataset.id); if (!r) return;
   const first = r.name.split(' ')[0];
   switch (b.dataset.rf) {
-    case 'confirmar': if (await refUpdate(r, { status: 'confirmada' }, 'Confirmada')) toast(`Indicação de ${first} confirmada`); break;
+    case 'confirmar': if (await refUpdate(r, { status: 'confirmada' }, 'Confirmada')) refAvisar(r, `Indicação de ${first} confirmada`); break;
     case 'pendente': if (await refUpdate(r, { status: 'pendente' }, 'Voltou para pendente')) toast(`${first} voltou para pendente`); break;
     case 'editar': refDialog(r); break;
     case 'hist':
@@ -352,7 +363,8 @@ function refDialog(r = {}) {
     go.disabled = false;
     if (error) return (msg.textContent = refError(error));
     refAdm.list.unshift(data); refDraw(); close();
-    toast(`Indicação de ${name.split(' ')[0]} cadastrada`);
+    if (status === 'confirmada') refAvisar(data, `Indicação de ${name.split(' ')[0]} cadastrada e confirmada`);
+    else toast(`Indicação de ${name.split(' ')[0]} cadastrada`);
   });
   requestAnimationFrame(() => wrap.classList.add('in'));
   setTimeout(() => (chosen ? wrap.querySelector('#rf-n') : pick.querySelector('#rf-who'))?.focus(), 60);

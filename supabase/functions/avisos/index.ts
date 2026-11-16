@@ -1,7 +1,8 @@
 // =========================================================
 // HC Instituto Educacional — função "avisos" (Supabase Edge Function)
 // Manda o aviso (notificação) para o celular do aluno quando o polo
-// confirma, cancela ou remarca um agendamento, e o aviso de teste.
+// confirma, cancela ou remarca um agendamento, quando confirma uma
+// indicação (aviso para quem indicou) e o aviso de teste.
 // Não usa bibliotecas de fora: a criptografia dos avisos (Web Push,
 // RFC 8291 + VAPID) é feita com o Web Crypto, que já vem no Supabase.
 //
@@ -102,6 +103,15 @@ function message(tipo: string, a: any) {
   return null;
 }
 
+const REF_GOAL = 10; // igual ao indicar.js
+function referralMessage(r: any, conf: number) {
+  const first = String(r.name || '').trim().split(/\s+/)[0] || 'a pessoa';
+  const base = { tag: `rf-${r.id}`, url: './#indicar' };
+  if (conf === REF_GOAL) return { ...base, title: 'Você chegou à meta! 🏆', body: `A matrícula de ${first} foi confirmada e você completou ${REF_GOAL} indicações confirmadas. Fale com a secretaria do polo.` };
+  const falta = REF_GOAL - conf;
+  return { ...base, title: 'Indicação confirmada 🎉', body: `A matrícula de ${first} foi confirmada. Você tem ${conf} ${conf === 1 ? 'indicação confirmada' : 'indicações confirmadas'}${falta > 0 ? `, faltam ${falta} para a meta` : ''}.` };
+}
+
 /* ---------- a função ---------- */
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -128,9 +138,20 @@ async function handle(req: Request) {
     targetUser = user.id;
     msg = { title: 'Avisos ativados 🔔', body: 'Tudo certo! Os avisos do HC Instituto vão chegar aqui.', tag: 'teste', url: './#perfil' };
   } else {
-    // avisos de agendamento: só administradores mandam
+    // avisos de agendamento e de indicação: só administradores mandam
     const [me] = await rows(`/rest/v1/profiles?id=eq.${user.id}&select=role,status`);
     if (!(me?.role === 'admin' && me?.status === 'approved')) return reply({ erro: 'Só administradores.' }, 403);
+  }
+  if (body.teste) { /* já resolvido acima */ } else if (body.indicacao) {
+    // indicação confirmada: avisa o aluno que indicou
+    if (!/^[0-9a-f-]{36}$/i.test(String(body.indicacao))) return reply({ erro: 'Indicação inválida.' }, 400);
+    const [r] = await rows(`/rest/v1/referrals?id=eq.${body.indicacao}&select=id,name,status,referrer_id`);
+    if (!r) return reply({ erro: 'Indicação não encontrada.' }, 404);
+    if (r.status !== 'confirmada') return reply({ erro: 'A indicação não está confirmada.' }, 409);
+    const conf = (await rows(`/rest/v1/referrals?referrer_id=eq.${r.referrer_id}&status=eq.confirmada&select=id`)).length;
+    msg = referralMessage(r, conf);
+    targetUser = r.referrer_id;
+  } else {
     if (!/^[0-9a-f-]{36}$/i.test(String(body.id || ''))) return reply({ erro: 'Agendamento inválido.' }, 400);
     const [a] = await rows(`/rest/v1/appointments?id=eq.${body.id}&select=*`);
     if (!a) return reply({ erro: 'Agendamento não encontrado.' }, 404);

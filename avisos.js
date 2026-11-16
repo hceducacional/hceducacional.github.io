@@ -86,6 +86,15 @@ async function pushNotifyAppointment(id, tipo) {
   } catch (e) { console.warn('Avisos:', e); return null; }
 }
 
+/* indicação confirmada: avisa o aluno que indicou (só administradores conseguem) */
+async function pushNotifyReferral(id) {
+  try {
+    const { data, error } = await sb.functions.invoke('avisos', { body: { indicacao: id } });
+    if (error) { console.warn('Avisos:', error.message); return null; }
+    return data;
+  } catch (e) { console.warn('Avisos:', e); return null; }
+}
+
 function pushHowTo() {
   openAuth('info', {
     title: 'Instale o site no iPhone', icon: 'smartphone', tone: 'ok',
@@ -108,8 +117,8 @@ function pushBlockedHelp() {
 
 /* cartão "Avisos no celular" (Meu perfil e tela de agendamento concluído) */
 const PC_TXT = {
-  on: ['Avisos ativados', 'Você recebe neste aparelho quando o polo confirmar, cancelar ou remarcar o seu agendamento.'],
-  off: ['Receba avisos no celular', 'Saiba na hora quando o polo confirmar o seu agendamento, mesmo com o site fechado.'],
+  on: ['Avisos ativados', 'Você recebe neste aparelho quando o polo confirmar o seu agendamento ou uma indicação sua.'],
+  off: ['Receba avisos no celular', 'Saiba na hora quando o polo confirmar o seu agendamento ou uma indicação sua, mesmo com o site fechado.'],
   'ios-install': ['Avisos no iPhone', 'No iPhone, os avisos só chegam com o site instalado na tela de início. Leva 10 segundos.'],
   denied: ['Avisos bloqueados', 'Os avisos do site estão bloqueados neste navegador. Dá para liberar nas configurações.'],
   unsupported: ['Avisos indisponíveis', 'Este navegador não recebe avisos. No Android, use o Chrome; no iPhone, instale o site pelo Safari.'],
