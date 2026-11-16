@@ -42,13 +42,23 @@
 
   /* som de aviso: três notas graves e longas, feito pelo próprio navegador (sem arquivo).
      O navegador só libera som depois do primeiro clique ou tecla na página;
-     se o aviso chegar antes disso, o som toca no primeiro clique. */
-  let actx = null, owed = false;
-  function chime() {
+     se o aviso chegar antes disso, o som toca no primeiro clique.
+     Cada agendamento toca uma vez só, mesmo com o site aberto em mais de uma aba
+     ou ao abrir o site de novo (a marca fica guardada no navegador). */
+  let actx = null, owed = null;
+  const heard = () => { try { return localStorage.getItem('hc-pd-som') || ''; } catch (e) { return ''; } };
+  const markHeard = (key) => { try { localStorage.setItem('hc-pd-som', key); } catch (e) {} };
+  function chime(key) {
+    key = String(key || '');
+    if (!key || heard() === key) return; // esse agendamento já tocou
     try {
       actx ||= new (window.AudioContext || window.webkitAudioContext)();
-      if (actx.state !== 'running') { owed = true; actx.resume().catch(() => {}); return; }
-      owed = false;
+      if (actx.state !== 'running') { // ainda sem permissão para tocar: tenta liberar; senão, toca no primeiro clique
+        owed = key;
+        actx.resume().then(() => { if (owed === key && actx.state === 'running') chime(key); }).catch(() => {});
+        return;
+      }
+      owed = null; markHeard(key);
       const t0 = actx.currentTime + 0.02;
       const out = actx.createGain(); out.gain.value = 0.3; out.connect(actx.destination);
       // três notas graves (ré, lá, ré), com eco longo, como um sino suave
@@ -66,12 +76,12 @@
   }
   ['pointerdown', 'keydown'].forEach((ev) => document.addEventListener(ev, () => {
     if (!actx) return;
-    actx.resume().then(() => { if (owed && bar.classList.contains('pd-on')) chime(); }).catch(() => {});
+    actx.resume().then(() => { if (owed && bar.classList.contains('pd-on')) chime(owed); }).catch(() => {});
   }, { passive: true }));
 
-  function show(head, sub, count, ring) {
+  function show(head, sub, count, ring, key) {
     const opening = !bar.classList.contains('pd-on') && !bar.classList.contains('pd-out');
-    if (opening || ring) chime();
+    if (opening || ring) chime(key);
     paint(head, sub, count);
     if (bar.classList.contains('pd-on') || bar.classList.contains('pd-out')) { // já aberta: troca o texto
       if (ring) { box.classList.remove('pd-bump'); void box.offsetWidth; box.classList.add('pd-bump'); }
@@ -105,8 +115,8 @@
       if (last > (baseline || 0)) baseline = last;
       if (baseline === null) baseline = last;
       if (!n) { lastPending = 0; hide(); return; }
-      if (arrived) show(`Novo agendamento de ${firstName(r.last_name)}`, `${kindTxt(r.last_kind)} · ${n} para analisar`, n, true);
-      else if (n !== lastPending || !bar.classList.contains('pd-on')) show(...summary(n), n, false);
+      if (arrived) show(`Novo agendamento de ${firstName(r.last_name)}`, `${kindTxt(r.last_kind)} · ${n} para analisar`, n, true, last);
+      else if (n !== lastPending || !bar.classList.contains('pd-on')) show(...summary(n), n, false, last);
       lastPending = n;
     } catch (e) { /* sem internet: tenta de novo na próxima */ }
     finally { busy = false; }
