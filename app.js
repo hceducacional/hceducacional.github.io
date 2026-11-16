@@ -891,19 +891,29 @@ function renderConfig(view) {
       </a>
       ${accSection('exclusive', 'star', 'Somente no HC', 'Banners com as criações do instituto: jogos, materiais de estudo e muito mais.', 'count-exclusive', '<div id="exclusive-panel"></div>')}
       ${accSection('connect', 'monitor', 'Mantenha-se conectado', 'Os blocos de vidro fosco com WhatsApp, Instagram e links de atendimento.', 'count-connect', '<div id="connect-panel"></div>')}
-      ${accSection('links', 'link', 'Acesso rápido', 'Atalhos para os portais das instituições parceiras, com imagem ou degradê.', 'count-links', '<div id="links-panel"></div>')}
-      ${accSection('hubs', 'grid', 'Painéis da tela inicial', 'O Financeiro e outros painéis ao lado do Acesso rápido: nomes, ícones e botões com imagem.', 'count-hubs', '<div id="hubs-panel"></div>')}
+      ${accSection('hubs', 'link', 'Acesso rápido e painéis', 'A faixa escura abaixo do banner: Acesso rápido, Financeiro e outros painéis, com os botões de cada um.', 'count-hubs', `
+        <div class="strip-map">
+          <div class="strip-lead"><span class="cfg-step">1</span><div><strong>Escolha o painel que deseja editar</strong><span>Eles aparecem nesta ordem, lado a lado, logo abaixo do banner da tela inicial.</span></div></div>
+          <div class="strip-tabs" id="strip-tabs" role="tablist" aria-label="Painéis"></div>
+        </div>
+        <div id="links-panel"></div>
+        <div id="hubs-panel" hidden></div>`)}
       ${accSection('brand', 'image', 'Logo do painel', 'A imagem exibida no topo da barra lateral, em todas as páginas.', '', '<div id="brand-panel"></div>')}
       ${accSection('prefs', 'shield', 'Preferências', 'Ajustes de exibição e privacidade, e as fotos do radar da página de Notícias.', '', `
-        <p class="desc">Ajustes de exibição aplicados neste navegador.</p>
-        <div class="pref">
-          <span class="pref-icon"><i data-icon="shield"></i></span>
-          <div class="pref-text"><strong>Ocultar dados sensíveis</strong><span>CPF e telefone aparecem mascarados</span></div>
-          <label class="switch"><input type="checkbox" id="pref-hide" ${prefs.hideSensitive ? 'checked' : ''}><span></span></label>
-        </div>
-        <h4 class="pref-h">Radar da página de Notícias</h4>
-        <p class="desc">As 5 bolinhas que giram em volta do título "Acontece no HC". Toque na foto para trocar; sem foto, aparecem as iniciais do nome.</p>
-        <div id="radar-panel"></div>`)}
+        <section class="cfg-sec">
+          ${secHead(1, 'Exibição e privacidade', 'Vale só para este navegador.')}
+          <div class="cfg-sec-body">
+            <div class="pref">
+              <span class="pref-icon"><i data-icon="shield"></i></span>
+              <div class="pref-text"><strong>Ocultar dados sensíveis</strong><span>CPF e telefone aparecem mascarados</span></div>
+              <label class="switch"><input type="checkbox" id="pref-hide" ${prefs.hideSensitive ? 'checked' : ''}><span></span></label>
+            </div>
+          </div>
+        </section>
+        <section class="cfg-sec">
+          ${secHead(2, 'Radar da página de Notícias', 'As 5 bolinhas que giram em volta do título “Acontece no HC”. Clique na foto para trocar; sem foto, aparecem as iniciais do nome.')}
+          <div class="cfg-sec-body"><div id="radar-panel"></div></div>
+        </section>`)}
     </div>
     <input type="file" id="file-link" accept="image/*" hidden>
     <input type="file" id="file-logo" accept="image/*" hidden>
@@ -1054,6 +1064,8 @@ function initBannerEditor(key) {
       if (f.dataset.field !== 'linkOn') { f.closest('.bi-lock')?.classList.toggle('on', f.checked); set.save(); return; }
       const box = f.closest('.bi-link');
       box.classList.toggle('on', f.checked);
+      const lc = f.closest('.bc')?.querySelector('[data-linkchip]');
+      if (lc) { lc.className = 'bc-chip ' + (f.checked ? 'ok' : 'warn'); lc.textContent = f.checked ? 'Botão “Acessar” ligado' : 'Sem botão “Acessar”'; }
       const url = box.querySelector('[data-field="url"]');
       if (f.checked) { url.removeAttribute('tabindex'); setTimeout(() => url.focus(), 250); } else url.setAttribute('tabindex', '-1');
       set.save(); return;
@@ -1063,7 +1075,7 @@ function initBannerEditor(key) {
       if (!(n >= 3 && n <= 60)) return; // espera um número válido (de 3 a 60)
       list[i].secs = n;
     } else list[i][f.dataset.field] = f.value;
-    if (f.dataset.field === 'title') panel.querySelector(`[data-sub="${i}"]`).textContent = f.value;
+    if (f.dataset.field === 'title') panel.querySelector(`[data-sub="${i}"]`).textContent = f.value || 'Sem título';
     clearTimeout(panel._t); panel._t = setTimeout(set.save, 300);
   });
 
@@ -1173,37 +1185,61 @@ function initConnectPanel() {
 function drawConnectPanel() {
   const panel = $('#connect-panel');
   $('#count-connect').textContent = connect.length;
+  const dest = (c) => waDigits(c.whatsapp || '') ? 'WhatsApp' : igHandles(c.instagram || '').length ? 'Instagram' : isSafeUrl(normalizeUrl(c.url || '')) ? 'Link' : '';
   panel.innerHTML = `
-    <p class="desc">Quatro blocos exibidos abaixo das Notícias recentes. Ao passar o mouse, uma faixa de vidro fosco revela o título, a descrição e o botão “Acessar” (o botão só aparece se houver link). Sem imagem, o bloco usa um degradê.</p>
+    <section class="cfg-sec">
+      ${secHead(1, 'Como funciona', 'Quatro blocos fixos abaixo das Notícias recentes. Ao passar o mouse, uma faixa de vidro fosco revela o título, a descrição e o botão. Sem imagem, o bloco usa um degradê.')}
+      <div class="cfg-sec-body">
+        <div class="cfg-sec-note"><i data-icon="whatsapp"></i><span>Com <b>WhatsApp</b>, o botão vira “Conecte-se no WhatsApp”. Com <b>Instagram</b>, cada @ já é um link. Sem nenhum dos dois, o bloco usa o <b>link</b> do botão “Acessar”.</span></div>
+        ${sizeRow([['Celular', CONNECT_MOBILE_SIZE], ['Foto de perfil (celular)', 'quadrada'], ...CONNECT_SLOTS.map((sl, k) => [`Bloco ${k + 1} · ${sl.name}`, sl.size])])}
+      </div>
+    </section>
+    <section class="cfg-sec">
+      ${secHead(2, 'Os quatro blocos', 'Clique nas imagens para trocar. Tudo é salvo enquanto você digita.')}
+      <div class="cfg-sec-body bc-list">
     ${connect.map((c, i) => `
-      <div class="banner-item">
-        <div class="bi-head">
-          <button class="bi-thumb cx-thumb cx-${i + 1}" data-cact="img" data-i="${i}" title="Trocar imagem do computador" ${c.image ? `style="background-image:url('${esc(imgUrl(c.image))}')"` : ''}><span class="bi-tag">Computador</span></button>
-          <button class="bi-mthumb ${c.imageMobile ? 'has' : ''}" data-cact="mimg" data-i="${i}" title="${c.imageMobile ? 'Trocar imagem do celular' : 'Adicionar imagem só para celular (opcional)'}" ${c.imageMobile ? `style="background-image:url('${esc(imgUrl(c.imageMobile))}');${bgPos(c.focusMobile)}"` : ''}>${c.imageMobile ? '' : '<i data-icon="smartphone"></i>'}<span class="bi-tag">Celular</span></button>
-          ${c.imageMobile ? `<span class="bi-mtools"><button class="icon-btn neutral" data-cact="mfocus" data-i="${i}" title="Enquadrar imagem do celular"><i data-icon="focus"></i></button><button class="icon-btn" data-cact="rmmimg" data-i="${i}" title="Remover imagem do celular (volta a usar a do computador)"><i data-icon="x"></i></button></span>` : ''}
-          <div class="bi-meta">
-            <span class="bi-badge">${CONNECT_SLOTS[i].name.toUpperCase()} · PC ${CONNECT_SLOTS[i].size} · CELULAR ${CONNECT_MOBILE_SIZE}</span>
-            <p data-csub="${i}">${esc(c.title) || 'Sem título'}</p>
+      <article class="bc">
+        <div class="bc-top">
+          <div class="bc-thumbs">
+            <button class="bi-thumb cx-thumb cx-${i + 1}" data-cact="img" data-i="${i}" title="Trocar imagem do computador" ${c.image ? `style="background-image:url('${esc(imgUrl(c.image))}')"` : ''}><span class="bi-tag">Computador</span></button>
+            ${c.image ? `<span class="bi-mtools"><button class="icon-btn" data-cact="rmimg" data-i="${i}" title="Remover imagem (volta ao degradê)"><i data-icon="x"></i></button></span>` : ''}
+            <button class="bi-mthumb ${c.imageMobile ? 'has' : ''}" data-cact="mimg" data-i="${i}" title="${c.imageMobile ? 'Trocar imagem do celular' : 'Adicionar imagem só para celular (opcional)'}" ${c.imageMobile ? `style="background-image:url('${esc(imgUrl(c.imageMobile))}');${bgPos(c.focusMobile)}"` : ''}>${c.imageMobile ? '' : '<i data-icon="smartphone"></i>'}<span class="bi-tag">Celular</span></button>
+            ${c.imageMobile ? `<span class="bi-mtools"><button class="icon-btn neutral" data-cact="mfocus" data-i="${i}" title="Enquadrar imagem do celular"><i data-icon="focus"></i></button><button class="icon-btn" data-cact="rmmimg" data-i="${i}" title="Remover imagem do celular (volta a usar a do computador)"><i data-icon="x"></i></button></span>` : ''}
+            <button class="cx-av-btn ${c.avatar ? 'has' : ''}" data-cact="avatar" data-i="${i}" title="Foto de perfil do cartão no celular">${c.avatar ? `<img src="${esc(imgUrl(c.avatar))}" alt=""${objPos(c.avatarFocus)}>` : '<i data-icon="user"></i>'}<span class="bi-tag">Perfil</span></button>
+            ${c.avatar ? `<span class="bi-mtools"><button class="icon-btn neutral" data-cact="avfocus" data-i="${i}" title="Enquadrar foto de perfil"><i data-icon="focus"></i></button><button class="icon-btn" data-cact="rmav" data-i="${i}" title="Remover foto de perfil"><i data-icon="x"></i></button></span>` : ''}
           </div>
-          <button class="cx-av-btn ${c.avatar ? 'has' : ''}" data-cact="avatar" data-i="${i}" title="Foto de perfil do cartão no celular">${c.avatar ? `<img src="${esc(imgUrl(c.avatar))}" alt=""${objPos(c.avatarFocus)}>` : '<i data-icon="user"></i>'}<span class="bi-tag">Perfil</span></button>
-          ${c.avatar ? `<span class="bi-mtools"><button class="icon-btn neutral" data-cact="avfocus" data-i="${i}" title="Enquadrar foto de perfil"><i data-icon="focus"></i></button><button class="icon-btn" data-cact="rmav" data-i="${i}" title="Remover foto de perfil"><i data-icon="x"></i></button></span>` : ''}
-          <button class="btn-soft" data-cact="img" data-i="${i}"><i data-icon="image"></i>${c.image ? 'Trocar' : 'Imagem'}</button>
-          ${c.image ? `<button class="icon-btn" data-cact="rmimg" data-i="${i}" title="Remover imagem (volta ao degradê)"><i data-icon="x"></i></button>` : ''}
+          <div class="bc-meta">
+            <span class="bc-num">Bloco ${i + 1} · ${esc(CONNECT_SLOTS[i].name)}</span>
+            <strong class="bc-name" data-csub="${i}">${esc(c.title) || 'Sem título'}</strong>
+            <span class="bc-chips">${dest(c) ? chip(true, 'Abre: ' + dest(c), '') : chip(false, '', 'Sem destino')}${c.image ? '' : infoChip('Usando degradê')}</span>
+          </div>
         </div>
-        <div class="bi-fields">
-          <div class="field"><label>Título</label><input data-i="${i}" data-cfield="title" value="${esc(c.title)}" maxlength="60"></div>
-          <div class="field"><label>Etiqueta no celular <em>(opcional, ex.: Atendimento ao aluno)</em></label><input data-i="${i}" data-cfield="tag" value="${esc(c.tag || '')}" maxlength="40" placeholder="${esc(CX_TAGS[i])}"></div>
-          <div class="field"><label>Número do WhatsApp <em>(com DDD, opcional)</em></label><input data-i="${i}" data-cfield="whatsapp" value="${esc(c.whatsapp || '')}" placeholder="(98) 9 8765-4321" inputmode="tel" maxlength="20"></div>
-          <div class="field full"><label>Contas do Instagram <em>(opcional, até 3, separadas por espaço)</em></label><input data-i="${i}" data-cfield="instagram" value="${esc(c.instagram || '')}" placeholder="@hceducacional @favenihc" maxlength="100" autocapitalize="off" spellcheck="false"></div>
-          ${i === 0
-            ? `<div class="field full"><label>Descrição <em>(até ${CONNECT_DESC_MAX[i]} caracteres)</em></label><textarea rows="3" data-i="${i}" data-cfield="desc" maxlength="${CONNECT_DESC_MAX[i]}">${esc(c.desc)}</textarea></div>`
-            : `<div class="field full"><label>Descrição</label><input data-i="${i}" data-cfield="desc" value="${esc(c.desc)}" maxlength="${CONNECT_DESC_MAX[i]}"></div>`}
-          <p class="cx-hint full">O número do WhatsApp e as contas do Instagram aparecem em destaque, com animação, e abrem direto a conversa ou o perfil. Com WhatsApp, o botão vira “Conecte-se no WhatsApp”; com Instagram, cada @ já é o link. Sem nenhum dos dois, o bloco usa o link abaixo.</p>
-          <div class="field full"><label>Link do botão “Acessar” <em>(usado só sem WhatsApp)</em></label><input data-i="${i}" data-cfield="url" value="${esc(c.url || '')}" placeholder="https://www.exemplo.com.br" inputmode="url"></div>
+        <div class="bc-grid">
+          <div class="bc-col">
+            <h5>Textos</h5>
+            <div class="field"><label>Título</label><input data-i="${i}" data-cfield="title" value="${esc(c.title)}" maxlength="60"></div>
+            <div class="field"><label>Etiqueta no celular <em>(opcional)</em></label><input data-i="${i}" data-cfield="tag" value="${esc(c.tag || '')}" maxlength="40" placeholder="${esc(CX_TAGS[i])}"></div>
+            ${i === 0
+              ? `<div class="field"><label>Descrição <em>(até ${CONNECT_DESC_MAX[i]} caracteres)</em></label><textarea rows="3" data-i="${i}" data-cfield="desc" maxlength="${CONNECT_DESC_MAX[i]}">${esc(c.desc)}</textarea></div>`
+              : `<div class="field"><label>Descrição</label><input data-i="${i}" data-cfield="desc" value="${esc(c.desc)}" maxlength="${CONNECT_DESC_MAX[i]}"></div>`}
+          </div>
+          <div class="bc-col">
+            <h5>Para onde o bloco leva</h5>
+            <div class="field"><label>Número do WhatsApp <em>(com DDD, opcional)</em></label><input data-i="${i}" data-cfield="whatsapp" value="${esc(c.whatsapp || '')}" placeholder="(98) 9 8765-4321" inputmode="tel" maxlength="20"></div>
+            <div class="field"><label>Contas do Instagram <em>(até 3, separadas por espaço)</em></label><input data-i="${i}" data-cfield="instagram" value="${esc(c.instagram || '')}" placeholder="@hceducacional @favenihc" maxlength="100" autocapitalize="off" spellcheck="false"></div>
+            <div class="field"><label>Link do botão “Acessar” <em>(usado só sem WhatsApp)</em></label><input data-i="${i}" data-cfield="url" value="${esc(c.url || '')}" placeholder="https://www.exemplo.com.br" inputmode="url"></div>
+          </div>
         </div>
-      </div>`).join('')}`;
+      </article>`).join('')}
+      </div>
+    </section>`;
   paintIcons(panel);
 }
+
+/* selos de situação dos cartões das Configurações */
+const chip = (ok, yes, no, attr = '') => `<span class="bc-chip ${ok ? 'ok' : 'warn'}" ${attr}>${ok ? yes : no}</span>`;
+const infoChip = (txt) => `<span class="bc-chip info">${txt}</span>`;
+const sizeRow = (items) => `<div class="cfg-sizes">${items.map(([k, v]) => `<span class="cfg-size"><small>${k}</small><b>${v}</b></span>`).join('')}</div>`;
 
 function drawBannerPanel(key = 'top') {
   const set = BANNER_SETS[key];
@@ -1211,54 +1247,75 @@ function drawBannerPanel(key = 'top') {
   const panel = $('#' + set.panel);
   $('#' + set.count).textContent = `${banners.length}/${MAX_BANNERS}`;
   panel.innerHTML = `
-    <p class="desc">${set.intro}</p>
-
+    <section class="cfg-sec">
+      ${secHead(1, 'Como funciona', set.intro)}
+      <div class="cfg-sec-body">
+        ${sizeRow([['Imagem do computador', '2560 × 673 px'], ['Imagem do celular (opcional)', '1080 × 1350 px'], ['Logo do celular (opcional)', 'PNG sem fundo'], ['Quantidade', `até ${MAX_BANNERS} banners`]])}
+      </div>
+    </section>
+    <section class="cfg-sec">
+      ${secHead(2, `Banners do carrossel <em>${banners.length}/${MAX_BANNERS}</em>`, 'Aparecem nesta ordem. Clique nas imagens para trocar; os textos são salvos enquanto você digita.',
+        `<button class="btn-dark" data-badd="1" ${banners.length >= MAX_BANNERS ? 'disabled' : ''}><i data-icon="plus"></i>Adicionar banners</button>`)}
+      <div class="cfg-sec-body bc-list">
     ${banners.map((b, i) => `
-      <div class="banner-item">
-        <div class="bi-head">
-          <button class="bi-thumb" data-thumb="${i}" title="Trocar imagem do computador" style="background-image:url('${esc(imgUrl(b.image))}')"><span class="bi-tag">Computador</span></button>
-          <button class="bi-mthumb ${b.imageMobile ? 'has' : ''}" data-mthumb="${i}" title="${b.imageMobile ? 'Trocar imagem do celular' : 'Adicionar imagem só para celular (opcional)'}" ${b.imageMobile ? `style="background-image:url('${esc(imgUrl(b.imageMobile))}');${bgPos(b.focusMobile)}"` : ''}>${b.imageMobile ? '' : '<i data-icon="smartphone"></i>'}<span class="bi-tag">Celular</span></button>
-          ${b.imageMobile ? `<span class="bi-mtools"><button class="icon-btn neutral" data-mfocus="${i}" title="Enquadrar imagem do celular"><i data-icon="focus"></i></button><button class="icon-btn" data-mdel="${i}" title="Remover imagem do celular (volta a usar a do computador)"><i data-icon="x"></i></button></span>` : ''}
-          <div class="bi-meta">
-            <span class="bi-badge">BANNER ${i + 1}</span>
-            <p data-sub="${i}">${esc(b.title)}</p>
+      <article class="bc">
+        <div class="bc-top">
+          <div class="bc-thumbs">
+            <button class="bi-thumb" data-thumb="${i}" title="Trocar imagem do computador" style="background-image:url('${esc(imgUrl(b.image))}')"><span class="bi-tag">Computador</span></button>
+            <button class="bi-mthumb ${b.imageMobile ? 'has' : ''}" data-mthumb="${i}" title="${b.imageMobile ? 'Trocar imagem do celular' : 'Adicionar imagem só para celular (opcional)'}" ${b.imageMobile ? `style="background-image:url('${esc(imgUrl(b.imageMobile))}');${bgPos(b.focusMobile)}"` : ''}>${b.imageMobile ? '' : '<i data-icon="smartphone"></i>'}<span class="bi-tag">Celular</span></button>
+            ${b.imageMobile ? `<span class="bi-mtools"><button class="icon-btn neutral" data-mfocus="${i}" title="Enquadrar imagem do celular"><i data-icon="focus"></i></button><button class="icon-btn" data-mdel="${i}" title="Remover imagem do celular (volta a usar a do computador)"><i data-icon="x"></i></button></span>` : ''}
           </div>
-          <button class="icon-btn" data-del="${i}" title="Remover banner"><i data-icon="trash"></i></button>
+          <div class="bc-meta">
+            <span class="bc-num">Banner ${i + 1} de ${banners.length}</span>
+            <strong class="bc-name" data-sub="${i}">${esc(b.title) || 'Sem título'}</strong>
+            <span class="bc-chips">
+              ${chip(b.linkOn, 'Botão “Acessar” ligado', 'Sem botão “Acessar”', 'data-linkchip')}
+              ${b.imageMobile ? infoChip('Imagem própria no celular') : ''}
+              ${b.lockInfo ? infoChip('Só alunos de Informática') : ''}
+            </span>
+          </div>
+          <div class="bi-actions"><button class="icon-btn" data-del="${i}" title="Remover banner"><i data-icon="trash"></i></button></div>
         </div>
-        <div class="bi-fields">
-          <div class="field"><label>Texto da pílula</label><input data-i="${i}" data-field="pill" value="${esc(b.pill)}"></div>
-          <div class="field"><label>Título</label><input data-i="${i}" data-field="title" value="${esc(b.title)}"></div>
-          <div class="field"><label>Descrição</label><input data-i="${i}" data-field="desc" value="${esc(b.desc)}"></div>
-          <div class="field bi-secs"><label>Tempo na tela <em>(segundos)</em></label><input data-i="${i}" data-field="secs" type="number" inputmode="numeric" min="3" max="60" step="1" value="${esc(String(b.secs || SLIDE_MS / 1000))}"></div>
-          <div class="field full bi-logo">
-            <span class="bi-logo-prev ${b.logo ? 'has' : ''}">${b.logo ? `<img src="${esc(imgUrl(b.logo))}" alt="">` : '<i data-icon="image"></i>'}</span>
-            <div class="pref-text"><strong>Logo sem fundo <em>(celular)</em></strong><span>No celular, surge no centro do banner e sobe para cima do texto. Use PNG sem fundo.</span></div>
-            <button class="btn-soft" type="button" data-lthumb="${i}">${b.logo ? 'Trocar' : 'Enviar logo'}</button>
-            ${b.logo ? `<button class="icon-btn" type="button" data-ldel="${i}" title="Remover logo"><i data-icon="x"></i></button>` : ''}
+        <div class="bc-grid">
+          <div class="bc-col">
+            <h5>Textos sobre a imagem</h5>
+            <div class="field"><label>Texto da pílula <em>(etiqueta pequena acima do título)</em></label><input data-i="${i}" data-field="pill" value="${esc(b.pill)}"></div>
+            <div class="field"><label>Título</label><input data-i="${i}" data-field="title" value="${esc(b.title)}"></div>
+            <div class="field"><label>Descrição</label><input data-i="${i}" data-field="desc" value="${esc(b.desc)}"></div>
+            <div class="field bi-secs"><label>Tempo na tela <em>(segundos)</em></label><input data-i="${i}" data-field="secs" type="number" inputmode="numeric" min="3" max="60" step="1" value="${esc(String(b.secs || SLIDE_MS / 1000))}"></div>
           </div>
-          <div class="field full bi-link ${b.linkOn ? 'on' : ''}">
-            <div class="bi-link-row">
-              <div class="pref-text"><strong>Botão “Acessar”</strong><span>Mostra um botão no banner que abre o link em uma nova guia</span></div>
-              <label class="switch"><input type="checkbox" data-i="${i}" data-field="linkOn" ${b.linkOn ? 'checked' : ''}><span></span></label>
+          <div class="bc-col">
+            <h5>Botão e acesso</h5>
+            <div class="field full bi-link ${b.linkOn ? 'on' : ''}">
+              <div class="bi-link-row">
+                <div class="pref-text"><strong>Botão “Acessar”</strong><span>Mostra um botão no banner que abre o link em uma nova guia</span></div>
+                <label class="switch"><input type="checkbox" data-i="${i}" data-field="linkOn" ${b.linkOn ? 'checked' : ''}><span></span></label>
+              </div>
+              <div class="bi-link-url"><div>
+                <label>Link de acesso</label>
+                <input data-i="${i}" data-field="url" value="${esc(b.url || '')}" placeholder="https://www.exemplo.com.br" inputmode="url" ${b.linkOn ? '' : 'tabindex="-1"'}>
+              </div></div>
             </div>
-            <div class="bi-link-url"><div>
-              <label>Link de acesso</label>
-              <input data-i="${i}" data-field="url" value="${esc(b.url || '')}" placeholder="https://www.exemplo.com.br" inputmode="url" ${b.linkOn ? '' : 'tabindex="-1"'}>
-            </div></div>
+            <div class="field full bi-link bi-lock ${b.lockInfo ? 'on' : ''}">
+              <div class="bi-link-row">
+                <div class="pref-text"><strong>Só para alunos de Informática</strong><span>O botão abre o link só para quem está marcado como aluno de Informática em Usuários. Os demais veem a página de apresentação do curso.</span></div>
+                <label class="switch"><input type="checkbox" data-i="${i}" data-field="lockInfo" ${b.lockInfo ? 'checked' : ''}><span></span></label>
+              </div>
+            </div>
           </div>
-          <div class="field full bi-link bi-lock ${b.lockInfo ? 'on' : ''}">
-            <div class="bi-link-row">
-              <div class="pref-text"><strong>Só para alunos de Informática</strong><span>O botão “Acessar” abre o link só para quem está marcado como aluno de Informática em Usuários. Os demais veem a página de apresentação do curso.</span></div>
-              <label class="switch"><input type="checkbox" data-i="${i}" data-field="lockInfo" ${b.lockInfo ? 'checked' : ''}><span></span></label>
+          <div class="bc-col full">
+            <h5>Logo no celular <em>(opcional)</em></h5>
+            <div class="field full bi-logo">
+              <span class="bi-logo-prev ${b.logo ? 'has' : ''}">${b.logo ? `<img src="${esc(imgUrl(b.logo))}" alt="">` : '<i data-icon="image"></i>'}</span>
+              <div class="pref-text"><strong>Logo sem fundo</strong><span>No celular, surge no centro do banner e sobe para cima do texto. Use PNG sem fundo.</span></div>
+              <button class="btn-soft" type="button" data-lthumb="${i}">${b.logo ? 'Trocar' : 'Enviar logo'}</button>
+              ${b.logo ? `<button class="icon-btn" type="button" data-ldel="${i}" title="Remover logo"><i data-icon="x"></i></button>` : ''}
             </div>
           </div>
         </div>
-      </div>`).join('')}
-
-    <div class="panel-foot">
-      <span>Computador: <b>2560 × 673 px</b> · Celular (opcional): <b>1080 × 1350 px</b> — até ${MAX_BANNERS} banners.</span>
-      <button class="btn-dark" data-badd="1" ${banners.length >= MAX_BANNERS ? 'disabled' : ''}><i data-icon="plus"></i>Adicionar banners</button>
-    </div>`;
+      </article>`).join('') || '<p class="bc-empty">Nenhum banner ainda — clique em “Adicionar banners”.</p>'}
+      </div>
+    </section>`;
   paintIcons(panel);
 }
 
@@ -2149,22 +2206,132 @@ function drawBrandPanel() {
   const panel = $('#brand-panel');
   const img = brandList[0].image;
   panel.innerHTML = `
-    <p class="desc">A imagem aparece no quadrado do topo da barra lateral, em todas as páginas. Prefira uma imagem quadrada.</p>
-    <div class="brand-row">
-      <button class="sb-logo brand-preview ${img ? 'has-img' : ''}" data-bact="img" title="Trocar logo">${img ? `<img src="${esc(imgUrl(img))}" alt="">` : LOGO_DEFAULT}</button>
-      <div class="img-row">
-        <button class="btn-soft" data-bact="img"><i data-icon="image"></i>${img ? 'Trocar imagem' : 'Escolher imagem'}</button>
-        ${img ? `<button class="btn-soft danger" data-bact="rm"><i data-icon="x"></i>Voltar ao padrão</button>` : ''}
+    <section class="cfg-sec">
+      ${secHead(1, 'Imagem do logo', 'Aparece no quadrado do topo da barra lateral, em todas as páginas.')}
+      <div class="cfg-sec-body">
+        <div class="brand-row">
+          <button class="sb-logo brand-preview ${img ? 'has-img' : ''}" data-bact="img" title="Trocar logo">${img ? `<img src="${esc(imgUrl(img))}" alt="">` : LOGO_DEFAULT}</button>
+          <div class="brand-side">
+            <span class="bc-chips">${img ? chip(true, 'Logo próprio', '') : infoChip('Usando o logo padrão')}</span>
+            <div class="img-row">
+              <button class="btn-soft" data-bact="img"><i data-icon="image"></i>${img ? 'Trocar imagem' : 'Escolher imagem'}</button>
+              ${img ? `<button class="btn-soft danger" data-bact="rm"><i data-icon="x"></i>Voltar ao padrão</button>` : ''}
+            </div>
+          </div>
+        </div>
+        ${sizeRow([['Tamanho recomendado', '512 × 512 px'], ['Formato', 'quadrado']])}
       </div>
-    </div>
-    <div class="panel-foot"><span>Tamanho recomendado: <b>512 × 512 px</b>.</span></div>`;
+    </section>`;
   paintIcons(panel);
 }
 
-/* ---------- Botões de acesso rápido ---------- */
+/* ---------- Acesso rápido e painéis (uma janela só, com abas) ---------- */
+let stripTab = 'qa'; // aba aberta: 'qa' (Acesso rápido) ou o id do painel
+
+/* cartão de edição de um botão (Acesso rápido e painéis) — o: atributos de cada editor */
+function btnCard(b, k, n, o) {
+  const ok = isSafeUrl(normalizeUrl(b.url));
+  const A = (act) => `${o.act}="${act}" ${o.key}`;
+  return `
+      <article class="bc">
+        <div class="bc-top">
+          <button class="ql bc-prev ${b.image ? 'has-img' : ''}" ${A('img')} title="Trocar imagem de fundo" style="${bcPrevStyle(b)}">
+            <span class="ql-name">${esc(b.name)}</span>
+            <span class="bc-prev-edit"><i data-icon="image"></i>Trocar</span>
+          </button>
+          <div class="bc-meta">
+            <span class="bc-num">Botão ${k + 1} de ${n}</span>
+            <strong class="bc-name">${esc(b.name) || 'Sem nome'}</strong>
+            <span class="bc-chip ${ok ? 'ok' : 'warn'}">${ok ? 'Link configurado' : 'Falta o link'}</span>
+          </div>
+          <div class="bi-actions">
+            <button class="icon-btn neutral" ${A('up')} title="Mover para a esquerda" ${k === 0 ? 'disabled' : ''}><i data-icon="left"></i></button>
+            <button class="icon-btn neutral" ${A('down')} title="Mover para a direita" ${k === n - 1 ? 'disabled' : ''}><i data-icon="right"></i></button>
+            <button class="icon-btn" ${A('del')} title="Remover botão"><i data-icon="trash"></i></button>
+          </div>
+        </div>
+        <div class="bc-grid">
+          <div class="bc-col">
+            <h5>Texto e link</h5>
+            <div class="field"><label>Nome no botão</label><input ${o.key} ${o.field}="name" value="${esc(b.name)}" maxlength="24"></div>
+            <div class="field"><label>Link (site que abre)</label><input ${o.key} ${o.field}="url" value="${esc(b.url)}" placeholder="https://www.exemplo.com.br" inputmode="url"></div>
+          </div>
+          <div class="bc-col">
+            <h5>Aparência</h5>
+            <div class="field">
+              <label>Imagem de fundo <em>· 800 × 320 px</em></label>
+              <div class="img-row">
+                <button class="btn-soft" ${A('img')}><i data-icon="image"></i>${b.image ? 'Trocar imagem' : 'Escolher imagem'}</button>
+                ${b.image ? `<button class="btn-soft danger" ${A('rmimg')}><i data-icon="x"></i>Remover</button>` : ''}
+              </div>
+            </div>
+            <div class="field">
+              <label>Cores do degradê ${b.image ? '<em>(usadas sem imagem)</em>' : ''}</label>
+              <div class="color-row">
+                <input type="color" ${o.key} ${o.field}="c1" value="${esc(b.c1)}" title="Cor inicial">
+                <input type="color" ${o.key} ${o.field}="c2" value="${esc(b.c2)}" title="Cor final">
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>`;
+}
+const bcPrevStyle = (b) => `background:${linkBg(b)};color:${linkInk(b)}${b.image ? `;--img:url('${esc(imgUrl(b.image))}')` : ''}`;
+/* atualiza a prévia, o nome e o selo do link enquanto o administrador digita */
+function bcRefresh(card, b) {
+  if (!card) return;
+  const prev = card.querySelector('.bc-prev');
+  prev.setAttribute('style', bcPrevStyle(b));
+  prev.querySelector('.ql-name').textContent = b.name;
+  card.querySelector('.bc-name').textContent = b.name || 'Sem nome';
+  const ok = isSafeUrl(normalizeUrl(b.url)), chip = card.querySelector('.bc-chip');
+  chip.className = 'bc-chip ' + (ok ? 'ok' : 'warn');
+  chip.textContent = ok ? 'Link configurado' : 'Falta o link';
+}
+/* cabeçalho de cada parte da janela (número do passo, título, explicação e um botão) */
+const secHead = (n, title, sub, extra = '') => `
+      <header class="cfg-sec-h"><span class="cfg-step">${n}</span><div><strong>${title}</strong><span>${sub}</span></div>${extra}</header>`;
+
+/* abas no formato da faixa da tela inicial */
+function drawStripTabs() {
+  const box = $('#strip-tabs'); if (!box) return;
+  const ps = hubPanels();
+  const qaDots = links.slice(0, 3).map((l, i) => `<span class="qa-dot" style="--i:${i};${l.image ? `background-image:url('${esc(imgUrl(l.image))}')` : `background:linear-gradient(135deg, ${l.c1}, ${l.c2})`}">${l.image ? '' : esc((l.name || '?')[0])}</span>`).join('');
+  const tab = (id, ico, title, count, extra = '') => `
+      <button type="button" class="strip-tab ${stripTab === id ? 'on' : ''}" data-tab="${id}" role="tab" aria-selected="${stripTab === id}">
+        <span class="qa-stack">${ico}</span>
+        <span class="strip-tab-txt"><strong>${esc(title)}</strong><small>${count} ${count === 1 ? 'botão' : 'botões'}${extra}</small></span>
+      </button>`;
+  box.innerHTML = tab('qa', qaDots, 'Acesso rápido', links.length, ' · fixo')
+    + ps.map((p) => tab(p.id, hubIco(p), p.title || 'Sem nome', hubBtns(p.id).length)).join('')
+    + (ps.length < MAX_HUBS ? `<button type="button" class="strip-add" data-tab="add"><i data-icon="plus"></i>Novo painel</button>` : '');
+  paintIcons(box);
+  $('#count-hubs').textContent = `${ps.length + 1} painéis`;
+  $('#links-panel').hidden = stripTab !== 'qa';
+  $('#hubs-panel').hidden = stripTab === 'qa';
+}
+function initStripTabs() {
+  $('#strip-tabs').addEventListener('click', (e) => {
+    const t = e.target.closest('[data-tab]'); if (!t) return;
+    if (t.dataset.tab === 'add') {
+      const id = 'hp' + Date.now();
+      hubs.push({ id, kind: 'panel', title: 'Novo painel', sub: '', icon: '', image: '' },
+        { id: 'hb' + Date.now(), kind: 'btn', panel: id, name: 'NOVO BOTÃO', url: '', image: '', c1: '#60a5fa', c2: '#1e3a8a' });
+      saveHubs(); stripTab = id; drawHubsPanel();
+      $('#hubs-panel [data-hf="title"]')?.select();
+      toast('Painel criado — dê um nome e configure os botões');
+      return;
+    }
+    stripTab = t.dataset.tab;
+    stripTab === 'qa' ? drawLinksPanel() : drawHubsPanel();
+  });
+}
+
+/* ---------- Botões do Acesso rápido ---------- */
 function initLinksPanel() {
   const panel = $('#links-panel');
   let imgIdx = -1;
+  initStripTabs();
   drawLinksPanel();
 
   panel.addEventListener('click', (e) => {
@@ -2193,12 +2360,8 @@ function initLinksPanel() {
     const f = e.target.closest('[data-field]'); if (!f) return;
     const i = +f.dataset.i;
     links[i][f.dataset.field] = f.value;
-    const prev = panel.querySelector(`[data-preview="${i}"]`);
-    prev.style.background = linkBg(links[i]);
-    prev.style.color = linkInk(links[i]);
-    prev.querySelector('.ql-name').textContent = links[i].name;
-    panel.querySelector(`[data-sub="l${i}"]`).textContent = normalizeUrl(links[i].url) || 'Sem link configurado';
-    clearTimeout(panel._t); panel._t = setTimeout(saveLinks, 300);
+    bcRefresh(f.closest('.bc'), links[i]);
+    clearTimeout(panel._t); panel._t = setTimeout(() => { saveLinks(); drawStripTabs(); }, 300);
   });
 
   $('#file-link').addEventListener('change', async (e) => {
@@ -2213,60 +2376,29 @@ function initLinksPanel() {
 
 function drawLinksPanel() {
   const panel = $('#links-panel');
-  $('#count-links').textContent = `${links.length}/${MAX_LINKS}`;
+  const o = { act: 'data-act', field: 'data-field' };
   panel.innerHTML = `
-    <p class="desc">Atalhos exibidos logo abaixo do banner. Cada botão abre o site configurado em uma nova aba. Use uma imagem de fundo ou um degradê de cores.</p>
-
-    ${links.map((l, i) => `
-      <div class="banner-item">
-        <div class="bi-head">
-          <button class="ql ql-preview ${l.image ? 'has-img' : ''}" data-act="img" data-i="${i}" data-preview="${i}" title="Trocar imagem de fundo"
-                  style="background:${linkBg(l)};color:${linkInk(l)}">
-            <span class="ql-name">${esc(l.name)}</span>
-          </button>
-          <div class="bi-meta">
-            <span class="bi-badge">BOTÃO ${i + 1}</span>
-            <p data-sub="l${i}">${esc(normalizeUrl(l.url)) || 'Sem link configurado'}</p>
-          </div>
-          <div class="bi-actions">
-            <button class="icon-btn neutral" data-act="up" data-i="${i}" title="Mover para a esquerda" ${i === 0 ? 'disabled' : ''}><i data-icon="up"></i></button>
-            <button class="icon-btn neutral" data-act="down" data-i="${i}" title="Mover para a direita" ${i === links.length - 1 ? 'disabled' : ''}><i data-icon="down"></i></button>
-            <button class="icon-btn" data-act="del" data-i="${i}" title="Remover botão"><i data-icon="trash"></i></button>
-          </div>
-        </div>
-        <div class="bi-fields">
-          <div class="field"><label>Nome</label><input data-i="${i}" data-field="name" value="${esc(l.name)}" maxlength="24"></div>
-          <div class="field"><label>Link (site)</label><input data-i="${i}" data-field="url" value="${esc(l.url)}" placeholder="https://www.exemplo.com.br" inputmode="url"></div>
-          <div class="field">
-            <label>Imagem de fundo</label>
-            <div class="img-row">
-              <button class="btn-soft" data-act="img" data-i="${i}"><i data-icon="image"></i>${l.image ? 'Trocar imagem' : 'Escolher imagem'}</button>
-              ${l.image ? `<button class="btn-soft danger" data-act="rmimg" data-i="${i}"><i data-icon="x"></i>Remover</button>` : ''}
-            </div>
-          </div>
-          <div class="field">
-            <label>Cores do degradê ${l.image ? '<em>(usadas sem imagem)</em>' : ''}</label>
-            <div class="color-row">
-              <input type="color" data-i="${i}" data-field="c1" value="${esc(l.c1)}" title="Cor inicial">
-              <input type="color" data-i="${i}" data-field="c2" value="${esc(l.c2)}" title="Cor final">
-            </div>
-          </div>
-        </div>
-      </div>`).join('')}
-
-    <div class="panel-foot">
-      <span>Imagem recomendada: <b>800 × 320 px</b> — até ${MAX_LINKS} botões.</span>
-      <button class="btn-dark" data-act="add" ${links.length >= MAX_LINKS ? 'disabled' : ''}><i data-icon="plus"></i>Adicionar botão</button>
-    </div>`;
+    <section class="cfg-sec">
+      ${secHead(2, 'Sobre o painel', 'O Acesso rápido é fixo e sempre fica em primeiro. As bolinhas dele mostram as imagens dos 3 primeiros botões.')}
+      <div class="cfg-sec-body cfg-sec-note">
+        <i data-icon="link"></i><span>Cada botão abre o portal da instituição em uma nova aba. Para o Financeiro ou outro painel, escolha a aba dele acima.</span>
+      </div>
+    </section>
+    <section class="cfg-sec">
+      ${secHead(3, `Botões do Acesso rápido <em>${links.length}/${MAX_LINKS}</em>`, 'Aparecem quando o painel é aberto, nesta ordem.',
+        `<button class="btn-dark" data-act="add" ${links.length >= MAX_LINKS ? 'disabled' : ''}><i data-icon="plus"></i>Adicionar botão</button>`)}
+      <div class="cfg-sec-body bc-list">
+        ${links.map((l, i) => btnCard(l, i, links.length, { ...o, key: `data-i="${i}"` })).join('') || '<p class="bc-empty">Nenhum botão ainda.</p>'}
+      </div>
+    </section>`;
   paintIcons(panel);
+  drawStripTabs();
 }
 
-
-/* ---------- Painéis da tela inicial (Financeiro e outros) ---------- */
+/* ---------- Painéis da faixa (Financeiro e outros) ---------- */
 function initHubsPanel() {
   const panel = $('#hubs-panel');
   let imgId = null;
-  drawHubsPanel();
   const find = (id) => hubs.find((h) => h.id === id);
   // troca a posição de dois itens da lista (painéis entre painéis, botões dentro do mesmo painel)
   const swap = (it, dir) => {
@@ -2279,7 +2411,7 @@ function initHubsPanel() {
 
   panel.addEventListener('click', (e) => {
     const t = e.target.closest('[data-hact]'); if (!t) return;
-    const it = find(t.dataset.id);
+    const it = find(t.dataset.id); if (!it) return;
     const act = t.dataset.hact;
     if (act === 'img') { imgId = it.id; $('#file-hub').click(); return; }
     if (act === 'rmimg') { it.image = ''; toast('Imagem removida'); }
@@ -2287,6 +2419,7 @@ function initHubsPanel() {
       if (it.kind === 'panel') {
         if (!confirm(`Remover o painel "${it.title}" e todos os botões dele?`)) return;
         hubs = hubs.filter((h) => h.id !== it.id && h.panel !== it.id);
+        stripTab = 'qa';
         toast('Painel removido');
       } else {
         if (!confirm(`Remover o botão "${it.name}"?`)) return;
@@ -2295,33 +2428,19 @@ function initHubsPanel() {
       }
     }
     if (act === 'up' || act === 'down') swap(it, act === 'up' ? -1 : 1);
-    if (act === 'addbtn') {
-      hubs.push({ id: 'hb' + Date.now(), kind: 'btn', panel: it.id, name: 'NOVO BOTÃO', url: '', image: '', c1: '#22c55e', c2: '#0e7490' });
-    }
-    if (act === 'addpanel') {
-      const id = 'hp' + Date.now();
-      hubs.push({ id, kind: 'panel', title: 'Novo painel', sub: '', icon: '', image: '' },
-        { id: 'hb' + Date.now(), kind: 'btn', panel: id, name: 'NOVO BOTÃO', url: '', image: '', c1: '#60a5fa', c2: '#1e3a8a' });
-    }
-    saveHubs(); drawHubsPanel();
-    if (act === 'addpanel') [...panel.querySelectorAll('.hub-cfg [data-hf="title"]')].pop()?.select();
+    if (act === 'addbtn') hubs.push({ id: 'hb' + Date.now(), kind: 'btn', panel: it.id, name: 'NOVO BOTÃO', url: '', image: '', c1: '#22c55e', c2: '#0e7490' });
+    saveHubs();
+    stripTab === 'qa' ? drawLinksPanel() : drawHubsPanel();
+    if (act === 'addbtn') [...panel.querySelectorAll('[data-hf="name"]')].pop()?.select();
   });
 
   panel.addEventListener('input', (e) => {
     const f = e.target.closest('[data-hf]'); if (!f) return;
     const it = find(f.dataset.id); if (!it) return;
     it[f.dataset.hf] = f.value;
-    if (it.kind === 'btn') {
-      const prev = panel.querySelector(`[data-hprev="${it.id}"]`);
-      prev.style.background = linkBg(it);
-      prev.style.color = linkInk(it);
-      prev.querySelector('.ql-name').textContent = it.name;
-      panel.querySelector(`[data-hsub="${it.id}"]`).textContent = normalizeUrl(it.url) || 'Sem link configurado';
-    } else if (!it.image) {
-      const dot = panel.querySelector(`[data-hico="${it.id}"]`);
-      if (dot) dot.innerHTML = hubIco(it);
-    }
-    clearTimeout(panel._t); panel._t = setTimeout(saveHubs, 300);
+    if (it.kind === 'btn') bcRefresh(f.closest('.bc'), it);
+    else if (!it.image) { const dot = panel.querySelector('.hub-cfg-ico'); if (dot) dot.innerHTML = hubIco(it); }
+    clearTimeout(panel._t); panel._t = setTimeout(() => { saveHubs(); drawStripTabs(); }, 300);
   });
 
   $('#file-hub').addEventListener('change', async (e) => {
@@ -2338,84 +2457,42 @@ function initHubsPanel() {
 function drawHubsPanel() {
   const panel = $('#hubs-panel');
   const ps = hubPanels();
-  $('#count-hubs').textContent = `${ps.length}/${MAX_HUBS}`;
-  const btn = (b, k, n) => `
-        <div class="banner-item hub-cfg-btn">
-          <div class="bi-head">
-            <button class="ql ql-preview ${b.image ? 'has-img' : ''}" data-hact="img" data-id="${b.id}" data-hprev="${b.id}" title="Trocar imagem de fundo"
-                    style="background:${linkBg(b)};color:${linkInk(b)}">
-              <span class="ql-name">${esc(b.name)}</span>
-            </button>
-            <div class="bi-meta">
-              <span class="bi-badge">BOTÃO ${k + 1}</span>
-              <p data-hsub="${b.id}">${esc(normalizeUrl(b.url)) || 'Sem link configurado'}</p>
-            </div>
-            <div class="bi-actions">
-              <button class="icon-btn neutral" data-hact="up" data-id="${b.id}" title="Mover para a esquerda" ${k === 0 ? 'disabled' : ''}><i data-icon="up"></i></button>
-              <button class="icon-btn neutral" data-hact="down" data-id="${b.id}" title="Mover para a direita" ${k === n - 1 ? 'disabled' : ''}><i data-icon="down"></i></button>
-              <button class="icon-btn" data-hact="del" data-id="${b.id}" title="Remover botão"><i data-icon="trash"></i></button>
-            </div>
-          </div>
-          <div class="bi-fields">
-            <div class="field"><label>Nome</label><input data-id="${b.id}" data-hf="name" value="${esc(b.name)}" maxlength="24"></div>
-            <div class="field"><label>Link (site)</label><input data-id="${b.id}" data-hf="url" value="${esc(b.url)}" placeholder="https://www.exemplo.com.br" inputmode="url"></div>
-            <div class="field">
-              <label>Imagem de fundo</label>
-              <div class="img-row">
-                <button class="btn-soft" data-hact="img" data-id="${b.id}"><i data-icon="image"></i>${b.image ? 'Trocar imagem' : 'Escolher imagem'}</button>
-                ${b.image ? `<button class="btn-soft danger" data-hact="rmimg" data-id="${b.id}"><i data-icon="x"></i>Remover</button>` : ''}
-              </div>
-            </div>
-            <div class="field">
-              <label>Cores do degradê ${b.image ? '<em>(usadas sem imagem)</em>' : ''}</label>
-              <div class="color-row">
-                <input type="color" data-id="${b.id}" data-hf="c1" value="${esc(b.c1)}" title="Cor inicial">
-                <input type="color" data-id="${b.id}" data-hf="c2" value="${esc(b.c2)}" title="Cor final">
-              </div>
-            </div>
-          </div>
-        </div>`;
+  const p = ps.find((x) => x.id === stripTab);
+  if (!p) { stripTab = 'qa'; return drawLinksPanel(); }
+  const i = ps.indexOf(p), bs = hubBtns(p.id);
+  const o = { act: 'data-hact', field: 'data-hf' };
   panel.innerHTML = `
-    <p class="desc">Painéis escuros que ficam ao lado do Acesso rápido, no computador. Ao clicar em um painel, ele se abre e mostra os botões dele. Painel sem nenhum botão não aparece no site.</p>
-    ${ps.map((p, i) => {
-      const bs = hubBtns(p.id);
-      return `
-    <div class="hub-cfg">
-      <div class="hub-cfg-head">
-        <button class="hub-cfg-ico" data-hact="img" data-id="${p.id}" data-hico="${p.id}" title="Trocar ícone do painel">${hubIco(p)}</button>
-        <div class="bi-meta">
-          <span class="bi-badge">PAINEL ${i + 1}</span>
-          <p>${bs.length} ${bs.length === 1 ? 'botão' : 'botões'}</p>
-        </div>
+    <section class="cfg-sec">
+      ${secHead(2, 'Sobre o painel', 'Como ele aparece fechado na faixa: ícone, nome e uma descrição curta.', `
         <div class="bi-actions">
-          <button class="icon-btn neutral" data-hact="up" data-id="${p.id}" title="Mover para a esquerda" ${i === 0 ? 'disabled' : ''}><i data-icon="up"></i></button>
-          <button class="icon-btn neutral" data-hact="down" data-id="${p.id}" title="Mover para a direita" ${i === ps.length - 1 ? 'disabled' : ''}><i data-icon="down"></i></button>
+          <button class="icon-btn neutral" data-hact="up" data-id="${p.id}" title="Mover o painel para a esquerda" ${i === 0 ? 'disabled' : ''}><i data-icon="left"></i></button>
+          <button class="icon-btn neutral" data-hact="down" data-id="${p.id}" title="Mover o painel para a direita" ${i === ps.length - 1 ? 'disabled' : ''}><i data-icon="right"></i></button>
           <button class="icon-btn" data-hact="del" data-id="${p.id}" title="Remover painel"><i data-icon="trash"></i></button>
-        </div>
-      </div>
-      <div class="bi-fields">
-        <div class="field"><label>Nome do painel</label><input data-id="${p.id}" data-hf="title" value="${esc(p.title)}" maxlength="22"></div>
-        <div class="field"><label>Descrição curta</label><input data-id="${p.id}" data-hf="sub" value="${esc(p.sub || '')}" maxlength="48" placeholder="Ex.: Boletos, 2ª via e negociação"></div>
-        <div class="field">
-          <label>Ícone do painel</label>
-          <div class="img-row">
-            <button class="btn-soft" data-hact="img" data-id="${p.id}"><i data-icon="image"></i>${p.image ? 'Trocar ícone' : 'Escolher imagem'}</button>
-            ${p.image ? `<button class="btn-soft danger" data-hact="rmimg" data-id="${p.id}"><i data-icon="x"></i>Remover</button>` : ''}
+        </div>`)}
+      <div class="cfg-sec-body hub-about">
+        <button class="hub-cfg-ico" data-hact="img" data-id="${p.id}" title="Trocar ícone do painel">${hubIco(p)}</button>
+        <div class="hub-about-fields">
+          <div class="field"><label>Nome do painel</label><input data-id="${p.id}" data-hf="title" value="${esc(p.title)}" maxlength="22"></div>
+          <div class="field"><label>Descrição curta</label><input data-id="${p.id}" data-hf="sub" value="${esc(p.sub || '')}" maxlength="48" placeholder="Ex.: Boletos, 2ª via e negociação"></div>
+          <div class="field full">
+            <label>Ícone redondo <em>· 256 × 256 px (sem imagem, aparece a inicial do nome)</em></label>
+            <div class="img-row">
+              <button class="btn-soft" data-hact="img" data-id="${p.id}"><i data-icon="image"></i>${p.image ? 'Trocar ícone' : 'Escolher imagem'}</button>
+              ${p.image ? `<button class="btn-soft danger" data-hact="rmimg" data-id="${p.id}"><i data-icon="x"></i>Remover</button>` : ''}
+            </div>
           </div>
         </div>
       </div>
-      <div class="hub-cfg-btns">${bs.map((b, k) => btn(b, k, bs.length)).join('')}</div>
-      <div class="panel-foot">
-        <span>Ícone: <b>256 × 256 px</b> · botões: <b>800 × 320 px</b> — até ${MAX_HUB_BTNS} botões.</span>
-        <button class="btn-soft" data-hact="addbtn" data-id="${p.id}" ${bs.length >= MAX_HUB_BTNS ? 'disabled' : ''}><i data-icon="plus"></i>Adicionar botão</button>
+    </section>
+    <section class="cfg-sec">
+      ${secHead(3, `Botões do painel <em>${bs.length}/${MAX_HUB_BTNS}</em>`, 'Aparecem quando o painel é aberto. Painel sem botões não aparece no site.',
+        `<button class="btn-dark" data-hact="addbtn" data-id="${p.id}" ${bs.length >= MAX_HUB_BTNS ? 'disabled' : ''}><i data-icon="plus"></i>Adicionar botão</button>`)}
+      <div class="cfg-sec-body bc-list">
+        ${bs.map((b, k) => btnCard(b, k, bs.length, { ...o, key: `data-id="${b.id}"` })).join('') || '<p class="bc-empty">Nenhum botão ainda — clique em “Adicionar botão”.</p>'}
       </div>
-    </div>`;
-    }).join('')}
-    <div class="panel-foot">
-      <span>Até ${MAX_HUBS} painéis, além do Acesso rápido.</span>
-      <button class="btn-dark" data-hact="addpanel" ${ps.length >= MAX_HUBS ? 'disabled' : ''}><i data-icon="plus"></i>Adicionar painel</button>
-    </div>`;
+    </section>`;
   paintIcons(panel);
+  drawStripTabs();
 }
 
 /* ---------- Notícias (configurações) ---------- */
@@ -2572,7 +2649,7 @@ function drawNewsPanel() {
   const panel = $('#news-panel');
   $('#count-news').textContent = news.length;
   panel.innerHTML = `
-    <p class="desc">Na página de Notícias, a publicação com a data mais recente aparece em destaque. Clique em uma notícia para editar; no texto completo, deixe uma linha em branco entre os parágrafos. A estrela exibe a notícia na tela inicial.</p>
+    <div class="cfg-sec-note na-note"><i data-icon="news"></i><span>A notícia com a data mais recente aparece em destaque na página de Notícias. <b>Clique em uma notícia</b> para abrir a edição. A <b>estrela</b> coloca a notícia na tela inicial (passo 2).</span></div>
 
     ${news.length ? sortedNews().map((n) => {
       const open = n.id === openNewsId;
@@ -2582,7 +2659,7 @@ function drawNewsPanel() {
           <button class="ni-thumb" data-nact="img" data-id="${n.id}" title="Trocar imagem" style="background-image:url('${esc(imgUrl(n.image))}');${bgPos(coverPos(n))}"></button>
           <button class="ni-main" data-nact="toggle" data-id="${n.id}" aria-expanded="${open}">
             <span class="ni-title">${esc(n.title) || 'Sem título'}</span>
-            <span class="ni-sub">${catBadge(n.cat)}<span>${fmtDate(n.date)} · ${readTime(n)} min de leitura</span></span>
+            <span class="ni-sub">${catBadge(n.cat)}<span>${fmtDate(n.date)} · ${readTime(n)} min de leitura</span>${n.star ? '<span class="bc-chip ok">Na tela inicial</span>' : ''}</span>
           </button>
           <div class="bi-actions">
             <button class="icon-btn star-btn ${n.star ? 'on' : ''}" data-nact="star" data-id="${n.id}" aria-pressed="${!!n.star}" title="${n.star ? 'Remover da tela inicial' : 'Exibir na tela inicial'}"><i data-icon="star"></i></button>
@@ -2591,28 +2668,39 @@ function drawNewsPanel() {
           </div>
         </div>
         ${open ? `
-        <div class="bi-fields ni-fields">
-          <div class="field full"><label>Título</label><input data-id="${n.id}" data-nfield="title" value="${esc(n.title)}" maxlength="140"></div>
-          <div class="field"><label>Categoria</label>
-            <select data-id="${n.id}" data-nfield="cat">${NEWS_CATS.map((c) => `<option ${c === n.cat ? 'selected' : ''}>${c}</option>`).join('')}</select>
-          </div>
-          <div class="field"><label>Data de publicação</label><input type="date" data-id="${n.id}" data-nfield="date" value="${esc(n.date)}"></div>
-          <div class="field"><label>Autor <em>(cadastre em “Autores”, acima)</em></label>
-            <div class="ni-author">
-              ${avatarHTML(newsAuthor(n), 'ni-avatar')}
-              <select data-id="${n.id}" data-nfield="authorId">
-                ${authors.map((a) => `<option value="${esc(a.id)}" ${a.id === newsAuthor(n).id ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}
-                ${!authors.some((a) => a.id === n.authorId) ? `<option value="" selected>${esc(n.author || 'Escolha um autor')}</option>` : ''}
-              </select>
+        <div class="bc-grid ni-fields">
+          <div class="bc-col full">
+            <h5>Informações</h5>
+            <div class="ni-info">
+              <div class="field full"><label>Título</label><input data-id="${n.id}" data-nfield="title" value="${esc(n.title)}" maxlength="140"></div>
+              <div class="field"><label>Categoria</label>
+                <select data-id="${n.id}" data-nfield="cat">${NEWS_CATS.map((c) => `<option ${c === n.cat ? 'selected' : ''}>${c}</option>`).join('')}</select>
+              </div>
+              <div class="field"><label>Data de publicação</label><input type="date" data-id="${n.id}" data-nfield="date" value="${esc(n.date)}"></div>
+              <div class="field full"><label>Autor <em>(cadastre no passo 3, “Autores”)</em></label>
+                <div class="ni-author">
+                  ${avatarHTML(newsAuthor(n), 'ni-avatar')}
+                  <select data-id="${n.id}" data-nfield="authorId">
+                    ${authors.map((a) => `<option value="${esc(a.id)}" ${a.id === newsAuthor(n).id ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}
+                    ${!authors.some((a) => a.id === n.authorId) ? `<option value="" selected>${esc(n.author || 'Escolha um autor')}</option>` : ''}
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
-          ${newsImagesField(n)}
+          <div class="bc-col full">
+            <h5>Imagens <em>· 1920 × 1200 px</em></h5>
+            ${newsImagesField(n)}
+          </div>
+          <div class="bc-col full">
+            <h5>Textos</h5>
           <div class="field full"><label>Resumo <em>(aparece no cartão)</em></label><textarea rows="2" data-id="${n.id}" data-nfield="excerpt" maxlength="260">${esc(n.excerpt)}</textarea></div>
-          <div class="field full"><label>Texto completo <em>(aparece ao abrir a notícia)</em></label><textarea rows="9" data-id="${n.id}" data-nfield="body">${esc(n.body.join('\n\n'))}</textarea>
+          <div class="field full"><label>Texto completo <em>(aparece ao abrir a notícia; deixe uma linha em branco entre os parágrafos)</em></label><textarea rows="9" data-id="${n.id}" data-nfield="body">${esc(n.body.join('\n\n'))}</textarea>
             <div class="ni-bodytools">
               <button class="btn-soft" type="button" data-nact="bodyimg" data-id="${n.id}"><i data-icon="image"></i>Inserir imagem inteira no texto</button>
               <span>Escreva <b>[imagem 2]</b> sozinho em um parágrafo para mostrar a imagem completa, sem cortes. O número é a ordem da imagem (1 = capa). Imagens usadas no texto não entram na troca de imagens do topo.</span>
             </div>
+          </div>
           </div>
           <div class="ni-foot full"><a class="btn-soft" href="#noticias"><i data-icon="external"></i>Ver na página de Notícias</a></div>
         </div>` : ''}
@@ -2635,8 +2723,17 @@ function renderNewsAdmin(view) {
 
     <section class="panel na-panel">
       <header class="na-head">
-        <span class="acc-icon na-star"><i data-icon="star"></i></span>
-        <span class="acc-text"><strong>Notícias recentes da tela inicial</strong><span>Exibidas abaixo do Acesso rápido, nesta ordem</span></span>
+        <span class="cfg-step na-step">1</span>
+        <span class="acc-text"><strong>Todas as notícias</strong><span>Publique, edite e exclua as notícias da página de Notícias</span></span>
+        <span class="count-badge" id="count-news"></span>
+      </header>
+      <div class="na-body" id="news-panel"></div>
+    </section>
+
+    <section class="panel na-panel">
+      <header class="na-head">
+        <span class="cfg-step na-step">2</span>
+        <span class="acc-text"><strong>Notícias da tela inicial</strong><span>As marcadas com estrela, exibidas abaixo do Acesso rápido, nesta ordem</span></span>
         <span class="count-badge" id="count-recent"></span>
       </header>
       <div class="na-body" id="recent-panel"></div>
@@ -2644,20 +2741,11 @@ function renderNewsAdmin(view) {
 
     <section class="panel na-panel">
       <header class="na-head">
-        <span class="acc-icon na-authors"><i data-icon="users"></i></span>
+        <span class="cfg-step na-step">3</span>
         <span class="acc-text"><strong>Autores</strong><span>Quem assina as notícias: foto de perfil e nome</span></span>
         <span class="count-badge" id="count-authors"></span>
       </header>
       <div class="na-body" id="authors-panel"></div>
-    </section>
-
-    <section class="panel na-panel">
-      <header class="na-head">
-        <span class="acc-icon na-news"><i data-icon="news"></i></span>
-        <span class="acc-text"><strong>Todas as notícias</strong><span>Publicações da página de Notícias</span></span>
-        <span class="count-badge" id="count-news"></span>
-      </header>
-      <div class="na-body" id="news-panel"></div>
     </section>
     <input type="file" id="file-news" accept="image/*" hidden>
     <input type="file" id="file-news-add" accept="image/*" multiple hidden>
@@ -2848,7 +2936,7 @@ function drawRecentPanel() {
   const list = recentNews();
   $('#count-recent').textContent = `${list.length}/${MAX_RECENT}`;
   panel.innerHTML = `
-    <p class="desc">Marque uma notícia com <span class="star-inline"><i data-icon="star"></i></span> na lista abaixo para exibi-la na tela inicial. Arraste os itens, ou use as setas, para mudar a ordem.</p>
+    <p class="desc">Marque uma notícia com <span class="star-inline"><i data-icon="star"></i></span> no passo 1 para exibi-la na tela inicial. Arraste os itens, ou use as setas, para mudar a ordem.</p>
     ${list.length ? `
     <ol class="rk-list">
       ${list.map((n, i) => `
@@ -2863,7 +2951,7 @@ function drawRecentPanel() {
           <button class="icon-btn star-btn on" data-ract="unstar" title="Remover da tela inicial"><i data-icon="star"></i></button>
         </span>
       </li>`).join('')}
-    </ol>` : `<div class="rk-empty"><i data-icon="star"></i><strong>Nenhuma notícia na tela inicial</strong><span>Marque notícias com a estrela na lista abaixo.</span></div>`}
+    </ol>` : `<div class="rk-empty"><i data-icon="star"></i><strong>Nenhuma notícia na tela inicial</strong><span>Marque notícias com a estrela no passo 1.</span></div>`}
     <div class="panel-foot">
       <span>Até <b>${MAX_RECENT} notícias</b>. A primeira aparece aberta.</span>
       <a class="btn-soft" href="#dashboard"><i data-icon="external"></i>Ver na tela inicial</a>

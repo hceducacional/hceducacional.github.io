@@ -323,9 +323,10 @@ window.HC_CONTENT = {
     {
       "id": "c4",
       "url": "https://prova-facil-favenihc.lovable.app/",
-      "desc": "Faça o agendamento pelo nosso site para realizar suas atividades presenciais na instituição.",
+      "desc": "Realize pagamentos, renegociações e fique por dentro de novas promoções",
       "image": "assets/conteudo/conectado-c4-0b2e323b.png",
-      "title": "Agende sua visita ao polo"
+      "title": "Setor Financeiro",
+      "whatsapp": "98933002455"
     }
   ],
   "authors": [
