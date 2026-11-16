@@ -3898,3 +3898,73 @@ html.lk-lock, html.lk-lock body { overflow: hidden; }
 .pb-x i { width: 14px; height: 14px; display: grid; }
 @media (max-width: 860px) { .pb { top: calc(100% + 8px); width: calc(100% - 24px); gap: 8px; padding: 6px 6px 6px 7px; } .pb-ico { width: 28px; height: 28px; } .pb-txt { font-size: 12.5px; } .pb-go { padding: 0 13px; } .pb-x { width: 28px; height: 28px; } }
 @media (prefers-reduced-motion: reduce) { .pb, .pb.out, .pb-ico i { animation: none; } }
+
+/* comprovante do agendamento: botão ✕ no canto */
+.ag-done { position: relative; }
+.ag-done-x { position: absolute; top: 0; right: 0; width: 36px; height: 36px; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--bg); color: var(--ink); cursor: pointer; transition: transform .15s; }
+.ag-done-x:active { transform: scale(.92); }
+.ag-done-x i { width: 18px; height: 18px; display: grid; }
+.ag-done .ag-done-actions { margin-top: 22px; }
+
+/* ===== Meus agendamentos (página Agendar) ===== */
+.ag-mine { margin: 40px 0 0; }
+.am-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; margin-bottom: 16px; }
+.am-head h2 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.03em; }
+.am-head p { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
+.am-note { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--line-soft); color: var(--muted); font-size: 12.5px; font-weight: 500; }
+.am-note i { width: 14px; height: 14px; display: grid; }
+.am-list { display: grid; gap: 12px; }
+.am-item {
+  display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 16px; align-items: center;
+  padding: 14px 18px 14px 14px; border-radius: 24px; background: var(--card);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 14px 34px -26px rgba(0, 0, 0, .35);
+  animation: amIn .6s var(--ease) calc(var(--i) * .07s) both;
+}
+@keyframes amIn { from { opacity: 0; transform: translateY(14px); } }
+.am-date { width: 64px; height: 72px; border-radius: 18px; display: grid; place-content: center; text-align: center; color: #fff; background: linear-gradient(150deg, var(--a), var(--b)); box-shadow: 0 10px 20px -12px var(--b); line-height: 1.05; }
+.am-date small { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; opacity: .85; }
+.am-date b { font-size: 26px; font-weight: 700; letter-spacing: -.03em; margin: 1px 0; }
+.am-info { min-width: 0; display: grid; gap: 6px; }
+.am-top { display: flex; align-items: center; justify-content: space-between; gap: 6px 10px; flex-wrap: wrap; }
+.am-top strong { font-size: 16.5px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); }
+.am-st { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.am-st i { width: 13px; height: 13px; display: grid; }
+.s-pendente .am-st { background: #fff4e5; color: #c2410c; }
+.s-pendente .am-st i { animation: amTick 2.4s ease-in-out infinite; }
+@keyframes amTick { 50% { opacity: .35; } }
+.s-confirmado .am-st { background: var(--accent-soft); color: var(--accent); }
+.s-compareceu .am-st { background: #e0ecff; color: #1d4ed8; }
+.s-faltou .am-st { background: #fff1f0; color: var(--danger); }
+.s-cancelado .am-st { background: var(--line-soft); color: var(--muted); }
+.am-sub { margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13.5px; color: var(--ink-2); }
+.am-sub > span:first-child { display: inline-flex; align-items: center; gap: 5px; }
+.am-sub i { width: 14px; height: 14px; display: grid; color: var(--muted); }
+.am-rel { padding: 2px 8px; border-radius: 999px; background: var(--bg); font-size: 12px; font-weight: 600; color: var(--muted); }
+.am-item.next .am-rel { background: color-mix(in srgb, var(--a) 18%, transparent); color: var(--b); }
+/* andamento: Recebido → Confirmado → Realizado */
+.am-track { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 4px; }
+.am-track span { position: relative; display: grid; justify-items: start; gap: 5px; font-size: 11.5px; font-weight: 600; color: var(--faint, #a1a1a6); }
+.am-track span::before { content: ""; position: absolute; top: 4px; left: 12px; right: 0; height: 2px; border-radius: 2px; background: var(--line-soft); }
+.am-track span:last-child::before { display: none; }
+.am-track i { position: relative; width: 10px; height: 10px; border-radius: 50%; background: var(--line-soft); }
+.am-track span.on { color: var(--ink-2); }
+.am-track span.on i { background: var(--accent); }
+.am-track span.on:not(.now)::before { background: var(--accent); }
+.am-track span.now i { box-shadow: 0 0 0 4px var(--accent-soft); }
+.s-pendente .am-track span.now i { background: #f59e0b; box-shadow: 0 0 0 4px #fff4e5; }
+.am-item.past { box-shadow: none; background: color-mix(in srgb, var(--card) 70%, var(--bg)); }
+.am-item.s-cancelado .am-date, .am-item.s-faltou .am-date { filter: grayscale(1); opacity: .55; box-shadow: none; }
+.am-item.s-cancelado .am-top strong { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+@media (max-width: 860px) {
+  .ag-mine { margin-top: 32px; }
+  .am-head h2 { font-size: 22px; }
+  .am-item { grid-template-columns: 56px minmax(0, 1fr); gap: 12px; padding: 12px 14px 12px 12px; border-radius: 22px; }
+  .am-date { width: 56px; height: 64px; border-radius: 16px; }
+  .am-date b { font-size: 22px; }
+  .am-top strong { font-size: 15.5px; }
+}
+@media (prefers-reduced-motion: reduce) { .am-item, .s-pendente .am-st i { animation: none; } }
+@media (min-width: 1100px) {
+  .ag-mine { grid-column: 1 / -1; margin-top: 56px; }
+  .am-list { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); }
+}

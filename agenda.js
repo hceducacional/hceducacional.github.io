@@ -117,6 +117,8 @@ function renderAgenda(view) {
       <div class="ag-stage" id="ag-stage" aria-live="polite"></div>
     </section>
 
+    <section class="ag-mine" id="ag-mine" hidden></section>
+
     <section class="ag-polo ag-reveal">
       <h2>Polo Faveni HC</h2>
       <p>Informações de contato e localização</p>
@@ -141,6 +143,7 @@ function renderAgenda(view) {
   // seção do polo aparece ao chegar nela
   const io = new IntersectionObserver((en) => en.forEach((x) => { if (x.isIntersecting) { x.target.classList.add('in'); io.disconnect(); } }), { threshold: .2 });
   io.observe(view.querySelector('.ag-polo'));
+  agMineLoad();
   agLoad(true).then(() => {
     if (agForm.date && !agDayOpen(agForm.kind, agForm.date)) { agForm.date = ''; agForm.shift = ''; }
     if (['data', 'turno'].includes(AG_STEPS[agForm.step].id)) agGo(agForm.step, 0);
@@ -346,21 +349,18 @@ document.addEventListener('click', async (e) => {
   agData.loaded = 0;
   $('#ag-prog').innerHTML = '';
   agSuccess(a);
+  agMineLoad(); // o agendamento novo já aparece em "Meus agendamentos"
 });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && e.target.closest?.('.ag-wiz input')) { e.preventDefault(); $('.ag-wiz [data-next]')?.click(); }
 });
 
-function agWhatsText(a) {
-  const k = AG.kinds[a.kind], s = AG.shifts[a.shift];
-  return `Olá, suporte Faveni HC! Foi realizado um novo agendamento (${k.label}):\n\nNome completo: ${a.name}\nCPF: ${a.cpf}\nCurso: ${a.course}\nFaculdade: ${a.college}\nTipo: ${k.label}\nData: ${brDate(a.date)}\nTurno: ${s.label}\nHorário: ${s.time}`;
-}
 function agSuccess(a) {
   const k = AG.kinds[a.kind], s = AG.shifts[a.shift];
-  const wa = `https://wa.me/${AG.phone}?text=${encodeURIComponent(agWhatsText(a))}`;
   const box = $('#ag-box');
   agMorph(box, () => { box.innerHTML = `
     <div class="ag-done">
+      <button type="button" class="ag-done-x" id="ag-done-x" aria-label="Fechar"><i data-icon="x"></i></button>
       <span class="ag-check"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="m15 27 7 7 15-16"/></svg></span>
       <h2>Agendamento recebido!</h2>
       <p>Sua vaga está reservada. O polo vai conferir e confirmar o seu agendamento.</p>
@@ -373,15 +373,68 @@ function agSuccess(a) {
           <div><dt>Faculdade</dt><dd>${esc(a.college)}</dd></div>
         </dl>
       </div>
-      <p class="ag-small">Envie o agendamento para o suporte no WhatsApp para concluir.</p>
       <div class="ag-done-actions">
-        <a class="ag-submit ag-wa" href="${esc(wa)}" target="_blank" rel="noopener">${WA_SVG}Enviar para o suporte no WhatsApp</a>
-        <button class="btn-soft" type="button" id="ag-new">Novo agendamento</button>
+        <button class="btn-soft" type="button" id="ag-home">Voltar ao início</button>
       </div>
     </div>`; });
+  paintIcons(box);
   if (box.classList.contains('expanded')) box.scrollTo({ top: 0, behavior: 'smooth' }); else box.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  $('#ag-new').addEventListener('click', () => { agExpand(false, true); route(); }); // recomeça o assistente na etapa 1
-  window.open(wa, '_blank', 'noopener'); // tenta abrir o WhatsApp sozinho; se o navegador bloquear, fica o botão
+  // ✕: fecha o comprovante e o agendamento volta para a etapa 1
+  $('#ag-done-x').addEventListener('click', () => { agExpand(false); setTimeout(() => { if ((location.hash || '').slice(1) === 'agendar') route(); }, 400); });
+  // Voltar ao início: vai para a página inicial do site
+  $('#ag-home').addEventListener('click', () => { agExpand(false, true); location.hash = '#dashboard'; });
+}
+
+/* ---------- Meus agendamentos (aluno logado) ----------
+   Lista os agendamentos do aluno com a situação de cada um. Cada um some daqui
+   10 dias depois da data (supabase/14-meus-agendamentos.sql). */
+const AM_ST = {
+  pendente: ['Aguardando confirmação', 'clock'], confirmado: ['Confirmado', 'check'],
+  compareceu: ['Realizado', 'check'], faltou: ['Não compareceu', 'x'], cancelado: ['Cancelado', 'x'],
+};
+let agMineId = 0;
+function agRel(iso) {
+  const n = Math.round((new Date(iso + 'T12:00:00') - new Date(agNow().date + 'T12:00:00')) / 864e5);
+  return n === 0 ? 'Hoje' : n === 1 ? 'Amanhã' : n === -1 ? 'Ontem' : n > 0 ? `Em ${n} dias` : `Há ${-n} dias`;
+}
+async function agMineLoad() {
+  const box = $('#ag-mine'); if (!box) return;
+  if (!auth.user || !sb) { box.hidden = true; return; }
+  const id = ++agMineId;
+  const { data, error } = await sb.rpc('my_appointments');
+  if (id !== agMineId || !$('#ag-mine')) return; // a página mudou enquanto carregava
+  if (error) { console.warn('Meus agendamentos:', error.message); box.hidden = true; return; }
+  const today = agNow().date;
+  const ativo = (a) => a.date >= today && (a.status === 'pendente' || a.status === 'confirmado');
+  // os próximos primeiro (do mais perto ao mais longe), depois os que já passaram ou foram cancelados
+  const list = [...(data || [])].sort((x, y) => (ativo(y) - ativo(x)) || (ativo(x) ? (x.date + x.shift).localeCompare(y.date + y.shift) : (y.date + y.shift).localeCompare(x.date + x.shift)));
+  if (!list.length) { box.hidden = true; box.innerHTML = ''; return; }
+  const prox = list.filter(ativo).length;
+  box.innerHTML = `
+    <div class="am-head">
+      <div><h2>Meus agendamentos</h2><p>${prox ? `${prox} ${prox === 1 ? 'agendamento por vir' : 'agendamentos por vir'}` : 'Nenhum agendamento por vir'}</p></div>
+      <span class="am-note"><i data-icon="clock"></i>Ficam aqui até 10 dias depois da data</span>
+    </div>
+    <div class="am-list">${list.map((a, k) => {
+      const d = new Date(a.date + 'T12:00:00'), [lab, ico] = AM_ST[a.status] || [a.status, 'clock'];
+      const step = a.status === 'compareceu' ? 3 : a.status === 'confirmado' ? 2 : a.status === 'pendente' ? 1 : 0;
+      return `
+      <article class="am-item s-${a.status} ${ativo(a) ? 'next' : 'past'}" style="--i:${k};--a:${a.kind === 'prova' ? '#60a5fa' : '#a78bfa'};--b:${a.kind === 'prova' ? '#2563eb' : '#7c3aed'}">
+        <span class="am-date"><small>${AG_WD[d.getDay()]}</small><b>${d.getDate()}</b><small>${AG_MS[d.getMonth()]}</small></span>
+        <div class="am-info">
+          <div class="am-top">
+            <strong>${AG.kinds[a.kind].label}</strong>
+            <span class="am-st"><i data-icon="${ico}"></i>${lab}</span>
+          </div>
+          <p class="am-sub"><span><i data-icon="${a.shift === 'manha' ? 'sun' : 'clock'}"></i>${AG.shifts[a.shift].label} · ${AG.shifts[a.shift].time}</span><span class="am-rel">${agRel(a.date)}</span></p>
+          ${step ? `<div class="am-track" aria-label="Andamento">
+            ${['Recebido', 'Confirmado', 'Realizado'].map((t, n) => `<span class="${n < step ? 'on' : ''} ${n === step - 1 ? 'now' : ''}"><i></i>${t}</span>`).join('')}
+          </div>` : ''}
+        </div>
+      </article>`;
+    }).join('')}</div>`;
+  box.hidden = false;
+  paintIcons(box);
 }
 
 /* ---------- painel dos administradores ---------- */
