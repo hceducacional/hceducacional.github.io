@@ -302,15 +302,19 @@ window.HC_CONTENT = {
       "desc": "Receba ajuda on-line de onde estiver pelo nosso número de suporte ao aluno. Oferecemos tutoria on-line, apoio no envio de documentação, dúvidas sobre estágio, atividades e orientações de uso da plataforma. Atendemos de segunda a sábado, das 8h às 12h e das 14h às 18h.",
       "image": "assets/conteudo/conectado-c1-2e76a435.webp",
       "title": "Setor Pedagógico",
-      "whatsapp": "98984861475"
+      "avatar": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/266a931e-84fa-4275-9c43-dc9c6823677e.webp",
+      "whatsapp": "98984861475",
+      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/e0bd0129-9c95-4f1a-b279-615168dd6152.webp"
     },
     {
       "id": "c2",
       "url": "https://www.instagram.com/favenihc/",
       "desc": "Conheça nossos cursos e receba orientação especializada das nossas consultoras para escolher a melhor opção para você!",
-      "image": "assets/conteudo/conectado-c2-a2aaea49.png",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/448e940c-0391-4967-ac09-35e2353c7ac2.webp",
       "title": "Setor Comercial",
-      "whatsapp": "98988650472"
+      "avatar": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/6a2b8652-1e5b-429e-9d96-1ac7f00e2902.webp",
+      "whatsapp": "98988650472",
+      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/1b4426c3-9821-4903-beaa-d1f7739a1ffb.webp"
     },
     {
       "id": "c3",
@@ -318,15 +322,19 @@ window.HC_CONTENT = {
       "desc": "Siga a gente no Instagram e tenha acesso a conteúdos exclusivos.",
       "image": "assets/conteudo/conectado-c3-6ceda75f.png",
       "title": "Redes Sociais",
-      "instagram": "@hceducacional @favenihc"
+      "avatar": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/38ce6bd7-9dbe-4f95-9c30-a2d72a632b35.webp",
+      "instagram": "@hceducacional @favenihc",
+      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/fc56d245-3743-477b-92a1-85b86c0aef66.webp"
     },
     {
       "id": "c4",
       "url": "https://prova-facil-favenihc.lovable.app/",
       "desc": "Realize pagamentos, renegociações e fique por dentro de novas promoções",
-      "image": "assets/conteudo/conectado-c4-0b2e323b.png",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/a4b6d3c3-dc7a-4bda-a538-1ca9f8b769cd.webp",
       "title": "Setor Financeiro",
-      "whatsapp": "98933002455"
+      "avatar": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/8d73bc16-1966-45a8-9dd9-98a72667f29d.webp",
+      "whatsapp": "98933002455",
+      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/a3d969c9-be93-4dbf-96f0-476a1e74151c.webp"
     }
   ],
   "authors": [

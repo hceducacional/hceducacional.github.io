@@ -288,7 +288,7 @@
    ABERTURA DA LIÇÃO — faixas brancas diagonais, logo e selo da lição
    Cobre só a área da plataforma (fica abaixo da barra de cima e da lateral).
    ========================================================= */
-.pfi { position: fixed; top: 0; right: 0; bottom: 0; z-index: 35; overflow: hidden; pointer-events: auto; cursor: progress; }
+.pfi { position: fixed; top: 0; right: 0; bottom: 0; z-index: 35; overflow: hidden; pointer-events: auto; cursor: wait; }
 /* faixas: entram pela direita, uma atrás da outra */
 .pfi-bands { position: absolute; inset: -12% -20%; transform: skewX(-17deg); }
 .pfi-bands i { position: absolute; top: 0; bottom: 0; background: #fff; transform: translate3d(160vw, 0, 0); will-change: transform; }

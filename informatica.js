@@ -115,7 +115,9 @@ const infoLoadPlatform = () => infoPlatform ||= new Promise((ok, fail) => {
   js.src = `curso/plataforma.js?v=${window.HC_V || ''}`;
   js.onload = () => ok();
   js.onerror = () => { infoPlatform = null; fail(); };
-  document.head.append(css); document.body.append(js);
+  const cur = document.createElement('script'); // cursores desenhados da plataforma (só no computador)
+  cur.src = `curso/cursores.js?v=${window.HC_V || ''}`;
+  document.head.append(css); document.body.append(js, cur);
 });
 
 function renderInformatica(view, route = 'informatica') {

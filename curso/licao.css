@@ -788,6 +788,8 @@
    Cor de fundo sorteada a cada resultado (--c1 / --c2).
    ========================================================= */
 .lr { position: fixed; top: 0; right: 0; bottom: 0; z-index: 35; overflow: hidden; color: #fff; outline: none; --e: cubic-bezier(.22, 1, .36, 1); }
+/* enquanto as estrelas são contadas, o cursor vira o círculo de carregando (o desenho verde vem do curso/cursores.js) */
+.lr:not(.done), .lr:not(.done) * { cursor: wait; }
 .lr.gone { opacity: 0; transition: opacity .6s ease; }
 /* faixas brancas: varrem a tela na entrada e cobrem de novo na saída */
 .lr-bands { position: absolute; inset: -12% -20%; z-index: 9; transform: skewX(-17deg); pointer-events: none; }
