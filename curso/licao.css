@@ -45,14 +45,16 @@
 .lc-shell .btn-soft { background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .16); color: #fff; font-weight: 600; }
 .lc-shell .btn-soft:hover { background: rgba(255, 255, 255, .16); }
 
-/* boas-vindas no computador: o painel vai de ponta a ponta como os blocos da tela inicial e desce até o fim da tela
-   (sem sobrar branco embaixo); em telas baixas ele só cresce com o conteúdo, sem cortar nada */
+/* no computador, todas as telas da lição (abertura, digitação e minijogos): o painel vai de ponta a ponta
+   como os blocos da tela inicial e desce até o fim da tela (sem sobrar branco embaixo);
+   em telas baixas ele só cresce com o conteúdo, sem cortar nada */
 @media (min-width: 1001px) {
-  .lc:has(.lc-wel) { max-width: 1680px; } /* mesma largura do banner e do Acesso rápido da tela inicial */
-  .content:has(.lc-wel) { padding-bottom: 24px; }
-  .lc-shell:has(.lc-wel) { display: flex; flex-direction: column; margin-bottom: 0; min-height: calc(100dvh - var(--header-h) - 64px); }
-  .lc-shell:has(.lc-wel) > #lc-body { flex: 1; display: flex; flex-direction: column; }
-  .lc-shell:has(.lc-wel) .lc-wel { flex: 1; }
+  .lc:has(> .lc-shell) { max-width: 1680px; } /* mesma largura do banner e do Acesso rápido da tela inicial */
+  .content:has(.lc-shell) { padding-bottom: 24px; }
+  .lc-shell { display: flex; flex-direction: column; margin-bottom: 0; min-height: calc(100dvh - var(--header-h) - 64px); }
+  .lc-shell > #lc-body { flex: 1; display: flex; flex-direction: column; }
+  .lc-shell .lc-wel, .lc-shell .lc-grid { flex: 1; }
+  .lc-shell .lc-grid { margin-bottom: 0; align-items: stretch; }
   .lc-shell:has(.lc-wel) .lc-wel-side { justify-content: center; gap: 0; }
 }
 @media (min-width: 1001px) and (min-height: 860px) {
