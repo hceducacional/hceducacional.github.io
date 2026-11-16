@@ -45,6 +45,23 @@
 .lc-shell .btn-soft { background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .16); color: #fff; font-weight: 600; }
 .lc-shell .btn-soft:hover { background: rgba(255, 255, 255, .16); }
 
+/* boas-vindas no computador: o painel vai da largura da barra do topo e desce até o fim da tela
+   (sem sobrar branco embaixo); em telas baixas ele só cresce com o conteúdo, sem cortar nada */
+@media (min-width: 1001px) {
+  .lc:has(.lc-wel) { max-width: 1320px; }
+  .content:has(.lc-wel) { padding-bottom: 24px; }
+  .lc-shell:has(.lc-wel) { display: flex; flex-direction: column; margin-bottom: 0; min-height: calc(100dvh - var(--header-h) - 64px); }
+  .lc-shell:has(.lc-wel) > #lc-body { flex: 1; display: flex; flex-direction: column; }
+  .lc-shell:has(.lc-wel) .lc-wel { flex: 1; }
+  .lc-shell:has(.lc-wel) .lc-wel-side { justify-content: center; gap: 0; }
+}
+@media (min-width: 1001px) and (min-height: 860px) {
+  .lc-shell:has(.lc-wel) { padding: 30px 36px 36px; }
+  .lc-shell:has(.lc-wel) .lc-wel { gap: 36px; }
+  .lc-shell:has(.lc-wel) .lc-wel-title { font-size: clamp(36px, 3.8vw, 56px); }
+  .lc-shell:has(.lc-wel) .lc-wel-intro { font-size: 18px; }
+}
+
 /* boas-vindas: o card da lição em destaque à esquerda e o que vem por aí à direita */
 .lc-wel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 28px; align-items: stretch; }
 .lc-hero { position: relative; isolation: isolate; overflow: hidden; min-height: 500px; border-radius: 28px; background: rgb(var(--tint)); color: #fff;
