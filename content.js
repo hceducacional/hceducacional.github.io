@@ -7,7 +7,7 @@ window.HC_CONTENT = {
       "url": "www.google.com",
       "desc": "Fique por dentro de notícias, acesse informações sobre cursos e mantenha-se conectado com a equipe do instituto.",
       "pill": "Notícias do Polo",
-      "image": "assets/conteudo/banner-b1-d49a976a.png",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/fe1f33fc-b33d-4d21-8d11-73042c28d9e0.webp",
       "title": "Bem-vindo ao HC Instituto Educacional",
       "linkOn": false,
       "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/c180d628-c2a3-4dc0-8d27-d045f420b3e9.webp"
