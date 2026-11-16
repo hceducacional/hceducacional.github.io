@@ -653,7 +653,8 @@ function agDraw() {
             <button class="aa-btn no" data-ag="faltou" title="Não compareceu"><i data-icon="x"></i><span>Faltou</span></button>
             <button class="icon-btn neutral" data-ag="remarcar" title="Remarcar"><i data-icon="calendar"></i></button>
             <button class="icon-btn" data-ag="cancelar" title="Cancelar agendamento"><i data-icon="trash"></i></button>` : `
-            <button class="btn-soft sm" data-ag="desfazer"><i data-icon="left"></i>Desfazer</button>`}
+            <button class="btn-soft sm" data-ag="desfazer"><i data-icon="left"></i>Desfazer</button>
+            ${a.status === 'cancelado' ? `<button class="icon-btn" data-ag="excluir" title="Excluir de vez (ex.: agendamento de teste)"><i data-icon="trash"></i></button>` : ''}`}
           ${a.history?.length ? `<button class="icon-btn neutral" data-ag="hist" title="Histórico"><i data-icon="clock"></i></button>` : ''}
         </span>
       </div>`).join('')}
@@ -688,6 +689,14 @@ async function agAction(e) {
     if (await agUpdate(a, { status: 'cancelado' }, { acao: 'Cancelado' })) agAvisar(a, 'cancelado', 'Agendamento cancelado');
   }
   if (act === 'remarcar') agRemarcar(a);
+  if (act === 'excluir') {
+    if (!(await confirmDialog({ title: `Excluir o agendamento de ${a.name.split(' ')[0]}?`, sub: `${AG.kinds[a.kind].label} em ${brDate(a.date)}. Some de vez do painel e dos relatórios. Não dá para desfazer.`, ok: 'Excluir' }))) return;
+    b.disabled = true;
+    const { data, error } = await sb.from('appointments').delete().eq('id', a.id).select('id');
+    if (error || !data?.length) { b.disabled = false; return toast(error ? authError(error) : 'Não foi possível excluir. Tente de novo.'); }
+    agAdm.list = agAdm.list.filter((x) => x.id !== a.id); agDraw(); window.pdKick?.();
+    toast('Agendamento excluído');
+  }
   if (act === 'hist') {
     openAuth('info', { title: 'Histórico', icon: 'clock', tone: 'ok', text: `<span class="ag-hist">${a.history.map((h) => `<span><b>${new Date(h.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</b> · ${esc(h.acao || '')}${h.de ? ` de ${brDate(h.de.date)} (${AG.shifts[h.de.shift].label}) para ${brDate(h.para.date)} (${AG.shifts[h.para.shift].label})` : ''}${h.por ? ` · por ${esc(h.por)}` : ''}</span>`).join('')}</span>` });
   }
