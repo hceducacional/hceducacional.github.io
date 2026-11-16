@@ -135,6 +135,19 @@ const saveCursoEdit = () => saveShared('cursoEdit', cursoEdit);
 let loginBanner = store.get('loginBanner', PUBLISHED.loginBanner || []);
 const saveLoginBanner = () => saveShared('loginBanner', loginBanner);
 const saveLinks = () => saveShared('links', links);
+/* Painéis da faixa ao lado do Acesso rápido (Financeiro e os que o administrador criar).
+   Lista única (para salvar/publicar igual aos outros conteúdos): itens kind:'panel'
+   e, depois, os botões kind:'btn' com o id do painel em "panel". */
+const MAX_HUBS = 4, MAX_HUB_BTNS = 12;
+const DEFAULT_HUBS = [
+  { id: 'h-fin', kind: 'panel', title: 'Financeiro', sub: 'Boletos, 2ª via e negociação', icon: 'wallet', image: '' },
+  { id: 'f1', kind: 'btn', panel: 'h-fin', name: 'Boletos e 2ª via', url: '', image: '', c1: '#34d399', c2: '#047857' },
+  { id: 'f2', kind: 'btn', panel: 'h-fin', name: 'Negociar mensalidades', url: '', image: '', c1: '#fbbf24', c2: '#c2410c' },
+];
+const hubPanels = () => hubs.filter((h) => h.kind === 'panel');
+const hubBtns = (pid) => hubs.filter((h) => h.kind === 'btn' && h.panel === pid);
+let hubs = store.get('hubs', PUBLISHED.hubs || DEFAULT_HUBS);
+const saveHubs = () => saveShared('hubs', hubs);
 /* Mantenha-se conectado: 4 blocos fixos (1 grande, 1 largo e 2 menores) */
 const DEFAULT_CONNECT = [
   { id: 'c1', title: 'Siga o HC no Instagram', desc: 'Novidades, eventos e bastidores do polo em @hceducacional.', url: 'https://www.instagram.com/hceducacional/', image: '', whatsapp: '' },
@@ -223,7 +236,7 @@ function toast(msg) {
    As imagens enviadas ficam no IndexedDB do navegador, que comporta
    centenas de MB. Os itens guardam só uma referência "idb:<chave>".
    ========================================================= */
-const IMG_MAX_W = { curso: 1400, banner: 2560, bannerLogo: 900, news: 1920, link: 1000, logo: 512, connect: 2000, author: 400, loginBanner: 1200 }; // largura máxima por tipo
+const IMG_MAX_W = { curso: 1400, banner: 2560, bannerLogo: 900, news: 1920, link: 1000, logo: 512, connect: 2000, author: 400, loginBanner: 1200, icone: 256 }; // largura máxima por tipo
 const IMG_QUALITY = 0.92;
 const imgCache = new Map(); // referência -> URL temporária para exibir
 const imgUrl = (ref = '') => imgCache.get(ref) || ref;
@@ -288,7 +301,7 @@ async function storeImage(file, kind) {
   return ref;
 }
 
-const allImageRefs = () => [...banners, ...exclusive, ...links, ...news, ...brandList, ...connect, ...authors, ...radar, ...cursoEdit, ...cursoExtra, ...loginBanner].flatMap((x) => [x.image, x.imageMobile, x.logo, x.avatar, ...(x.gallery || [])]).filter(Boolean);
+const allImageRefs = () => [...banners, ...exclusive, ...links, ...news, ...brandList, ...connect, ...authors, ...radar, ...cursoEdit, ...cursoExtra, ...loginBanner, ...hubs].flatMap((x) => [x.image, x.imageMobile, x.logo, x.avatar, ...(x.gallery || [])]).filter(Boolean);
 async function loadImages() {
   for (const ref of allImageRefs()) {
     if (!ref.startsWith('idb:') || imgCache.has(ref)) continue;
@@ -314,7 +327,7 @@ function cleanupImages() {
 }
 /* Move imagens antigas (guardadas em texto/base64) para o IndexedDB e libera espaço */
 async function migrateDataUrls() {
-  for (const [list, save] of [[banners, saveBanners], [exclusive, saveExclusive], [links, saveLinks], [news, saveNews], [brandList, saveBrand], [connect, saveConnect], [authors, saveAuthors]]) {
+  for (const [list, save] of [[banners, saveBanners], [exclusive, saveExclusive], [links, saveLinks], [hubs, saveHubs], [news, saveNews], [brandList, saveBrand], [connect, saveConnect], [authors, saveAuthors]]) {
     let changed = false;
     for (const it of list) {
       if (!it.image || !it.image.startsWith('data:')) continue;
@@ -344,7 +357,7 @@ async function exportContent() {
     if (Array.isArray(it.gallery)) out.gallery = (await Promise.all(it.gallery.map(one))).filter(Boolean);
     return out;
   }));
-  return { banners: await conv(banners), exclusive: await conv(exclusive), links: await conv(links), news: await conv(news), brand: await conv(brandList), connect: await conv(connect), authors: await conv(authors), radar: await conv(radar), cursoExtra: await conv(cursoExtra), cursoEdit: await conv(cursoEdit), loginBanner: await conv(loginBanner) };
+  return { banners: await conv(banners), exclusive: await conv(exclusive), links: await conv(links), news: await conv(news), brand: await conv(brandList), connect: await conv(connect), authors: await conv(authors), radar: await conv(radar), cursoExtra: await conv(cursoExtra), cursoEdit: await conv(cursoEdit), loginBanner: await conv(loginBanner), hubs: await conv(hubs) };
 }
 window.HC_exportContent = exportContent;
 
@@ -385,13 +398,52 @@ function carouselHTML(list, key) {
     </div>`;
 }
 
+/* cartão de link (Acesso rápido e demais painéis da faixa) */
+const qlCard = (l, i) => `
+        <a class="ql ${l.image ? 'has-img' : ''}" data-ql="${i}"
+           ${isSafeUrl(normalizeUrl(l.url)) ? `href="${esc(normalizeUrl(l.url))}" target="_blank" rel="noopener noreferrer"` : 'href="#" data-empty="1"'}
+           style="background:${linkBg(l)};color:${linkInk(l)};--k:${i}${l.image ? `;--img:url('${esc(imgUrl(l.image))}')` : ''}">
+          <span class="ql-name">${esc(l.name)}</span>
+          <span class="ql-go"><i data-icon="external"></i></span>
+          <span class="ql-cta" aria-hidden="true">Abrir</span>
+        </a>`;
+
+const WALLET_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><path d="M21 11h-5a2 2 0 0 0 0 4h5z"/></svg>';
+
+/* ícone redondo do painel: imagem enviada, carteira (Financeiro) ou a inicial do título */
+function hubIco(p) {
+  if (p.image) return `<span class="qa-dot hub-ico has-img" style="background-image:url('${esc(imgUrl(p.image))}')"></span>`;
+  return `<span class="qa-dot hub-ico">${p.icon === 'wallet' ? WALLET_SVG : esc((p.title || '?')[0].toUpperCase())}</span>`;
+}
+
+/* painel escuro expansível da faixa abaixo do banner (mesmo visual do Acesso rápido) */
+function hubPanel(p) {
+  const list = hubBtns(p.id);
+  if (!list.length) return '';
+  const id = 'hub-' + String(p.id).replace(/[^\w-]/g, '');
+  return `
+    <section class="qa hub hub-only-desk" id="${id}">
+      <button type="button" class="qa-head" id="${id}-head" aria-expanded="false" aria-controls="${id}-body">
+        <span class="qa-stack" aria-hidden="true">${hubIco(p)}</span>
+        <span class="qa-txt"><strong>${esc(p.title)}</strong><small><span class="qa-desk">${esc(p.sub || '')}</span></small></span>
+        <span class="qa-chev" aria-hidden="true">${CHEV_SVG}</span>
+      </button>
+      <div class="qa-body" id="${id}-body">
+        <div class="qa-inner">
+          <nav class="quick-links" aria-label="${esc(p.title)}">${list.map(qlCard).join('')}</nav>
+        </div>
+      </div>
+    </section>`;
+}
+
 function renderDashboard(view) {
   view.innerHTML = `
   <div class="wrap">
     ${carouselHTML(banners, 'top')}
 
+    <div class="hub-row" id="hub-row">
     ${links.length ? `
-    <section class="qa" id="qa">
+    <section class="qa hub" id="qa">
       <h2 class="shelf-title qa-title"><span class="ap-grad">Acesso rápido.</span><span> Portais das instituições parceiras, a um clique.</span></h2>
       <button type="button" class="qa-head" id="qa-head" aria-expanded="false" aria-controls="qa-body">
         <span class="qa-stack" aria-hidden="true">${links.slice(0, 3).map((l, i) => `<span class="qa-dot" style="--i:${i};${l.image ? `background-image:url('${esc(imgUrl(l.image))}')` : `background:linear-gradient(135deg, ${l.c1}, ${l.c2})`}">${l.image ? '' : esc((l.name || '?')[0])}</span>`).join('')}${links.length > 3 ? `<span class="qa-dot qa-more" style="--i:3">+${links.length - 3}</span>` : ''}</span>
@@ -401,18 +453,13 @@ function renderDashboard(view) {
       <div class="qa-body" id="qa-body">
         <div class="qa-inner">
     <nav class="quick-links" id="quick-links" aria-label="Acesso rápido">
-      ${links.map((l, i) => `
-        <a class="ql ${l.image ? 'has-img' : ''}" data-ql="${i}"
-           ${isSafeUrl(normalizeUrl(l.url)) ? `href="${esc(normalizeUrl(l.url))}" target="_blank" rel="noopener noreferrer"` : 'href="#" data-empty="1"'}
-           style="background:${linkBg(l)};color:${linkInk(l)};--k:${i}${l.image ? `;--img:url('${esc(imgUrl(l.image))}')` : ''}">
-          <span class="ql-name">${esc(l.name)}</span>
-          <span class="ql-go"><i data-icon="external"></i></span>
-          <span class="ql-cta" aria-hidden="true">Abrir</span>
-        </a>`).join('')}
+      ${links.map(qlCard).join('')}
     </nav>
         </div>
       </div>
     </section>` : ''}
+    ${hubPanels().map(hubPanel).join('')}
+    </div>
 
     ${recentNews().length ? `
     <section class="rn" aria-label="Notícias recentes">
@@ -477,22 +524,45 @@ function renderDashboard(view) {
     }), { threshold: 0.6 });
     heads.forEach((h) => stIO.observe(h));
   }
-  // Acesso rápido no celular: menu escuro que abre e fecha; ao abrir, os cartões entram em cascata
-  // No computador ele já aparece aberto (dá para recolher na setinha)
-  const qa = $('#qa'), qaHead = $('#qa-head');
-  const setQa = (open) => {
-    qa.classList.toggle('open', open);
-    qaHead.setAttribute('aria-expanded', open);
-    const ql = $('#quick-links');
+  // Faixa de painéis escuros (Acesso rápido, Financeiro...).
+  // Celular: o Acesso rápido abre e fecha para baixo. Computador: ficam lado a lado,
+  // o painel sob o mouse se alarga (como as Notícias recentes) e o clique abre o painel
+  // para o lado, ocupando a faixa; os outros encolhem até a setinha fechar.
+  const hub = $('#hub-row');
+  const panels = [...(hub?.querySelectorAll('.hub') || [])];
+  const setPanel = (p, open) => {
+    p.classList.toggle('open', open);
+    p.querySelector('.qa-head').setAttribute('aria-expanded', open);
+    const ql = p.querySelector('.quick-links');
     ql.classList.remove('ql-in');
     if (open && !reduceMotion()) { void ql.offsetWidth; ql.classList.add('ql-in'); }
   };
-  if (qa && matchMedia('(min-width: 861px)').matches) setQa(true);
-  qaHead?.addEventListener('click', () => setQa(!qa.classList.contains('open')));
-  $('#quick-links')?.addEventListener('click', (e) => {
+  // No computador a abertura vem em dois tempos, para os cartões não se reorganizarem
+  // enquanto a largura muda: 1º o painel se estica (e os outros somem), 2º o corpo desce
+  // com os cartões em cascata. Ao recolher, o inverso.
+  let hubT;
+  panels.forEach((p) => p.querySelector('.qa-head').addEventListener('click', () => {
+    const head = p.querySelector('.qa-head');
+    const open = head.getAttribute('aria-expanded') !== 'true';
+    clearTimeout(hubT);
+    const setWide = (on) => {
+      panels.forEach((o) => o.classList.toggle('wide', on && o === p));
+      hub.classList.toggle('has-open', on);
+    };
+    if (!matchMedia('(min-width: 861px)').matches || reduceMotion()) { setPanel(p, open); setWide(open); return; }
+    if (open) {
+      head.setAttribute('aria-expanded', true);
+      setWide(true);
+      hubT = setTimeout(() => setPanel(p, true), 680);
+    } else {
+      setPanel(p, false);
+      hubT = setTimeout(() => setWide(false), 450);
+    }
+  }));
+  hub?.addEventListener('click', (e) => {
     const a = e.target.closest('[data-empty]'); if (!a) return;
     e.preventDefault();
-    toast('Link ainda não configurado — defina em Configurações.');
+    toast(a.closest('#qa') ? 'Link ainda não configurado — defina em Configurações.' : 'Link ainda não configurado.');
   });
 }
 
@@ -822,6 +892,7 @@ function renderConfig(view) {
       ${accSection('exclusive', 'star', 'Somente no HC', 'Banners com as criações do instituto: jogos, materiais de estudo e muito mais.', 'count-exclusive', '<div id="exclusive-panel"></div>')}
       ${accSection('connect', 'monitor', 'Mantenha-se conectado', 'Os blocos de vidro fosco com WhatsApp, Instagram e links de atendimento.', 'count-connect', '<div id="connect-panel"></div>')}
       ${accSection('links', 'link', 'Acesso rápido', 'Atalhos para os portais das instituições parceiras, com imagem ou degradê.', 'count-links', '<div id="links-panel"></div>')}
+      ${accSection('hubs', 'grid', 'Painéis da tela inicial', 'O Financeiro e outros painéis ao lado do Acesso rápido: nomes, ícones e botões com imagem.', 'count-hubs', '<div id="hubs-panel"></div>')}
       ${accSection('brand', 'image', 'Logo do painel', 'A imagem exibida no topo da barra lateral, em todas as páginas.', '', '<div id="brand-panel"></div>')}
       ${accSection('prefs', 'shield', 'Preferências', 'Ajustes de exibição e privacidade, e as fotos do radar da página de Notícias.', '', `
         <p class="desc">Ajustes de exibição aplicados neste navegador.</p>
@@ -836,6 +907,7 @@ function renderConfig(view) {
     </div>
     <input type="file" id="file-link" accept="image/*" hidden>
     <input type="file" id="file-logo" accept="image/*" hidden>
+    <input type="file" id="file-hub" accept="image/*" hidden>
     <input type="file" id="file-connect" accept="image/*" hidden>
     <input type="file" id="file-radar" accept="image/*" hidden>
   </div>`;
@@ -850,6 +922,7 @@ function renderConfig(view) {
   initBannerEditor('top');
   initBannerEditor('hc');
   initLinksPanel();
+  initHubsPanel();
   initBrandPanel();
   initConnectPanel();
   initRadarPanel();
@@ -2188,6 +2261,162 @@ function drawLinksPanel() {
   paintIcons(panel);
 }
 
+
+/* ---------- Painéis da tela inicial (Financeiro e outros) ---------- */
+function initHubsPanel() {
+  const panel = $('#hubs-panel');
+  let imgId = null;
+  drawHubsPanel();
+  const find = (id) => hubs.find((h) => h.id === id);
+  // troca a posição de dois itens da lista (painéis entre painéis, botões dentro do mesmo painel)
+  const swap = (it, dir) => {
+    const same = it.kind === 'panel' ? hubPanels() : hubBtns(it.panel);
+    const k = same.indexOf(it), other = same[k + dir];
+    if (!other) return;
+    const i = hubs.indexOf(it), j = hubs.indexOf(other);
+    [hubs[i], hubs[j]] = [hubs[j], hubs[i]];
+  };
+
+  panel.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-hact]'); if (!t) return;
+    const it = find(t.dataset.id);
+    const act = t.dataset.hact;
+    if (act === 'img') { imgId = it.id; $('#file-hub').click(); return; }
+    if (act === 'rmimg') { it.image = ''; toast('Imagem removida'); }
+    if (act === 'del') {
+      if (it.kind === 'panel') {
+        if (!confirm(`Remover o painel "${it.title}" e todos os botões dele?`)) return;
+        hubs = hubs.filter((h) => h.id !== it.id && h.panel !== it.id);
+        toast('Painel removido');
+      } else {
+        if (!confirm(`Remover o botão "${it.name}"?`)) return;
+        hubs = hubs.filter((h) => h !== it);
+        toast('Botão removido');
+      }
+    }
+    if (act === 'up' || act === 'down') swap(it, act === 'up' ? -1 : 1);
+    if (act === 'addbtn') {
+      hubs.push({ id: 'hb' + Date.now(), kind: 'btn', panel: it.id, name: 'NOVO BOTÃO', url: '', image: '', c1: '#22c55e', c2: '#0e7490' });
+    }
+    if (act === 'addpanel') {
+      const id = 'hp' + Date.now();
+      hubs.push({ id, kind: 'panel', title: 'Novo painel', sub: '', icon: '', image: '' },
+        { id: 'hb' + Date.now(), kind: 'btn', panel: id, name: 'NOVO BOTÃO', url: '', image: '', c1: '#60a5fa', c2: '#1e3a8a' });
+    }
+    saveHubs(); drawHubsPanel();
+    if (act === 'addpanel') [...panel.querySelectorAll('.hub-cfg [data-hf="title"]')].pop()?.select();
+  });
+
+  panel.addEventListener('input', (e) => {
+    const f = e.target.closest('[data-hf]'); if (!f) return;
+    const it = find(f.dataset.id); if (!it) return;
+    it[f.dataset.hf] = f.value;
+    if (it.kind === 'btn') {
+      const prev = panel.querySelector(`[data-hprev="${it.id}"]`);
+      prev.style.background = linkBg(it);
+      prev.style.color = linkInk(it);
+      prev.querySelector('.ql-name').textContent = it.name;
+      panel.querySelector(`[data-hsub="${it.id}"]`).textContent = normalizeUrl(it.url) || 'Sem link configurado';
+    } else if (!it.image) {
+      const dot = panel.querySelector(`[data-hico="${it.id}"]`);
+      if (dot) dot.innerHTML = hubIco(it);
+    }
+    clearTimeout(panel._t); panel._t = setTimeout(saveHubs, 300);
+  });
+
+  $('#file-hub').addEventListener('change', async (e) => {
+    const file = e.target.files[0]; e.target.value = '';
+    const it = imgId && find(imgId);
+    if (!file || !it) return;
+    const old = it.image;
+    it.image = await storeImage(file, it.kind === 'panel' ? 'icone' : 'link');
+    if (saveHubs()) toast(it.kind === 'panel' ? 'Ícone do painel aplicado' : 'Imagem de fundo aplicada'); else it.image = old;
+    drawHubsPanel();
+  });
+}
+
+function drawHubsPanel() {
+  const panel = $('#hubs-panel');
+  const ps = hubPanels();
+  $('#count-hubs').textContent = `${ps.length}/${MAX_HUBS}`;
+  const btn = (b, k, n) => `
+        <div class="banner-item hub-cfg-btn">
+          <div class="bi-head">
+            <button class="ql ql-preview ${b.image ? 'has-img' : ''}" data-hact="img" data-id="${b.id}" data-hprev="${b.id}" title="Trocar imagem de fundo"
+                    style="background:${linkBg(b)};color:${linkInk(b)}">
+              <span class="ql-name">${esc(b.name)}</span>
+            </button>
+            <div class="bi-meta">
+              <span class="bi-badge">BOTÃO ${k + 1}</span>
+              <p data-hsub="${b.id}">${esc(normalizeUrl(b.url)) || 'Sem link configurado'}</p>
+            </div>
+            <div class="bi-actions">
+              <button class="icon-btn neutral" data-hact="up" data-id="${b.id}" title="Mover para a esquerda" ${k === 0 ? 'disabled' : ''}><i data-icon="up"></i></button>
+              <button class="icon-btn neutral" data-hact="down" data-id="${b.id}" title="Mover para a direita" ${k === n - 1 ? 'disabled' : ''}><i data-icon="down"></i></button>
+              <button class="icon-btn" data-hact="del" data-id="${b.id}" title="Remover botão"><i data-icon="trash"></i></button>
+            </div>
+          </div>
+          <div class="bi-fields">
+            <div class="field"><label>Nome</label><input data-id="${b.id}" data-hf="name" value="${esc(b.name)}" maxlength="24"></div>
+            <div class="field"><label>Link (site)</label><input data-id="${b.id}" data-hf="url" value="${esc(b.url)}" placeholder="https://www.exemplo.com.br" inputmode="url"></div>
+            <div class="field">
+              <label>Imagem de fundo</label>
+              <div class="img-row">
+                <button class="btn-soft" data-hact="img" data-id="${b.id}"><i data-icon="image"></i>${b.image ? 'Trocar imagem' : 'Escolher imagem'}</button>
+                ${b.image ? `<button class="btn-soft danger" data-hact="rmimg" data-id="${b.id}"><i data-icon="x"></i>Remover</button>` : ''}
+              </div>
+            </div>
+            <div class="field">
+              <label>Cores do degradê ${b.image ? '<em>(usadas sem imagem)</em>' : ''}</label>
+              <div class="color-row">
+                <input type="color" data-id="${b.id}" data-hf="c1" value="${esc(b.c1)}" title="Cor inicial">
+                <input type="color" data-id="${b.id}" data-hf="c2" value="${esc(b.c2)}" title="Cor final">
+              </div>
+            </div>
+          </div>
+        </div>`;
+  panel.innerHTML = `
+    <p class="desc">Painéis escuros que ficam ao lado do Acesso rápido, no computador. Ao clicar em um painel, ele se abre e mostra os botões dele. Painel sem nenhum botão não aparece no site.</p>
+    ${ps.map((p, i) => {
+      const bs = hubBtns(p.id);
+      return `
+    <div class="hub-cfg">
+      <div class="hub-cfg-head">
+        <button class="hub-cfg-ico" data-hact="img" data-id="${p.id}" data-hico="${p.id}" title="Trocar ícone do painel">${hubIco(p)}</button>
+        <div class="bi-meta">
+          <span class="bi-badge">PAINEL ${i + 1}</span>
+          <p>${bs.length} ${bs.length === 1 ? 'botão' : 'botões'}</p>
+        </div>
+        <div class="bi-actions">
+          <button class="icon-btn neutral" data-hact="up" data-id="${p.id}" title="Mover para a esquerda" ${i === 0 ? 'disabled' : ''}><i data-icon="up"></i></button>
+          <button class="icon-btn neutral" data-hact="down" data-id="${p.id}" title="Mover para a direita" ${i === ps.length - 1 ? 'disabled' : ''}><i data-icon="down"></i></button>
+          <button class="icon-btn" data-hact="del" data-id="${p.id}" title="Remover painel"><i data-icon="trash"></i></button>
+        </div>
+      </div>
+      <div class="bi-fields">
+        <div class="field"><label>Nome do painel</label><input data-id="${p.id}" data-hf="title" value="${esc(p.title)}" maxlength="22"></div>
+        <div class="field"><label>Descrição curta</label><input data-id="${p.id}" data-hf="sub" value="${esc(p.sub || '')}" maxlength="48" placeholder="Ex.: Boletos, 2ª via e negociação"></div>
+        <div class="field">
+          <label>Ícone do painel</label>
+          <div class="img-row">
+            <button class="btn-soft" data-hact="img" data-id="${p.id}"><i data-icon="image"></i>${p.image ? 'Trocar ícone' : 'Escolher imagem'}</button>
+            ${p.image ? `<button class="btn-soft danger" data-hact="rmimg" data-id="${p.id}"><i data-icon="x"></i>Remover</button>` : ''}
+          </div>
+        </div>
+      </div>
+      <div class="hub-cfg-btns">${bs.map((b, k) => btn(b, k, bs.length)).join('')}</div>
+      <div class="panel-foot">
+        <span>Ícone: <b>256 × 256 px</b> · botões: <b>800 × 320 px</b> — até ${MAX_HUB_BTNS} botões.</span>
+        <button class="btn-soft" data-hact="addbtn" data-id="${p.id}" ${bs.length >= MAX_HUB_BTNS ? 'disabled' : ''}><i data-icon="plus"></i>Adicionar botão</button>
+      </div>
+    </div>`;
+    }).join('')}
+    <div class="panel-foot">
+      <span>Até ${MAX_HUBS} painéis, além do Acesso rápido.</span>
+      <button class="btn-dark" data-hact="addpanel" ${ps.length >= MAX_HUBS ? 'disabled' : ''}><i data-icon="plus"></i>Adicionar painel</button>
+    </div>`;
+  paintIcons(panel);
+}
 
 /* ---------- Notícias (configurações) ---------- */
 let openNewsId = null; // notícia aberta para edição

@@ -402,5 +402,35 @@ window.HC_CONTENT = {
       "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/9ea17470-1f5d-4150-98bc-ab3f422a267a.webp",
       "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/5c3e1f51-7013-458f-9fb0-f6e39916caec.webp"
     }
+  ],
+  "hubs": [
+    {
+      "id": "h-fin",
+      "kind": "panel",
+      "title": "Financeiro",
+      "sub": "Boletos, 2ª via e negociação",
+      "icon": "wallet",
+      "image": ""
+    },
+    {
+      "id": "f1",
+      "kind": "btn",
+      "panel": "h-fin",
+      "name": "Boletos e 2ª via",
+      "url": "",
+      "image": "",
+      "c1": "#34d399",
+      "c2": "#047857"
+    },
+    {
+      "id": "f2",
+      "kind": "btn",
+      "panel": "h-fin",
+      "name": "Negociar mensalidades",
+      "url": "",
+      "image": "",
+      "c1": "#fbbf24",
+      "c2": "#c2410c"
+    }
   ]
 };

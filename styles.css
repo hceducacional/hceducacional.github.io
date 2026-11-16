@@ -4093,3 +4093,54 @@ html.lk-lock, html.lk-lock body { overflow: hidden; }
 @keyframes pdBump { 0% { transform: scale(1); } 40% { transform: scale(1.04); } 100% { transform: scale(1); } }
 @media (max-width: 860px) { .pd { display: none !important; } }
 @media (prefers-reduced-motion: reduce) { .pd-pill, .pd-pill::after, .pd-bell svg, .pd-text, .pd-count, .pd-go { animation: none !important; } }
+
+/* =========================================================
+   FAIXA DE PAINÉIS (Acesso rápido, Financeiro...) — computador
+   Lado a lado; o painel sob o mouse se alarga como as Notícias recentes
+   e, ao clicar, abre ocupando a faixa inteira (os outros somem até ele recolher).
+   Novos painéis dividem a largura sozinhos.
+   ========================================================= */
+.hub-ico { background: linear-gradient(135deg, #34d399, #047857); color: #fff; }
+.hub-ico svg { width: 17px; height: 17px; }
+@media (max-width: 860px) {
+  .hub-only-desk { display: none; } /* celular: configurado depois */
+}
+@media (min-width: 861px) {
+  .hub-row { display: flex; align-items: flex-start; gap: 14px; margin-top: 34px; }
+  .hub-row > .qa {
+    margin-top: 0; flex: 1 1 0; min-width: 0;
+    transition: flex-grow .7s var(--ease), margin .7s var(--ease), opacity .4s ease .25s, visibility 0s, box-shadow .4s ease;
+  }
+  .hub-row:not(.has-open) > .hub:hover { flex-grow: 1.7; }
+  .hub-row > .hub:hover { box-shadow: 0 1px 2px rgba(0, 0, 0, .08), 0 22px 40px -18px rgba(0, 0, 0, .6); }
+  .hub-row .qa-head { overflow: hidden; }
+  .hub-row .qa-txt strong, .hub-row .qa-txt small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* um painel aberto: os outros somem por um momento e ele ocupa a faixa inteira;
+     ao recolher, os outros voltam (a margem negativa engole o espaço entre eles) */
+  .hub-row.has-open > .hub.wide { flex-grow: 1; }
+  .hub-row.has-open > .hub:not(.wide) {
+    flex-grow: 0; margin-right: -16px; opacity: 0; visibility: hidden; pointer-events: none;
+    transition: flex-grow .7s var(--ease), margin .7s var(--ease), opacity .25s ease, visibility 0s linear .7s;
+  }
+  .hub-row.has-open > .hub:last-child:not(.wide) { margin-right: 0; margin-left: -16px; }
+
+  /* a setinha gira já no clique, sem esperar o corpo abrir */
+  .hub-row .qa-head[aria-expanded="true"] .qa-chev { transform: rotate(180deg); background: rgba(255, 255, 255, .2); }
+  .hub-row .qa-head[aria-expanded="false"] .qa-chev { transform: none; }
+
+  /* os cartões entram já na largura final, sem pular durante a expansão */
+  .hub-row .qa .quick-links { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+}
+
+/* ícone do painel (imagem enviada pelo administrador) */
+.hub-ico.has-img { background-size: cover; background-position: center; }
+/* Configurações › Painéis da tela inicial */
+.hub-cfg { border: 1px solid var(--line); border-radius: 22px; padding: 16px; margin: 0 0 16px; background: var(--card, #fff); }
+.hub-cfg-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.hub-cfg-head .bi-meta { flex: 1; min-width: 0; }
+.hub-cfg-ico { flex: none; width: 52px; height: 52px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center; background: rgb(22, 22, 23); cursor: pointer; }
+.hub-cfg-ico .qa-dot { width: 40px; height: 40px; margin: 0; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 16px; box-shadow: none; }
+.hub-cfg-ico:hover { filter: brightness(1.15); }
+.hub-cfg-btns { margin-top: 14px; padding-left: 14px; border-left: 2px solid var(--line-soft, #eee); }
+.hub-cfg .panel-foot { margin-top: 10px; }
