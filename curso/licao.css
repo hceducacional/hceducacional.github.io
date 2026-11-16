@@ -99,6 +99,36 @@
 
 .lc-wel-side { display: flex; flex-direction: column; justify-content: center; padding: 6px 4px; }
 .lc-wel-side > * { animation: lcUp .8s var(--soft) both; }
+.lc-best { display: flex; align-items: center; gap: 14px; margin: 0 0 18px -14px; animation-delay: .2s; }
+/* recorde da lição concluída: as estrelas da tela de resultado (inclinadas, uma sobre a outra), com o brilho passando de uma para a outra */
+.lc-best-stars { display: flex; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .3)); }
+.lc-best-stars img { width: 124px; height: 124px; margin: -22px 0; rotate: -14deg; opacity: 0; }
+/* tudo espera a classe "go" (posta quando a tela de carregamento da lição sai) */
+.lc-best.go .lc-best-stars img { opacity: 1; animation: lrLand .9s cubic-bezier(.34, 1.4, .64, 1) calc(.4s + var(--i) * 140ms) both, lrGlow 3s ease-in-out calc(1.6s + var(--i) * .2s) infinite; }
+.lc-best-txt { opacity: 0; transform: translateX(-10px); transition: opacity .6s ease .3s, transform .8s var(--soft, ease) .3s; }
+.lc-best.go .lc-best-txt { opacity: 1; transform: none; }
+.lc-best-txt img { opacity: 0; transform: scale(.6); }
+.lc-best.go .lc-best-txt img { animation: lcBestTitle .8s cubic-bezier(.34, 1.5, .64, 1) 2.1s both; }
+@keyframes lcBestTitle { 0% { opacity: 0; transform: scale(.6); } 100% { opacity: 1; transform: none; } }
+.lc-best-stars img + img { margin-left: -68px; } /* mesmo tamanho e encaixe das estrelas da barra da tela de resultado */
+.lc-best-txt { display: grid; justify-items: start; gap: 2px; }
+.lc-best-num { display: flex; align-items: baseline; gap: 8px; }
+/* número do recorde: gradiente na cor da conquista (dourado, azul Superstar ou lilás Megastar), inclinado como o título,
+   com um reflexo branco passando de tempos em tempos e um "pulo" quando a contagem termina */
+.lc-best { --n1: #fff7d1; --n2: #fbbf24; --n3: #f59e0b; --nglow: rgba(251, 191, 36, .45); }
+.lc-best.super { --n1: #f0f9ff; --n2: #7dd3fc; --n3: #0ea5e9; --nglow: rgba(56, 189, 248, .5); }
+.lc-best.mega { --n1: #fdf4ff; --n2: #f0abfc; --n3: #a855f7; --nglow: rgba(192, 132, 252, .55); }
+.lc-best-num b { display: inline-block; animation-play-state: paused !important; padding: 0 .06em; font-size: clamp(36px, 3.4vw, 50px); font-weight: 700; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums;
+  transform: skewX(-8deg); color: transparent; -webkit-background-clip: text; background-clip: text;
+  background-image: linear-gradient(100deg, var(--n2) 0%, var(--n1) 30%, var(--n2) 45%, #fff 50%, var(--n2) 55%, var(--n3) 100%); background-size: 260% 100%; background-position: 100% 0;
+  filter: drop-shadow(0 0 16px var(--nglow)) drop-shadow(0 3px 0 rgba(0, 0, 0, .35));
+  animation: lcNumShine 4s ease-in-out 2.2s infinite; }
+.lc-best.go .lc-best-num b { animation-play-state: running !important; }
+.lc-best-num b.hit { animation: lcNumHit .6s cubic-bezier(.34, 1.5, .64, 1), lcNumShine 4s ease-in-out .6s infinite; }
+@keyframes lcNumShine { 0%, 55% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+@keyframes lcNumHit { 40% { transform: skewX(-8deg) scale(1.12); } }
+.lc-best-num em { font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--n2); opacity: .8; }
+.lc-best-txt img { display: block; height: 38px; margin-left: -4px; width: auto; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .3)); }
 .lc-wel-title { margin: 0; font-size: clamp(32px, 3.4vw, 48px); line-height: 1.04; font-weight: 700; letter-spacing: -.035em; animation-delay: .35s; }
 .lc-wel-intro { margin: 12px 0 0; max-width: 560px; font-size: 17px; line-height: 1.5; color: rgba(255, 255, 255, .66); animation-delay: .45s; }
 .lc-intro-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 24px 0 0; animation: none !important; }
@@ -778,7 +808,8 @@
   .lc-lv-mark { font-size: 100px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .lc-shell, .lc-top, .lc-hero, .lc-hero::after, .lc-hero-img, .lc-wel-side > *, .lc-intro, .lc-segs i.cur, .lc-shell .lc-main::after { animation: none !important; }
+  .lc-best-txt, .lc-best-txt img { opacity: 1 !important; transform: none !important; }
+  .lc-best-stars img, .lc-best-num b, .lc-best-txt img, .lc-shell, .lc-top, .lc-hero, .lc-hero::after, .lc-hero-img, .lc-wel-side > *, .lc-intro, .lc-segs i.cur, .lc-shell .lc-main::after { animation: none !important; }
   .lc-shell .lc-main { transition: none; }
 }
 
@@ -887,7 +918,7 @@
   background: radial-gradient(closest-side, rgba(255, 255, 255, .95), rgba(255, 236, 150, .5) 45%, rgba(255, 255, 255, 0)); }
 .lr-rstar.on::after { animation: lrFlash .9s ease-out; }
 @keyframes lrBStar { 0% { opacity: 0; transform: scale(.2) rotate(-120deg); } 60% { opacity: 1; transform: scale(1.3) rotate(10deg); } 100% { opacity: 1; transform: none; } }
-.lr-rnum { position: absolute; top: 50%; left: calc(var(--p) * 100% + 60px); transform: translateY(-50%); white-space: nowrap; pointer-events: none; opacity: 0;
+.lr-rnum { position: absolute; top: 50%; left: calc(var(--p) * 100% + 60px); transform: translateY(-50%) skewX(-8deg); letter-spacing: -.03em; white-space: nowrap; pointer-events: none; opacity: 0;
   font-size: 22px; font-weight: 800; letter-spacing: -.01em; font-variant-numeric: tabular-nums; text-shadow: 0 2px 10px rgba(0, 0, 0, .35); transition: opacity .4s ease; }
 .lr.counting .lr-rnum { opacity: 1; }
 /* no fim, estrelas e pontos da barra dão um pulinho e somem encolhendo para trás */
@@ -940,9 +971,18 @@
 /* no fim, um brilho suave que pulsa nas estrelas conquistadas */
 .lr.done .lr-star.on img { animation: lrGlow 3s ease-in-out calc(var(--i) * .2s) infinite; }
 @keyframes lrGlow { 50% { filter: brightness(1.25) drop-shadow(0 0 6px rgba(255, 255, 255, .7)); } }
-.lr-num { opacity: 0; transform: scale(.4); transition: opacity .6s ease, transform .8s cubic-bezier(.34, 1.4, .64, 1); }
-.lr.land .lr-num { opacity: 1; transform: none; transition-delay: .5s; }
-.lr-num { font-size: clamp(28px, 2.6vw, 38px); font-weight: 800; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 4px 18px rgba(0, 0, 0, .25); }
+.lr-num { opacity: 0; transform: scale(.4) skewX(-8deg); transition: opacity .6s ease, transform .8s cubic-bezier(.34, 1.4, .64, 1); }
+.lr.land .lr-num { opacity: 1; transform: skewX(-8deg); transition-delay: .5s; }
+.lr-num { padding: 0 .06em; font-size: clamp(32px, 3vw, 44px); font-weight: 700; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+/* pontos da tela de resultado: o mesmo número do recorde da lição — gradiente na cor da conquista (dourado → azul Superstar → lilás Megastar),
+   inclinado, com brilho e um reflexo passando; a cor muda junto com as estrelas durante a contagem */
+.lr { --n1: #fffbeb; --n2: #fde68a; --n3: #fbbf24; --nglow: rgba(251, 191, 36, .55); }
+.lr.super { --n1: #f0f9ff; --n2: #bae6fd; --n3: #7dd3fc; --nglow: rgba(56, 189, 248, .6); }
+.lr.mega { --n1: #fdf4ff; --n2: #f5d0fe; --n3: #e9a8ff; --nglow: rgba(192, 132, 252, .7); }
+.lr-num, .lr-rnum { color: transparent; text-shadow: none; -webkit-background-clip: text; background-clip: text;
+  background-image: linear-gradient(100deg, var(--n2) 0%, var(--n1) 30%, var(--n2) 45%, #fff 50%, var(--n2) 55%, var(--n3) 100%); background-size: 260% 100%; background-position: 100% 0;
+  filter: drop-shadow(0 3px 0 rgba(40, 0, 60, .45)) drop-shadow(0 0 16px var(--nglow)) drop-shadow(0 6px 14px rgba(0, 0, 0, .3)); }
+.lr.done .lr-num { animation: lcNumShine 4s ease-in-out 1.2s infinite; }
 /* título Superstar/Megastar grande, ocupando a largura das estrelas até quase encostar na barra (pode vazar da faixa) */
 .lr-badge:has(img) { justify-self: stretch; position: relative; height: 30px; }
 .lr-badge img { position: absolute; top: -2px; right: -6px; display: block; width: calc(100% + 20px); height: auto; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .3)); }
@@ -1014,6 +1054,10 @@
   background: rgba(255, 255, 255, .16); color: #fff; font: inherit; font-size: 14.5px; font-weight: 700; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2); transition: background .2s; }
 .lr-btn svg { width: 17px; height: 17px; }
 .lr-btn:hover { background: rgba(255, 255, 255, .26); }
+/* ao refazer: avisa se bateu o recorde ou qual recorde continua valendo */
+.lr-rec { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 4px; color: rgba(255, 255, 255, .85); font-size: 14px; font-weight: 600; }
+.lr-rec.new { padding: 0 18px; border-radius: 999px; color: #3b2a00; background: linear-gradient(135deg, #fde68a, #fbbf24); font-weight: 700; box-shadow: 0 10px 24px -12px rgba(0, 0, 0, .5); }
+.lr-rec svg { width: 17px; height: 17px; }
 .lr-confetti { position: absolute; inset: 0; z-index: 5; width: 100%; height: 100%; pointer-events: none; }
 @keyframes lrFade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes lrIn { to { opacity: 1; transform: none; } }
@@ -1022,5 +1066,5 @@
 @media (prefers-reduced-motion: reduce) {
   .lr *, .lr *::before, .lr *::after { animation: none !important; transition: none !important; }
   .lr-bands { display: none; } .lr-bg, .lr-rays, .lr-congrats, .lr-score, .lr .avatar.lr-av { opacity: 1; transform: none; } .lr-ribbon, .lr-panel { transform: none; }
-  .lr-panel { transform: skewX(10deg); } .lr-code { opacity: .2; } .lr-star, .lr-num { opacity: 1; transform: none; } .lr-rstars, .lr-rnum { display: none; } .lr.done .lr-card, .lr.done .lr-acts { opacity: 1; transform: none; }
+  .lr-panel { transform: skewX(10deg); } .lr-code { opacity: .2; } .lr-star { opacity: 1; transform: none; } .lr-num { opacity: 1; transform: skewX(-8deg); } .lr-rstars, .lr-rnum { display: none; } .lr.done .lr-card, .lr.done .lr-acts { opacity: 1; transform: none; }
 }

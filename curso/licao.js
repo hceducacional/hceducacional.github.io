@@ -142,6 +142,10 @@
     // progresso salvo antes da pontuação ser dividida entre os níveis: pontos de nível acima da parte de cada um são descartados
     if (saved?.levelPts?.some((x) => x > PTS_MAX / N + 1)) saved.levelPts = [];
     let st = saved && !saved.done ? { ...fresh(), ...saved } : fresh();
+    // lição já concluída: o resultado salvo é o recorde do aluno. Refazer não apaga nada;
+    // só uma pontuação maior substitui o recorde (no fim da lição)
+    let best = saved?.done ? saved : null;
+    const ptsOf = (s) => Math.min(PTS_MAX, Math.round((s?.levelPts || []).reduce((t, x) => t + (x || 0), 0)));
     let alive = true, busy = false, phase = 'welcome', tick = null, lvlStart = 0;
     let game = {}; // estado do nível atual (minijogos)
 
@@ -174,6 +178,17 @@
       const doneN = p ? (p.done ? N : Math.min(p.lvl, N)) : 0;
       const status = finished ? 'Concluída' : resume ? `Nível ${st.lvl + 1} de ${N}` : `${N} níveis`;
       const stars = p && meta.stars ? meta.stars(p) : '';
+      // lição concluída: o recorde em destaque acima do título, como no fim da tela de resultado
+      // (estrelas com o brilho passando de uma para a outra, pontuação e, se tiver, Superstar ou Megastar)
+      let bestHTML = '';
+      if (finished) {
+        const bp = ptsOf(p), bn = starsOf(bp), br = rankOf(bp), kind = br === 'mega' ? 'megastar' : br === 'super' ? 'superstar' : 'amarela';
+        const label = `Seu recorde: ${bp.toLocaleString('pt-BR')} pontos, ${bn} ${bn === 1 ? 'estrela' : 'estrelas'}${br ? ' · ' + RANK_NAME[br] : ''}`;
+        bestHTML = `<div class="lc-best ${br}" role="img" aria-label="${label}">
+          ${bn ? `<span class="lc-best-stars">${Array.from({ length: bn }, (_, i) => `<img src="assets/estrelas/estrela-${kind}.png" alt="" draggable="false" style="--i:${i}">`).join('')}</span>` : ''}
+          <span class="lc-best-txt"><span class="lc-best-num"><b data-to="${bp}">${bp.toLocaleString('pt-BR')}</b><em>pontos</em></span>${br ? `<img src="assets/estrelas/titulo-${kind}.png" alt="" draggable="false">` : ''}</span>
+        </div>`;
+      }
       body.innerHTML = `
       <div class="lc-wel">
         <article class="lc-hero">
@@ -193,6 +208,7 @@
           ${p ? `<b class="lc-hero-prog" style="--w:${(doneN / N) * 100}%"></b>` : ''}
         </article>
         <div class="lc-wel-side">
+          ${bestHTML}
           <h2 class="lc-wel-title"><span class="lc-grad">${resume ? 'Continue de onde parou.' : finished ? 'Lição concluída!' : 'Vamos começar.'}</span></h2>
           <p class="lc-wel-intro">${esc(L.intro)}</p>
           <div class="lc-intro-grid">
@@ -206,15 +222,48 @@
           </div>` : ''}
           <div class="lc-cta">
             ${resume ? `<button class="btn-dark inf-shine" type="button" data-go="resume">${svg('play', true)}Continuar do nível ${st.lvl + 1}</button><button class="btn-soft" type="button" data-go="restart">Recomeçar a lição</button>`
-              : finished ? `<button class="btn-dark inf-shine" type="button" data-go="restart">${svg('refresh')}Refazer a lição</button><button class="btn-soft" type="button" data-go="last">Ver o último resultado</button>`
+              : finished ? `<button class="btn-dark inf-shine" type="button" data-go="restart">${svg('refresh')}Refazer a lição</button><button class="btn-soft" type="button" data-go="last">Ver o melhor resultado</button>`
               : `<button class="btn-dark inf-shine" type="button" data-go="restart">${svg('play', true)}Iniciar atividade</button>`}
           </div>
           <p class="lc-note">Use as teclas ${L.teclas.map((k) => `<kbd>${esc(keyLabel(k))}</kbd>`).join('')} com os dedos na posição inicial.</p>
         </div>
       </div>`;
+      // o recorde só entra (estrelas, contagem e Megastar/Superstar) depois que a tela de carregamento da lição sai
+      const bestBox = body.querySelector('.lc-best');
+      if (bestBox) {
+        const reduceM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const bnum = bestBox.querySelector('.lc-best-num b');
+        const go = () => {
+          if (!bestBox.isConnected || bestBox.classList.contains('go')) return;
+          bestBox.classList.add('go');
+          if (reduceM || !bnum) return;
+          // a pontuação sobe contando enquanto as estrelas entram
+          const to = +bnum.dataset.to, D0 = 450, D = 1500, t0 = performance.now();
+          const run = (now) => {
+            if (!bnum.isConnected) return;
+            const t = Math.min(1, Math.max(0, (now - t0 - D0) / D));
+            bnum.textContent = Math.round(to * (1 - Math.pow(1 - t, 3))).toLocaleString('pt-BR');
+            if (t < 1) requestAnimationFrame(run); else bnum.classList.add('hit');
+          };
+          requestAnimationFrame(run);
+        };
+        if (bnum && !reduceM) bnum.textContent = '0';
+        const pfi = document.querySelector('body > .pfi');
+        if (reduceM || !pfi) go();
+        else {
+          // a abertura ganha a classe "out" quando começa a sair; a página aparece cerca de 1 s depois
+          let later = 0;
+          const check = () => { if (later) return; if (!pfi.isConnected || pfi.classList.contains('out')) { mo.disconnect(); later = setTimeout(go, pfi.isConnected ? 1000 : 0); } };
+          const mo = new MutationObserver(check);
+          mo.observe(pfi, { attributes: true, attributeFilter: ['class'] });
+          mo.observe(document.body, { childList: true });
+          setTimeout(() => { mo.disconnect(); go(); }, 15000); // nunca fica escondido
+          check();
+        }
+      }
       body.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
         if (b.dataset.go === 'restart') st = fresh();
-        if (b.dataset.go === 'last') { st = { ...fresh(), ...saved }; return results(); }
+        if (b.dataset.go === 'last') { st = { ...fresh(), ...saved }; return results(true); }
         play();
       }));
     }
@@ -558,7 +607,7 @@
       st.levelPts[st.lvl] = Math.max(st.levelPts[st.lvl] || 0, pts); // guarda a melhor pontuação do nível
       const over = $q('#lc-over'); const n = st.lvl + 1;
       st.lvl++;
-      saveProgress(L.id, { ...st, done: false });
+      if (!best) saveProgress(L.id, { ...st, done: false }); // refazendo: o recorde salvo fica intacto até o fim
       over.hidden = false; over.innerHTML = `<div class="lc-done"><h3 class="lc-pop">Parabéns!</h3><p>+${Math.round(pts).toLocaleString('pt-BR')} pontos</p></div>`;
       await sleep(1100); if (!alive || !over.isConnected) return;
       over.innerHTML = `<h3 class="lc-pop sub">Nível ${n} concluído</h3>`;
@@ -783,10 +832,15 @@
     window.addEventListener('hashchange', stop, { once: true });
 
     /* ---------- resultado ---------- */
-    function results() {
+    function results(review = false) {
       phase = 'results'; clearInterval(game.timer); paintProgress();
       st.done = true; st.lvl = N;
-      saveProgress(L.id, { ...st });
+      // refazendo: só salva se superou o recorde; senão o recorde anterior continua valendo
+      let record = '';
+      if (review) record = '';
+      else if (!best) { saveProgress(L.id, { ...st }); best = { ...st }; }
+      else if (ptsOf(st) > ptsOf(best)) { saveProgress(L.id, { ...st }); best = { ...st }; record = 'new'; }
+      else record = 'kept';
       const a = accuracy();
       const rating = a >= 88 ? 'Excelente' : a >= 70 ? 'Bom' : 'Regular';
       const times = st.levelTimes.map((t, i) => [t || 0, i]).filter(([t]) => t > 0);
@@ -796,7 +850,7 @@
       const first = (meName() || '').split(' ')[0];
       // todas as informações ficam só na tela final animada; por baixo fica apenas um espaço vazio
       body.innerHTML = '<section class="lc-results-blank" aria-hidden="true"></section>';
-      showFinale({ a, rating, fast, slow, g });
+      showFinale({ a, rating, fast, slow, g, record });
     }
 
     /* ---------- tela final animada (por cima da área da plataforma) ----------
@@ -834,7 +888,7 @@
       };
       setTimeout(() => requestAnimationFrame(tick), delay);
     }
-    function showFinale({ a, rating, fast, slow, g }) {
+    function showFinale({ a, rating, fast, slow, g, record }) {
       document.querySelector('.lr')?.remove();
       const pts = Math.min(PTS_MAX, Math.round((st.levelPts || []).reduce((t, x) => t + (x || 0), 0)));
       const rk = rankOf(pts);
@@ -877,6 +931,8 @@
               <div class="lr-acts">
                 <button type="button" class="lr-btn" data-lr="report">${svg('download')}Baixar relatório</button>
                 <button type="button" class="lr-btn" data-lr="again">${svg('refresh')}Refazer a lição</button>
+                ${record === 'new' ? `<span class="lr-rec new">${svg('star', true)}Novo recorde! Sua melhor pontuação foi atualizada.</span>`
+                  : record === 'kept' ? `<span class="lr-rec">Seu recorde continua: ${ptsOf(best).toLocaleString('pt-BR')} pontos.</span>` : ''}
               </div>
             </div>
           </div>

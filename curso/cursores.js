@@ -74,15 +74,24 @@
   addEventListener('mouseup', (e) => setTimeout(() => apply(e.target)), true);
   addEventListener('mousemove', (e) => { mx = e.clientX; my = e.clientY; if (folKind && !raf) raf = requestAnimationFrame(place); }, { passive: true, capture: true });
   document.addEventListener('mouseleave', () => showFol(''));
-  // quando a tela muda sozinha embaixo do mouse (ex.: a contagem de estrelas termina), confere de novo
-  setInterval(() => { if (on && last && document.hasFocus()) { const el = document.elementFromPoint(mx, my); if (el) apply(el); } }, 400);
+  // na abertura da lição e na tela de resultado a tela muda sozinha embaixo do mouse
+  // (ex.: a contagem de estrelas termina), então só nelas conferimos de novo a cada 0,4 s;
+  // no resto da plataforma o cursor só muda quando o mouse se mexe
+  let tick = 0;
+  const recheck = () => { if (on && last && document.hasFocus()) { const el = document.elementFromPoint(mx, my); if (el) apply(el); } };
+  const overlay = () => !!document.querySelector('body > .lr, body > .pfi');
 
   const update = () => {
-    on = (typeof infoAllowed !== 'function' || infoAllowed()) && (location.hash.startsWith('#informatica') || !!document.querySelector('.lr, .pfi'));
+    const ov = overlay();
+    on = (typeof infoAllowed !== 'function' || infoAllowed()) && (location.hash.startsWith('#informatica') || ov);
     document.documentElement.classList.toggle('hc-cur', on);
     if (!on) showFol('');
+    if (on && ov && !tick) tick = setInterval(recheck, 400);
+    else if ((!on || !ov) && tick) { clearInterval(tick); tick = 0; recheck(); }
   };
   addEventListener('hashchange', update);
+  // a abertura e o resultado são colocados direto no <body>: observamos só os filhos dele (barato)
+  new MutationObserver(update).observe(document.body, { childList: true });
   update();
   window.HC_cursors = { update };
 })();
