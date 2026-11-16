@@ -70,7 +70,10 @@ async function pushDisable(quiet) {
 /* aviso de teste: chega só nos aparelhos de quem pediu */
 async function pushTest() {
   const { data, error } = await sb.functions.invoke('avisos', { body: { teste: true } });
-  if (error) return toast('A função de avisos ainda não está no ar no Supabase.');
+  if (error) {
+    const msg = await error.context?.json?.().then((j) => j?.erro).catch(() => null);
+    return toast(msg ? `Não foi possível enviar o teste: ${msg}` : 'A função de avisos ainda não está no ar no Supabase.');
+  }
   toast(data?.enviados ? 'Aviso de teste enviado. Deve chegar em instantes.' : 'Nenhum aparelho recebeu. Desative e ative de novo.');
 }
 

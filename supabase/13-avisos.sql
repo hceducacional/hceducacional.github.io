@@ -25,6 +25,8 @@ create index if not exists push_subscriptions_user on public.push_subscriptions 
 alter table public.push_subscriptions enable row level security;
 revoke all on public.push_subscriptions from anon, authenticated;
 -- ninguém lê ou grava direto: só pelas funções abaixo (e a função de envio, com a chave secreta)
+grant select, delete on public.push_subscriptions to service_role;
+grant select on public.appointments, public.profiles to service_role;
 
 -- o aluno logado ativa os avisos neste aparelho (se outra pessoa usava o mesmo
 -- navegador antes, o aparelho passa a ser de quem está logado agora)

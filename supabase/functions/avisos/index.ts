@@ -75,9 +75,14 @@ async function sendPush(sub: { endpoint: string; p256dh: string; auth: string },
 }
 
 /* ---------- banco (REST do Supabase com a chave secreta) ---------- */
+// chave secreta: a nova (sb_secret_..., em SUPABASE_SECRET_KEYS) ou a antiga (service_role)
+function secretKey() {
+  try { const k = JSON.parse(env('SUPABASE_SECRET_KEYS') || '{}'); const v = k.default || Object.values(k)[0]; if (v) return String(v); } catch { /* segue para a antiga */ }
+  return env('SUPABASE_SERVICE_ROLE_KEY');
+}
 const db = (path: string, init: RequestInit = {}) => fetch(`${env('SUPABASE_URL')}${path}`, {
   ...init,
-  headers: { apikey: env('SUPABASE_SERVICE_ROLE_KEY'), Authorization: `Bearer ${env('SUPABASE_SERVICE_ROLE_KEY')}`, 'Content-Type': 'application/json', ...(init.headers || {}) },
+  headers: { apikey: secretKey(), Authorization: `Bearer ${secretKey()}`, 'Content-Type': 'application/json', ...(init.headers || {}) },
 });
 const rows = async (path: string) => { const r = await db(path); if (!r.ok) throw new Error(`banco: ${r.status} ${await r.text()}`); return r.json(); };
 
