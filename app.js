@@ -486,6 +486,16 @@ function renderDashboard(view) {
   initRecentNews();
   view.querySelector('.cx-grid')?.addEventListener('click', (e) => {
     const tile = e.target.closest('.cx-tile');
+    // celular: "Acessar" do cartão de redes sociais abre/fecha a lista de perfis do Instagram
+    const igBtn = e.target.closest('[data-igtoggle]');
+    if (igBtn && tile) {
+      const open = !tile.classList.contains('ig-open');
+      tile.classList.toggle('ig-open', open);
+      igBtn.setAttribute('aria-expanded', open);
+      igBtn.textContent = open ? 'Fechar' : 'Acessar';
+      tile.querySelectorAll('.cx-app-ig a').forEach((a) => (open ? a.removeAttribute('tabindex') : a.setAttribute('tabindex', '-1')));
+      return;
+    }
     if (!tile || e.target.closest('a')) return; // botões, número e @ abrem o próprio link
     // com mouse, a faixa já está visível: um clique abre o link
     if (matchMedia('(hover: hover)').matches) { tile.querySelector('.cx-go')?.click(); return; }
@@ -571,8 +581,9 @@ function renderDashboard(view) {
    na cor da própria imagem e, embaixo, a foto de perfil com o botão "Acessar" */
 const CX_TAGS = ['Atendimento ao aluno', 'Matrículas e cursos', 'Redes sociais', 'HC Instituto Educacional'];
 function cxAppCard(c, i, url, ok, num, ig) {
-  const href = num ? url : ig.length ? `https://www.instagram.com/${ig[0]}/` : ok ? url : '';
-  const sub = num || (ig.length ? ig.map((h) => '@' + h).join(' · ') : (c.desc || ''));
+  // com Instagram, "Acessar" abre a lista de perfis dentro do cartão (a pessoa escolhe qual)
+  const href = num ? url : ig.length ? '' : ok ? url : '';
+  const sub = num || (ig.length ? (ig.length > 1 ? `${ig.length} perfis no Instagram` : 'Perfil no Instagram') : (c.desc || ''));
   const tag = c.tag || (num ? 'Atendimento no WhatsApp' : ig.length ? 'Redes sociais' : CX_TAGS[i] || '');
   const av = c.avatar ? `<img src="${esc(imgUrl(c.avatar))}" alt=""${objPos(c.avatarFocus)}>` : `<span>${esc(initials(c.title))}</span>`;
   return `
@@ -581,11 +592,20 @@ function cxAppCard(c, i, url, ok, num, ig) {
                 ${tag ? `<span class="cx-app-tag">${esc(tag)}</span>` : ''}
                 <h3>${esc(c.title)}</h3>
                 ${c.desc ? `<p>${esc(c.desc)}</p>` : ''}
+                ${ig.length ? `
+                <div class="cx-app-ig" id="cx-ig-${i}"><div>
+                  ${ig.map((h, k) => `
+                  <a class="cx-wa-num cx-ig-num" href="https://www.instagram.com/${esc(h)}/" target="_blank" rel="noopener noreferrer" aria-label="Instagram @${esc(h)}" style="--row:${k}" tabindex="-1">
+                    <span class="cx-wa-ico cx-ig-ico">${IG_SVG}</span>
+                    <span class="cx-wa-digits" aria-hidden="true">${cascade('@' + h, k * 6)}</span>
+                  </a>`).join('')}
+                </div></div>` : ''}
               </div>
               <div class="cx-app-bar">
                 <span class="cx-app-av">${av}</span>
                 <span class="cx-app-who"><strong>${esc(c.title)}</strong><small>${esc(sub)}</small></span>
-                ${href ? `<a class="cx-app-go" href="${esc(href)}" target="_blank" rel="noopener noreferrer">Acessar</a>` : ''}
+                ${ig.length ? `<button type="button" class="cx-app-go" data-igtoggle aria-expanded="false" aria-controls="cx-ig-${i}">Acessar</button>`
+                  : href ? `<a class="cx-app-go" href="${esc(href)}" target="_blank" rel="noopener noreferrer">Acessar</a>` : ''}
               </div>
             </div>`;
 }

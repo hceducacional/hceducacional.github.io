@@ -4328,3 +4328,47 @@ html.lk-lock, html.lk-lock body { overflow: hidden; }
 .ni-info .field.full { grid-column: 1 / -1; }
 .ni-sub .bc-chip { font-size: 11.5px; }
 @media (max-width: 760px) { .ni-info { grid-template-columns: 1fr; } .bc-thumbs { flex-wrap: wrap; } }
+
+/* celular: "Acessar" do cartão de redes sociais revela os perfis do Instagram
+   logo abaixo da descrição, com a mesma animação do computador (ícone gira e o @ sobe letra a letra),
+   em versão mais suave: o texto de cima sobe devagar e as letras surgem com um leve desfoque */
+.cx-app-ig { display: none; }
+@media (max-width: 860px) {
+  /* o botão "Acessar" é um <button>: mesmo visual dos links "Acessar", sem borda e com toque suave */
+  button.cx-app-go {
+    appearance: none; -webkit-appearance: none; border: 0; outline: 0; margin: 0; font: inherit; font-weight: 700; font-size: 15px;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .cx-app-go { transition: transform .35s cubic-bezier(.22, 1, .36, 1), background .35s ease, color .35s ease; }
+  .cx-app-go:active { transform: scale(.94); transition-duration: .12s; }
+  .cx-app-go:focus-visible { box-shadow: 0 0 0 2px rgba(255, 255, 255, .7); }
+
+  .cx-app-ig {
+    display: grid; grid-template-rows: 0fr; opacity: 0;
+    transition: grid-template-rows .8s cubic-bezier(.22, 1, .36, 1), opacity .5s ease;
+  }
+  .cx-app-ig > div {
+    min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+    padding-top: 0; transition: padding-top .8s cubic-bezier(.22, 1, .36, 1);
+  }
+  .cx-tile.ig-open .cx-app-ig { grid-template-rows: 1fr; opacity: 1; }
+  .cx-tile.ig-open .cx-app-ig > div { padding-top: 14px; }
+  .cx-app-ig .cx-ig-num { color: #fff; font-size: 20px; }
+  .cx-app-ig .cx-wa-digits { padding: .12em 0; }
+  .cx-app-ig .cx-wa-ico { transition: opacity .6s ease, transform .9s cubic-bezier(.22, 1, .36, 1) !important; }
+  .cx-app-ig .cx-wa-digits span { transition: opacity .6s ease, transform .7s cubic-bezier(.22, 1, .36, 1), filter .6s ease !important; }
+  /* fechado: tudo escondido, sem esperar */
+  .cx-tile:not(.ig-open) .cx-app-ig .cx-wa-ico { opacity: 0 !important; transform: scale(.7) rotate(-12deg) !important; transition-delay: 0s !important; transition-duration: .25s !important; }
+  .cx-tile:not(.ig-open) .cx-app-ig .cx-wa-digits span { opacity: 0 !important; transform: translateY(.35em) !important; filter: blur(3px); transition-delay: 0s !important; transition-duration: .25s !important; }
+  /* aberto: ícone e letras entram em sequência, um perfil depois do outro */
+  .cx-tile.ig-open .cx-app-ig .cx-wa-ico { opacity: 1 !important; transform: none !important; transition-delay: calc(.3s + var(--row) * .18s) !important; }
+  .cx-tile.ig-open .cx-app-ig .cx-wa-digits span { opacity: 1 !important; transform: none !important; filter: none; transition-delay: calc(.4s + var(--d) * 26ms) !important; }
+  .cx-tile.ig-open .cx-app-go { background: rgba(255, 255, 255, .9); color: #111; }
+  /* aberto: o degradê sobe junto, para os perfis ficarem legíveis sobre a imagem */
+  .cx-app::before {
+    content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0; pointer-events: none; transition: opacity .8s ease;
+    background: linear-gradient(to bottom, rgba(var(--tint), 0) 12%, rgba(var(--tint), .82) 36%, rgb(var(--tint)) 56%);
+  }
+  .cx-tile.ig-open .cx-app::before { opacity: 1; }
+  .cx-app { isolation: isolate; }
+}
