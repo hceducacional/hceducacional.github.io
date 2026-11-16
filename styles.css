@@ -1938,6 +1938,10 @@ body.modal-open { overflow: hidden; }
 .us-pill.info svg { width: 13px; height: 13px; }
 .us-info-btn.on { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
 .us-info-btn.on:hover { background: #333; }
+.us-pill.ped { display: inline-flex; align-items: center; gap: 5px; background: #e6f7ef; color: #047857; }
+.us-pill.ped svg { width: 13px; height: 13px; }
+.us-ped-btn.on { background: #047857; color: #fff; border-color: #047857; }
+.us-ped-btn.on:hover { background: #065f46; }
 .us-actions { display: flex; align-items: center; gap: 4px; }
 .us-actions .btn-dark.sm, .us-actions .btn-soft.sm { height: 34px; padding: 0 14px; font-size: 13.5px; margin-right: 4px; }
 .us-actions .icon-btn:not(.danger):hover { background: var(--line-soft); color: var(--ink); }
@@ -3968,3 +3972,57 @@ html.lk-lock, html.lk-lock body { overflow: hidden; }
   .ag-mine { grid-column: 1 / -1; margin-top: 56px; }
   .am-list { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); }
 }
+
+/* =========================================================
+   Setor pedagógico: aviso ao vivo no lugar do nome do instituto (pedagogico.js)
+   ========================================================= */
+.pd { display: none; flex: 1; min-width: 0; }
+@media (min-width: 861px) { .tb-title { transition: opacity .3s ease, transform .4s var(--ease), filter .3s ease; } }
+.topbar.pd-out .tb-title { opacity: 0; transform: translateX(-12px); filter: blur(4px); }
+.topbar.pd-on .tb-title { display: none; }
+.topbar.pd-on .pd { display: flex; align-items: center; }
+.pd-pill {
+  position: relative; display: flex; align-items: center; gap: 10px;
+  max-width: 100%; height: 44px; padding: 0 6px 0 5px; border-radius: 999px;
+  background: linear-gradient(90deg, #047857, #10b981 60%, #34d399);
+  box-shadow: 0 0 18px -2px rgba(16, 185, 129, .55), inset 0 0 0 1px rgba(255, 255, 255, .14);
+  color: #fff; text-decoration: none; overflow: hidden;
+  animation: pdGrow .7s var(--ease) both;
+}
+.pd-pill.link { cursor: pointer; }
+.pd-pill.link:hover { box-shadow: 0 0 24px 0 rgba(16, 185, 129, .65), inset 0 0 0 1px rgba(255, 255, 255, .24); }
+.pd-pill::after { /* brilho que passa uma vez quando a pílula abre */
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .35) 50%, transparent 70%);
+  transform: translateX(-100%); animation: pdShine 1.2s ease .6s both;
+}
+.pd-bell {
+  flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255, 255, 255, .22); animation: pdText .4s ease .35s both;
+}
+.pd-bell svg { width: 18px; height: 18px; transform-origin: 50% 10%; animation: pdRing 1.1s ease .7s 2; }
+.pd-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; animation: pdText .45s ease .45s both; }
+.pd-text b { font-size: 14px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pd-text small { font-size: 11.5px; opacity: .92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pd-count {
+  flex: none; min-width: 26px; height: 26px; padding: 0 8px; margin-left: 4px; border-radius: 999px;
+  display: grid; place-items: center; background: #fff; color: #047857;
+  font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; animation: pdText .4s ease .55s both;
+}
+.pd-go {
+  flex: none; width: 28px; height: 28px; margin-right: 2px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(0, 0, 0, .12); animation: pdText .4s ease .6s both; transition: transform .25s var(--ease), background .25s;
+}
+.pd-go svg { width: 15px; height: 15px; }
+.pd-pill.link:hover .pd-go { transform: translateX(3px); background: rgba(0, 0, 0, .2); }
+.pd-pill { padding-right: 8px; }
+.pd.pd-bump .pd-pill { animation: pdBump .5s var(--ease); }
+.topbar.pd-closing .pd-pill { animation: pdShrink .4s var(--ease) both; }
+@keyframes pdGrow { from { clip-path: inset(0 100% 0 0 round 999px); opacity: .6; } to { clip-path: inset(0 0 0 0 round 999px); opacity: 1; } }
+@keyframes pdShrink { from { clip-path: inset(0 0 0 0 round 999px); opacity: 1; } to { clip-path: inset(0 100% 0 0 round 999px); opacity: 0; } }
+@keyframes pdText { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+@keyframes pdShine { to { transform: translateX(100%); } }
+@keyframes pdRing { 0%, 100% { transform: rotate(0); } 15% { transform: rotate(16deg); } 30% { transform: rotate(-14deg); } 45% { transform: rotate(10deg); } 60% { transform: rotate(-6deg); } 75% { transform: rotate(3deg); } }
+@keyframes pdBump { 0% { transform: scale(1); } 40% { transform: scale(1.04); } 100% { transform: scale(1); } }
+@media (max-width: 860px) { .pd { display: none !important; } }
+@media (prefers-reduced-motion: reduce) { .pd-pill, .pd-pill::after, .pd-bell svg, .pd-text, .pd-count, .pd-go { animation: none !important; } }

@@ -664,7 +664,7 @@ async function agUpdate(a, patch, note) {
   const history = [...(a.history || []), { em: new Date().toISOString(), por: meName(), ...note }];
   const { error } = await sb.from('appointments').update({ ...patch, history }).eq('id', a.id);
   if (error) { toast(authError(error)); return false; }
-  Object.assign(a, patch, { history }); agDraw(); return true;
+  Object.assign(a, patch, { history }); agDraw(); window.pdKick?.(); return true; // atualiza a pílula do setor pedagógico
 }
 /* manda o aviso para o celular do aluno e conta no toast se chegou */
 async function agAvisar(a, tipo, txt) {

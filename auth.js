@@ -117,6 +117,7 @@ async function refreshMe() { await loadProfile(); paintUser(); }
 /* ---------- Barra de cima: nome, e-mail e foto ---------- */
 function paintUser() {
   document.body.classList.toggle('is-admin', isAdmin()); // mostra os itens só de administradores
+  window.pdKick?.(); // aviso ao vivo do setor pedagógico (pedagogico.js)
   const box = $('#tb-user'); if (!box) return;
   if (!sb) { box.innerHTML = ''; return; }
   if (!auth.user) {
@@ -614,7 +615,7 @@ function removeAvatarFile(url) {
 
 /* ---------- Painel mestre: usuários ---------- */
 let usersCache = [], usersFilter = 'all', usersQuery = '';
-const USER_FILTERS = [['all', 'Todos'], ['pending', 'Aguardando'], ['approved', 'Aprovados'], ['blocked', 'Bloqueados'], ['admin', 'Administradores'], ['info', 'Informática']];
+const USER_FILTERS = [['all', 'Todos'], ['pending', 'Aguardando'], ['approved', 'Aprovados'], ['blocked', 'Bloqueados'], ['admin', 'Administradores'], ['ped', 'Pedagógico'], ['info', 'Informática']];
 
 function renderUsers(view) {
   waitAuth(view, async () => {
@@ -654,7 +655,7 @@ async function loadUsers() {
 }
 function drawUsers() {
   const list = $('#us-list'); if (!list) return;
-  const match = (u, f) => f === 'all' || (f === 'admin' ? u.role === 'admin' : f === 'info' ? !!u.informatica : u.status === f);
+  const match = (u, f) => f === 'all' || (f === 'admin' ? u.role === 'admin' : f === 'info' ? !!u.informatica : f === 'ped' ? !!u.pedagogico : u.status === f);
   USER_FILTERS.forEach(([k]) => { const el = document.querySelector(`[data-uc="${k}"]`); if (el) el.textContent = usersCache.filter((u) => match(u, k)).length; });
   const q = fold(usersQuery.trim());
   const rows = usersCache.filter((u) => match(u, usersFilter) && (!q || fold(`${u.name} ${u.email} ${u.username || ''}`).includes(q)));
@@ -671,12 +672,14 @@ function drawUsers() {
       <div class="us-tags">
         <span class="us-pill s-${esc(u.status)}">${esc(STATUS_TXT[u.status])}</span>
         ${u.role === 'admin' ? '<span class="us-pill admin">Administrador</span>' : ''}
+        ${u.pedagogico ? '<span class="us-pill ped"><i data-icon="cap"></i>Setor pedagógico</span>' : ''}
         ${u.informatica ? '<span class="us-pill info"><i data-icon="monitor"></i>Aluno de Informática</span>' : ''}
       </div>
       <div class="us-actions">
         ${u.status !== 'approved' ? `<button class="btn-dark sm" type="button" data-ua="approve"><i data-icon="check"></i>Aprovar</button>` : ''}
         ${u.status !== 'blocked' && u.id !== me ? `<button class="btn-soft sm" type="button" data-ua="block"><i data-icon="lock"></i>Bloquear</button>` : ''}
         <button class="btn-soft sm us-info-btn ${u.informatica ? 'on' : ''}" type="button" data-ua="info" aria-pressed="${!!u.informatica}" title="${u.informatica ? 'Tirar o acesso à Plataforma de Informática' : 'Marcar como aluno de Informática (libera a plataforma)'}"><i data-icon="monitor"></i>Informática</button>
+        <button class="btn-soft sm us-ped-btn ${u.pedagogico ? 'on' : ''}" type="button" data-ua="ped" aria-pressed="${!!u.pedagogico}" title="${u.pedagogico ? 'Tirar do setor pedagógico' : 'Marcar como setor pedagógico (vê os avisos de agendamento no computador)'}"><i data-icon="cap"></i>Pedagógico</button>
         <button class="icon-btn us-at" type="button" data-ua="username" title="${u.username ? 'Trocar' : 'Definir'} o nome de usuário">@</button>
         <button class="icon-btn" type="button" data-ua="reset" title="Enviar link de nova senha por e-mail"><i data-icon="mail"></i></button>
         <button class="icon-btn" type="button" data-ua="setpass" title="Definir uma senha nova"><i data-icon="key"></i></button>
@@ -694,7 +697,7 @@ async function userAction(e) {
     b.disabled = true;
     const { error } = await sb.rpc(fn, args);
     b.disabled = false;
-    if (error) return toast(/informatica/i.test(error.message || '') ? 'Falta atualizar o banco: rode o script 07-alunos-informatica.sql no Supabase.' : authError(error)), false;
+    if (error) return toast(/informatica/i.test(error.message || '') ? 'Falta atualizar o banco: rode o script 07-alunos-informatica.sql no Supabase.' : /pedagogico/i.test(error.message || '') ? 'Falta atualizar o banco: rode o script 15-setor-pedagogico.sql no Supabase.' : authError(error)), false;
     toast(okMsg); await loadUsers(); return true;
   };
   switch (b.dataset.ua) {
@@ -711,6 +714,12 @@ async function userAction(e) {
       const on = !u.informatica;
       if (!on && !(await confirmDialog({ title: `Tirar ${who} da Informática?`, sub: 'A pessoa deixa de entrar direto na Plataforma de Informática pelo banner.', ok: 'Tirar acesso', icon: 'monitor' }))) return;
       return rpc('admin_set_informatica', { target: u.id, value: on }, on ? `${who} agora tem acesso à Plataforma de Informática.` : `${who} não tem mais acesso à Plataforma de Informática.`)
+        .then((ok) => { if (ok && u.id === auth.user.id) refreshMe(); });
+    }
+    case 'ped': {
+      const on = !u.pedagogico;
+      if (!on && !(await confirmDialog({ title: `Tirar ${who} do setor pedagógico?`, sub: 'A pessoa deixa de ver os avisos de agendamento no cabeçalho.', ok: 'Tirar', icon: 'cap' }))) return;
+      return rpc('admin_set_pedagogico', { target: u.id, value: on }, on ? `${who} agora é do setor pedagógico.` : `${who} não é mais do setor pedagógico.`)
         .then((ok) => { if (ok && u.id === auth.user.id) refreshMe(); });
     }
     case 'reset': {
