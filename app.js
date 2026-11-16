@@ -395,7 +395,7 @@ function renderDashboard(view) {
       <h2 class="shelf-title qa-title"><span class="ap-grad">Acesso rápido.</span><span> Portais das instituições parceiras, a um clique.</span></h2>
       <button type="button" class="qa-head" id="qa-head" aria-expanded="false" aria-controls="qa-body">
         <span class="qa-stack" aria-hidden="true">${links.slice(0, 3).map((l, i) => `<span class="qa-dot" style="--i:${i};${l.image ? `background-image:url('${esc(imgUrl(l.image))}')` : `background:linear-gradient(135deg, ${l.c1}, ${l.c2})`}">${l.image ? '' : esc((l.name || '?')[0])}</span>`).join('')}${links.length > 3 ? `<span class="qa-dot qa-more" style="--i:3">+${links.length - 3}</span>` : ''}</span>
-        <span class="qa-txt"><strong>Acesso rápido</strong><small>Toque aqui para entrar na sua plataforma</small></span>
+        <span class="qa-txt"><strong>Acesso rápido</strong><small><span class="qa-mob">Toque aqui para entrar na sua plataforma</span><span class="qa-desk">Clique em uma instituição para entrar na sua plataforma</span></small></span>
         <span class="qa-chev" aria-hidden="true">${CHEV_SVG}</span>
       </button>
       <div class="qa-body" id="qa-body">
@@ -478,15 +478,17 @@ function renderDashboard(view) {
     heads.forEach((h) => stIO.observe(h));
   }
   // Acesso rápido no celular: menu escuro que abre e fecha; ao abrir, os cartões entram em cascata
+  // No computador ele já aparece aberto (dá para recolher na setinha)
   const qa = $('#qa'), qaHead = $('#qa-head');
-  qaHead?.addEventListener('click', () => {
-    const open = !qa.classList.contains('open');
+  const setQa = (open) => {
     qa.classList.toggle('open', open);
     qaHead.setAttribute('aria-expanded', open);
     const ql = $('#quick-links');
     ql.classList.remove('ql-in');
     if (open && !reduceMotion()) { void ql.offsetWidth; ql.classList.add('ql-in'); }
-  });
+  };
+  if (qa && matchMedia('(min-width: 861px)').matches) setQa(true);
+  qaHead?.addEventListener('click', () => setQa(!qa.classList.contains('open')));
   $('#quick-links')?.addEventListener('click', (e) => {
     const a = e.target.closest('[data-empty]'); if (!a) return;
     e.preventDefault();
