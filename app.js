@@ -2844,6 +2844,7 @@ function route() {
   else if (TITLES[r]) renderPlaceholder(view, r);
   else renderDashboard(view);
   window.scrollTo(0, 0);
+  window.pushBanner?.(); // aviso para ativar as notificações (Agendar e Indicar)
 }
 
 window.addEventListener('hashchange', route);

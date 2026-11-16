@@ -373,7 +373,6 @@ function agSuccess(a) {
           <div><dt>Faculdade</dt><dd>${esc(a.college)}</dd></div>
         </dl>
       </div>
-      <div class="ag-push" id="ag-push"></div>
       <p class="ag-small">Envie o agendamento para o suporte no WhatsApp para concluir.</p>
       <div class="ag-done-actions">
         <a class="ag-submit ag-wa" href="${esc(wa)}" target="_blank" rel="noopener">${WA_SVG}Enviar para o suporte no WhatsApp</a>
@@ -382,7 +381,6 @@ function agSuccess(a) {
     </div>`; });
   if (box.classList.contains('expanded')) box.scrollTo({ top: 0, behavior: 'smooth' }); else box.scrollIntoView({ behavior: 'smooth', block: 'start' });
   $('#ag-new').addEventListener('click', () => { agExpand(false, true); route(); }); // recomeça o assistente na etapa 1
-  paintPushCard($('#ag-push'), { compact: true }); // oferece os avisos de confirmação no celular
   window.open(wa, '_blank', 'noopener'); // tenta abrir o WhatsApp sozinho; se o navegador bloquear, fica o botão
 }
 

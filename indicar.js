@@ -136,11 +136,8 @@ async function refLoadMine(id) {
         </div>`}
       </div>
     </section>
-    <section class="rf-card rf-in rf-push" id="rf-push" style="--d:${done ? 2 : 1}" hidden></section>
     <div class="rf-in" style="--d:${done ? 2 : 1}">${refSteps()}</div>`;
   paintIcons(body);
-  // oferece os avisos no celular só para quem ainda não ativou
-  pushState().then((st) => { const el = $('#rf-push'); if (!el || st === 'on' || st === 'unsupported') return; el.hidden = false; paintPushCard(el, { compact: true }); });
 }
 
 /* ---------- Painel dos administradores ---------- */

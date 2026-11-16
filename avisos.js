@@ -155,3 +155,55 @@ async function paintPushCard(el, { compact } = {}) {
     paintPushCard(el, { compact });
   };
 }
+
+/* ---------- aviso discreto abaixo da barra do relógio (Agendar e Indicar) ----------
+   Pede para o aluno ativar os avisos. Só tem "Ativar" e fechar. Some de vez quando ele
+   ativa; se fechar, fica escondido por PB_PAUSA e depois volta a aparecer. */
+const PB_PARA = { agendar: 'do agendamento', indicar: 'das indicações' };
+const PB_KEY = 'hc-avisos-fechado';
+const PB_PAUSA = 24 * 60 * 60 * 1000; // fechou: volta a aparecer depois de 1 dia
+const pbClosed = () => { try { return Date.now() - Number(localStorage.getItem(PB_KEY) || 0) < PB_PAUSA; } catch { return false; } };
+function pbHide(el = document.getElementById('pb')) {
+  if (!el || el.classList.contains('out')) return;
+  el.classList.add('out');
+  setTimeout(() => el.remove(), 380);
+}
+async function pushBanner() {
+  const page = () => (location.hash || '').slice(1);
+  const r = page();
+  if (!PB_PARA[r] || pbClosed() || !auth.ready || !sb) return pbHide();
+  const st = auth.user ? await pushState() : 'login';
+  if (page() !== r) return; // a pessoa já trocou de página
+  if (st === 'on' || st === 'unsupported') return pbHide();
+  const txt = {
+    off: `<strong>Ative os avisos</strong> de confirmação ${PB_PARA[r]}.`,
+    login: `<strong>Entre e ative os avisos</strong> ${PB_PARA[r]}.`,
+    'ios-install': `<strong>Instale o site</strong> para receber os avisos.`,
+    denied: `<strong>Avisos bloqueados.</strong> Libere para receber.`,
+  }[st];
+  let el = document.getElementById('pb');
+  if (el?.classList.contains('out')) { el.remove(); el = null; }
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'pb'; el.className = 'pb'; el.setAttribute('role', 'status');
+    document.getElementById('topbar-wrap')?.append(el);
+    el.addEventListener('click', async (e) => {
+      if (e.target.closest('[data-pb="x"]')) { try { localStorage.setItem(PB_KEY, String(Date.now())); } catch {} return pbHide(el); }
+      const go = e.target.closest('[data-pb="go"]'); if (!go) return;
+      const s = el.dataset.st;
+      if (s === 'login') return openAuth('login');
+      if (s === 'ios-install') return pushHowTo();
+      if (s === 'denied') return pushBlockedHelp();
+      go.disabled = true;
+      const ok = await pushEnable();
+      go.disabled = false;
+      if (ok) { pbHide(el); pushTest(); }
+    });
+  }
+  el.dataset.st = st;
+  el.innerHTML = `<span class="pb-ico"><i data-icon="bell"></i></span>
+    <span class="pb-txt">${txt}</span>
+    <button class="pb-go" type="button" data-pb="go">Ativar</button>
+    <button class="pb-x" type="button" data-pb="x" aria-label="Fechar aviso"><i data-icon="x"></i></button>`;
+  paintIcons(el);
+}
