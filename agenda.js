@@ -438,7 +438,7 @@ async function agMineLoad() {
 }
 
 /* ---------- painel dos administradores ---------- */
-const agAdm = { list: [], blocked: [], tab: 'agendados', f: { range: 'hoje', d1: '', d2: '', kind: '', shift: '', q: '' }, day: '' };
+const agAdm = { list: [], blocked: [], photos: {}, tab: 'agendados', f: { range: 'hoje', d1: '', d2: '', kind: '', shift: '', q: '' }, day: '' };
 const AG_WD = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 const AG_MS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 const agDayLong = (iso) => { const t = new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }); return t[0].toUpperCase() + t.slice(1); };
@@ -565,6 +565,12 @@ async function agReload() {
   if (a.error) { $('#ag-list') && ($('#ag-list').innerHTML = `<p class="me-loading">${esc(authError(a.error))}</p>`); return; }
   const first = !agAdm.list.length;
   agAdm.list = a.data || []; agAdm.blocked = b.data || [];
+  // fotos de perfil de quem agendou logado (administradores leem os perfis)
+  const ids = [...new Set(agAdm.list.map((x) => x.user_id).filter(Boolean))];
+  if (ids.length) {
+    const { data: ps } = await sb.from('profiles').select('id, avatar_url, avatar_focus').in('id', ids);
+    agAdm.photos = Object.fromEntries((ps || []).filter((p) => p.avatar_url).map((p) => [p.id, p]));
+  }
   if (first && agAdm.tab === 'agendados' && agAdm.list.some((x) => x.status === 'pendente')) agAdm.tab = 'aguardando';
   agDraw();
 }
@@ -639,9 +645,9 @@ function agDraw() {
     <div class="aa-group">
       <h4 class="aa-gh"><span>${agDayLong(g.date)}${g.date === now ? ' · <b>hoje</b>' : ''}</span><small>${g.items.length} ${g.items.length === 1 ? 'aluno' : 'alunos'}</small></h4>
       ${g.items.map((a) => `
-      <div class="aa-row" data-id="${a.id}">
-        <span class="aa-av" style="--a:${a.kind === 'prova' ? '#60a5fa' : '#a78bfa'};--b:${a.kind === 'prova' ? '#2563eb' : '#7c3aed'}">${esc(initials(a.name))}</span>
-        <span class="aa-who"><strong>${esc(a.name)}</strong><small>${esc(a.course)} · ${esc(a.college)} · CPF ${cpfMask(a.cpf)}</small></span>
+      <div class="aa-row ${a.user_id ? 'reg' : 'guest'}" data-id="${a.id}">
+        <span class="aa-av" style="--a:${a.kind === 'prova' ? '#60a5fa' : '#a78bfa'};--b:${a.kind === 'prova' ? '#2563eb' : '#7c3aed'}">${agAdm.photos[a.user_id] ? `<img src="${esc(imgUrl(agAdm.photos[a.user_id].avatar_url))}" alt=""${objPos(agAdm.photos[a.user_id].avatar_focus)}>` : esc(initials(a.name))}${a.user_id ? '<i class="aa-av-badge" title="Aluno com cadastro no site"><i data-icon="check"></i></i>' : ''}</span>
+        <span class="aa-who"><strong>${esc(a.name)}${a.user_id ? '<span class="aa-acc reg"><i data-icon="user"></i>Cadastrado</span>' : '<span class="aa-acc guest">Sem cadastro</span>'}</strong><small>${esc(a.course)} · ${esc(a.college)} · CPF ${cpfMask(a.cpf)}</small></span>
         <span class="aa-when"><span class="ag-tag t-${a.kind}">${AG.kinds[a.kind].short}</span><span class="aa-time"><i data-icon="${a.shift === 'manha' ? 'sun' : 'clock'}"></i>${AG.shifts[a.shift].label} · ${AG.shifts[a.shift].time}</span></span>
         <span class="ag-st s-${a.status}">${AG_STATUS[a.status]}</span>
         <span class="ag-acts">

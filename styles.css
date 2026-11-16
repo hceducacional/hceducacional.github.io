@@ -3018,6 +3018,47 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
 .aa-who { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .aa-who strong { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
 .aa-who small { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* agendamento de aluno com cadastro (logado ao agendar) x de visitante sem conta:
+   cada aluno vira um cartão — verde-escuro em degradê para quem tem cadastro, cinza para quem não tem */
+.aa-row { position: relative; margin-top: 10px; padding: 14px 16px; border: 0; border-radius: 20px; }
+.aa-row:last-child { border-bottom: 0; }
+.aa-av { position: relative; }
+.aa-av > img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.aa-row.reg .aa-av:has(> img) { box-shadow: 0 0 0 2px #6ee7b7, 0 6px 16px -6px rgba(0, 0, 0, .5); }
+
+.aa-row.reg {
+  color: #fff; overflow: hidden; isolation: isolate;
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(52, 211, 153, .35), transparent 55%),
+    linear-gradient(135deg, #064e3b 0%, #065f46 45%, #047857 100%);
+  box-shadow: 0 14px 30px -18px rgba(6, 78, 59, .8), inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+/* metade esquerda (foto e nome) no mesmo preto do Acesso rápido, com corte diagonal e um filete verde-menta na divisa */
+.aa-row.reg::before, .aa-row.reg::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: var(--cut, 41%); pointer-events: none; }
+.aa-row.reg::before { z-index: -1; background: radial-gradient(90% 120% at 0% 0%, rgba(255, 255, 255, .07), transparent 60%), linear-gradient(135deg, #1c1c1e, #161617 60%, #0f0f10); clip-path: polygon(0 0, 100% 0, calc(100% - 40px) 100%, 0 100%); }
+.aa-row.reg::after { z-index: -2; left: 3px; background: linear-gradient(180deg, #a7f3d0, #34d399 60%, #10b981); clip-path: polygon(0 0, 100% 0, calc(100% - 40px) 100%, 0 100%); filter: blur(.3px); }
+.aa-row.reg .aa-av { width: 46px; height: 46px; font-size: 15px; background: rgba(255, 255, 255, .14); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .35); backdrop-filter: blur(6px); }
+.aa-row.reg .aa-who strong { font-size: 18px; font-weight: 700; letter-spacing: -.01em; color: #fff; text-shadow: 0 1px 10px rgba(0, 0, 0, .18); }
+.aa-row.reg .aa-who small { color: rgba(236, 253, 245, .72); }
+.aa-row.reg .aa-time, .aa-row.reg .aa-time i { color: rgba(236, 253, 245, .9); }
+.aa-row.reg .icon-btn { color: rgba(255, 255, 255, .85); background: rgba(255, 255, 255, .1); }
+.aa-row.reg .icon-btn:hover { background: rgba(255, 255, 255, .2); color: #fff; }
+.aa-row.reg .btn-soft { background: rgba(255, 255, 255, .12); border-color: transparent; color: #fff; }
+.aa-row.reg .aa-btn.ok { background: #fff; color: #065f46; }
+.aa-row.reg .aa-btn.no { background: rgba(255, 255, 255, .14); color: #fecaca; }
+.aa-av-badge { position: absolute; right: -3px; bottom: -3px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: #34d399; color: #064e3b; box-shadow: 0 0 0 2px #065f46; }
+.aa-av-badge > i { display: inline-flex; width: 11px; height: 11px; }
+.aa-av-badge svg { stroke-width: 3.4; }
+
+.aa-row.guest { background: #ececf0; }
+.aa-row.guest .aa-av { background: #d6d6dc; color: var(--ink-2); }
+.aa-row.guest .aa-who strong { color: var(--ink-2); }
+
+.aa-row.reg .aa-who strong, .aa-row.guest .aa-who strong { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.aa-acc { display: inline-flex; align-items: center; gap: 4px; margin-left: 0; padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; text-shadow: none; }
+.aa-acc > i { display: inline-flex; width: 11px; height: 11px; }
+.aa-acc.reg { color: #064e3b; background: linear-gradient(135deg, #a7f3d0, #6ee7b7); }
+.aa-acc.guest { color: var(--muted); background: rgba(0, 0, 0, .06); }
 .aa-when { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .aa-time { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .aa-time i { width: 15px; height: 15px; display: grid; color: var(--muted); }
@@ -3039,9 +3080,12 @@ html.tab-hidden *, html.tab-hidden *::before, html.tab-hidden *::after,
 @media (max-width: 1200px) { .aa-grid { grid-template-columns: 1fr; } .aa-kpis { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 1000px) {
   .aa-row { grid-template-columns: 42px minmax(0, 1fr) auto; }
+  /* no celular a parte preta fica em cima (foto, nome e situação) e o verde embaixo (botões) */
+  .aa-row.reg::before, .aa-row.reg::after { width: 100%; bottom: auto; height: 100px; clip-path: polygon(0 0, 100% 0, 100% 74%, 0 100%); }
+  .aa-row.reg::after { left: 0; height: 103px; }
   .aa-when { grid-column: 2; }
   .aa-row > .ag-st { grid-column: 3; grid-row: 1; }
-  .aa-row .ag-acts { grid-column: 1 / -1; justify-content: flex-start; padding-left: 56px; }
+  .aa-row .ag-acts { grid-column: 1 / -1; justify-content: flex-start; padding-left: 56px; flex-wrap: wrap; }
 }
 @media (max-width: 860px) {
   .aa-head { flex-direction: column; align-items: flex-start; }
