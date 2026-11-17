@@ -1074,3 +1074,128 @@
   .lr-bands { display: none; } .lr-bg, .lr-rays, .lr-congrats, .lr-score, .lr .avatar.lr-av { opacity: 1; transform: none; } .lr-ribbon, .lr-panel { transform: none; }
   .lr-panel { transform: skewX(10deg); } .lr-code { opacity: .2; } .lr-star { opacity: 1; transform: none; } .lr-num { opacity: 1; transform: skewX(-8deg); } .lr-rstars, .lr-rnum { display: none; } .lr.done .lr-card, .lr.done .lr-acts { opacity: 1; transform: none; }
 }
+
+/* =========================================================
+   Digitação em "máquina de escrever" e a sombra das palavras
+   ========================================================= */
+.lc-line-win { position: relative; }
+.lc-line.roll { text-align: left; }
+.lc-line.roll .lc-line-win { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 80%, transparent); mask-image: linear-gradient(90deg, transparent, #000 14%, #000 80%, transparent); }
+.lc-line.roll .lc-line-text { flex-wrap: nowrap; justify-content: flex-start; max-width: none; white-space: nowrap; will-change: transform; transition: transform .24s cubic-bezier(.22, .9, .3, 1); }
+/* o carro: uma marca fixa onde a próxima letra é batida */
+.lc-line.roll::before { content: ''; position: absolute; z-index: 1; left: calc(24px + (100% - 48px) * .42); bottom: 14px; width: 2px; height: 8px; margin-left: -1px; border-radius: 2px; background: rgba(110, 231, 183, .55); pointer-events: none; }
+
+/* sombra: a letra de verdade em cima de cada F/J */
+/* a frase grande em cima chama a atenção; as teclas F/J (o que se digita de fato) ficam pequenas embaixo.
+   Cada letra vira uma coluna alta, e o realce do cursor pega a letra da frase e a tecla juntas. */
+.lc-line.ghost { padding-top: 30px; padding-bottom: 24px; }
+.lc-line.ghost .lc-ch { min-width: 1.02em; padding: 1.85em .04em 0; font-size: .6em; border-radius: 12px; }
+.lc-line.ghost .lc-ch.cur::after { bottom: -.12em; }
+.lc-ch[data-g]::before { content: attr(data-g); position: absolute; left: 0; right: 0; top: .14em; font: 700 1.62em/1 ui-monospace, "SF Mono", Menlo, Consolas, monospace; text-align: center; letter-spacing: 0; opacity: .92; transition: opacity .15s, color .15s; }
+.lc-ch.l[data-g]::before { color: #b45309; }
+.lc-ch.r[data-g]::before { color: #0e7490; }
+.lc-ch.ok[data-g]::before { opacity: .38; }
+.lc-ch.cur[data-g]::before { opacity: 1; text-shadow: 0 0 20px currentColor; }
+.lc-shell .lc-ch.l[data-g]::before { color: #fcd34d; }
+.lc-shell .lc-ch.r[data-g]::before { color: #67e8f9; }
+.lc-shell .lc-line.ghost .lc-ch { color: rgba(255, 255, 255, .78); }
+.lc-shell .lc-line.ghost .lc-ch.ok { color: rgba(110, 231, 183, .7); text-shadow: none; }
+.lc-shell .lc-line.ghost .lc-ch.cur { background: rgba(255, 255, 255, .14); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .28); color: #fff; }
+.lc-home b.l { color: #d97706; } .lc-home b.r { color: #0891b2; }
+.lc-shell .lc-home b.l { color: #fcd34d; } .lc-shell .lc-home b.r { color: #67e8f9; }
+
+/* apresentação de um desafio novo */
+.lc-apr-tag { font: 700 11px/1 Inter, system-ui, sans-serif !important; letter-spacing: .14em; text-transform: uppercase; color: #059669 !important; }
+.lc-shell .lc-apr-tag { color: #6ee7b7 !important; }
+.lc-apr h3 { margin: 10px 0 8px !important; }
+.lc-apr > p:not(.lc-apr-tag):not(.lc-new-go):not(.lc-apr-key) { max-width: 560px; margin: 0 auto !important; line-height: 1.55; }
+.lc-apr-ex { display: flex; justify-content: center; align-items: flex-end; gap: 4px; margin: 20px 0 10px; font: 700 17px/1 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.lc-apr-ex span { display: grid; justify-items: center; gap: 6px; width: 1.9em; animation: lcUp .45s var(--ease) both; animation-delay: var(--d); }
+.lc-apr-ex small { font: 700 32px/1 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.lc-apr-ex .l { color: #b45309; } .lc-apr-ex .r { color: #0e7490; }
+.lc-shell .lc-apr-ex .l { color: #fcd34d; } .lc-shell .lc-apr-ex .r { color: #67e8f9; }
+.lc-apr-ex i.sp { width: 1.2em; }
+.lc-apr-key { display: flex; justify-content: center; gap: 18px; margin: 4px 0 14px !important; font-size: 13px !important; }
+.lc-apr-key .l { color: #d97706; } .lc-apr-key .r { color: #0891b2; }
+.lc-shell .lc-apr-key .l { color: #fcd34d; } .lc-shell .lc-apr-key .r { color: #67e8f9; }
+.lc-apr-key kbd { font-size: 12px !important; min-width: 1.9em !important; height: 1.7em !important; }
+@media (prefers-reduced-motion: reduce) { .lc-line.roll .lc-line-text { transition: none; } .lc-apr-ex span { animation: none; } }
+
+/* =========================================================
+   Nível concluído: medalha, raios, faíscas, letras subindo e barra da lição
+   ========================================================= */
+.lc-over:has(.lc-cel) { background: radial-gradient(60% 55% at 50% 38%, color-mix(in srgb, var(--c1, #10b981) 38%, transparent), transparent 70%), rgba(8, 10, 12, .74); }
+.lc-over.out { animation: lcCelFade .38s ease forwards; }
+@keyframes lcCelFade { to { opacity: 0; } }
+.lc-cel { position: relative; display: grid; justify-items: center; width: min(440px, 92%); text-align: center; color: #fff; }
+.lc-cel.out { animation: lcCelOut .38s cubic-bezier(.5, 0, .75, 0) forwards; }
+@keyframes lcCelOut { to { opacity: 0; transform: scale(1.08); filter: blur(6px); } }
+
+/* raios girando atrás da medalha */
+.lc-cel-rays { position: absolute; top: 70px; left: 50%; width: 460px; height: 460px; margin: -230px 0 0 -230px; border-radius: 50%; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .09) 0 7deg, transparent 7deg 22deg);
+  -webkit-mask-image: radial-gradient(circle, #000 18%, transparent 62%); mask-image: radial-gradient(circle, #000 18%, transparent 62%);
+  animation: lcCelRaysIn .7s ease both, lcCelSpin 14s linear infinite; }
+@keyframes lcCelRaysIn { from { opacity: 0; transform: scale(.4); } }
+@keyframes lcCelSpin { to { rotate: 360deg; } }
+
+/* medalha */
+.lc-cel-badge { position: relative; width: 140px; height: 140px; display: grid; place-items: center; animation: lcCelBadge .7s cubic-bezier(.18, .89, .32, 1.28) both; }
+@keyframes lcCelBadge { from { opacity: 0; transform: scale(.3) rotate(-20deg); } }
+.lc-cel-badge::before { content: ''; position: absolute; inset: 14px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 28%, rgba(255, 255, 255, .35), transparent 45%), linear-gradient(150deg, #34d399, #0d9488 55%, #0e7490);
+  box-shadow: 0 18px 40px -12px rgba(16, 185, 129, .7), inset 0 -6px 14px rgba(0, 0, 0, .25), inset 0 0 0 1px rgba(255, 255, 255, .25); }
+.lc-cel-badge::after { content: ''; position: absolute; inset: 14px; border-radius: 50%; overflow: hidden; pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, .55) 50%, transparent 65%) -160% 0 / 250% 100% no-repeat; animation: lcCelShine 1.1s ease .75s both; }
+@keyframes lcCelShine { to { background-position: 160% 0; } }
+.lc-cel-badge > svg { position: absolute; inset: 0; width: 100%; height: 100%; rotate: -90deg; }
+.lc-cel-badge circle { fill: none; stroke-width: 5; }
+.lc-cel-badge .trk { stroke: rgba(255, 255, 255, .12); }
+.lc-cel-badge .arc { stroke: #6ee7b7; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; filter: drop-shadow(0 0 6px rgba(110, 231, 183, .8)); animation: lcCelArc .8s cubic-bezier(.65, 0, .35, 1) .25s forwards; }
+@keyframes lcCelArc { to { stroke-dashoffset: 0; } }
+.lc-cel-num { position: relative; font: 800 44px/1 Inter, system-ui, sans-serif; letter-spacing: -.04em; text-shadow: 0 2px 10px rgba(0, 0, 0, .25); animation: lcUp .45s var(--ease) .2s both; }
+.lc-cel-check { position: absolute; right: 8px; bottom: 10px; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: #fff; box-shadow: 0 8px 18px -6px rgba(0, 0, 0, .5);
+  animation: lcPop .45s cubic-bezier(.18, .89, .32, 1.28) .85s both; }
+.lc-cel-check svg { width: 24px; height: 24px; }
+.lc-cel-check path { fill: none; stroke: #059669; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 100; stroke-dashoffset: 100; animation: lcCelArc .35s ease 1.05s forwards; }
+
+/* faíscas que estouram para fora da medalha */
+.lc-cel-spark { position: absolute; left: 50%; top: 50%; width: var(--s); height: var(--s); margin: calc(var(--s) / -2); border-radius: 50%; opacity: 0;
+  background: radial-gradient(circle, #fff, #fde68a 45%, rgba(251, 191, 36, 0) 70%); box-shadow: 0 0 10px #fbbf24;
+  animation: lcCelSpark .9s cubic-bezier(.15, .8, .3, 1) .8s both; }
+.lc-cel-spark:nth-of-type(3n) { background: radial-gradient(circle, #fff, #a7f3d0 45%, rgba(52, 211, 153, 0) 70%); box-shadow: 0 0 10px #34d399; }
+.lc-cel-spark:nth-of-type(3n+1) { background: radial-gradient(circle, #fff, #a5f3fc 45%, rgba(34, 211, 238, 0) 70%); box-shadow: 0 0 10px #22d3ee; }
+@keyframes lcCelSpark {
+  0% { opacity: 0; transform: rotate(var(--a)) translateY(0) scale(.4); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(var(--r) * -1)) scale(1); }
+}
+
+/* "Parabéns!" letra por letra, com brilho passando */
+.lc-cel-title { display: flex; justify-content: center; margin: 18px 0 0; font: 800 clamp(34px, 3.4vw, 46px)/1.05 Inter, system-ui, sans-serif; letter-spacing: -.035em; }
+.lc-cel-title span { display: inline-block; background: linear-gradient(100deg, #6ee7b7 0%, #fff 45%, #67e8f9 100%) 0 0 / 300% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  animation: lcCelLetter .6s cubic-bezier(.18, .89, .32, 1.28) calc(.35s + var(--i) * 45ms) both, lcCelGrad 2.4s ease-in-out 1s infinite alternate; }
+@keyframes lcCelLetter { from { opacity: 0; transform: translateY(26px) rotate(8deg) scale(.6); filter: blur(4px); } }
+@keyframes lcCelGrad { to { background-position: 100% 0; } }
+.lc-cel-sub { margin: 8px 0 0; font: 600 15px/1.3 Inter, system-ui, sans-serif; letter-spacing: .02em; color: rgba(255, 255, 255, .72); animation: lcUp .5s var(--ease) .7s both; }
+
+.lc-cel-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; animation: lcUp .5s var(--ease) .85s both; }
+.lc-cel-chips span { padding: 7px 14px; border-radius: 999px; background: rgba(255, 255, 255, .1); box-shadow: inset 0 0 0 .5px rgba(255, 255, 255, .22); font: 600 13px/1.2 Inter, system-ui, sans-serif; color: rgba(255, 255, 255, .8); font-variant-numeric: tabular-nums; }
+.lc-cel-chips .pts { background: linear-gradient(135deg, rgba(251, 191, 36, .28), rgba(245, 158, 11, .14)); box-shadow: inset 0 0 0 .5px rgba(253, 230, 138, .5); color: #fde68a; }
+.lc-cel-chips .pts b { font-weight: 800; color: #fff; }
+
+/* o que vem a seguir + a barra da lição avançando */
+.lc-cel-next { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 4px 12px; width: 100%; margin-top: 22px; padding: 14px 16px 16px; border-radius: 16px; text-align: left;
+  background: rgba(255, 255, 255, .06); box-shadow: inset 0 0 0 .5px rgba(255, 255, 255, .14); animation: lcUp .55s var(--ease) 1.05s both; }
+.lc-cel-next small { grid-column: 1 / -1; font: 700 10.5px/1 Inter, system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: #6ee7b7; }
+.lc-cel-next strong { font: 700 15px/1.3 Inter, system-ui, sans-serif; color: #fff; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lc-cel-of { font: 600 12px/1.3 Inter, system-ui, sans-serif; color: rgba(255, 255, 255, .55); font-variant-numeric: tabular-nums; }
+.lc-cel-bar { grid-column: 1 / -1; position: relative; height: 6px; margin-top: 6px; border-radius: 6px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+.lc-cel-bar b { position: absolute; inset: 0 auto 0 0; width: var(--from); border-radius: inherit; background: linear-gradient(90deg, #10b981, #22d3ee); box-shadow: 0 0 12px rgba(34, 211, 238, .6);
+  animation: lcCelBar .9s cubic-bezier(.65, 0, .35, 1) 1.35s forwards; }
+@keyframes lcCelBar { to { width: var(--to); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .lc-cel-rays, .lc-cel-spark { display: none; }
+  .lc-cel *, .lc-cel { animation-duration: .01s !important; animation-delay: 0s !important; }
+}

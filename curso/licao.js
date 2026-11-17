@@ -616,11 +616,57 @@
       const over = $q('#lc-over'); const n = st.lvl + 1;
       st.lvl++;
       if (!best) saveProgress(L.id, { ...st, done: false }); // refazendo: o recorde salvo fica intacto até o fim
-      over.hidden = false; over.innerHTML = `<div class="lc-done"><h3 class="lc-pop">Parabéns!</h3><p>+${Math.round(pts).toLocaleString('pt-BR')} pontos</p></div>`;
-      await sleep(1100); if (!alive || !over.isConnected) return;
-      over.innerHTML = `<h3 class="lc-pop sub">Nível ${n} concluído</h3>`;
-      await sleep(1100); if (!alive || !over.isConnected) return;
+      await celebrate(over, n, pts, st.levelTimes[n - 1]);
+      if (!alive || !over.isConnected) return;
       level();
+    }
+
+    /* ---------- nível concluído ----------
+       Medalha com o número do nível: o anel se desenha, o check aparece, raios giram atrás e faíscas estouram;
+       a frase de parabéns sobe letra por letra, os pontos contam e a barra da lição avança até o próximo nível. */
+    const CHEERS = ['Parabéns!', 'Mandou bem!', 'Excelente!', 'Isso aí!', 'Arrasou!', 'Muito bem!'];
+    async function celebrate(over, n, pts, secs) {
+      const nn = String(n).padStart(2, '0');
+      const next = L.niveis[n];
+      const cheer = CHEERS[(n * 7 + Math.floor(Math.random() * 3)) % CHEERS.length];
+      const nextTxt = next ? esc(next.titulo) : 'Resultado da lição';
+      const nextTag = !next ? 'Você chegou ao fim' : next.tipo === 'typing' ? 'A seguir' : 'A seguir · minijogo';
+      over.hidden = false;
+      over.innerHTML = `
+        <div class="lc-cel" role="status" aria-live="polite">
+          <div class="lc-cel-rays" aria-hidden="true"></div>
+          <div class="lc-cel-badge" aria-hidden="true">
+            <svg viewBox="0 0 120 120"><circle class="trk" cx="60" cy="60" r="52"/><circle class="arc" cx="60" cy="60" r="52" pathLength="100"/></svg>
+            <span class="lc-cel-num">${nn}</span>
+            <span class="lc-cel-check"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9" pathLength="100"/></svg></span>
+            ${Array.from({ length: 14 }, (_, i) => `<i class="lc-cel-spark" style="--a:${i * (360 / 14) + (i % 2) * 8}deg;--r:${i % 2 ? 92 : 118}px;--s:${i % 3 ? 6 : 9}px"></i>`).join('')}
+          </div>
+          <h3 class="lc-cel-title">${[...cheer].map((c, i) => `<span style="--i:${i}">${c === ' ' ? '&nbsp;' : esc(c)}</span>`).join('')}</h3>
+          <p class="lc-cel-sub">Nível ${nn} concluído</p>
+          <div class="lc-cel-chips">
+            <span class="pts"><b id="lc-cel-pts">+0</b> pontos</span>
+            ${secs ? `<span>${fmt(secs)} no nível</span>` : ''}
+          </div>
+          <div class="lc-cel-next">
+            <small>${nextTag}</small>
+            <strong>${nextTxt}</strong>
+            <i class="lc-cel-bar" style="--from:${((n - 1) / N) * 100}%;--to:${(n / N) * 100}%"><b></b></i>
+            <span class="lc-cel-of">${n} de ${N}</span>
+          </div>
+        </div>`;
+      // os pontos contam até o total do nível
+      const el = $q('#lc-cel-pts'), total = Math.round(pts), t0 = performance.now() + 450;
+      const run = (t) => {
+        if (!el.isConnected) return;
+        const k = Math.min(1, Math.max(0, (t - t0) / 800)), e = 1 - (1 - k) ** 3;
+        el.textContent = `+${Math.round(total * e).toLocaleString('pt-BR')}`;
+        if (k < 1) requestAnimationFrame(run);
+      };
+      requestAnimationFrame(run);
+      await sleep(2500); if (!alive || !over.isConnected) return;
+      over.querySelector('.lc-cel')?.classList.add('out'); over.classList.add('out');
+      await sleep(380);
+      over.classList.remove('out');
     }
 
     /* ---------- DIGITAÇÃO ---------- */
@@ -645,22 +691,68 @@
         kbTarget('enter');
       };
     }
+    /* apresentação de um jeito novo de treinar (ex.: "A sombra das palavras") → Enter para começar */
+    function apresentaInit(lv) {
+      const a = lv.apresenta;
+      game.intro = 'found';
+      $q('#lc-stage').innerHTML = `
+        <div class="lc-new ok lc-apr">
+          <p class="lc-apr-tag">${esc(a.tag || 'Novo desafio')}</p>
+          <h3>${esc(a.titulo)}</h3>
+          <p>${esc(a.texto)}</p>
+          ${a.exemplo ? `<div class="lc-apr-ex" aria-hidden="true">${[...a.exemplo.sombra].map((c, i) => c === ' ' ? '<i class="sp"></i>' : `<span class="${a.exemplo.texto[i] === 'f' ? 'l' : 'r'}" style="--d:${i * 70}ms"><small>${esc(c)}</small>${a.exemplo.texto[i]}</span>`).join('')}</div>
+          <p class="lc-apr-key"><span class="l">Mão esquerda → <kbd>F</kbd></span><span class="r">Mão direita → <kbd>J</kbd></span></p>` : ''}
+          <p class="lc-new-go">Pressione <kbd>Enter</kbd> para começar</p>
+        </div>`;
+      kbTarget('enter');
+    }
     function typingInit(lv) {
       if (lv.nova && !game.introDone) return introInit(lv);
+      if (lv.apresenta && !game.introDone) return apresentaInit(lv);
       game.intro = null; game.t0 = 0;
       game.pos = 0; game.text = lv.texto;
-      // o texto numa linha só; o cursor avança a cada tecla certa
+      const g = lv.sombra || ''; // a frase de verdade por trás do ritmo (uma letra por tecla)
+      // máquina de escrever: o texto numa linha só que corre para a esquerda, mantendo o cursor no mesmo lugar
       $q('#lc-stage').innerHTML = `
-        <div class="lc-line">
-          <div class="lc-line-text">${[...lv.texto].map((c, i) => `<span class="lc-ch${c === ' ' ? ' sp' : ''}" data-i="${i}">${c === ' ' ? '&nbsp;' : esc(c)}</span>`).join('')}</div>
+        <div class="lc-line${g ? ' ghost' : ''}" id="lc-line">
+          <div class="lc-line-win"><div class="lc-line-text" id="lc-line-text">${[...lv.texto].map((c, i) => `<span class="lc-ch${c === ' ' ? ' sp' : g ? (c === 'f' ? ' l' : ' r') : ''}" data-i="${i}"${g && c !== ' ' ? ` data-g="${esc(g[i])}"` : ''}>${c === ' ' ? '&nbsp;' : esc(c)}</span>`).join('')}</div></div>
           <span class="lc-start-tip" id="lc-start-tip">Comece a digitar</span>
         </div>
-        <p class="lc-home">Volte os dedos para a posição inicial <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd> – <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>Ç</kbd> depois de cada tecla</p>`;
-      typingPaint();
+        <p class="lc-home">${g ? 'Letra da <b class="l">mão esquerda</b> → <kbd>F</kbd> · letra da <b class="r">mão direita</b> → <kbd>J</kbd> · entre as palavras, <kbd>Espaço</kbd>' : 'Volte os dedos para a posição inicial <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd> – <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>Ç</kbd> depois de cada tecla'}</p>`;
+      game.chs = [...view.querySelectorAll('#lc-line-text .lc-ch')];
+      typeMeasure();
+      game.chs[0]?.classList.add('cur');
+      kbTarget(game.text[0] ?? null);
+      if (!game.onResize) {
+        const mine = game, fn = () => { if (game !== mine || !mine.chs?.[0]?.isConnected) return removeEventListener('resize', fn); typeMeasure(); };
+        game.onResize = fn; addEventListener('resize', fn);
+      }
+    }
+    /* mede uma vez onde cada letra fica; se o texto não cabe, liga o modo "máquina de escrever" */
+    function typeMeasure() {
+      const line = $q('#lc-line'), strip = $q('#lc-line-text'); if (!line || !strip) return;
+      line.classList.remove('roll'); strip.style.transform = '';
+      const win = strip.parentElement.clientWidth;
+      game.roll = strip.scrollWidth > win - 8;
+      line.classList.toggle('roll', game.roll);
+      game.win = win;
+      game.mid = game.chs.map((el) => el.offsetLeft + el.offsetWidth / 2);
+      typeScroll(true);
+    }
+    function typeScroll(instant) {
+      if (!game.roll) return;
+      const strip = $q('#lc-line-text'); if (!strip) return;
+      const x = game.mid[Math.min(game.pos, game.mid.length - 1)] ?? 0;
+      const anchor = game.win * 0.42; // o cursor fica parado um pouco antes do meio, como o carro de uma máquina de escrever
+      strip.style.transition = instant ? 'none' : '';
+      strip.style.transform = `translate3d(${Math.round(anchor - x)}px,0,0)`;
     }
     function typingPaint() {
-      view.querySelectorAll('.lc-ch').forEach((el, i) => { el.classList.toggle('ok', i < game.pos); el.classList.toggle('cur', i === game.pos); });
-      if (game.pos > 0) $q('#lc-start-tip')?.remove();
+      const prev = game.chs[game.pos - 1], cur = game.chs[game.pos];
+      prev?.classList.remove('cur'); prev?.classList.add('ok');
+      cur?.classList.add('cur');
+      if (game.pos === 1) $q('#lc-start-tip')?.remove();
+      typeScroll();
       kbTarget(game.text[game.pos] ?? null);
     }
     function typingKey(k) {
