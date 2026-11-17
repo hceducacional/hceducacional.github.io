@@ -373,8 +373,64 @@
     const GOALS = [...STAR_AT, SUPER_AT, MEGA_AT];
     const BAR_COLORS = ['#ffc400', '#ff4f9a', '#22d3ee', '#a3e635', '#ff8a00', '#a78bfa', '#34d399', '#f43f5e']; // sorteada a cada vez que a lição começa
     const gPct = (v) => Math.min(100, (v / G_TOP) * 100);
+    /* feixes da reta final: depois da 5ª estrela, feixes finos sobem pela barra rumo ao Superstar
+       (e depois ao Megastar). Cada um tem a sua velocidade, então uns passam pelos outros; quanto mais
+       perto da meta, mais feixes aparecem e mais rápido todos sobem. Só transform/opacity, animados pela
+       placa de vídeo (Web Animations); a velocidade muda com playbackRate, que não faz o feixe pular. */
+    const STREAKS = [ // x/w em px; h = comprimento do feixe em % da barra; d = segundos por volta; f = onde começa; o = brilho
+      { x: 6, w: 2, h: 16, d: 2.6, f: 0.1, o: 0.9 }, { x: 33, w: 3, h: 10, d: 1.9, f: 0.55, o: 0.8 },
+      { x: 19, w: 2, h: 20, d: 3.2, f: 0.8, o: 0.95 }, { x: 40, w: 2, h: 13, d: 2.2, f: 0.3, o: 0.75 },
+      { x: 12, w: 3, h: 9, d: 1.6, f: 0.65, o: 0.9 }, { x: 26, w: 4, h: 18, d: 2.9, f: 0.2, o: 0.7 },
+      { x: 3, w: 2, h: 12, d: 2.0, f: 0.9, o: 0.85 }, { x: 37, w: 3, h: 15, d: 2.4, f: 0.45, o: 0.9 },
+    ];
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function chargeOf(pts) {
+      if (pts >= MEGA_AT) return null;
+      if (pts >= SUPER_AT) return { to: 'mega', t: (pts - SUPER_AT) / (MEGA_AT - SUPER_AT) };
+      const five = STAR_AT[STAR_AT.length - 1];
+      if (pts >= five) return { to: 'super', t: (pts - five) / (SUPER_AT - five) };
+      return null;
+    }
+    function streaksRun(t, quiet) {
+      const box = $q('#lc-gstreaks'); if (!box || reduceMotion) return;
+      const els = [...box.children];
+      if (!gs.anims) gs.anims = els.map((el, i) => {
+        const k = STREAKS[i];
+        return el.animate([{ transform: `translate3d(0,${k.h}%,0)` }, { transform: 'translate3d(0,-100%,0)' }],
+          { duration: k.d * 1000, delay: -k.d * 1000 * k.f, iterations: Infinity, easing: 'linear' });
+      });
+      box.classList.add('run');
+      const e = t * t * (3 - 2 * t); // sobe devagar no começo e acelera de forma lisa
+      const rate = 1 + e * 3.6; // até ~4,6× mais rápido perto da meta
+      gs.anims.forEach((a) => (a.updatePlaybackRate ? a.updatePlaybackRate(rate) : (a.playbackRate = rate)));
+      const show = 2 + Math.round(e * (els.length - 2)); // de 2 a 8 feixes
+      els.forEach((el, i) => el.classList.toggle('on', i < show));
+    }
+    function streaksStop(final) {
+      const box = $q('#lc-gstreaks'); if (!box || !gs.anims) return;
+      if (final) { gs.anims.forEach((a) => (a.updatePlaybackRate ? a.updatePlaybackRate(7) : (a.playbackRate = 7))); [...box.children].forEach((el) => el.classList.add('on')); }
+      clearTimeout(gs.stopT);
+      gs.stopT = setTimeout(() => {
+        box.classList.remove('run');
+        setTimeout(() => { if (box.classList.contains('run')) return; gs.anims?.forEach((a) => a.cancel()); gs.anims = null; }, 600);
+      }, final ? 650 : 0);
+    }
+    /* a barra vai ganhando a cor da próxima conquista; ao chegar, ela se enche num brilho e o brilho assenta */
+    function gaugeCharge(pts, quiet) {
+      const c = chargeOf(pts), rank = rankOf(pts);
+      const ts = $q('#lc-gtint-s'), tm = $q('#lc-gtint-m'); if (!ts) return;
+      ts.style.opacity = rank ? 1 : c ? (c.t * 0.5).toFixed(3) : 0;
+      if (!gs.megaLock) tm.style.opacity = rank === 'mega' ? 1 : c?.to === 'mega' ? (c.t * 0.5).toFixed(3) : 0;
+      if (!c) return;
+      if (performance.now() < (gs.hold || 0)) return; // logo depois de chegar no Superstar, os feixes descansam um pouco
+      streaksRun(c.t, quiet);
+    }
+    function gaugeArrive(g, rank) {
+      g.classList.remove('arrive-super', 'arrive-mega'); void g.offsetWidth; g.classList.add('arrive-' + rank);
+      setTimeout(() => g.classList.remove('arrive-' + rank), 2200);
+    }
     function gaugeBuild() {
-      Object.assign(gs, { stars: 0, rank: '', ready: false });
+      Object.assign(gs, { stars: 0, rank: '', ready: false, anims: null, hold: 0, megaLock: false });
       const g = $q('#lc-gauge'); if (!g) return;
       g.className = 'lc-gauge';
       g.style.setProperty('--bar', BAR_COLORS[Math.floor(Math.random() * BAR_COLORS.length)]);
@@ -382,7 +438,8 @@
         <div class="lc-g-code" aria-hidden="true">${typeof infoBgRows === 'function' ? infoBgRows(8) : ''}</div>
         <div class="lc-g-area">
           <div class="lc-g-frame" id="lc-gframe"></div>
-          <div class="lc-g-bar" id="lc-gbar"><i class="lc-g-shine"></i><b class="lc-g-beam" id="lc-gbeam"></b></div>
+          <div class="lc-g-halo" id="lc-ghalo"></div>
+          <div class="lc-g-bar" id="lc-gbar"><i class="lc-g-tint s" id="lc-gtint-s"></i><i class="lc-g-tint m" id="lc-gtint-m"></i><i class="lc-g-shine"></i><b class="lc-g-beam" id="lc-gbeam"></b><div class="lc-g-streaks" id="lc-gstreaks">${STREAKS.map((k) => `<i style="left:${k.x}px;width:${k.w}px;--sh:${k.h}%;--so:${k.o}"></i>`).join('')}</div><i class="lc-g-glow" id="lc-gglow"></i></div>
           ${STAR_AT.map((t, i) => `<span class="lc-g-star" data-gs="${i}" style="--at:${gPct(t)}%;--i:${i}"><img class="lc-g-edge" src="assets/estrelas/estrela-amarela.png" alt="" draggable="false">${['vazia', 'amarela', 'superstar', 'megastar'].map((k) => `<img class="s-${k}" src="assets/estrelas/estrela-${k}.png" alt="" draggable="false">`).join('')}</span>`).join('')}
           <div class="lc-g-word" id="lc-gword"></div>
           <div class="lc-g-flash" id="lc-gflash"></div>
@@ -411,6 +468,7 @@
       const g = $q('#lc-gauge'); if (!g) return;
       const pts = Math.round(totalPts()), quiet = !gs.ready; // ao abrir/retomar, mostra o estado sem animar
       $q('#lc-gbar').style.height = `${gPct(pts)}%`;
+      $q('#lc-ghalo').style.height = `${gPct(pts)}%`;
       $q('#lc-gpts').textContent = pts.toLocaleString('pt-BR');
       const next = GOALS.find((t) => t > pts);
       $q('#lc-gframe').style.height = `${next ? gPct(next) : 100}%`; // a moldura cresce até a próxima meta
@@ -425,13 +483,22 @@
           setTimeout(() => el.classList.remove('pop'), 1100);
         }
       });
+      g.classList.toggle('starred', stars > 0); // o número ganha a cor da conquista: branco → dourado → Superstar → Megastar
+      if (!quiet && stars > gs.stars) replay($q('#lc-gpts'), 'hit');
       gs.stars = stars;
       const rank = rankOf(pts);
       if (rank !== gs.rank) {
         gs.rank = rank;
         if (quiet) { g.classList.toggle('super', rank === 'super'); g.classList.toggle('mega', rank === 'mega'); wordSet(rank, true); }
-        else rankShow(g, rank);
+        else if (rank === 'super') { // chegou: os feixes somem, a barra se enche de brilho e só depois a corrida recomeça rumo ao Megastar
+          streaksStop(); gs.hold = performance.now() + 2200; rankShow(g, rank); gaugeArrive(g, rank);
+          setTimeout(() => { if (g.isConnected) gaugeCharge(Math.round(totalPts())); }, 2250);
+        } else if (rank === 'mega') { // a última corrida dispara, termina, e então vem o brilho do Megastar
+          gs.megaLock = true; streaksStop(true);
+          setTimeout(() => { gs.megaLock = false; if (!g.isConnected) return; $q('#lc-gtint-m').style.opacity = 1; rankShow(g, rank); gaugeArrive(g, rank); }, 650);
+        } else rankShow(g, rank);
       }
+      gaugeCharge(pts, quiet);
       gs.ready = true;
     }
     function wordSet(rank, instant) {
@@ -1081,10 +1148,18 @@
         el.classList.remove('super', 'mega'); el.classList.add(r);
         word.innerHTML = `<img src="assets/estrelas/titulo-${r === 'mega' ? 'megastar' : 'superstar'}.png" alt="${RANK_NAME[r]}">`; burst.classList.remove('go'); void burst.offsetWidth; burst.classList.add('go');
       };
+      /* desempenho: estrelas e pontos andam com transform (sem recalcular a página a cada quadro); o número só é
+         reescrito quando muda; o número grande (escondido durante a contagem) só recebe o valor no fim */
+      let tw = track.clientWidth, shown = '';
+      const onResize = () => { if (!el.isConnected) return removeEventListener('resize', onResize); tw = track.clientWidth; };
+      addEventListener('resize', onResize);
       const paint = (v) => {
-        num.textContent = rnum.textContent = Math.round(v).toLocaleString('pt-BR');
-        track.style.setProperty('--p', (v / PTS_MAX).toFixed(4)); // estrelas e pontos andam junto com a ponta da barra
-        fill.style.transform = `scaleX(${(v / PTS_MAX).toFixed(4)})`;
+        const txt = Math.round(v).toLocaleString('pt-BR');
+        if (txt !== shown) { shown = txt; rnum.textContent = txt; }
+        const p = v / PTS_MAX;
+        track.style.setProperty('--x', `${(p * tw).toFixed(1)}px`); // estrelas e pontos andam junto com a ponta da barra
+        fill.style.transform = `scaleX(${p.toFixed(4)})`;
+        if (v >= STAR_AT[0] && !el.classList.contains('starred')) el.classList.add('starred'); // o número sai do branco na 1ª estrela
         // cada estrela nova surge na ponta da barra (as antigas vão ficando atrás) e um feixe de brilho corre pela parte cheia
         rstars.forEach((s, i) => { if (v >= STAR_AT[i] && !s.classList.contains('on')) { s.classList.add('on'); beam.classList.remove('go'); void beam.offsetWidth; beam.classList.add('go'); } });
         if (v >= MEGA_AT && !el.classList.contains('mega')) showRank('mega');
@@ -1093,7 +1168,7 @@
       // no fim: as estrelas da barra dão um pulinho e somem encolhendo para trás; só então aparecem no lugar delas, ao lado dos pontos
       const land = () => { el.classList.add('land'); stars.forEach((s, i) => s.classList.toggle('on', pts >= STAR_AT[i])); };
       const finish = () => {
-        paint(pts);
+        paint(pts); num.textContent = shown;
         if (reduce) { land(); el.classList.add('done'); return; }
         const n = starsOf(pts);
         el.classList.add('leave');

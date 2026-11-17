@@ -909,8 +909,8 @@
 .lr-beam.go { animation: lrBeam .95s cubic-bezier(.4, 0, .2, 1) both; }
 @keyframes lrBeam { 0% { opacity: 0; transform: translateX(0); } 15% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; transform: translateX(350%); } }
 /* estrelas e pontos que andam grudados na ponta da barra enquanto ela enche */
-.lr-track { --p: 0; }
-.lr-rstars { position: absolute; top: 50%; right: calc(100% - var(--p) * 100% - 44px); display: flex; transform: translateY(-50%); pointer-events: none; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .3)); }
+.lr-track { --x: 0px; } /* --x = quanto a ponta da barra já andou (posto pelo JS); tudo anda com transform */
+.lr-rstars { position: absolute; top: 50%; right: calc(100% - 44px); display: flex; transform: translate3d(var(--x), -50%, 0); will-change: transform; pointer-events: none; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .3)); }
 /* a estrela nova abre espaço aos poucos na ponta, empurrando as anteriores para trás num deslize suave */
 .lr-rstar { position: relative; flex: none; width: 0; height: 124px; opacity: 0; transform-origin: calc(100% - 62px) 50%; transition: width .6s cubic-bezier(.22, 1, .36, 1), margin-left .6s cubic-bezier(.22, 1, .36, 1); }
 .lr-rstar.on { width: 124px; opacity: 1; animation: lrBStar .8s cubic-bezier(.34, 1.4, .64, 1) both; }
@@ -924,7 +924,7 @@
   background: radial-gradient(closest-side, rgba(255, 255, 255, .95), rgba(255, 236, 150, .5) 45%, rgba(255, 255, 255, 0)); }
 .lr-rstar.on::after { animation: lrFlash .9s ease-out; }
 @keyframes lrBStar { 0% { opacity: 0; transform: scale(.2) rotate(-120deg); } 60% { opacity: 1; transform: scale(1.3) rotate(10deg); } 100% { opacity: 1; transform: none; } }
-.lr-rnum { position: absolute; top: 50%; left: calc(var(--p) * 100% + 60px); transform: translateY(-50%) skewX(-8deg); letter-spacing: -.03em; white-space: nowrap; pointer-events: none; opacity: 0;
+.lr-rnum { position: absolute; top: 50%; left: 60px; transform: translate3d(var(--x), -50%, 0) skewX(-8deg); will-change: transform; letter-spacing: -.03em; white-space: nowrap; pointer-events: none; opacity: 0;
   font-size: 22px; font-weight: 800; letter-spacing: -.01em; font-variant-numeric: tabular-nums; text-shadow: 0 2px 10px rgba(0, 0, 0, .35); transition: opacity .4s ease; }
 .lr.counting .lr-rnum { opacity: 1; }
 /* no fim, estrelas e pontos da barra dão um pulinho e somem encolhendo para trás */
@@ -933,12 +933,12 @@
 @keyframes lrBLeave { 0% { opacity: 1; translate: 0 0; scale: 1; } 35% { opacity: 1; translate: 0 -22px; scale: 1.2; } 100% { opacity: 0; translate: 0 -8px; scale: 0; filter: blur(2px); } }
 /* celular: estrelas um pouco menores (para não cobrir o nome) e os pontos embaixo da barra, à direita */
 @media (max-width: 640px) {
-  .lr-rstars { right: calc(100% - var(--p) * 100% - 36px); }
+  .lr-rstars { right: calc(100% - 36px); }
   .lr-rstar { height: 100px; transform-origin: calc(100% - 50px) 50%; }
   .lr-rstar.on { width: 100px; }
   .lr-rstar.on ~ .lr-rstar.on { margin-left: -55px; }
   .lr-rstar img { width: 100px; height: 100px; }
-  .lr-rnum { top: calc(100% + 26px); left: auto; right: 0; }
+  .lr-rnum { top: calc(100% + 26px); left: auto; right: 0; transform: translateY(-50%) skewX(-8deg); }
   .lr-track { margin-bottom: 40px; }
 }
 .lr-score { display: grid; justify-items: end; gap: 4px; opacity: 0; }
@@ -975,7 +975,12 @@
 .lr.mega .lr-star::after { background: radial-gradient(closest-side, rgba(255, 255, 255, .95), rgba(216, 120, 255, .6) 45%, rgba(255, 255, 255, 0)); }
 @keyframes lrStarUp { 0% { transform: none; } 45% { transform: scale(1.35) rotate(-8deg); } 100% { transform: none; } }
 /* no fim, um brilho suave que pulsa nas estrelas conquistadas */
-.lr.done .lr-star.on img { animation: lrGlow 3s ease-in-out calc(var(--i) * .2s) infinite; }
+/* brilho que pulsa atrás de cada estrela no fim: uma luz própria que só muda de opacidade
+   (antes era um filtro animado nas imagens, que redesenhava as estrelas sem parar) */
+.lr-star::before { content: ""; position: absolute; inset: -16%; border-radius: 50%; pointer-events: none; opacity: 0; will-change: opacity;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, .7), rgba(255, 255, 255, .25) 55%, rgba(255, 255, 255, 0)); }
+.lr.done .lr-star.on::before { animation: lrGlowB 3s ease-in-out calc(var(--i) * .2s) infinite; }
+@keyframes lrGlowB { 50% { opacity: .85; } }
 @keyframes lrGlow { 50% { filter: brightness(1.25) drop-shadow(0 0 6px rgba(255, 255, 255, .7)); } }
 .lr-num { opacity: 0; transform: scale(.4) skewX(-8deg); transition: opacity .6s ease, transform .8s cubic-bezier(.34, 1.4, .64, 1); }
 .lr.land .lr-num { opacity: 1; transform: skewX(-8deg); transition-delay: .5s; }
@@ -1225,3 +1230,65 @@
 /* nos minijogos o cartão muda de cor; as luzes ficam mais suaves */
 .lc-shell .lc-main:has(.lc-kind.game)::before { opacity: .55; }
 @media (prefers-reduced-motion: reduce) { .lc-shell .lc-main::before { animation: none; } }
+
+/* =========================================================
+   Barra de estrelas: reta final rumo ao Superstar / Megastar
+   ========================================================= */
+/* a cor da conquista vai tomando a barra (camadas por cima da cor sorteada; só a opacidade muda) */
+.lc-g-tint { position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity .6s ease; }
+.lc-g-tint.s { background: linear-gradient(0deg, #0284c7, #38bdf8 45%, #bae6fd 85%, #f0f9ff); }
+.lc-g-tint.m { background: linear-gradient(0deg, #6b21a8, #a855f7 40%, #e879f9 75%, #fde68a); }
+.lc-gauge.super .lc-g-bar { box-shadow: 0 0 16px rgba(56, 189, 248, .65); }
+.lc-gauge.mega .lc-g-bar { box-shadow: 0 0 18px rgba(192, 132, 252, .75); }
+
+/* feixes finos subindo (cada um na sua velocidade; o JS acelera todos juntos, de forma lisa) */
+.lc-g-streaks { position: absolute; inset: 0; z-index: 1; opacity: 0; pointer-events: none; transition: opacity .6s ease; }
+.lc-g-streaks.run { opacity: 1; }
+.lc-g-streaks i { position: absolute; bottom: 0; height: 100%; opacity: 0; border-radius: 3px; will-change: transform; transition: opacity .7s ease;
+  background: linear-gradient(0deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, calc(var(--so) * .55)) 55%, rgba(255, 255, 255, var(--so)) 92%, #fff) bottom / 100% var(--sh) no-repeat;
+}
+.lc-g-streaks i.on { opacity: 1; }
+
+/* chegada: a barra se enche de brilho de baixo para cima e o brilho assenta */
+.lc-g-glow { position: absolute; inset: 0; z-index: 2; opacity: 0; pointer-events: none; transform-origin: 50% 100%; will-change: transform, opacity; }
+.lc-gauge.arrive-super .lc-g-glow { background: linear-gradient(0deg, rgba(125, 211, 252, .9), #fff); animation: gGlowFill 2.1s cubic-bezier(.22, 1, .36, 1) both; }
+.lc-gauge.arrive-mega .lc-g-glow { background: linear-gradient(0deg, rgba(216, 180, 254, .95), #fff 70%, #fde68a); animation: gGlowFill 2.1s cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes gGlowFill { 0% { opacity: 1; transform: scaleY(0); } 32% { opacity: 1; transform: scaleY(1); } 100% { opacity: 0; transform: scaleY(1); } }
+/* aura atrás da barra: aparece forte na chegada e fica um brilho leve depois */
+.lc-g-halo { position: absolute; left: 21px; bottom: 0; width: 106px; height: 0; opacity: 0; pointer-events: none; transition: height .45s var(--ease), opacity .8s ease;
+  background: radial-gradient(closest-side, var(--gc, rgba(56, 189, 248, .55)), transparent); }
+.lc-gauge.super .lc-g-halo { --gc: rgba(56, 189, 248, .5); opacity: .45; }
+.lc-gauge.mega .lc-g-halo { --gc: rgba(192, 132, 252, .55); opacity: .5; }
+.lc-gauge.arrive-super .lc-g-halo, .lc-gauge.arrive-mega .lc-g-halo { animation: gHalo 2.2s ease-out; }
+@keyframes gHalo { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: .45; } }
+
+/* SUPERSTAR / MEGASTAR: maior, colado na barra, letras em vai e vem de cima para baixo */
+.lc-g-word { left: 100px; font-size: 30px; line-height: .92; }
+.lc-g-word span { animation: gLetter .35s cubic-bezier(.2, .9, .3, 1.4) calc(var(--i) * .07s) forwards, gSway 3.2s ease-in-out calc(1.2s + var(--i) * .1s) infinite; }
+.lc-g-word.instant span { animation: gSway 3.2s ease-in-out calc(var(--i) * .1s) infinite; }
+@keyframes gSway { 0%, 30%, 100% { transform: none; } 8% { transform: translateX(3px) rotate(5deg); } 18% { transform: translateX(-2.5px) rotate(-4deg); } }
+.lc-g-word.super span { color: #f0fbff; -webkit-text-stroke: 1.4px #0ea5e9; text-shadow: 0 2px 0 #075985, 0 0 12px rgba(56, 189, 248, .85); }
+.lc-g-word.mega span { color: #f3e8ff; -webkit-text-stroke: 1.4px #f5b83d; text-shadow: 0 2px 0 #6b21a8, 0 0 12px rgba(192, 132, 252, .9); }
+
+@media (prefers-reduced-motion: reduce) {
+  .lc-g-word span, .lc-g-word.instant span { animation: none !important; opacity: 1; transform: none; }
+  .lc-g-glow, .lc-g-halo { animation: none !important; }
+}
+
+/* número de pontos embaixo da barra: o mesmo estilo do recorde da lição concluída
+   (gradiente na cor da conquista, inclinado, com reflexo passando). Branco antes da 1ª estrela. */
+.lc-gauge { --n1: #ffffff; --n2: #f4f4f5; --n3: #c4c4cc; --nglow: rgba(255, 255, 255, .22); }
+.lc-gauge.starred { --n1: #fff7d1; --n2: #fbbf24; --n3: #f59e0b; --nglow: rgba(251, 191, 36, .45); }
+.lc-gauge.super { --n1: #f0f9ff; --n2: #7dd3fc; --n3: #0ea5e9; --nglow: rgba(56, 189, 248, .5); }
+.lc-gauge.mega { --n1: #fdf4ff; --n2: #f0abfc; --n3: #a855f7; --nglow: rgba(192, 132, 252, .55); }
+.lc-gauge-pts { display: inline-block; padding: 0 .08em; font-size: 22px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; font-variant-numeric: tabular-nums;
+  transform: skewX(-8deg); color: transparent; -webkit-background-clip: text; background-clip: text;
+  background-image: linear-gradient(100deg, rgba(255, 255, 255, 0) 38%, rgba(255, 255, 255, .95) 50%, rgba(255, 255, 255, 0) 62%), linear-gradient(100deg, var(--n1) 0%, var(--n2) 45%, var(--n3) 100%);
+  background-size: 250% 100%, 100% 100%; background-repeat: no-repeat; background-position: 100% 0, 0 0;
+  filter: drop-shadow(0 0 10px var(--nglow)) drop-shadow(0 2px 0 rgba(0, 0, 0, .35));
+  animation: lcNumShine 4s ease-in-out 1s infinite; }
+.lc-gauge-pts.hit { animation: lcNumHit .6s cubic-bezier(.34, 1.5, .64, 1), lcNumShine 4s ease-in-out .6s infinite; }
+@media (prefers-reduced-motion: reduce) { .lc-gauge-pts, .lc-gauge-pts.hit { animation: none; } }
+
+/* número da contagem: branco até a 1ª estrela; depois dourado, Superstar e Megastar */
+.lr:not(.starred) { --n1: #ffffff; --n2: #f4f4f5; --n3: #d4d4d8; --nglow: rgba(255, 255, 255, .35); }
