@@ -43,6 +43,8 @@
     return { g, pct: (rest / need) * 100 };
   }
   const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  // reinicia uma animação de classe sem forçar o recálculo da página (dois quadros em vez de ler offsetWidth)
+  const replay = (el, cls, extra = []) => { if (!el) return; el.classList.remove(cls, ...extra); requestAnimationFrame(() => requestAnimationFrame(() => el.isConnected && el.classList.add(cls))); };
   const dur = (s) => (s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`);
 
   /* ---------- progresso salvo ---------- */
@@ -151,13 +153,16 @@
 
     const tint = meta.tint || TINT0;
     view.innerHTML = `
-    <div class="wrap lc" style="--tint:${tint}">
+    <div class="wrap lc lc-full" style="--tint:${tint}">
       <div class="lc-shell">
         ${topHTML(L, true)}
         <div id="lc-body"></div>
       </div>
     </div>`;
     const body = view.querySelector('#lc-body');
+    // classes no lugar de seletores :has() — com :has() o navegador reavaliava a lição inteira a cada tecla
+    const shell = view.querySelector('.lc-shell');
+    const content = view.closest('.content'); content?.classList.add('lc-page');
     const $q = (s) => view.querySelector(s);
 
     const accuracy = () => { const t = st.hits + st.errors; return t ? Math.max(0, (st.hits / t) * 100) : 100; };
@@ -171,7 +176,7 @@
 
     /* ---------- tela de boas-vindas ---------- */
     function welcome() {
-      phase = 'welcome'; paintProgress();
+      phase = 'welcome'; paintProgress(); shell.classList.add('is-wel');
       const resume = saved && !saved.done && st.lvl > 0;
       const finished = saved?.done;
       const p = saved || null, tot = p ? p.hits + p.errors : 0;
@@ -199,7 +204,7 @@
               <h2>${esc(L.titulo)}</h2>
               <p>${esc(meta.desc || L.intro)}</p>
             </div>
-            <div class="lc-hero-bar">
+            <div class="lc-hero-bar${stars ? ' has-stars' : ''}">
               <span class="lc-hero-av">${L.numero}</span>
               <span class="lc-hero-who"><strong>Lição ${L.numero}</strong><small>${esc(status)}</small></span>
               ${stars}
@@ -270,7 +275,7 @@
 
     /* ---------- área de jogo (coluna principal + lateral) ---------- */
     function play() {
-      phase = 'play';
+      phase = 'play'; shell.classList.remove('is-wel');
       body.innerHTML = `
       <div class="lc-grid">
         <aside class="lc-gauge" id="lc-gauge" aria-label="Pontuação do nível"></aside>
@@ -322,12 +327,12 @@
 
     /* acerto e erro valem para todos os tipos de nível */
     function hit(k) {
-      presses.push(performance.now());
-      st.hits++; st.xp += 5; paintStats(); spark(); drop(k, true); kb?.flash(k, true);
+      presses.push(performance.now()); speedWake();
+      st.hits++; st.xp += 5; paintStats(); spark(); kb?.flash(k, true);
       score(true);
     }
     function miss(k) {
-      st.errors++; st.xp = Math.max(0, st.xp - (1 + Math.floor(Math.random() * 6))); paintStats(); if (k) { drop(k, false); kb?.flash(k, false); }
+      st.errors++; st.xp = Math.max(0, st.xp - (1 + Math.floor(Math.random() * 6))); paintStats(); if (k) kb?.flash(k, false);
       score(false);
     }
 
@@ -352,7 +357,7 @@
       g.className = 'lc-gauge';
       g.style.setProperty('--bar', BAR_COLORS[Math.floor(Math.random() * BAR_COLORS.length)]);
       g.innerHTML = `
-        <div class="lc-g-code" aria-hidden="true">${typeof infoBgRows === 'function' ? infoBgRows(16) : ''}</div>
+        <div class="lc-g-code" aria-hidden="true">${typeof infoBgRows === 'function' ? infoBgRows(8) : ''}</div>
         <div class="lc-g-area">
           <div class="lc-g-frame" id="lc-gframe"></div>
           <div class="lc-g-bar" id="lc-gbar"><i class="lc-g-shine"></i><b class="lc-g-beam" id="lc-gbeam"></b></div>
@@ -367,7 +372,7 @@
       gs.glint = setInterval(() => {
         if (!g.isConnected) return clearInterval(gs.glint);
         g.querySelectorAll('.lc-g-star.on:not(.pop)').forEach((el, i) => setTimeout(() => {
-          el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse');
+          replay(el, 'pulse');
         }, i * 280));
       }, 5000);
     }
@@ -375,7 +380,7 @@
     function score(ok) {
       if (!game.need || busy) return;
       if (ok) game.ph++;
-      else { game.pe++; const g = $q('#lc-gauge'); g?.classList.remove('hurt'); void g?.offsetWidth; g?.classList.add('hurt'); }
+      else game.pe++; // (o tremor da moldura no erro foi tirado: a moldura nem aparece mais)
       const prog = Math.min(1, game.ph / game.need), acc = game.ph / Math.max(1, game.ph + game.pe);
       game.lp = Math.min(PER, Math.max(game.lp, PER * prog * acc));
       paintGauge();
@@ -392,9 +397,9 @@
         el.classList.toggle('on', i < stars);
         el.classList.toggle('next', i === stars); // estrela vazia esperando na próxima meta
         if (!quiet && i >= gs.stars && i < stars) { // estrela nova: surge com raios, cresce branca de brilho e assenta
-          el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
-          const bar = $q('#lc-gbar'); bar.classList.remove('flash'); void bar.offsetWidth; bar.classList.add('flash');
-          const beam = $q('#lc-gbeam'); beam.classList.remove('go'); void beam.offsetWidth; beam.classList.add('go'); // feixe branco subindo pela barra
+          replay(el, 'pop');
+          replay($q('#lc-gbar'), 'flash');
+          replay($q('#lc-gbeam'), 'go'); // feixe branco subindo pela barra
           setTimeout(() => el.classList.remove('pop'), 1100);
         }
       });
@@ -440,13 +445,6 @@
         box.appendChild(s); setTimeout(() => s.remove(), 1600);
       }, i * 140);
     }
-    function drop(k, ok) { // tecla que cai ao fundo do cartão principal
-      const main = $q('#lc-main'); if (!main || main.querySelectorAll('.lc-drop').length > 14) return;
-      const d = document.createElement('span');
-      d.className = 'lc-drop' + (ok ? '' : ' bad'); d.textContent = keyGlyph(k);
-      d.style.left = (6 + Math.random() * 88) + '%'; d.style.setProperty('--r', (Math.random() * 40 - 20) + 'deg');
-      main.appendChild(d); setTimeout(() => d.remove(), 2600);
-    }
     /* teclado virtual ABNT2 (curso/teclado.js); a preferência de mostrar ou não fica guardada no aparelho */
     let kb = null;
     let kbOpen = false, kbTimer = null;
@@ -455,20 +453,30 @@
        Cor de azul (devagar) a vermelho (bem rápido); PPM = (teclas por minuto) ÷ 5. */
     const SPEED_WIN = 3000, SPEED_MAX = 60; // PPM em que a pílula fica cheia
     let presses = [], speedShown = 0, speedTick = null;
+    // roda só enquanto há algo para mostrar: começa na tecla certa (speedWake) e para sozinho quando a pílula zera
     function speedRun() {
-      clearInterval(speedTick);
+      clearInterval(speedTick); speedTick = null;
+      const fill = $q('#lc-speed-fill'); if (fill) { fill.style.width = '0%'; fill.classList.add('zero'); }
+      const num = $q('#lc-ppm'); if (num) num.textContent = '0';
+    }
+    function speedWake() {
+      if (speedTick) return;
+      $q('#lc-speed-fill')?.classList.remove('zero');
       speedTick = setInterval(() => {
-        if (!view.isConnected || !alive) return clearInterval(speedTick);
+        if (!view.isConnected || !alive) { clearInterval(speedTick); speedTick = null; return; }
         const now = performance.now();
         while (presses.length && now - presses[0] > SPEED_WIN) presses.shift();
         const target = presses.length ? (presses.length / (SPEED_WIN / 1000)) * 60 / 5 : 0;
         speedShown += (target - speedShown) * .18; // anda devagar até o valor, sem saltos
         if (speedShown < .4) speedShown = 0;
-        const fill = $q('#lc-speed-fill'), num = $q('#lc-ppm'); if (!fill || !num) return;
-        const t = Math.min(1, speedShown / SPEED_MAX);
-        fill.style.width = `${(t * 100).toFixed(1)}%`;
-        fill.style.setProperty('--h', Math.round(215 - 215 * t)); // 215 = azul … 0 = vermelho
-        num.textContent = Math.round(speedShown);
+        const fill = $q('#lc-speed-fill'), num = $q('#lc-ppm');
+        if (fill && num) {
+          const t = Math.min(1, speedShown / SPEED_MAX);
+          fill.style.width = `${(t * 100).toFixed(1)}%`;
+          fill.style.setProperty('--h', Math.round(215 - 215 * t)); // 215 = azul … 0 = vermelho
+          num.textContent = Math.round(speedShown);
+        }
+        if (!speedShown && !presses.length) { clearInterval(speedTick); speedTick = null; fill?.classList.add('zero'); }
       }, 80);
     }
     const KB_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>';
@@ -595,7 +603,7 @@
       });
       if (focus) setTimeout(() => inp?.focus(), 80);
     }
-    function supBad(box, inp) { inp.value = ''; box.classList.remove('bad'); void box.offsetWidth; box.classList.add('bad'); }
+    function supBad(box, inp) { inp.value = ''; replay(box, 'bad'); }
 
     /* nível concluído: "Parabéns!" → "Nível X concluído" → próximo */
     async function complete() {
@@ -665,7 +673,7 @@
       } else {
         miss(k);
         const cur = view.querySelector(`.lc-ch[data-i="${game.pos}"]`);
-        cur?.classList.remove('bad'); void cur?.offsetWidth; cur?.classList.add('bad'); setTimeout(() => cur?.classList.remove('bad'), 450);
+        replay(cur, 'bad'); setTimeout(() => cur?.classList.remove('bad'), 480);
       }
     }
 
@@ -685,9 +693,14 @@
     function hackerPaint() {
       const pct = Math.max(0, game.left / game.limit);
       const col = pct > .55 ? '#34d399' : pct > .28 ? '#fbbf24' : '#f43f5e';
-      view.querySelectorAll('.lc-hk').forEach((el) => {
+      // 20 vezes por segundo: as teclas ficam guardadas e só o que mudou é tocado (cor e alvo raramente mudam; o anel sim)
+      if (!game.hk || !game.hk[0]?.isConnected) game.hk = [...view.querySelectorAll('.lc-hk')];
+      game.hk.forEach((el) => {
         const on = (el.dataset.hk === 'space' ? ' ' : el.dataset.hk) === game.target;
-        el.classList.toggle('on', on); el.style.setProperty('--c', col); el.style.setProperty('--p', on ? pct : 0);
+        if (el.classList.contains('on') !== on) el.classList.toggle('on', on);
+        if (el._c !== col) { el._c = col; el.style.setProperty('--c', col); }
+        const p = on ? pct.toFixed(3) : '0';
+        if (el._p !== p) { el._p = p; el.style.setProperty('--p', p); }
       });
       const l = $q('#lc-left'); if (l) l.textContent = `Tempo: ${game.left.toFixed(1)}s`;
       kbTarget(game.target);
@@ -714,13 +727,16 @@
     }
 
     /* ---------- MINIJOGO: FILA DE ANCORAGEM ---------- */
+    // Fila de Ancoragem: cada coluna (e as teclas dela) com uma cor
+    const FILA_CORES = ['#34d399', '#a78bfa', '#fbbf24', '#f472b6', '#38bdf8', '#fb923c'];
+    const filaCor = (k) => FILA_CORES[Math.max(0, L.teclas.indexOf(k)) % FILA_CORES.length];
     function filaInit(lv) {
       game.score = 0; game.meta = lv.meta;
       game.queue = Array.from({ length: lv.meta }, (_, i) => ({ id: i, k: L.teclas[Math.floor(Math.random() * L.teclas.length)] }));
       $q('#lc-stage').innerHTML = `
         <div class="lc-term lc-fila">
-          <div class="lc-lanes">${L.teclas.map(() => '<span></span>').join('')}</div>
-          <div class="lc-dock">${L.teclas.map((k) => `<span>${keyLabel(k)}</span>`).join('')}</div>
+          <div class="lc-lanes" style="grid-template-columns:repeat(${L.teclas.length},1fr)">${L.teclas.map((k) => `<span style="--lc:${filaCor(k)}"></span>`).join('')}</div>
+          <div class="lc-dock" style="grid-template-columns:repeat(${L.teclas.length},1fr)">${L.teclas.map((k) => `<span style="--lc:${filaCor(k)}">${keyLabel(k)}</span>`).join('')}</div>
           <div class="lc-fila-items" id="lc-fila"></div>
         </div>`;
       goal(0, game.meta); filaPaint();
@@ -733,7 +749,7 @@
       [...box.children].forEach((el) => { if (!show.some((q) => String(q.id) === el.dataset.id)) el.remove(); });
       show.forEach((q, i) => {
         let el = box.querySelector(`[data-id="${q.id}"]`);
-        if (!el) { el = document.createElement('span'); el.className = 'lc-fk'; el.dataset.id = q.id; el.textContent = keyGlyph(q.k); el.style.left = lane(q.k) + '%'; el.style.bottom = (18 + 5 * 52) + 'px'; box.appendChild(el); void el.offsetWidth; }
+        if (!el) { el = document.createElement('span'); el.className = 'lc-fk'; el.style.setProperty('--lc', filaCor(q.k)); el.dataset.id = q.id; el.textContent = keyGlyph(q.k); el.style.left = lane(q.k) + '%'; el.style.bottom = (18 + 5 * 52) + 'px'; box.appendChild(el); void el.offsetWidth; }
         el.style.bottom = (18 + i * 52) + 'px'; el.classList.toggle('on', i === 0);
       });
       kbTarget(game.queue[0]?.k ?? null);
@@ -777,7 +793,7 @@
       if (game.state !== 'play') return;
       const b = memoKey(k);
       if (k === game.seq[game.input]) {
-        hit(k); game.input++; b?.classList.remove('good'); void b?.offsetWidth; b?.classList.add('good'); setTimeout(() => b?.classList.remove('good'), 300);
+        hit(k); game.input++; replay(b, 'good'); setTimeout(() => b?.classList.remove('good'), 330);
         if (game.input === game.seq.length) {
           game.state = 'idle'; game.round++; goal(game.round, game.rounds.length);
           if (game.round >= game.rounds.length) { memoMsg('Sequência correta!', 'ok'); return setTimeout(complete, 700); }
@@ -798,7 +814,7 @@
       if (!ov.isConnected) return;
       ov.remove(); game.paused = false; hackerRun();
     }
-    function shake(sel) { const el = view.querySelector(sel); if (!el) return; el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+    function shake(sel) { replay(view.querySelector(sel), 'shake'); }
 
     /* ---------- teclado (físico e da tela) ---------- */
     function press(k) {
@@ -828,12 +844,12 @@
       if (lv?.tipo === 'typing' && k.length === 1 && /\S/.test(k) && !busy) { miss(k); shake(`.lc-ch[data-i="${game.pos}"]`); }
     }
     document.addEventListener('keydown', onKey);
-    function stop() { alive = false; clearTimeout(kbTimer); clearInterval(speedTick); clearInterval(tick); clearInterval(game.timer); clearInterval(gs.glint); kb?.destroy(); document.removeEventListener('keydown', onKey); }
+    function stop() { content?.classList.remove('lc-page'); alive = false; clearTimeout(kbTimer); clearInterval(speedTick); clearInterval(tick); clearInterval(game.timer); clearInterval(gs.glint); kb?.destroy(); document.removeEventListener('keydown', onKey); }
     window.addEventListener('hashchange', stop, { once: true });
 
     /* ---------- resultado ---------- */
     function results(review = false) {
-      phase = 'results'; clearInterval(game.timer); paintProgress();
+      phase = 'results'; clearInterval(game.timer); paintProgress(); shell.classList.remove('is-wel');
       st.done = true; st.lvl = N;
       // refazendo: só salva se superou o recorde; senão o recorde anterior continua valendo
       let record = '';

@@ -49,19 +49,19 @@
    como os blocos da tela inicial e desce até o fim da tela (sem sobrar branco embaixo);
    em telas baixas ele só cresce com o conteúdo, sem cortar nada */
 @media (min-width: 1001px) {
-  .lc:has(> .lc-shell) { max-width: 1680px; } /* mesma largura do banner e do Acesso rápido da tela inicial */
-  .content:has(.lc-shell) { padding-bottom: 24px; }
+  .lc.lc-full { max-width: 1680px; } /* mesma largura do banner e do Acesso rápido da tela inicial */
+  .content.lc-page { padding-bottom: 24px; }
   .lc-shell { display: flex; flex-direction: column; margin-bottom: 0; min-height: calc(100dvh - var(--header-h) - 64px); }
   .lc-shell > #lc-body { flex: 1; display: flex; flex-direction: column; }
   .lc-shell .lc-wel, .lc-shell .lc-grid { flex: 1; }
   .lc-shell .lc-grid { margin-bottom: 0; align-items: stretch; }
-  .lc-shell:has(.lc-wel) .lc-wel-side { justify-content: center; gap: 0; }
+  .lc-shell.is-wel .lc-wel-side { justify-content: center; gap: 0; }
 }
 @media (min-width: 1001px) and (min-height: 860px) {
-  .lc-shell:has(.lc-wel) { padding: 30px 36px 36px; }
-  .lc-shell:has(.lc-wel) .lc-wel { gap: 36px; }
-  .lc-shell:has(.lc-wel) .lc-wel-title { font-size: clamp(36px, 3.8vw, 56px); }
-  .lc-shell:has(.lc-wel) .lc-wel-intro { font-size: 18px; }
+  .lc-shell.is-wel { padding: 30px 36px 36px; }
+  .lc-shell.is-wel .lc-wel { gap: 36px; }
+  .lc-shell.is-wel .lc-wel-title { font-size: clamp(36px, 3.8vw, 56px); }
+  .lc-shell.is-wel .lc-wel-intro { font-size: 18px; }
 }
 
 /* boas-vindas: o card da lição em destaque à esquerda e o que vem por aí à direita */
@@ -88,7 +88,7 @@
 .lc-hero-av, .lc-lv-av { flex: none; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 13px; background: rgba(255, 255, 255, .2); box-shadow: 0 0 0 1px rgba(255, 255, 255, .14);
   font-size: 17px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .lc-hero-who, .lc-lv-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.lc-hero-bar:has(.pf-lesson-stars) .lc-hero-who { flex: 0 1 auto; }
+.lc-hero-bar.has-stars .lc-hero-who { flex: 0 1 auto; }
 .lc-hero-who strong, .lc-lv-who strong { font-size: 15px; font-weight: 600; }
 .lc-hero-who small, .lc-lv-who small { font-size: 13px; opacity: .75; }
 .lc-hero .pf-lesson-stars { flex: 1 0 auto; display: flex; justify-content: center; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .3)); }
@@ -120,12 +120,13 @@
 .lc-best.mega { --n1: #fdf4ff; --n2: #f0abfc; --n3: #a855f7; --nglow: rgba(192, 132, 252, .55); }
 .lc-best-num b { display: inline-block; animation-play-state: paused !important; padding: 0 .06em; font-size: clamp(36px, 3.4vw, 50px); font-weight: 700; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums;
   transform: skewX(-8deg); color: transparent; -webkit-background-clip: text; background-clip: text;
-  background-image: linear-gradient(100deg, var(--n2) 0%, var(--n1) 30%, var(--n2) 45%, #fff 50%, var(--n2) 55%, var(--n3) 100%); background-size: 260% 100%; background-position: 100% 0;
+  background-image: linear-gradient(100deg, rgba(255, 255, 255, 0) 38%, rgba(255, 255, 255, .95) 50%, rgba(255, 255, 255, 0) 62%), linear-gradient(100deg, var(--n1) 0%, var(--n2) 45%, var(--n3) 100%); background-size: 250% 100%, 100% 100%; background-repeat: no-repeat; background-position: 100% 0, 0 0;
   filter: drop-shadow(0 0 16px var(--nglow)) drop-shadow(0 3px 0 rgba(0, 0, 0, .35));
   animation: lcNumShine 4s ease-in-out 2.2s infinite; }
 .lc-best.go .lc-best-num b { animation-play-state: running !important; }
 .lc-best-num b.hit { animation: lcNumHit .6s cubic-bezier(.34, 1.5, .64, 1), lcNumShine 4s ease-in-out .6s infinite; }
-@keyframes lcNumShine { 0%, 55% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+/* o reflexo é uma camada própria por cima da cor: entra e sai por fora do número, então nunca "pula" ao recomeçar */
+@keyframes lcNumShine { 0%, 45% { background-position: 100% 0, 0 0; } 100% { background-position: 0 0, 0 0; } }
 @keyframes lcNumHit { 40% { transform: skewX(-8deg) scale(1.12); } }
 .lc-best-num em { font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--n2); opacity: .8; }
 .lc-best-txt img { display: block; height: 38px; margin-left: -4px; width: auto; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .3)); }
@@ -220,8 +221,10 @@
 .kb-key.mod b { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; color: #6b7280; }
 .kb-key.nub::after { content: ''; position: absolute; bottom: 6px; width: 10px; height: 2px; border-radius: 2px; background: currentColor; opacity: .5; }
 /* próxima tecla: contorno escuro em volta, como um cursor no teclado */
-.kb-key.target { box-shadow: 0 0 0 2.5px #fff, 0 0 0 5px #0f3d36; transform: translateY(-1px); z-index: 1; font-weight: 700; animation: kbPulse 1.3s ease-in-out infinite; }
-@keyframes kbPulse { 50% { box-shadow: 0 0 0 2.5px #fff, 0 0 0 5px #0f3d36, 0 0 0 10px rgba(15, 61, 54, .12); } }
+.kb-key.target { box-shadow: 0 0 0 2.5px #fff, 0 0 0 5px #0f3d36; transform: translateY(-1px); z-index: 1; font-weight: 700; }
+/* pulso da tecla-alvo: um anel por trás que só muda de opacidade (não redesenha a sombra a cada quadro) */
+.kb-key.target::before { content: ''; position: absolute; inset: -10px; border-radius: 15px; pointer-events: none; box-shadow: 0 0 0 5px rgba(15, 61, 54, .12); opacity: 0; will-change: opacity; animation: kbRing 1.3s ease-in-out infinite; }
+@keyframes kbRing { 50% { opacity: 1; } }
 .kb-key.hit { background: #10b981; color: #fff; transform: translateY(2px) scale(.96); box-shadow: 0 0 16px rgba(16, 185, 129, .6); animation: none; }
 .kb-key.hit b, .kb-key.hit small { color: #fff; }
 .kb-key.miss { background: #f43f5e; color: #fff; transform: translateY(2px); animation: lcShake .25s ease; }
@@ -243,12 +246,8 @@
 .lc-new-go kbd { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; padding: 0 .6em !important; }
 .lc-new h3 kbd.shake { animation: lcShake .3s ease; }
 
-/* teclas que caem ao fundo e o aviso de nível concluído */
-.lc-drop { position: absolute; top: -40px; z-index: 0; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; pointer-events: none;
-  font: 700 15px/1 ui-monospace, Menlo, monospace; color: #059669; background: rgba(16, 185, 129, .12); border: 1px solid rgba(16, 185, 129, .3); animation: lcFall 2.5s cubic-bezier(.25, .46, .45, .94) forwards; }
-.lc-drop.bad { color: #e11d48; background: rgba(244, 63, 94, .1); border-color: rgba(244, 63, 94, .3); }
-@keyframes lcFall { from { transform: translateY(0) rotate(0); opacity: .9; } to { transform: translateY(640px) rotate(var(--r)); opacity: 0; } }
-.lc-main > :not(.lc-drop):not(.lc-over):not(.lc-lv-mark) { position: relative; z-index: 1; }
+/* aviso de nível concluído */
+.lc-main > :not(.lc-over):not(.lc-lv-mark) { position: relative; z-index: 1; }
 .lc-over { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; background: rgba(255, 255, 255, .86); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); animation: lcFade .25s ease; }
 .lc-over[hidden] { display: none; }
 @keyframes lcFade { from { opacity: 0; } }
@@ -290,13 +289,18 @@
 
 /* Fila de Ancoragem */
 .lc-lanes { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); }
-.lc-lanes span + span { border-left: 1px solid rgba(255, 255, 255, .06); }
-.lc-dock { position: absolute; left: 0; right: 0; bottom: 12px; height: 52px; display: grid; grid-template-columns: repeat(3, 1fr); background: rgba(34, 211, 238, .08); border-block: 1px solid rgba(34, 211, 238, .25); }
-.lc-dock span { display: grid; place-items: end center; padding-bottom: 4px; font: 700 9px ui-monospace, Menlo, monospace; text-transform: uppercase; letter-spacing: .1em; color: rgba(34, 211, 238, .45); }
+/* cada coluna com a sua cor: um degradê suave que sobe do alvo e a divisória na mesma cor */
+.lc-lanes span { --lc: #22d3ee; background: linear-gradient(0deg, color-mix(in srgb, var(--lc) 22%, transparent), color-mix(in srgb, var(--lc) 6%, transparent) 55%, transparent); }
+.lc-lanes span + span { border-left: 1px solid rgba(255, 255, 255, .08); }
+.lc-dock { position: absolute; left: 0; right: 0; bottom: 12px; height: 52px; display: grid; grid-template-columns: repeat(3, 1fr); border-block: 1px solid rgba(255, 255, 255, .14); }
+.lc-dock span { --lc: #22d3ee; display: grid; place-items: end center; padding-bottom: 4px; font: 700 9px ui-monospace, Menlo, monospace; text-transform: uppercase; letter-spacing: .1em;
+  color: var(--lc); background: color-mix(in srgb, var(--lc) 14%, transparent); box-shadow: inset 0 2px 0 color-mix(in srgb, var(--lc) 70%, transparent); }
 .lc-fila-items { position: absolute; inset: 0; }
-.lc-fk { position: absolute; display: grid; place-items: center; width: 52px; height: 42px; margin-left: -26px; border-radius: 12px; background: #1f2937; border: 2px solid #374151; color: #9ca3af;
-  font: 800 16px/1 ui-monospace, Menlo, monospace; opacity: .7; transition: bottom .3s cubic-bezier(.2, .8, .3, 1), transform .2s, background .2s, opacity .2s; }
-.lc-fk.on { background: #06b6d4; border-color: #67e8f9; color: #fff; opacity: 1; transform: scale(1.12); box-shadow: 0 0 22px rgba(6, 182, 212, .6); }
+/* teclas: na cor da coluna — contorno e letra coloridos na fila; a da vez fica cheia e brilhando */
+.lc-fk { --lc: #22d3ee; position: absolute; display: grid; place-items: center; width: 52px; height: 42px; margin-left: -26px; border-radius: 12px;
+  background: color-mix(in srgb, var(--lc) 16%, #111827); border: 2px solid color-mix(in srgb, var(--lc) 55%, transparent); color: var(--lc);
+  font: 800 16px/1 ui-monospace, Menlo, monospace; opacity: .8; transition: bottom .3s cubic-bezier(.2, .8, .3, 1), transform .2s, background .2s, opacity .2s; }
+.lc-fk.on { background: var(--lc); border-color: color-mix(in srgb, var(--lc) 45%, #fff); color: #0b1220; opacity: 1; transform: scale(1.12); box-shadow: 0 0 22px color-mix(in srgb, var(--lc) 65%, transparent); }
 .lc-fk.on.shake { animation: lcShakeC .3s ease; }
 @keyframes lcShakeC { 25% { transform: scale(1.12) translateX(-5px); } 75% { transform: scale(1.12) translateX(5px); } }
 
@@ -326,10 +330,12 @@
 /* barra de cor sólida (a cor é sorteada a cada início de lição) */
 .lc-g-bar { position: absolute; left: 51px; bottom: 0; width: 46px; height: 0; overflow: hidden; background: var(--bar);
   box-shadow: 0 0 14px color-mix(in srgb, var(--bar) 55%, transparent); transition: height .45s var(--ease); }
-.lc-g-bar::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: rgba(255, 255, 255, .85); box-shadow: 0 0 10px #fff; animation: gTopPulse 1.6s ease-in-out infinite; }
+.lc-g-bar::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: rgba(255, 255, 255, .85); box-shadow: 0 0 10px #fff; will-change: opacity; animation: gTopPulse 1.6s ease-in-out infinite; }
 @keyframes gTopPulse { 50% { opacity: .35; } }
-.lc-g-shine { position: absolute; left: 0; right: 0; height: 80px; bottom: -80px; background: linear-gradient(0deg, transparent, rgba(255, 255, 255, .55), transparent); animation: gShine 2.8s ease-in-out infinite; }
-@keyframes gShine { 0% { bottom: -80px; } 70%, 100% { bottom: 110%; } }
+/* brilho subindo pela barra: anda com transform (a placa de vídeo faz sozinha, sem recalcular a página) */
+.lc-g-shine { position: absolute; left: 0; right: 0; bottom: 0; height: 100%; pointer-events: none; will-change: transform;
+  background: linear-gradient(0deg, transparent, rgba(255, 255, 255, .55), transparent) bottom / 100% 80px no-repeat; animation: gShine 2.8s ease-in-out infinite; }
+@keyframes gShine { 0% { transform: translateY(80px); } 70%, 100% { transform: translateY(-110%); } }
 .lc-g-bar.flash { animation: gBarFlash .5s ease-out; }
 @keyframes gBarFlash { 0% { filter: brightness(1.9) saturate(.6); } }
 /* estrelas: à esquerda da barra, cada uma na sua meta */
@@ -424,7 +430,7 @@
 .lc-star-fill { position: absolute; inset: 0; color: #f59e0b; clip-path: inset(calc(100% - var(--fill)) 0 0 0); transition: clip-path .5s var(--ease); }
 .lc-star.on > svg { color: #f59e0b; }
 .lc-sparks { position: absolute; left: 50%; top: 58%; width: 0; height: 0; pointer-events: none; }
-.lc-sparks i { position: absolute; width: 10px; height: 10px; margin: -5px; border-radius: 50%; background: #facc15; box-shadow: 0 0 12px rgba(250, 204, 21, .9); animation: lcSpark 1.5s cubic-bezier(.25, 1, .5, 1) forwards; }
+.lc-sparks i { position: absolute; width: 18px; height: 18px; margin: -9px; border-radius: 50%; background: radial-gradient(circle, #fef3c7 0 22%, #facc15 34%, rgba(250, 204, 21, .45) 52%, rgba(250, 204, 21, 0) 70%); will-change: transform, opacity; animation: lcSpark 1.5s cubic-bezier(.25, 1, .5, 1) forwards; }
 @keyframes lcSpark { to { transform: translate(var(--dx), var(--dy)) scale(.3); opacity: 0; } }
 .lc-tank { position: relative; display: grid; place-items: center; width: 100%; max-width: 140px; aspect-ratio: 5 / 4; margin-bottom: 8px; border-radius: 20px; overflow: hidden; background: var(--bg); }
 .lc-tank i { position: absolute; left: 0; right: 0; bottom: 0; height: 100%; transition: height .6s var(--ease), background .6s; }
@@ -554,14 +560,13 @@
 .lc-shell .kb-key:not([data-f]) { --bg: rgba(255, 255, 255, .1); --fg: rgba(255, 255, 255, .8); }
 .lc-shell .kb-key { box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .18); }
 .lc-shell .kb-key.mod b { color: rgba(255, 255, 255, .6); }
-.lc-shell .kb-key.target { box-shadow: 0 0 0 2.5px rgba(0, 0, 0, .55), 0 0 0 5px #fff; animation: kbPulseD 1.3s ease-in-out infinite; }
-@keyframes kbPulseD { 50% { box-shadow: 0 0 0 2.5px rgba(0, 0, 0, .55), 0 0 0 5px #fff, 0 0 0 11px rgba(255, 255, 255, .16); } }
+.lc-shell .kb-key.target { box-shadow: 0 0 0 2.5px rgba(0, 0, 0, .55), 0 0 0 5px #fff; }
+.lc-shell .kb-key.target::before { inset: -11px; border-radius: 16px; box-shadow: 0 0 0 6px rgba(255, 255, 255, .16); }
+.kb-key.hit::before, .kb-key.miss::before { display: none; }
 .lc-shell .kb-key.hit { box-shadow: 0 0 18px rgba(16, 185, 129, .8); }
 .lc-shell .kb-finger { color: rgba(255, 255, 255, .6); }
 .lc-shell .kb-finger b { color: #6ee7b7; }
 /* teclas que caem e o aviso de nível concluído */
-.lc-shell .lc-drop { color: #6ee7b7; background: rgba(16, 185, 129, .16); border-color: rgba(110, 231, 183, .3); }
-.lc-shell .lc-drop.bad { color: #fda4af; background: rgba(244, 63, 94, .16); border-color: rgba(253, 164, 175, .3); }
 .lc-shell .lc-over { background: rgba(10, 10, 12, .62); }
 .lc-shell .lc-pop { background-image: linear-gradient(90deg, #34d399, #2dd4bf 45%, #60a5fa); }
 .lc-shell .lc-pop.sub { -webkit-text-fill-color: #fff; color: #fff; }
@@ -638,7 +643,7 @@
   .lc-res strong { font-size: 19px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .lc-drop, .lc-sparks i { display: none; }
+  .lc-sparks i { display: none; }
   .lc-intro, .lc-lv-title, .lc-results, .lc-pop, .lc-count, .lc-start > span, .lc-g-star, .lc-g-edge, .lc-g-star::before, .lc-g-star::after, .lc-g-shine, .lc-g-bar::after, .lc-g-flash, .lc-stars5 i { animation: none !important; }
   .lc-g-word span { animation: none; opacity: 1; transform: none; }
   .lc-pc *, .lc-pc { animation: none !important; }
@@ -742,7 +747,8 @@
   transition: width .2s linear, --h .3s linear; }
 /* brilho que corre por dentro da pílula */
 .lc-speed-pill i::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 40%; border-radius: inherit; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .45), transparent);
-  animation: lcSpeedGloss 1.8s ease-in-out infinite; }
+  will-change: transform; animation: lcSpeedGloss 1.8s ease-in-out infinite; }
+.lc-speed-pill i.zero::after { animation: none; } /* parada (vazia): o brilho também para */
 @keyframes lcSpeedGloss { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
 .lc-speed b { min-width: 2ch; font-size: 17px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; text-align: right; }
 .lc-speed small { margin-left: -5px; font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, .55); }
@@ -980,7 +986,7 @@
 .lr.super { --n1: #f0f9ff; --n2: #bae6fd; --n3: #7dd3fc; --nglow: rgba(56, 189, 248, .6); }
 .lr.mega { --n1: #fdf4ff; --n2: #f5d0fe; --n3: #e9a8ff; --nglow: rgba(192, 132, 252, .7); }
 .lr-num, .lr-rnum { color: transparent; text-shadow: none; -webkit-background-clip: text; background-clip: text;
-  background-image: linear-gradient(100deg, var(--n2) 0%, var(--n1) 30%, var(--n2) 45%, #fff 50%, var(--n2) 55%, var(--n3) 100%); background-size: 260% 100%; background-position: 100% 0;
+  background-image: linear-gradient(100deg, rgba(255, 255, 255, 0) 38%, rgba(255, 255, 255, .95) 50%, rgba(255, 255, 255, 0) 62%), linear-gradient(100deg, var(--n1) 0%, var(--n2) 45%, var(--n3) 100%); background-size: 250% 100%, 100% 100%; background-repeat: no-repeat; background-position: 100% 0, 0 0;
   filter: drop-shadow(0 3px 0 rgba(40, 0, 60, .45)) drop-shadow(0 0 16px var(--nglow)) drop-shadow(0 6px 14px rgba(0, 0, 0, .3)); }
 .lr.done .lr-num { animation: lcNumShine 4s ease-in-out 1.2s infinite; }
 /* título Superstar/Megastar grande, ocupando a largura das estrelas até quase encostar na barra (pode vazar da faixa) */

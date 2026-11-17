@@ -66,7 +66,11 @@
     /* tecla apertada: pisca verde (acerto) ou vermelho (erro) */
     function flash(ch, ok) {
       const id = idOf(ch); if (!id) return;
-      keysOf(id).forEach((k) => { k.classList.remove('hit', 'miss'); void k.offsetWidth; k.classList.add(ok ? 'hit' : 'miss'); setTimeout(() => k.classList.remove('hit', 'miss'), 260); });
+      // reinicia o piscar sem forçar o navegador a recalcular a página (espera dois quadros em vez de ler offsetWidth)
+      keysOf(id).forEach((k) => {
+        k.classList.remove('hit', 'miss'); clearTimeout(k._t);
+        requestAnimationFrame(() => requestAnimationFrame(() => { k.classList.add(ok ? 'hit' : 'miss'); k._t = setTimeout(() => k.classList.remove('hit', 'miss'), 260); }));
+      });
     }
 
     return { el: wrap, target, flash, layout: () => {}, destroy: () => {} };

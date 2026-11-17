@@ -1700,19 +1700,15 @@ body.modal-open { overflow: hidden; }
 .hw[data-tone="night"]     { --hw-grad: linear-gradient(90deg, #312e81, #6366f1); --hw-glow: rgba(99, 102, 241, .55); }
 
 /* sol animado: raios girando e brilho pulsando */
-.hw-sun .hw-rays { fill: #ffd54a; transform-origin: 16px 16px; animation: hwSpin 14s linear infinite; }
-.hw-sun .hw-core { fill: #ffcc33; filter: drop-shadow(0 0 4px rgba(255, 210, 74, .9)); animation: hwGlow 3s ease-in-out infinite; transform-origin: 16px 16px; }
+.hw-sun .hw-rays { fill: #ffd54a; } /* sol e lua parados (desempenho); só a barra anda com o horário */
+.hw-sun .hw-core { fill: #ffcc33; filter: drop-shadow(0 0 4px rgba(255, 210, 74, .9)); }
 .hw[data-tone="afternoon"] .hw-sun .hw-rays, .hw[data-tone="dawn"] .hw-sun .hw-rays { fill: #fff3c4; }
 .hw[data-tone="afternoon"] .hw-sun .hw-core, .hw[data-tone="dawn"] .hw-sun .hw-core { fill: #fff1b8; }
-@keyframes hwSpin { to { transform: rotate(360deg); } }
-@keyframes hwGlow { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
 /* lua: balança devagar e as estrelas piscam */
-.hw-moon { animation: hwFloat 5s ease-in-out infinite; }
+.hw-moon { transform: rotate(-6deg); }
 .hw-crescent { fill: #fef3c7; filter: drop-shadow(0 0 5px rgba(254, 243, 199, .7)); }
-.hw-star { fill: #fff; animation: hwTwinkle 2.4s ease-in-out infinite; }
-.hw-star.s2 { animation-delay: 1.2s; }
-@keyframes hwFloat { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-2px) rotate(4deg); } }
-@keyframes hwTwinkle { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
+.hw-star { fill: #fff; opacity: .85; }
+.hw-star.s2 { opacity: .5; }
 
 /* cartão que se expande ao passar o mouse */
 .hw-card {
