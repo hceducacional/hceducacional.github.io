@@ -1199,3 +1199,29 @@
   .lc-cel-rays, .lc-cel-spark { display: none; }
   .lc-cel *, .lc-cel { animation-duration: .01s !important; animation-delay: 0s !important; }
 }
+
+/* =========================================================
+   Cenário do cartão do nível (sorteado a cada início da lição)
+   Fundo escuro na cor do cenário + três luzes de aurora que flutuam devagar,
+   uma trama de pontinhos bem leve e um véu escuro embaixo para o teclado ler bem.
+   ========================================================= */
+.lc-shell .lc-main {
+  background:
+    radial-gradient(rgba(255, 255, 255, .055) 1px, transparent 1.3px) 0 0 / 22px 22px,
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, .38) 100%),
+    linear-gradient(160deg, var(--c1) 0%, color-mix(in srgb, var(--c1) 45%, #06060a) 100%);
+}
+.lc-shell .lc-main::before { content: ''; position: absolute; inset: -30%; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(32% 28% at 22% 26%, rgb(var(--a1, 45 212 191) / .42), transparent 70%),
+    radial-gradient(30% 30% at 80% 22%, rgb(var(--a2, 139 92 246) / .36), transparent 70%),
+    radial-gradient(36% 30% at 58% 78%, rgb(var(--a3, 34 211 238) / .26), transparent 70%);
+  animation: lcAurora 26s ease-in-out infinite alternate; will-change: transform; }
+@keyframes lcAurora {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  50% { transform: translate3d(4%, -3%, 0) rotate(8deg) scale(1.06); }
+  100% { transform: translate3d(-4%, 3%, 0) rotate(-6deg) scale(1.02); }
+}
+/* nos minijogos o cartão muda de cor; as luzes ficam mais suaves */
+.lc-shell .lc-main:has(.lc-kind.game)::before { opacity: .55; }
+@media (prefers-reduced-motion: reduce) { .lc-shell .lc-main::before { animation: none; } }

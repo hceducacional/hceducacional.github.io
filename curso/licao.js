@@ -83,6 +83,25 @@
   /* cor do cartão de cada tipo de nível (a de digitação é a do card da lição) */
   const KIND_TINT = { hacker: '24, 46, 110', fila: '30, 70, 90', memoria: '70, 32, 120' };
   const CARD_TINTS = ['24, 46, 110', '70, 32, 120', '120, 40, 30', '30, 70, 90'];
+  /* cenários do cartão do nível: um sorteado a cada vez que a lição começa (nunca o mesmo da vez anterior).
+     base = cor escura do fundo; a1, a2, a3 = as três luzes de aurora que flutuam devagar por trás */
+  const SCENES = [
+    { nome: 'Aurora boreal', base: '14, 32, 46', a1: '45 212 191', a2: '139 92 246', a3: '34 211 238' },
+    { nome: 'Oceano profundo', base: '12, 26, 60', a1: '59 130 246', a2: '6 182 212', a3: '99 102 241' },
+    { nome: 'Pôr do sol', base: '50, 18, 42', a1: '244 63 94', a2: '245 158 11', a3: '168 85 247' },
+    { nome: 'Galáxia', base: '26, 16, 62', a1: '168 85 247', a2: '236 72 153', a3: '59 130 246' },
+    { nome: 'Lavanda', base: '34, 24, 58', a1: '192 132 252', a2: '129 140 248', a3: '240 171 252' },
+    { nome: 'Coral', base: '46, 20, 26', a1: '251 113 133', a2: '251 146 60', a3: '250 204 21' },
+    { nome: 'Meia-noite', base: '16, 20, 38', a1: '56 189 248', a2: '167 139 250', a3: '244 114 182' },
+  ];
+  function pickScene() {
+    let last = -1;
+    try { last = +localStorage.getItem('hc-lc-scene'); } catch {}
+    let i = Math.floor(Math.random() * (SCENES.length - 1));
+    if (i >= last && last >= 0) i++;
+    try { localStorage.setItem('hc-lc-scene', String(i)); } catch {}
+    return SCENES[i] || SCENES[0];
+  }
   const topHTML = (L, prog) => `
       <div class="lc-top">
         <a class="lc-back" href="#informatica">${svg('back')}Lições</a>
@@ -152,9 +171,10 @@
     let game = {}; // estado do nível atual (minijogos)
 
     const tint = meta.tint || TINT0;
+    let scene = pickScene();
     view.innerHTML = `
     <div class="wrap lc lc-full" style="--tint:${tint}">
-      <div class="lc-shell">
+      <div class="lc-shell" style="--a1:${scene.a1};--a2:${scene.a2};--a3:${scene.a3}" data-cena="${scene.nome}">
         ${topHTML(L, true)}
         <div id="lc-body"></div>
       </div>
@@ -276,6 +296,8 @@
     /* ---------- área de jogo (coluna principal + lateral) ---------- */
     function play() {
       phase = 'play'; shell.classList.remove('is-wel');
+      if (play.ran) { scene = pickScene(); shell.style.setProperty('--a1', scene.a1); shell.style.setProperty('--a2', scene.a2); shell.style.setProperty('--a3', scene.a3); shell.dataset.cena = scene.nome; }
+      play.ran = true; // cada vez que a lição (re)começa, um cenário novo
       body.innerHTML = `
       <div class="lc-grid">
         <aside class="lc-gauge" id="lc-gauge" aria-label="Pontuação do nível"></aside>
@@ -528,7 +550,7 @@
       const lv = L.niveis[st.lvl];
       const isGame = lv.tipo !== 'typing';
       const main = $q('#lc-main');
-      const t = (KIND_TINT[lv.tipo] || tint).split(',').map(Number);
+      const t = (KIND_TINT[lv.tipo] || scene.base).split(',').map(Number);
       main.style.setProperty('--c1', `rgb(${t.join(' ')})`); // a cor do cartão desliza de um nível para o outro
       main.classList.remove('enter'); void main.offsetWidth; main.classList.add('enter');
       const nn = String(st.lvl + 1).padStart(2, '0');
