@@ -1,0 +1,182 @@
+/* =========================================================
+   PLATAFORMA DE INFORMÁTICA — tela de seleção (curso/menu.js)
+   Só transform/opacity nas animações (e clip-path/máscara nos personagens
+   apenas durante a troca de botão).
+   ========================================================= */
+@property --fade { syntax: '<percentage>'; inherits: false; initial-value: 0%; }
+
+.ifm { --s: clamp(120px, min(15.5vw, 28vh), 250px); --gap: calc(var(--s) * 1.55); --shift: calc(var(--s) * .45); --r: calc(var(--s) * .13);
+  --spring: cubic-bezier(.34, 1.56, .64, 1); --soft: cubic-bezier(.22, 1, .36, 1);
+  position: fixed; inset: 0 0 0 var(--sb-collapsed); z-index: 1; overflow: hidden; isolation: isolate; background: #0b0d14;
+  font-family: inherit; user-select: none; -webkit-user-select: none; }
+
+/* ---------- fundo: degradê escuro + luzes de aurora + malha de pontinhos ---------- */
+.ifm-bg { position: absolute; inset: 0; z-index: -2; opacity: 0; transition: opacity .8s ease; }
+.ifm.in .ifm-bg, .ifm.still .ifm-bg { opacity: 1; }
+.ifm-sky { position: absolute; inset: 0; opacity: 0; transition: opacity 2.6s ease; overflow: hidden;
+  background: linear-gradient(160deg, rgb(var(--b)) 0%, color-mix(in srgb, rgb(var(--b)) 42%, #05060a) 100%); }
+.ifm-sky.on { opacity: 1; }
+.ifm-sky::before { content: ''; position: absolute; inset: -25%; will-change: transform;
+  background:
+    radial-gradient(32% 36% at 80% 24%, rgb(var(--a1) / .6), transparent 70%),
+    radial-gradient(30% 34% at 96% 70%, rgb(var(--a2) / .52), transparent 70%),
+    radial-gradient(36% 32% at 62% 92%, rgb(var(--a3) / .42), transparent 70%),
+    radial-gradient(30% 30% at 30% 12%, rgb(var(--a2) / .3), transparent 70%);
+  animation: ifmAurora 26s ease-in-out infinite alternate; }
+@keyframes ifmAurora {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  50% { transform: translate3d(3%, -3%, 0) rotate(6deg) scale(1.06); }
+  100% { transform: translate3d(-4%, 3%, 0) rotate(-5deg) scale(1.02); }
+}
+/* pontinhos maiores que os das lições, para aparecerem bem */
+.ifm-dots { position: absolute; inset: 0; overflow: hidden;
+  -webkit-mask: radial-gradient(120% 90% at 75% 45%, #000 40%, rgba(0, 0, 0, .45) 100%); mask: radial-gradient(120% 90% at 75% 45%, #000 40%, rgba(0, 0, 0, .45) 100%); }
+/* a malha anda na diagonal sem parar: a camada é uma casa maior que a tela e volta ao
+   início a cada 24 px, então o movimento é contínuo (só transform) */
+.ifm-dots::before { content: ''; position: absolute; inset: -24px; will-change: transform;
+  background: radial-gradient(rgba(255, 255, 255, .15) 1.7px, transparent 2.3px) 0 0 / 24px 24px;
+  animation: ifmDots 1.8s linear infinite; }
+@keyframes ifmDots { from { transform: translate3d(-24px, 0, 0); } to { transform: translate3d(0, -24px, 0); } }
+.ifm-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, .35) 100%); }
+
+/* ---------- faixa branca na diagonal ---------- */
+.ifm-white { position: absolute; inset: 0; z-index: -1; background: #fff; clip-path: polygon(0 0, 47% 0, 58% 100%, 0 100%);
+  transform: translate3d(-62%, 0, 0); will-change: transform; }
+.ifm-white::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0, 0, 0, 0) 80%, rgba(0, 0, 0, .05)); }
+.ifm.in .ifm-white { animation: ifmWhite .9s var(--soft) .05s both; }
+.ifm.still .ifm-white { transform: none; }
+@keyframes ifmWhite { from { transform: translate3d(-62%, 0, 0); } to { transform: none; } }
+
+/* ---------- os três botões ---------- */
+.ifm-row { position: absolute; left: 0; right: 0; top: calc(50% + 14px); height: 0; }
+.ifm-opt { --push: 0; position: absolute; left: 50%; top: 0; width: var(--s); margin: calc(var(--s) * -.62) 0 0 calc(var(--s) * -.5);
+  padding: 0; border: 0; background: none; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; outline: none;
+  translate: calc((var(--i) - 1) * var(--gap) + var(--push) * var(--shift)) 0;
+  transition: translate .75s var(--soft); }
+.ifm-opt.sel { z-index: 2; }
+.ifm-in { display: block; opacity: 0; }
+.ifm.in .ifm-in { animation: ifmCardIn .8s var(--spring) calc(.35s + var(--i) * .11s) both; }
+.ifm.still .ifm-in { opacity: 1; }
+@keyframes ifmCardIn { 0% { opacity: 0; transform: translateY(54px) scale(.55); } 45% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+
+.ifm-card { position: relative; display: block; width: var(--s); height: var(--s); transition: scale .7s var(--spring), translate .7s var(--spring); }
+.ifm-opt:not(.sel):hover .ifm-card { translate: 0 -4px; }
+.ifm-opt.sel .ifm-card { scale: var(--grow, 1.24); }
+
+.ifm-shape { position: absolute; inset: 0; overflow: hidden; border-radius: var(--r);
+  background: radial-gradient(90% 70% at 18% 8%, rgba(255, 255, 255, .28), rgba(255, 255, 255, 0) 60%), linear-gradient(135deg, var(--g1) 0%, var(--g2) 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .35) inset, 0 calc(var(--s) * .1) calc(var(--s) * .2) calc(var(--s) * -.1) color-mix(in srgb, var(--g1) 60%, transparent); }
+/* brilho que atravessa a forma quando ela se expande */
+.ifm-shine { position: absolute; top: -20%; bottom: -20%; left: 0; width: 45%; opacity: 0;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .55), rgba(255, 255, 255, 0)); transform: translateX(-130%) skewX(-14deg); }
+.ifm-opt.sel .ifm-shine { animation: ifmShine 1.1s var(--soft) .15s; }
+@keyframes ifmShine { 0% { opacity: 1; transform: translateX(-130%) skewX(-14deg); } 100% { opacity: 1; transform: translateX(330%) skewX(-14deg); } }
+
+/* luz atrás da forma */
+.ifm-glow { position: absolute; inset: -30%; z-index: -1; border-radius: 50%; opacity: 0; transform: scale(.6);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--g2) 70%, transparent), transparent); transition: opacity .6s ease, transform .8s var(--soft); }
+.ifm-opt.sel .ifm-glow { opacity: .42; transform: scale(1); }
+/* anel que estoura na hora da expansão */
+.ifm-ring { position: absolute; inset: 0; border-radius: var(--r); border: 3px solid var(--g2); opacity: 0; pointer-events: none; }
+.ifm-opt.sel .ifm-ring { animation: ifmRing .9s var(--soft); }
+/* botão principal: igual aos outros (forma quadrada atrás, esmaecido leve na base); os personagens sobem um pouco */
+.ifm-curso .ifm-float { transition: translate .85s var(--spring); }
+.ifm-curso.sel .ifm-float { translate: 0 -8%; }
+/* no do meio as pernas passam das laterais da forma: o esmaecido é mais longo e some por
+   completo um pouco acima da borda de baixo (o logo fica por cima dessa parte) */
+.ifm-curso .ifm-art { -webkit-mask: linear-gradient(to top, transparent 0, transparent calc(var(--fade) * .3), rgba(0, 0, 0, .5) calc(var(--fade) * .7), #000 var(--fade)); mask: linear-gradient(to top, transparent 0, transparent calc(var(--fade) * .3), rgba(0, 0, 0, .5) calc(var(--fade) * .7), #000 var(--fade)); }
+.ifm-curso.sel .ifm-art { --fade: 26%; }
+@keyframes ifmRing { 0% { opacity: .9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.32); } }
+
+/* personagens: recolhidos ficam dentro da forma; expandidos saem por cima dela,
+   com o corte das pernas sumindo num esmaecido suave.
+   A caixa dos personagens é bem maior que a forma (a máscara do esmaecido só vale dentro
+   dela), e o recorte recolhido usa as margens --ax/--ay para cair exatamente na forma. */
+.ifm-art { --ax: calc(var(--s) * .9); --ay: calc(var(--s) * 1.1);
+  position: absolute; inset: calc(var(--ay) * -1) calc(var(--ax) * -1) 0; z-index: 1; pointer-events: none; transform-origin: 50% 100%;
+  clip-path: inset(var(--ay) var(--ax) 0 var(--ax) round var(--r) var(--r) var(--r) var(--r));
+  -webkit-mask: linear-gradient(to top, transparent 0, #000 var(--fade)); mask: linear-gradient(to top, transparent 0, #000 var(--fade));
+  transition: clip-path .55s var(--soft), scale .85s var(--spring), --fade .6s ease; }
+.ifm-opt.sel .ifm-art { clip-path: inset(0 0 0 0 round 0 0 var(--r) var(--r)); scale: 1.42; --fade: 16%; }
+.ifm-float { position: absolute; top: var(--ay); bottom: 0; left: var(--ax); right: var(--ax); }
+.ifm-opt.sel .ifm-float { animation: ifmFloat 3.2s ease-in-out .9s infinite alternate; }
+@keyframes ifmFloat { to { transform: translateY(-2.2%); } }
+.ifm-art img { position: absolute; display: block; width: auto; max-width: none; pointer-events: none; }
+.ifm-art img.solo { left: 50%; bottom: -52%; height: 146%; transform: translateX(-50%); }
+.ifm-art img.c { z-index: 2; left: 50%; bottom: -48%; height: 142%; transform: translateX(-50%); }
+.ifm-art img.l { left: -12%; bottom: -60%; height: 140%; }
+.ifm-art img.r { right: -22%; bottom: -60%; height: 140%; }
+
+/* nome / logo embaixo */
+.ifm-name { position: relative; z-index: 3; display: flex; justify-content: center; margin-top: calc(var(--s) * .05);
+  transform-origin: 50% 0; transition: scale .7s var(--spring), translate .7s var(--spring); }
+.ifm-name b { font-size: calc(var(--s) * .17); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; white-space: nowrap;
+  background: linear-gradient(90deg, var(--t1), var(--t2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.ifm-opt.sel .ifm-name { scale: 1.32; translate: 0 calc(var(--s) * .12); }
+.ifm-logo { width: calc(var(--s) * 1.2); max-width: none; height: auto; margin-top: calc(var(--s) * -.1); filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .25)); }
+.ifm-curso.sel .ifm-name { scale: 1.75; translate: 0 calc(var(--s) * -.24); }
+/* "seu perfil" fica na parte escura: o degradê clareia para ler bem */
+.ifm-perfil .ifm-name b { background: linear-gradient(90deg, #5eead4, #38bdf8 55%, #60a5fa); -webkit-background-clip: text; background-clip: text; }
+
+/* botões que ainda não abrem nada balançam de leve */
+.ifm-opt.nope .ifm-in { animation: ifmNope .45s ease; }
+@keyframes ifmNope { 20% { transform: translateX(-8px); } 45% { transform: translateX(7px); } 70% { transform: translateX(-4px); } }
+
+/* ---------- avisos de baixo ---------- */
+.ifm-news { position: absolute; left: clamp(20px, 6vw, 90px); bottom: clamp(22px, 7vh, 70px); display: flex; align-items: center; gap: 10px;
+  padding: 0; border: 0; background: none; cursor: pointer; opacity: 0; transform: translateY(16px); transition: opacity .6s ease, transform .7s var(--soft); }
+.ifm-bell { position: relative; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; color: #fff;
+  background: linear-gradient(135deg, #f7154c, #ff8f4e); box-shadow: 0 10px 22px -10px rgba(247, 21, 76, .8); }
+.ifm-bell svg { width: 24px; height: 24px; transform-origin: 50% 10%; }
+.ifm-bell i { position: absolute; top: 6px; right: 6px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 99px; background: #fff; color: #f7154c;
+  font: 800 10px/15px system-ui, sans-serif; font-style: normal; text-align: center; }
+.ifm-news-pill { padding: 12px 22px; border-radius: 99px; color: #fff; font-size: 13px; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; white-space: nowrap;
+  background: linear-gradient(90deg, #f7154c, #ff8f4e); box-shadow: 0 10px 22px -12px rgba(247, 21, 76, .8); transition: transform .3s var(--soft); }
+.ifm-news:hover .ifm-news-pill { transform: translateX(3px); }
+.ifm.has-sel .ifm-news { opacity: 1; transform: none; }
+.ifm.has-sel .ifm-bell svg { animation: ifmBell 2.6s ease-in-out .6s infinite; }
+@keyframes ifmBell { 0%, 30%, 100% { transform: none; } 5% { transform: rotate(16deg); } 10% { transform: rotate(-14deg); } 15% { transform: rotate(10deg); } 20% { transform: rotate(-6deg); } }
+
+.ifm-enter { position: absolute; right: clamp(20px, 6vw, 90px); bottom: clamp(26px, 7vh, 74px); margin: 0; display: flex; align-items: center; gap: 12px;
+  color: #fff; font-size: clamp(15px, 1.35vw, 19px); font-weight: 700; letter-spacing: -.01em; text-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+  opacity: 0; transform: translateY(16px); transition: opacity .6s ease .15s, transform .7s var(--soft) .15s; }
+.ifm-enter em { position: relative; display: inline-grid; font-style: normal; }
+.ifm-enter em > span { grid-area: 1 / 1; white-space: pre; }
+.ifm-enter em > span i { display: inline-block; font-style: normal; animation: ifmLetter .5s var(--spring) calc(var(--d) * 18ms) both; }
+.ifm-enter em > span.out { animation: ifmTxtOut .28s ease forwards; }
+.ifm-enter em > span.out i { animation: none; }
+@keyframes ifmLetter { from { opacity: 0; transform: translateY(.7em) scale(.6); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes ifmTxtOut { to { opacity: 0; transform: translateY(-.6em); filter: blur(3px); } }
+.ifm-enter.swap .ifm-enter-ico { animation: ifmIco .5s var(--spring); }
+@keyframes ifmIco { 40% { transform: scale(1.25) translateX(-4px); } }
+.ifm-enter-ico { display: grid; place-items: center; width: 40px; height: 40px; }
+.ifm-enter-ico svg { width: 34px; height: 34px; animation: ifmEnter 1.6s ease-in-out infinite; }
+@keyframes ifmEnter { 50% { transform: translateX(-4px); } }
+.ifm.has-sel .ifm-enter { opacity: 1; transform: none; }
+/* carregando (o mesmo círculo da tela de resultado das lições): aparece na entrada e
+   dá lugar ao "Pressione enter" quando o botão do meio se expande */
+.ifm-wait { position: absolute; right: clamp(20px, 6vw, 90px); bottom: clamp(26px, 7vh, 74px); margin: 0; display: flex; align-items: center; gap: 14px; pointer-events: none;
+  opacity: 0; transform: translateX(8px); transition: opacity .4s ease, transform .5s var(--soft); }
+.ifm-wait em { font-size: clamp(15px, 1.2vw, 17px); font-weight: 600; font-style: normal; letter-spacing: -.01em; white-space: nowrap; color: rgba(255, 255, 255, .92); text-shadow: 0 1px 8px rgba(0, 0, 0, .25); }
+.ifm-spin { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, .25); border-top-color: #fff; animation: ifmSpin .9s linear infinite; }
+@keyframes ifmSpin { to { transform: rotate(360deg); } }
+.ifm.in .ifm-wait { opacity: 1; transform: none; transition-delay: .3s; }
+.ifm.has-sel .ifm-wait { opacity: 0; transform: scale(.9); transition-delay: 0s; }
+.ifm.has-sel .ifm-spin { animation-play-state: paused; }
+
+/* ---------- saída: o escolhido avança, o resto some ---------- */
+.ifm.leave .ifm-opt:not(.sel) .ifm-in { animation: ifmOut .45s ease forwards; }
+.ifm.leave .ifm-opt.sel .ifm-in { animation: ifmGo .62s cubic-bezier(.5, 0, .75, 0) forwards; }
+.ifm.leave .ifm-news, .ifm.leave .ifm-enter { opacity: 0; transform: translateY(16px); transition-delay: 0s; }
+.ifm.leave .ifm-white { animation: ifmWhiteOut .6s cubic-bezier(.5, 0, .75, 0) forwards; }
+.ifm.leave .ifm-bg { opacity: 0; transition: opacity .55s ease .1s; }
+@keyframes ifmOut { to { opacity: 0; transform: translateY(24px) scale(.85); } }
+@keyframes ifmGo { 0% { opacity: 1; transform: none; } 35% { opacity: 1; transform: scale(1.06); } 100% { opacity: 0; transform: scale(1.35) translateY(-20px); } }
+@keyframes ifmWhiteOut { from { transform: none; } to { transform: translate3d(-62%, 0, 0); } }
+
+/* só aparece no computador (no celular e no tablet #informatica vai direto aos módulos) */
+@media (max-width: 1100px) { .ifm-white { clip-path: polygon(0 0, 42% 0, 60% 100%, 0 100%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ifm *, .ifm *::before, .ifm *::after { animation: none !important; transition-duration: .01s !important; }
+}

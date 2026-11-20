@@ -104,7 +104,7 @@
   }
   const topHTML = (L, prog) => `
       <div class="lc-top">
-        <a class="lc-back" href="#informatica">${svg('back')}Lições</a>
+        <a class="lc-back" href="#informatica/cursos">${svg('back')}Lições</a>
         <h1 class="lc-head"><span class="lc-grad">Lição ${L.numero}.</span> <span>${esc(L.titulo)}</span></h1>
         ${prog ? `<div class="lc-prog" aria-label="Progresso da lição"><span id="lc-prog-txt"></span><div class="lc-segs" id="lc-segs">${L.niveis.map((n) => `<i class="${n.tipo === 'typing' ? '' : 'g'}"></i>`).join('')}</div></div>` : ''}
       </div>`;
@@ -144,7 +144,7 @@
             <div><strong>${p ? dur(p.time) : '—'}</strong><small>Tempo</small></div>
           </div>
         </div>
-        <div class="lc-cta"><a class="btn-dark" href="#informatica">Voltar às lições</a></div>
+        <div class="lc-cta"><a class="btn-dark" href="#informatica/cursos">Voltar às lições</a></div>
       </section>
      </div>
     </div>`;
@@ -1198,12 +1198,12 @@
       // Continuar: a mesma abertura do início da lição, com "Retornando à plataforma" embaixo do logo
       el.querySelector('[data-lr="go"]').addEventListener('click', () => {
         const I = window.HC_intro;
-        if (reduce || !I) return close(() => { location.hash = '#informatica'; });
+        if (reduce || !I) return close(() => { location.hash = '#informatica/cursos'; });
         if (el.dataset.leaving) return;
         el.dataset.leaving = '1'; // as faixas da abertura passam por cima da tela de resultado
         const n = parseInt(String(L.id).split('-')[1], 10) || 1;
         I.play(n, L, { label: 'Retornando à plataforma', sub: 'Lição concluída' });
-        setTimeout(() => { el.remove(); location.hash = '#informatica'; I.end(); }, I.PEAK + 200);
+        setTimeout(() => { el.remove(); location.hash = '#informatica/cursos'; I.end(); }, I.PEAK + 200);
       });
       el.querySelector('[data-lr="again"]').addEventListener('click', () => close(() => { st = fresh(); play(); }));
       el.querySelector('[data-lr="report"]').addEventListener('click', () => report(a, rating, fast, slow, g));

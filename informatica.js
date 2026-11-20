@@ -111,13 +111,20 @@ let infoPlatform = null;
 const infoLoadPlatform = () => infoPlatform ||= new Promise((ok, fail) => {
   const css = document.createElement('link');
   css.rel = 'stylesheet'; css.href = `curso/plataforma.css?v=${window.HC_V || ''}`;
+  const css2 = document.createElement('link'); // tela de seleção (menu de entrada)
+  css2.rel = 'stylesheet'; css2.href = `curso/menu.css?v=${window.HC_V || ''}`;
+  let left = 2;
+  const done = () => { if (--left === 0) ok(); };
+  const err = () => { infoPlatform = null; fail(); };
   const js = document.createElement('script');
   js.src = `curso/plataforma.js?v=${window.HC_V || ''}`;
-  js.onload = () => ok();
-  js.onerror = () => { infoPlatform = null; fail(); };
+  js.onload = done; js.onerror = err;
+  const menu = document.createElement('script');
+  menu.src = `curso/menu.js?v=${window.HC_V || ''}`;
+  menu.onload = done; menu.onerror = err;
   const cur = document.createElement('script'); // cursores desenhados da plataforma (só no computador)
   cur.src = `curso/cursores.js?v=${window.HC_V || ''}`;
-  document.head.append(css); document.body.append(js, cur);
+  document.head.append(css, css2); document.body.append(js, menu, cur);
 });
 
 function renderInformatica(view, route = 'informatica') {

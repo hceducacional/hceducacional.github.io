@@ -98,7 +98,7 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
   const lessonAt = (n) => HC_CURSO.modulos.flatMap((m) => m.licoes)[n - 1];
   async function openLesson(view, n) {
     const l = lessonAt(n);
-    if (!l?.arquivo) { introEnd(); location.hash = '#informatica'; return toast('Esta lição será montada em breve.'); }
+    if (!l?.arquivo) { introEnd(); location.hash = '#informatica/cursos'; return toast('Esta lição será montada em breve.'); }
     view.innerHTML = '<div class="wrap"><p class="me-loading">Carregando a lição…</p></div>';
     try { await Promise.all([load('curso/licao.css'), load('curso/teclado.js'), load('curso/licao.js'), load(l.arquivo)]); }
     catch { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir a lição. Verifique a internet e tente de novo.</p></div>'; return introEnd(); }
@@ -567,8 +567,12 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
       let local = null; try { local = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
       if (!local || (dados?.savedAt || 0) > (local.savedAt || 0)) { try { localStorage.setItem(key, JSON.stringify(dados)); changed = true; } catch {} }
     });
-    if (changed && view.isConnected && location.hash === '#informatica') render(view);
+    if (changed && view.isConnected && (location.hash === '#informatica/cursos' || (location.hash === '#informatica' && !window.HC_isComputer()))) render(view);
   }
 
-  window.HC_platform = { render: (view, sub) => { render(view, sub); if (!sub) sync(view); } };
+  window.HC_platform = { render: (view, sub) => {
+    if (!sub && window.HC_menu && window.HC_isComputer()) return window.HC_menu.render(view); // #informatica: tela de seleção (curso/menu.js), só no computador
+    if (sub === 'cursos') sub = ''; // #informatica/cursos: módulos e lições
+    render(view, sub); if (!sub) sync(view);
+  } };
 })();

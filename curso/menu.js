@@ -1,0 +1,175 @@
+/* =========================================================
+   PLATAFORMA DE INFORMÁTICA — tela de seleção (como a de um jogo)
+   É a primeira tela de #informatica. Os três botões entram recolhidos (personagens
+   dentro da forma); 1 s depois o do meio se expande e os personagens saem da forma.
+   Passar o mouse ou usar ← → escolhe outro botão; Enter (ou clique) entra.
+   O botão do meio leva aos módulos (#informatica/cursos).
+   Fundo: o mesmo das lições (degradê escuro + luzes de aurora + malha de pontinhos),
+   trocando de cor devagar, com a faixa branca na diagonal por cima.
+   ========================================================= */
+(() => {
+  const IMG = 'assets/menu-info/';
+  /* para trocar os personagens, substitua os arquivos em assets/menu-info (PNG/WebP sem fundo) */
+  const OPTS = [
+    { id: 'progresso', label: 'progresso', hint: 'para ver o seu progresso', g1: '#0ba5a4', g2: '#72de6c', t1: '#0e9f92', t2: '#4fc95a',
+      art: [['progresso.webp', 'solo']] },
+    { id: 'curso', logo: true, hint: 'para começar', g1: '#f7154c', g2: '#ff8f4e',
+      art: [['aluno-celular.webp', 'l'], ['aluno-notebook.webp', 'r'], ['aluna-oculos.webp', 'c']] },
+    { id: 'perfil', label: 'seu perfil', hint: 'para ver o seu perfil', g1: '#2fd6ec', g2: '#1d56d6', t1: '#18b4d4', t2: '#2563eb',
+      art: [['perfil.webp', 'solo']] },
+  ];
+  /* as mesmas cores dos cenários das lições: b = fundo escuro; a1, a2, a3 = luzes de aurora */
+  const SCENES = [
+    { b: '14 32 46', a1: '45 212 191', a2: '139 92 246', a3: '34 211 238' },
+    { b: '12 26 60', a1: '59 130 246', a2: '6 182 212', a3: '99 102 241' },
+    { b: '50 18 42', a1: '244 63 94', a2: '245 158 11', a3: '168 85 247' },
+    { b: '26 16 62', a1: '168 85 247', a2: '236 72 153', a3: '59 130 246' },
+    { b: '34 24 58', a1: '192 132 252', a2: '129 140 248', a3: '240 171 252' },
+    { b: '46 20 26', a1: '251 113 133', a2: '251 146 60', a3: '250 204 21' },
+    { b: '16 20 38', a1: '56 189 248', a2: '167 139 250', a3: '244 114 182' },
+  ];
+  const SCENE_MS = 9000; // tempo de cada cor do fundo
+  const START = 1;       // botão que se expande sozinho na entrada (o do meio)
+
+  const ENTER_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4v7a4 4 0 0 1-4 4H4"/><path d="m9 10-5 5 5 5"/></svg>';
+  const BELL_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a6 6 0 0 0-6 6v3.6l-1.7 3.1A1 1 0 0 0 5.2 16h13.6a1 1 0 0 0 .9-1.3L18 11.6V8a6 6 0 0 0-6-6Z"/><path d="M9.5 18a2.5 2.5 0 0 0 5 0Z"/></svg>';
+
+  let run = 0; // cada abertura da tela ganha um número; timers antigos se calam
+
+  function render(view) {
+    const id = ++run;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let si = Math.floor(Math.random() * SCENES.length);
+    const sky = (s, on) => `<div class="ifm-sky${on ? ' on' : ''}" style="--b:${s.b};--a1:${s.a1};--a2:${s.a2};--a3:${s.a3}"></div>`;
+
+    view.innerHTML = `
+    <section class="ifm${reduce ? ' still' : ''}" aria-label="Plataforma de Informática">
+      <div class="ifm-bg" aria-hidden="true">${sky(SCENES[si], true)}${sky(SCENES[si], false)}<div class="ifm-dots"></div></div>
+      <div class="ifm-white" aria-hidden="true"></div>
+      <div class="ifm-row" role="listbox" aria-label="Escolha uma opção">
+        ${OPTS.map((o, k) => `
+        <button class="ifm-opt ifm-${o.id}" type="button" role="option" aria-selected="false" data-k="${k}"
+          style="--i:${k};--g1:${o.g1};--g2:${o.g2}${o.t1 ? `;--t1:${o.t1};--t2:${o.t2}` : ''}"
+          aria-label="${o.logo ? 'Plataforma de Informática: módulos e lições' : o.label[0].toUpperCase() + o.label.slice(1)}">
+          <span class="ifm-in">
+            <span class="ifm-card">
+              <span class="ifm-glow"></span>
+              <span class="ifm-shape"><i class="ifm-shine"></i></span>
+              <span class="ifm-ring"></span>
+              <span class="ifm-art"><span class="ifm-float">${o.art.map(([src, c]) => `<img class="${c}" src="${IMG}${src}" alt="" draggable="false" decoding="async">`).join('')}</span></span>
+            </span>
+            <span class="ifm-name">${o.logo
+              ? '<img class="ifm-logo" src="assets/plataforma-informatica.webp" width="900" height="184" alt="" draggable="false">'
+              : `<b>${o.label}</b>`}</span>
+          </span>
+        </button>`).join('')}
+      </div>
+      <button class="ifm-news" type="button" data-go="1">
+        <span class="ifm-bell">${BELL_SVG}<i>1</i></span>
+        <span class="ifm-news-pill">Novos níveis para você explorar</span>
+      </button>
+      <p class="ifm-wait" role="status"><em>Aguarde, preparando</em><span class="ifm-spin" aria-hidden="true"></span></p>
+      <p class="ifm-enter" aria-live="polite"><span class="ifm-enter-ico">${ENTER_SVG}</span><span>Pressione enter <em><span>${OPTS[START].hint}</span></em></span></p>
+    </section>`;
+
+    const stage = view.querySelector('.ifm');
+    const opts = [...stage.querySelectorAll('.ifm-opt')];
+    const hint = stage.querySelector('.ifm-enter em');
+    const alive = () => id === run && stage.isConnected;
+    /* troca o texto do aviso: o antigo sobe e some, o novo entra letra por letra */
+    const swapHint = (txt) => {
+      const old = hint.querySelector('span:not(.out)');
+      if (old?.textContent === txt) return;
+      old?.classList.add('out'); setTimeout(() => old?.remove(), 300);
+      const nw = document.createElement('span');
+      nw.innerHTML = [...txt].map((c, d) => `<i style="--d:${d}">${c === ' ' ? '&nbsp;' : c}</i>`).join('');
+      hint.appendChild(nw);
+      const box = hint.parentElement.parentElement;
+      box.classList.remove('swap'); void box.offsetWidth; box.classList.add('swap');
+    };
+    let sel = -1, ready = false, leaving = false, auto = 0;
+
+    /* escolhe um botão: ele se expande e o anterior se recolhe; os vizinhos abrem espaço */
+    const select = (k, focus) => {
+      if (leaving || k === sel || k < 0 || k >= opts.length) return;
+      clearTimeout(auto);
+      sel = k;
+      opts.forEach((b, j) => {
+        b.classList.toggle('sel', j === k);
+        b.setAttribute('aria-selected', j === k);
+        b.style.setProperty('--push', j === k ? 0 : j < k ? -1 : 1);
+      });
+      stage.classList.add('has-sel');
+      swapHint(OPTS[k].hint);
+      if (focus) opts[k].focus({ preventScroll: true });
+    };
+
+    /* entra no botão escolhido */
+    const go = (k) => {
+      if (leaving) return;
+      const o = OPTS[k];
+      if (o.id !== 'curso') {
+        opts[k].classList.remove('nope'); void opts[k].offsetWidth; opts[k].classList.add('nope');
+        return toast(o.id === 'progresso' ? 'A tela de progresso chega em breve.' : 'A tela do seu perfil chega em breve.');
+      }
+      leaving = true; select(k);
+      stage.classList.add('leave');
+      setTimeout(() => { if (alive()) location.hash = '#informatica/cursos'; }, reduce ? 0 : 620);
+    };
+
+    opts.forEach((b, k) => {
+      b.addEventListener('pointerenter', (e) => { if (ready && e.pointerType === 'mouse') select(k); });
+      b.addEventListener('focus', () => { if (ready) select(k); });
+      b.addEventListener('click', () => {
+        if (!ready) { ready = true; }
+        go(k);
+      });
+    });
+    stage.querySelector('.ifm-news').addEventListener('click', () => go(1));
+
+    const onKey = (e) => {
+      if (!alive()) return document.removeEventListener('keydown', onKey);
+      if (e.target.closest?.('input, textarea, select, [contenteditable]') || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault(); ready = true;
+        select(Math.max(0, Math.min(opts.length - 1, (sel < 0 ? START : sel) + (e.key === 'ArrowLeft' ? -1 : 1))), true);
+      } else if (e.key === 'Enter' && !e.target.closest?.('button:not(.ifm-opt), a')) {
+        e.preventDefault(); go(sel < 0 ? START : sel);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+
+    /* fundo: troca de cor devagar (duas camadas que se cruzam só pela opacidade) */
+    if (!reduce) {
+      const skies = stage.querySelectorAll('.ifm-sky');
+      let cur = 0;
+      const tick = () => {
+        if (!alive()) return;
+        si = (si + 1) % SCENES.length;
+        const s = SCENES[si], nx = skies[1 - cur];
+        nx.style.cssText = `--b:${s.b};--a1:${s.a1};--a2:${s.a2};--a3:${s.a3}`;
+        nx.classList.add('on'); skies[cur].classList.remove('on'); cur = 1 - cur;
+        setTimeout(tick, SCENE_MS);
+      };
+      setTimeout(tick, SCENE_MS);
+    }
+
+    /* entrada: espera as imagens (no máx. 1,2 s), os botões entram recolhidos e,
+       1 s depois, o do meio se expande */
+    if (reduce) { ready = true; stage.classList.add('in'); select(START); return; }
+    const imgs = [...stage.querySelectorAll('img')];
+    const wait = Promise.race([
+      Promise.all(imgs.map((i) => (i.decode ? i.decode().catch(() => {}) : null))),
+      new Promise((r) => setTimeout(r, 1200)),
+    ]);
+    wait.then(() => {
+      if (!alive()) return;
+      stage.classList.add('in');
+      const inMs = 350 + (opts.length - 1) * 110 + 800; // última entrada terminando
+      setTimeout(() => { if (alive()) ready = true; }, inMs - 300);
+      auto = setTimeout(() => { if (alive() && sel < 0) select(START); }, inMs + 1000);
+    });
+  }
+
+  window.HC_menu = { render };
+})();

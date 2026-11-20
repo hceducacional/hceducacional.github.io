@@ -36,7 +36,7 @@ window.HC_CONTENT = {
       "desc": "Acesse a plataforma de digitação do curso de Informática Básica com seu usuário e senha para continuar progredindo",
       "logo": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/fe60251c-c8ed-4f7f-87bd-4b806b8cea06.webp",
       "pill": "Curso de Informática",
-      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/e362ad27-cabb-460e-979a-7d89e67a775c.png",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/e0e8ce21-55ef-4ce5-a87b-4feff2f3be85.webp",
       "title": "Continue seu treinamento",
       "linkOn": true,
       "lockInfo": true,
@@ -102,6 +102,22 @@ window.HC_CONTENT = {
       "url": "https://grupoeducamais.sistemasiga.net/login",
       "name": "EDUCA NEXUS",
       "image": "assets/conteudo/botao-l6-8af2fb68.png"
+    },
+    {
+      "c1": "#22c55e",
+      "c2": "#0e7490",
+      "id": "l1794923521692",
+      "url": "",
+      "name": "INFORMÁTICA",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/15736941-f6f4-442e-9500-dfb0a454d3c7.webp"
+    },
+    {
+      "c1": "#22c55e",
+      "c2": "#0e7490",
+      "id": "l1794923826356",
+      "url": "",
+      "name": "CURSOS TÉCNICOS",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/9c6c532e-4b10-4359-aef7-dd45d359bff5.webp"
     }
   ],
   "news": [
@@ -341,7 +357,7 @@ window.HC_CONTENT = {
     {
       "id": "a1",
       "name": "Comunicação HC",
-      "image": ""
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/4cd15a43-6628-4664-8b4d-679a8ca07e99.webp"
     },
     {
       "id": "amwew9xh2",
@@ -352,40 +368,31 @@ window.HC_CONTENT = {
   "radar": [
     {
       "id": "r1",
-      "name": "Ana Lima",
-      "image": ""
+      "name": "Faveni",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/fd900821-10df-4d90-be30-a84f309f890f.webp"
     },
     {
       "id": "r2",
-      "name": "Maria Clara",
-      "image": ""
+      "name": "Futura",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/80332899-9f0c-4396-bb88-25d2b0c8d3ec.webp"
     },
     {
       "id": "r3",
-      "name": "João Pedro",
-      "image": ""
+      "name": "Uniabeu",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/04d6498c-96a5-45e0-acda-068275c0d777.webp"
     },
     {
       "id": "r4",
-      "name": "Rita Sousa",
-      "image": ""
+      "name": "HC",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/63601666-b69e-4867-888b-bf6fce089f29.webp"
     },
     {
       "id": "r5",
-      "name": "Bruno Ferreira",
-      "image": ""
+      "name": "Unisba",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/2ea114e7-7e1c-4cf4-939f-e8897232c5a2.webp"
     }
   ],
-  "cursoExtra": [
-    {
-      "id": "lmwhrc4wj",
-      "mod": 0,
-      "tag": "Nova lição",
-      "desc": "Card criado pelo administrador. O conteúdo desta lição ainda será configurado.",
-      "imagem": "",
-      "titulo": "Lição 06"
-    }
-  ],
+  "cursoExtra": [],
   "cursoEdit": [
     {
       "id": "l0-0",
@@ -403,6 +410,34 @@ window.HC_CONTENT = {
       "secao": "Primeiro comando.",
       "texto": "Nesta etapa, você encontrará atividades elaboradas especialmente para introduzir os conceitos iniciais do teclado. É essencial compreender o funcionamento de cada tecla; por isso, cada seção é projetada com atenção para facilitar a aprendizagem e a memorização dos diferentes grupos de teclas a seguir.",
       "secaoComplemento": "As teclas básicas, uma lição de cada vez."
+    },
+    {
+      "id": "l0-1",
+      "tag": "Introdução",
+      "desc": "Os indicadores sobem para U e R, e o dedo médio direito chega ao K.",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/d6400aae-fbc9-4918-ae18-43eb4551f525.webp",
+      "titulo": "Teclas U, R e K"
+    },
+    {
+      "id": "l0-3",
+      "tag": "Introdução",
+      "desc": "O médio esquerdo desce ao C, e os indicadores alcançam o G e o N.",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/95681fee-0864-43e4-955d-f0b10b4fb7f5.webp",
+      "titulo": "Teclas C, G e N"
+    },
+    {
+      "id": "l0-2",
+      "tag": "Introdução",
+      "desc": "O dedo médio esquerdo no D e no E, e o médio direito no I.",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/57e021bb-733b-4083-9d11-91a7e71f3aca.webp",
+      "titulo": "Teclas D, E e I"
+    },
+    {
+      "id": "l0-4",
+      "tag": "Revisão",
+      "desc": "Uma revisão completa de todas as teclas aprendidas no módulo.",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/ef4cae18-000b-438e-99d9-c0061875e2a6.webp",
+      "titulo": "Revisão Geral 1"
     }
   ],
   "loginBanner": [
@@ -415,31 +450,59 @@ window.HC_CONTENT = {
   "hubs": [
     {
       "id": "h-fin",
-      "kind": "panel",
-      "title": "Financeiro",
       "sub": "Boletos, 2ª via e negociação",
       "icon": "wallet",
-      "image": ""
+      "kind": "panel",
+      "image": "",
+      "title": "Financeiro"
     },
     {
-      "id": "f1",
-      "kind": "btn",
-      "panel": "h-fin",
-      "name": "Boletos e 2ª via",
-      "url": "",
-      "image": "",
       "c1": "#34d399",
-      "c2": "#047857"
+      "c2": "#047857",
+      "id": "f1",
+      "url": "",
+      "kind": "btn",
+      "name": "Boletos e 2ª via",
+      "image": "",
+      "panel": "h-fin"
     },
     {
-      "id": "f2",
-      "kind": "btn",
-      "panel": "h-fin",
-      "name": "Negociar mensalidades",
-      "url": "",
-      "image": "",
       "c1": "#fbbf24",
-      "c2": "#c2410c"
+      "c2": "#c2410c",
+      "id": "f2",
+      "url": "",
+      "kind": "btn",
+      "name": "Negociar mensalidades",
+      "image": "",
+      "panel": "h-fin"
+    },
+    {
+      "id": "hp1794923815354",
+      "sub": "",
+      "icon": "",
+      "kind": "panel",
+      "image": "",
+      "title": "EM BREVE"
+    },
+    {
+      "c1": "#60a5fa",
+      "c2": "#1e3a8a",
+      "id": "hb1794923815354",
+      "url": "",
+      "kind": "btn",
+      "name": "NOVO BOTÃO",
+      "image": "",
+      "panel": "hp1794923815354"
+    },
+    {
+      "c1": "#22c55e",
+      "c2": "#0e7490",
+      "id": "hb1794923819811",
+      "url": "",
+      "kind": "btn",
+      "name": "NOVO BOTÃO",
+      "image": "",
+      "panel": "hp1794923815354"
     }
   ]
 };
