@@ -6,7 +6,7 @@
 @property --fade { syntax: '<percentage>'; inherits: false; initial-value: 0%; }
 @property --cutb { syntax: '<length>'; inherits: true; initial-value: 0px; }
 
-.ifm { --s: clamp(120px, min(15.5vw, 28vh), 250px); --gap: calc(var(--s) * 1.55); --shift: calc(var(--s) * .45); --r: calc(var(--s) * .13);
+.ifm { --s: clamp(130px, min(18.5vw, 32vh), 320px); /* tamanho dos botões */ --gap: calc(var(--s) * 1.42); --shift: calc(var(--s) * .45); --r: calc(var(--s) * .13);
   --spring: cubic-bezier(.34, 1.56, .64, 1); --soft: cubic-bezier(.22, 1, .36, 1);
   position: fixed; inset: 0 0 0 var(--sb-collapsed); z-index: 1; overflow: hidden; isolation: isolate; background: #0b0d14;
   font-family: inherit; user-select: none; -webkit-user-select: none; }
