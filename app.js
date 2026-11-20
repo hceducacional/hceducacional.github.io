@@ -835,14 +835,16 @@ function loopTrack(track, onChange) {
   };
 }
 
-/* Logo do banner (só no celular): ela entra junto com o banner, no pé da área do texto, e,
+/* Logo do banner (só no celular): ela entra junto com o banner, um pouco acima do pé da área do texto, e,
    quando o banner para, sobe para o lugar dela, acima do texto. Aqui medimos essa distância. */
+const LOGO_LIFT = 56; // quantos px acima do pé da área do texto a logo surge
 function placeBannerLogos(box) {
   const place = () => box.querySelectorAll('.slide-logo img').forEach((img) => {
     const slide = img.closest('.slide'), wrap = img.parentElement;
     if (!img.offsetWidth) return;
     const w = wrap.getBoundingClientRect(), t = wrap.parentElement.getBoundingClientRect();
-    img.style.setProperty('--ly', `${Math.round(t.bottom - w.top - img.offsetHeight)}px`);
+    // começa um pouco acima do pé da imagem (LOGO_LIFT), em vez de quase encostar nele
+    img.style.setProperty('--ly', `${Math.max(0, Math.round(t.bottom - w.top - img.offsetHeight - LOGO_LIFT))}px`);
   });
   box.querySelectorAll('.slide-logo img').forEach((img) => { if (!img.complete) img.addEventListener('load', place, { once: true }); });
   place();
