@@ -339,7 +339,8 @@
 .lc-g-bar.flash { animation: gBarFlash .5s ease-out; }
 @keyframes gBarFlash { 0% { filter: brightness(1.9) saturate(.6); } }
 /* estrelas: à esquerda da barra, cada uma na sua meta */
-.lc-g-star { position: absolute; left: 46px; bottom: var(--at); width: 56px; height: 56px; margin: 0 0 -28px -28px; z-index: 2; opacity: 0; transform: scale(.5);
+/* mesmo tamanho e inclinação das estrelas da tela da lição concluída (.lc-best-stars) */
+.lc-g-star { position: absolute; left: 56px; bottom: var(--at); width: 124px; height: 124px; margin: 0 0 -62px -62px; rotate: -14deg; z-index: 2; opacity: 0; transform: scale(.5);
   transition: opacity .45s ease, transform .55s cubic-bezier(.22, 1, .36, 1); will-change: transform, opacity; }
 .lc-g-star.on, .lc-g-star.next { opacity: 1; transform: none; }
 /* estrela vazia na próxima meta: respira devagar */
@@ -368,7 +369,7 @@
   background: radial-gradient(60% 45% at 50% 60%, #fff, rgba(255, 255, 255, .85) 40%, transparent 75%); }
 .lc-g-flash.go { animation: gFlash 1s ease-out; }
 @keyframes gFlash { 0% { opacity: 0; } 15%, 40% { opacity: 1; } 100% { opacity: 0; } }
-.lc-gauge.big .lc-g-star.on { transform: scale(1.7); transition: transform .55s cubic-bezier(.34, 1.56, .64, 1); z-index: 3; }
+.lc-gauge.big .lc-g-star.on { transform: scale(1.25); transition: transform .55s cubic-bezier(.34, 1.56, .64, 1); z-index: 3; }
 .lc-gauge.big .lc-g-star.on .lc-g-edge { opacity: .6; transition: opacity .5s ease; }
 .lc-g-star.burst { animation: gBurst .9s cubic-bezier(.22, 1, .36, 1); }
 .lc-g-star.burst .lc-g-edge { animation: gEdge .9s ease-in-out; }
@@ -773,22 +774,16 @@
 .lc-gauge.super .lc-g-star.on .s-superstar { opacity: 1; }
 .lc-gauge.mega .lc-g-star.on .s-megastar { opacity: 1; }
 .lc-g-area, .lc-gauge-pts, .lc-gauge > small { position: relative; z-index: 1; }
-.lc-g-code { position: absolute; inset: 0; z-index: 0; display: flex; flex-direction: column; justify-content: space-around; overflow: hidden; pointer-events: none;
-  font: 500 11px/1 ui-monospace, "SF Mono", Menlo, monospace; color: #fff; opacity: .13;
-  -webkit-mask-image: linear-gradient(180deg, transparent, #000 12%, #000 80%, transparent); mask-image: linear-gradient(180deg, transparent, #000 12%, #000 80%, transparent); }
-.lc-g-code .inf-code-row { white-space: nowrap; }
-.lc-g-code .inf-code-row > div { display: inline-block; will-change: transform; animation: lrMarquee calc(130s + var(--r) * 18s) linear infinite; }
-/* algumas palavras coloridas, como no código da apresentação (tons claros para o fundo roxo) */
-.lc-g-code .t-k { color: #6ee7b7; } .lc-g-code .t-f { color: #93c5fd; } .lc-g-code .t-s { color: #fcd34d; }
-.lc-g-code .t-n { color: #f0abfc; } .lc-g-code .t-c { color: #a1a1aa; } .lc-g-code .t-v { color: #e4e4e7; }
-.lc-g-code .inf-code-row:nth-child(even) > div { animation-direction: reverse; }
-.lc-g-code .inf-sep { width: 32px; }
+.lc-g-sky { position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(rgba(255, 255, 255, .055) 1px, transparent 1.3px) 0 0 / 18px 18px,
+    color-mix(in srgb, rgb(var(--b, 14, 32, 46)) 70%, #06060a); }
 .lc-g-beam { position: absolute; z-index: 1; left: 0; right: 0; bottom: -45%; height: 45%; opacity: 0; pointer-events: none;
   background: linear-gradient(0deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .95) 55%, rgba(255, 255, 255, 0)); }
 .lc-g-beam.go { animation: lcBeamUp .95s cubic-bezier(.4, 0, .2, 1) both; }
 @keyframes lcBeamUp { 0% { opacity: 0; transform: translateY(0); } 15% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(-330%); } }
 @media (prefers-reduced-motion: reduce) {
-  .lc-g-code .inf-code-row > div, .lc-g-beam { animation: none !important; }
+  .lc-g-beam { animation: none !important; }
   .lc-kbwrap { transition: none; }
 }
 
@@ -847,10 +842,12 @@
   box-shadow: -18px 0 40px -20px rgba(0, 0, 0, .35); }
 .lr-panel::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 6%; background: linear-gradient(90deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .06)); }
 .lr.in .lr-panel { animation: lrPanel 1.8s var(--e) 1.2s both; }
-/* flash de conquista na faixa do nome (disparado pelo JS a cada estrela e no Superstar/Megastar):
-   começa todo branco e o branco sai da esquerda para a direita (o fundo de 300% anda até o lado transparente) */
-.lr-flash { position: absolute; z-index: 2; top: 0; bottom: 0; left: 22%; right: 0; border-radius: 0 26px 26px 0; opacity: 0; pointer-events: none;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0) 33%, rgba(255, 255, 255, .85) 55%, #fff 66%, #fff 100%) 100% 0 / 300% 100% no-repeat; }
+/* brilho de conquista na faixa do nome (disparado pelo JS a cada estrela e no Superstar/Megastar):
+   uma faixa de luz suave atravessa da esquerda para a direita (o fundo de 300% anda de 100% até 0%) */
+.lr-flash { position: absolute; z-index: 0; top: 0; bottom: 0; left: 22%; right: 0; border-radius: 0 26px 26px 0; opacity: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, .16) 42%, rgba(255, 255, 255, .42) 50%, rgba(255, 255, 255, .16) 58%, rgba(255, 255, 255, 0) 70%) 100% 0 / 300% 100% no-repeat; }
+/* o flash fica por trás: foto, nome, barra, estrelas e pontos continuam por cima dele */
+.lr-ribbon > .avatar, .lr-ribbon > .lr-who, .lr-ribbon > .lr-score { position: relative; z-index: 1; }
 @keyframes lrPanel { to { transform: skewX(10deg); } }
 .lr-rays { position: absolute; inset: 0; opacity: 0; }
 .lr-rays i { position: absolute; top: -10%; bottom: -10%; left: calc(14% + var(--k) * 15%); width: calc(5% + (var(--k) % 3) * 4%); transform: skewX(-6deg);
@@ -1217,23 +1214,15 @@
 .lc-shell .lc-main {
   background:
     radial-gradient(rgba(255, 255, 255, .055) 1px, transparent 1.3px) 0 0 / 22px 22px,
-    linear-gradient(180deg, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, .38) 100%),
-    linear-gradient(160deg, var(--c1) 0%, color-mix(in srgb, var(--c1) 45%, #06060a) 100%);
+    color-mix(in srgb, var(--c1) 70%, #06060a);
 }
-.lc-shell .lc-main::before { content: ''; position: absolute; inset: -30%; z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(32% 28% at 22% 26%, rgb(var(--a1, 45 212 191) / .42), transparent 70%),
-    radial-gradient(30% 30% at 80% 22%, rgb(var(--a2, 139 92 246) / .36), transparent 70%),
-    radial-gradient(36% 30% at 58% 78%, rgb(var(--a3, 34 211 238) / .26), transparent 70%);
-  animation: lcAurora 26s ease-in-out infinite alternate; will-change: transform; }
+/* sem luzes nem degradês dentro do cartão: as auroras ficam só no fundo da página */
+.lc-shell .lc-main::before { display: none; }
 @keyframes lcAurora {
   0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
   50% { transform: translate3d(4%, -3%, 0) rotate(8deg) scale(1.06); }
   100% { transform: translate3d(-4%, 3%, 0) rotate(-6deg) scale(1.02); }
 }
-/* nos minijogos o cartão muda de cor; as luzes ficam mais suaves */
-.lc-shell .lc-main:has(.lc-kind.game)::before { opacity: .55; }
-@media (prefers-reduced-motion: reduce) { .lc-shell .lc-main::before { animation: none; } }
 
 /* =========================================================
    Barra de estrelas: reta final rumo ao Superstar / Megastar
@@ -1416,3 +1405,122 @@
   color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 .lc-xptest:hover { background: rgba(255, 255, 255, .18); }
 @media (prefers-reduced-motion: reduce) { .xpn * { animation: none !important; } .xpn-title span, .xpn-gain, .xpn-need, .xr-disc, .xr-white, .xr-green, .xr-shine, .xpn-num b, .xpn-glow { opacity: 1; transform: none; } .xr-track, .xr-border { stroke-dashoffset: 0; opacity: 1; } }
+
+/* =========================================================
+   Fundo da página durante a lição: o mesmo cenário sorteado do cartão do nível
+   (cor escura do cenário + as três luzes de aurora + trama de pontinhos),
+   no lugar do fundo branco do site, para a tela ficar mais imersiva.
+   ========================================================= */
+#lc-bgfx { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
+  background:
+    radial-gradient(rgba(255, 255, 255, .05) 1px, transparent 1.3px) 0 0 / 22px 22px,
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, .45) 100%),
+    linear-gradient(160deg, rgb(var(--b, 14, 32, 46)) 0%, color-mix(in srgb, rgb(var(--b, 14, 32, 46)) 40%, #05050a) 100%);
+  animation: lcBgIn .9s ease both; transition: background-color .8s ease; }
+#lc-bgfx::before { content: ''; position: absolute; inset: -30%; pointer-events: none;
+  background:
+    radial-gradient(32% 28% at 22% 26%, rgb(var(--a1) / .34), transparent 70%),
+    radial-gradient(30% 30% at 80% 22%, rgb(var(--a2) / .3), transparent 70%),
+    radial-gradient(36% 30% at 58% 78%, rgb(var(--a3) / .22), transparent 70%);
+  animation: lcAurora 34s ease-in-out infinite alternate; will-change: transform; }
+@keyframes lcBgIn { from { opacity: 0; } }
+body.lc-bg-on { background: #0b0b10; }
+body.lc-bg-on .lc-shell { border-color: rgba(255, 255, 255, .12); box-shadow: 0 30px 70px -30px rgba(0, 0, 0, .7); }
+@media (prefers-reduced-motion: reduce) { #lc-bgfx::before { animation: none; } }
+
+/* =========================================================
+   PATENTE na tela de XP (depende só do XP total do aluno)
+   Faixa na cor da família da patente, com nome, barra até a próxima e o troféu:
+   o troféu conquistado sai do círculo; o da próxima patente fica guardado dentro do dele.
+   ========================================================= */
+@property --rc1 { syntax: '<color>'; inherits: true; initial-value: #9a4a1f; }
+@property --rc2 { syntax: '<color>'; inherits: true; initial-value: #f0975a; }
+.xpr { --soft: cubic-bezier(.22, 1, .36, 1); --pop: cubic-bezier(.34, 1.5, .64, 1); --cd: clamp(104px, 8.6vw, 140px);
+  position: relative; width: min(600px, 40vw); height: calc(var(--cd) + 50px); margin-top: clamp(22px, 3.4vh, 38px);
+  opacity: 0; transform: translateX(-50px); transition: --rc1 1s ease, --rc2 1s ease; }
+.xpn.in .xpr { animation: xpnLine .9s var(--soft) 2.6s both; }
+/* faixa inclinada (acompanha a diagonal da tela) */
+.xpr-band { position: absolute; left: 0; right: 0; top: 18px; bottom: 0; overflow: hidden; border-radius: 20px 0 0 20px;
+  clip-path: polygon(0 0, 93% 0, 100% 100%, 0 100%); color: #fff;
+  background: radial-gradient(70% 120% at 0% 0%, rgba(255, 255, 255, .22), transparent 60%), linear-gradient(100deg, var(--rc1) 0%, var(--rc2) 100%);
+  box-shadow: 0 22px 40px -24px var(--rc1); }
+/* reflexo passando pela faixa (só transform) */
+.xpr-shine { position: absolute; top: 0; bottom: 0; left: 0; width: 40%; pointer-events: none; transform: translateX(-120%) skewX(-18deg);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .45), rgba(255, 255, 255, 0)); }
+.xpn.in .xpr-shine { animation: xprShine 4.5s ease-in-out 3.4s infinite; }
+.xpr.up .xpr-shine { animation: xprShine .9s ease-out, xprShine 4.5s ease-in-out 1.6s infinite; }
+@keyframes xprShine { 0% { transform: translateX(-120%) skewX(-18deg); } 40%, 100% { transform: translateX(320%) skewX(-18deg); } }
+.xpr-info { position: relative; z-index: 1; width: 38%; padding: clamp(12px, 1.5vw, 18px) 0 0 clamp(16px, 1.8vw, 24px); }
+.xpr-kicker { display: flex; white-space: nowrap; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: rgba(255, 255, 255, .78); }
+.xpr-new { padding: 3px 8px; border-radius: 99px; background: #fff; color: var(--rc1); font-style: normal; letter-spacing: .02em; opacity: 0; transform: scale(.5); }
+.xpr.up .xpr-new { animation: xprNew .6s var(--pop) .5s both; }
+@keyframes xprNew { to { opacity: 1; transform: none; } }
+.xpr-name { position: relative; display: grid; margin-top: 4px; font-size: clamp(22px, 2.2vw, 34px); font-weight: 800; letter-spacing: -.03em; line-height: 1.05; white-space: nowrap; text-shadow: 0 2px 10px rgba(0, 0, 0, .18); }
+.xpr-name span { grid-area: 1 / 1; }
+.xpr-name span.in { animation: xprNameIn .7s var(--pop) .25s both; }
+.xpr-name span.out { animation: xprNameOut .35s cubic-bezier(.5, 0, .75, 0) forwards; }
+@keyframes xprNameIn { from { opacity: 0; transform: translateY(70%) scale(.8); } }
+@keyframes xprNameOut { to { opacity: 0; transform: translateY(-70%) scale(.8); } }
+.xpr-bar { position: relative; display: block; height: 10px; margin-top: clamp(8px, 1vw, 12px); border-radius: 99px; overflow: hidden; background: rgba(0, 0, 0, .2); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .2); }
+.xpr-bar i { position: absolute; inset: 0; border-radius: inherit; transform-origin: 0 50%; transform: scaleX(0); will-change: transform;
+  background: linear-gradient(90deg, rgba(255, 255, 255, .85), #fff); box-shadow: 0 0 12px rgba(255, 255, 255, .7); }
+.xpr-xp { margin: 7px 0 0; font-size: clamp(11px, .85vw, 13px); line-height: 1.35; font-weight: 500; color: rgba(255, 255, 255, .85); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.xpr-xp b { color: #fff; font-weight: 800; }
+
+/* troféu atual: círculo + troféu que sai por cima dele */
+.xpr-cur { position: absolute; z-index: 2; left: 49%; top: 18px; width: var(--cd); height: var(--cd); margin-left: calc(var(--cd) / -2); }
+.xpr-disc { position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, #fff 0%, color-mix(in srgb, var(--rc2) 45%, #fff) 55%, var(--rc2) 100%);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, .9), 0 14px 28px -12px rgba(0, 0, 0, .45), inset 0 -8px 18px color-mix(in srgb, var(--rc1) 35%, transparent); }
+.xpr-cur .xpr-disc { opacity: 0; transform: scale(.4); }
+.xpn.in .xpr-cur .xpr-disc { animation: xprDisc .8s var(--pop) 2.95s both; }
+@keyframes xprDisc { to { opacity: 1; transform: none; } }
+.xpr-tro { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; user-select: none;
+  filter: var(--tf, none) drop-shadow(0 10px 14px rgba(0, 0, 0, .35)); }
+/* conquistado: maior que o círculo, saindo por cima */
+.xpr-cur .xpr-tro { transform: rotate(-14deg) scale(1.02); transform-origin: 50% 50%; } /* centralizado e com a mesma inclinação das estrelas */
+/* entrada e nova patente: o troféu começa guardado dentro do círculo e se expande para fora */
+.xpn.in .xpr-cur .xpr-tro.first { animation: xprEarn 1.7s var(--soft) 3.35s both; }
+.xpr-cur .xpr-tro.earn { animation: xprEarnBig 1.8s ease-in-out .15s both; }
+/* surge reto, no meio do círculo; espera um instante e só então cresce para fora, deitando */
+@keyframes xprEarn { 0% { opacity: 0; transform: rotate(0) scale(.45); } 30% { opacity: 1; transform: rotate(0) scale(.62); } 55% { transform: rotate(0) scale(.62); }
+  100% { opacity: 1; transform: rotate(-14deg) scale(1.02); } }
+@keyframes xprEarnBig { 0% { opacity: 0; transform: rotate(0) scale(.4); } 22% { opacity: 1; transform: rotate(0) scale(.62); } 42% { transform: rotate(0) scale(.58); }
+  70% { transform: rotate(-18deg) scale(1.2); } 86% { transform: rotate(-12deg) scale(.98); } 100% { opacity: 1; transform: rotate(-14deg) scale(1.02); } }
+/* faíscas na conquista */
+.xpr-sparks { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+.xpr-sparks i { position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; border-radius: 50%; opacity: 0; background: #fff; box-shadow: 0 0 10px var(--rc2), 0 0 4px #fff; }
+.xpr.up .xpr-sparks i { animation: xprSpark 1.2s cubic-bezier(.2, .7, .3, 1) .55s; }
+@keyframes xprSpark { 0% { opacity: 1; transform: rotate(var(--a)) translateX(calc(var(--cd) * .3)); } 100% { opacity: 0; transform: rotate(var(--a)) translateX(calc(var(--cd) * .95)) scale(.3); } }
+/* clarão na faixa quando a patente muda */
+.xpr-band::after { content: ''; position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.xpr.up .xpr-band::after { animation: xprFlash .9s ease-out; }
+@keyframes xprFlash { 0% { opacity: .85; } 100% { opacity: 0; } }
+.xpr.up .xpr-cur .xpr-disc { animation: xprDiscPulse .7s var(--pop); opacity: 1; transform: none; }
+@keyframes xprDiscPulse { 40% { transform: scale(1.12); } }
+
+/* próxima patente: troféu guardado dentro do círculo, apagado, com cadeado */
+.xpr-next { position: absolute; z-index: 1; right: 11%; top: calc(18px + (100% - 18px) / 2); width: calc(var(--cd) * .62); aspect-ratio: 1; margin-top: calc(var(--cd) * -.31 - 10px);
+  opacity: 0; transform: scale(.6); }
+.xpn.in .xpr-next { animation: xprDisc .8s var(--pop) 3.2s both; }
+.xpr-next.swap { animation: xprNextSwap .8s var(--pop) .9s both !important; }
+@keyframes xprNextSwap { 0% { opacity: 0; transform: scale(.5) translateX(30px); } 100% { opacity: 1; transform: none; } }
+.xpr-next .xpr-disc { --rc2: #fff; background: radial-gradient(circle at 50% 38%, rgba(255, 255, 255, .95), rgba(255, 255, 255, .55)); box-shadow: 0 0 0 3px rgba(255, 255, 255, .6), inset 0 -6px 12px rgba(0, 0, 0, .12); }
+.xpr-next .xpr-tro { transform: scale(.66); filter: var(--tf, none) grayscale(.55) brightness(.92) drop-shadow(0 4px 6px rgba(0, 0, 0, .25)); opacity: .9; }
+.xpr-lock { position: absolute; right: -4px; bottom: -2px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #1d1d1f; color: #fff; box-shadow: 0 0 0 2px #fff; }
+.xpr-lock svg { width: 13px; height: 13px; }
+.xpr-next small, .xpr-next em { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; color: #fff; text-align: center; }
+.xpr-next small { top: calc(100% + 6px); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
+.xpr-next em { top: calc(100% + 19px); font-size: 13px; font-weight: 800; font-style: normal; }
+.xpr-next .xpr-disc.max { background: radial-gradient(circle, #fff, rgba(255, 255, 255, .4)); }
+/* trilha das 10 famílias de patente: as já passadas acesas, a atual em destaque */
+.xpr-trail { display: flex; gap: 5px; width: min(540px, 36vw); margin-top: 14px; opacity: 0; }
+.xpn.in .xpr-trail { animation: xpnLine .8s var(--soft) 3.1s both; }
+.xpr-trail i { flex: 1; height: 6px; border-radius: 99px; background: #e5e5ea; transition: background .6s ease, transform .5s var(--pop); }
+.xpr-trail i.on { background: linear-gradient(90deg, var(--c1), var(--c2)); opacity: .55; }
+.xpr-trail i.cur { background: linear-gradient(90deg, var(--c1), var(--c2)); transform: scaleY(1.7); box-shadow: 0 0 10px color-mix(in srgb, var(--c2) 70%, transparent); }
+.xpn.leave .xpr, .xpn.leave .xpr-trail { transition: opacity .4s ease; opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .xpr, .xpr-trail, .xpr-cur .xpr-disc, .xpr-next { opacity: 1; transform: none; }
+  .xpr-cur .xpr-tro { opacity: 1; }
+}

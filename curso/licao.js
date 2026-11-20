@@ -195,6 +195,9 @@
     const nn = (n) => String(n).padStart(2, '0');
     const fmtN = (v) => Math.round(v).toLocaleString('pt-BR');
     const up = L1.nivel - L0.nivel;
+    /* patente (pelo XP total): a cor da faixa e o tom do troféu vêm da família */
+    const R0 = X.rankOf ? X.rankOf(before) : null;
+    const rVars = (r) => `--rc1:${r.c1};--rc2:${r.c2};--tf:${r.tf}`;
     const el = document.createElement('section');
     el.className = 'ifm xpn';
     el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Seu nível');
@@ -206,6 +209,25 @@
         <h2 class="xpn-title"><span>Você está</span> <span>subindo de nível!</span></h2>
         <p class="xpn-gain"><b class="xpn-plus">${gained >= 0 ? '+' : '−'}<span id="xpn-plus">0</span> XP</b> nesta lição</p>
         <p class="xpn-need" id="xpn-need">Faltam <b>${fmtN(L0.falta)} XP</b> para o nível ${nn(L0.nivel + 1)}</p>
+        ${R0 ? `
+        <div class="xpr" id="xpr" style="${rVars(R0)}">
+          <div class="xpr-band">
+            <span class="xpr-shine" aria-hidden="true"></span>
+            <div class="xpr-info">
+              <span class="xpr-kicker">Sua patente <i class="xpr-new" id="xpr-new">Nova patente!</i></span>
+              <strong class="xpr-name" id="xpr-name"><span>${esc(R0.nome)}</span></strong>
+              <b class="xpr-bar"><i id="xpr-fill"></i></b>
+              <p class="xpr-xp" id="xpr-xp"></p>
+            </div>
+          </div>
+          <div class="xpr-cur" aria-hidden="true">
+            <span class="xpr-disc"></span>
+            <img class="xpr-tro first" id="xpr-tro" src="${R0.img}" alt="" draggable="false">
+            <span class="xpr-sparks">${Array.from({ length: 10 }, (_, k) => `<i style="--a:${k * 36}deg"></i>`).join('')}</span>
+          </div>
+          <div class="xpr-next" id="xpr-next"></div>
+        </div>
+        <div class="xpr-trail" id="xpr-trail" aria-hidden="true">${Object.keys(X.FAMILIAS).map((f) => `<i data-f="${f}" style="--c1:${X.FAMILIAS[f].c1};--c2:${X.FAMILIAS[f].c2}"></i>`).join('')}</div>` : ''}
       </div>
       <div class="xpn-badge" aria-live="polite">
         <span class="xpn-glow"></span>
@@ -263,12 +285,43 @@
         upEl.classList.remove('show', 'rest'); void upEl.offsetWidth; upEl.classList.add('show'); // revela de novo a cada nível
       }, old ? 300 : 0);
     };
+    /* ---------- patente ---------- */
+    const xpr = el.querySelector('#xpr');
+    let rShown = R0 ? R0.i : -1, rTxt = '';
+    const nextHTML = (r) => r.next
+      ? `<span class="xpr-disc"></span><img class="xpr-tro" src="${r.next.img}" alt="" draggable="false" style="--tf:${r.next.tf}"><span class="xpr-lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span><small>Próxima</small><em>${esc(r.next.nome)}</em>`
+      : `<span class="xpr-disc max"></span><small>Topo</small><em>Patente máxima</em>`;
+    const trail = (r) => el.querySelectorAll('#xpr-trail i').forEach((t) => {
+      const fi = X.RANKS.findIndex((k) => k.fam === t.dataset.f);
+      t.className = t.dataset.f === r.fam ? 'cur' : fi < r.i ? 'on' : '';
+    });
+    const rankUp = (r) => {
+      xpr.setAttribute('style', rVars(r));
+      const nm = el.querySelector('#xpr-name');
+      nm.querySelectorAll('span.out').forEach((x) => x.remove());
+      const old = nm.querySelector('span'); if (old) { old.className = 'out'; setTimeout(() => old.remove(), 380); }
+      const sp = document.createElement('span'); sp.className = 'in'; sp.textContent = r.nome; nm.append(sp);
+      const tro = el.querySelector('#xpr-tro'); tro.src = r.img;
+      tro.classList.remove('first', 'earn'); void tro.offsetWidth; tro.classList.add('earn');
+      const nx = el.querySelector('#xpr-next'); nx.classList.remove('swap'); void nx.offsetWidth; nx.innerHTML = nextHTML(r); nx.classList.add('swap');
+      xpr.classList.remove('up'); void xpr.offsetWidth; xpr.classList.add('up');
+      trail(r);
+    };
+    const paintRank = (xp) => {
+      const r = X.rankOf(xp);
+      if (r.i !== rShown) { rShown = r.i; rankUp(r); }
+      el.querySelector('#xpr-fill').style.transform = `scaleX(${(r.pct / 100).toFixed(4)})`;
+      const t = r.next ? `<b>${fmtN(xp)}</b> / ${fmtN(r.next.xp)} XP<br>Faltam <b>${fmtN(r.falta)}</b> para ${esc(r.next.nome)}` : `<b>${fmtN(xp)} XP</b> · você está no topo!`;
+      if (t !== rTxt) { rTxt = t; el.querySelector('#xpr-xp').innerHTML = t; }
+    };
+    if (R0) { el.querySelector('#xpr-next').innerHTML = nextHTML(R0); trail(R0); paintRank(before); }
     const paint = (xp) => {
       const l = X.levelOf(xp);
       if (l.nivel !== lvShown) { lvShown = l.nivel; flip(l.nivel); setArc(0); }
       else setArc(l.pct);
       plus.textContent = fmtN(Math.abs(xp - before));
       need.innerHTML = `Faltam <b>${fmtN(l.falta)} XP</b> para o nível ${nn(l.nivel + 1)}`;
+      if (R0) paintRank(xp);
     };
     const finish = () => {
       paint(after);
@@ -338,7 +391,7 @@
     let scene = pickScene();
     view.innerHTML = `
     <div class="wrap lc lc-full" style="--tint:${tint}">
-      <div class="lc-shell" style="--a1:${scene.a1};--a2:${scene.a2};--a3:${scene.a3}" data-cena="${scene.nome}">
+      <div class="lc-shell" style="--b:${scene.base};--a1:${scene.a1};--a2:${scene.a2};--a3:${scene.a3}" data-cena="${scene.nome}">
         ${topHTML(L, true)}
         <div id="lc-body"></div>
       </div>
@@ -347,6 +400,16 @@
     // classes no lugar de seletores :has() — com :has() o navegador reavaliava a lição inteira a cada tecla
     const shell = view.querySelector('.lc-shell');
     const content = view.closest('.content'); content?.classList.add('lc-page');
+    // fundo da página inteira no mesmo cenário sorteado do cartão do nível (no lugar do branco do site)
+    document.getElementById('lc-bgfx')?.remove();
+    const bgfx = document.createElement('div');
+    bgfx.id = 'lc-bgfx'; bgfx.setAttribute('aria-hidden', 'true');
+    const paintBg = () => { bgfx.style.setProperty('--b', scene.base); bgfx.style.setProperty('--a1', scene.a1); bgfx.style.setProperty('--a2', scene.a2); bgfx.style.setProperty('--a3', scene.a3); };
+    paintBg(); document.body.appendChild(bgfx); document.body.classList.add('lc-bg-on');
+    const dropBg = () => { bgfx.remove(); if (!document.getElementById('lc-bgfx')) document.body.classList.remove('lc-bg-on'); };
+    // some assim que a lição sai da tela (trocar de página), sem esperar a próxima tecla ou o relógio
+    const bgWatch = new MutationObserver(() => { if (!shell.isConnected) { bgWatch.disconnect(); dropBg(); } });
+    bgWatch.observe(view, { childList: true });
     const $q = (s) => view.querySelector(s);
 
     const accuracy = () => { const t = st.hits + st.errors; return t ? Math.max(0, (st.hits / t) * 100) : 100; };
@@ -460,7 +523,7 @@
     /* ---------- área de jogo (coluna principal + lateral) ---------- */
     function play() {
       phase = 'play'; shell.classList.remove('is-wel');
-      if (play.ran) { scene = pickScene(); shell.style.setProperty('--a1', scene.a1); shell.style.setProperty('--a2', scene.a2); shell.style.setProperty('--a3', scene.a3); shell.dataset.cena = scene.nome; }
+      if (play.ran) { scene = pickScene(); shell.style.setProperty('--b', scene.base); shell.style.setProperty('--a1', scene.a1); shell.style.setProperty('--a2', scene.a2); shell.style.setProperty('--a3', scene.a3); shell.dataset.cena = scene.nome; paintBg(); }
       play.ran = true; // cada vez que a lição (re)começa, um cenário novo
       body.innerHTML = `
       <div class="lc-grid">
@@ -599,7 +662,7 @@
       g.className = 'lc-gauge';
       g.style.setProperty('--bar', BAR_COLORS[Math.floor(Math.random() * BAR_COLORS.length)]);
       g.innerHTML = `
-        <div class="lc-g-code" aria-hidden="true">${typeof infoBgRows === 'function' ? infoBgRows(8) : ''}</div>
+        <div class="lc-g-sky" aria-hidden="true"></div>
         <div class="lc-g-area">
           <div class="lc-g-frame" id="lc-gframe"></div>
           <div class="lc-g-halo" id="lc-ghalo"></div>
@@ -801,7 +864,7 @@
         ${kbHTML()}
         <div class="lc-over" id="lc-over" hidden></div>`;
       kbMount(); supRender();
-      $q('#lc-xptest')?.addEventListener('click', (e) => { e.currentTarget.blur(); xpScreen({ test: true, gained: 600 + Math.round(Math.random() * 2400) }); });
+      $q('#lc-xptest')?.addEventListener('click', (e) => { e.currentTarget.blur(); const rf = window.HC_xp?.rankOf?.(window.HC_xp.get().xp)?.falta || 0; xpScreen({ test: true, gained: Math.max(600 + Math.round(Math.random() * 2400), rf && rf < 8000 ? rf + 250 : 0) }); });
       paintProgress(); paintStats(); gaugeLevel(lv);
       ({ typing: typingInit, hacker: hackerInit, fila: filaInit, memoria: memoInit })[lv.tipo](lv);
     }
@@ -1191,7 +1254,7 @@
       if (lv?.tipo === 'typing' && k.length === 1 && /\S/.test(k) && !busy) { miss(k); shake(`.lc-ch[data-i="${game.pos}"]`); }
     }
     document.addEventListener('keydown', onKey);
-    function stop() { content?.classList.remove('lc-page'); alive = false; clearTimeout(kbTimer); clearInterval(speedTick); clearInterval(tick); clearInterval(game.timer); clearInterval(gs.glint); kb?.destroy(); document.removeEventListener('keydown', onKey); }
+    function stop() { content?.classList.remove('lc-page'); bgWatch.disconnect(); dropBg(); alive = false; clearTimeout(kbTimer); clearInterval(speedTick); clearInterval(tick); clearInterval(game.timer); clearInterval(gs.glint); kb?.destroy(); document.removeEventListener('keydown', onKey); }
     window.addEventListener('hashchange', stop, { once: true });
 
     /* ---------- resultado ---------- */
@@ -1310,19 +1373,18 @@
       const num = el.querySelector('.lr-num'), fill = el.querySelector('.lr-fill'), stars = el.querySelectorAll('.lr-star');
       const track = el.querySelector('.lr-track'), rnum = el.querySelector('.lr-rnum'), rstars = el.querySelectorAll('.lr-rstar'), beam = el.querySelector('.lr-beam');
       const burst = el.querySelector('.lr-burst'), word = el.querySelector('.lr-word');
-      /* flash na faixa do nome (como no vídeo de referência): a faixa fica toda branca por um instante, cobrindo
-         nome e barra, e o branco vai saindo da esquerda para a direita; no Superstar/Megastar ele dura mais */
+      /* brilho na faixa do nome: uma luz suave atravessa a faixa da esquerda para a direita, por trás das
+         informações; no Superstar/Megastar ele dura um pouco mais */
       const flash = el.querySelector('.lr-flash');
       const flashFx = (r) => {
         if (reduce) return;
         flash.getAnimations().forEach((a) => a.cancel());
         flash.animate([
           { opacity: 0, backgroundPosition: '100% 0' },
-          { opacity: 1, backgroundPosition: '100% 0', offset: .08 },
-          { opacity: 1, backgroundPosition: '100% 0', offset: r ? .3 : .25 },
-          { opacity: .9, backgroundPosition: '45% 0', offset: .7 },
+          { opacity: 1, backgroundPosition: '85% 0', offset: .15 },
+          { opacity: 1, backgroundPosition: '12% 0', offset: .85 },
           { opacity: 0, backgroundPosition: '0% 0' },
-        ], { duration: r ? 1500 : 1000, easing: 'ease-out' });
+        ], { duration: r ? 1300 : 900, easing: 'cubic-bezier(.4, 0, .2, 1)' });
       };
       const showRank = (r) => {
         flashFx(r);

@@ -110,7 +110,39 @@ window.HC_xp = (() => {
   };
   addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && timer) push(); });
   addEventListener('pagehide', () => { if (timer) push(); });
-  return { ID, get: () => { const d = cur(); return { xp: d.xp, ...levelOf(d.xp) }; }, add, merge, pull, flush: () => { if (timer) push(); }, levelOf, need };
+  /* PATENTES: dependem só do XP total do aluno (não do nível). Cada uma pede um total de XP.
+     O curso inteiro feito uma vez, bem feito, dá por volta de Diamante; Mestre em diante pede refazer
+     lições para buscar pontuações maiores. Troféu provisório igual para todas (tingido pela cor da família). */
+  const TROFEU = 'assets/patentes/trofeu-base.webp';
+  const FAM = {
+    bronze: { nome: 'Bronze', c1: '#9a4a1f', c2: '#f0975a', tf: 'sepia(.55) hue-rotate(-20deg) saturate(1.15) brightness(.86)' },
+    prata: { nome: 'Prata', c1: '#5b6676', c2: '#c9d3df', tf: 'grayscale(1) brightness(1.2) contrast(1.05)' },
+    ouro: { nome: 'Ouro', c1: '#c26a06', c2: '#fcd34d', tf: 'saturate(1.1)' },
+    platina: { nome: 'Platina', c1: '#0f766e', c2: '#5eead4', tf: 'hue-rotate(120deg) saturate(.8) brightness(1.08)' },
+    diamante: { nome: 'Diamante', c1: '#1d4ed8', c2: '#67e8f9', tf: 'hue-rotate(165deg) saturate(1.2) brightness(1.1)' },
+    mestre: { nome: 'Mestre', c1: '#5b21b6', c2: '#c4b5fd', tf: 'hue-rotate(225deg) saturate(.95)' },
+    mestreHonra: { nome: 'Mestre de Honra', c1: '#86198f', c2: '#f0abfc', tf: 'hue-rotate(265deg) saturate(1.1)' },
+    elite: { nome: 'Elite', c1: '#be123c', c2: '#fb7185', tf: 'hue-rotate(300deg) saturate(1.2)' },
+    eliteHonra: { nome: 'Elite de Honra', c1: '#7f1d1d', c2: '#fbbf24', tf: 'hue-rotate(330deg) saturate(1.4) brightness(.95)' },
+    desafiante: { nome: 'Desafiante', c1: '#6d28d9', c2: '#f472b6', tf: 'saturate(1.35) brightness(1.08)' },
+  };
+  const RANKS = [
+    ['bronze', 'Bronze I', 0], ['bronze', 'Bronze II', 2000], ['bronze', 'Bronze III', 4500],
+    ['prata', 'Prata I', 7500], ['prata', 'Prata II', 11000], ['prata', 'Prata III', 15000],
+    ['ouro', 'Ouro I', 20000], ['ouro', 'Ouro II', 25500], ['ouro', 'Ouro III', 31500], ['ouro', 'Ouro IV', 38000],
+    ['platina', 'Platina I', 45000], ['platina', 'Platina II', 52500], ['platina', 'Platina III', 60500], ['platina', 'Platina IV', 69000], ['platina', 'Platina V', 78000],
+    ['diamante', 'Diamante I', 88000], ['diamante', 'Diamante II', 99000], ['diamante', 'Diamante III', 111000], ['diamante', 'Diamante IV', 124000], ['diamante', 'Diamante V', 138000],
+    ['mestre', 'Mestre', 155000], ['mestreHonra', 'Mestre de Honra', 180000], ['elite', 'Elite', 210000],
+    ['eliteHonra', 'Elite de Honra', 250000], ['desafiante', 'Desafiante', 300000],
+  ].map(([fam, nome, xp], i) => ({ ...FAM[fam], i, fam, nome, xp, img: TROFEU, familia: FAM[fam].nome }));
+  const rankOf = (xp) => {
+    let i = 0;
+    while (i + 1 < RANKS.length && xp >= RANKS[i + 1].xp) i++;
+    const r = RANKS[i], next = RANKS[i + 1] || null;
+    const pct = next ? ((xp - r.xp) / (next.xp - r.xp)) * 100 : 100;
+    return { ...r, next, falta: next ? next.xp - xp : 0, pct };
+  };
+  return { ID, get: () => { const d = cur(); return { xp: d.xp, ...levelOf(d.xp) }; }, add, merge, pull, flush: () => { if (timer) push(); }, levelOf, need, RANKS, FAMILIAS: FAM, rankOf };
 })();
 
 (() => {
