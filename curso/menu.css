@@ -55,6 +55,8 @@
   translate: calc((var(--i) - 1) * var(--gap) + var(--push) * var(--shift)) 0;
   transition: translate .75s var(--soft); }
 .ifm-opt.sel { z-index: 2; }
+/* o botão do meio, expandido, cresce bem para cima: desce um pouco para o grupo ficar no centro da tela */
+.ifm-opt.ifm-curso.sel { translate: 0 calc(var(--s) * .38); }
 .ifm-in { display: block; opacity: 0; }
 .ifm.in .ifm-in { animation: ifmCardIn .8s var(--spring) calc(.35s + var(--i) * .11s) both; }
 .ifm.still .ifm-in { opacity: 1; }
