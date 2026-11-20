@@ -1516,6 +1516,21 @@ function featureCard(n) {
   </article>`;
 }
 
+/* Destaque rotativo: as 5 notícias mais recentes (da categoria escolhida), trocando a cada 10 s.
+   As barrinhas em cima mostram o tempo e levam direto a uma notícia; com o mouse em cima, ele pausa. */
+const ROT_MAX = 5, ROT_MS = 10000;
+function featureRotator(list) {
+  const items = list.slice(0, ROT_MAX);
+  if (items.length < 2) return featureCard(items[0]);
+  return `
+  <div class="ap-rot" style="--rot-ms:${ROT_MS}ms">
+    ${items.map((n, i) => featureCard(n).replace('class="nc ap-feature"', `class="nc ap-feature${i ? '' : ' on'}"`).replace('tabindex="0"', `tabindex="${i ? -1 : 0}"`)).join('')}
+    <div class="ap-rot-bars" role="tablist" aria-label="Notícias em destaque">
+      ${items.map((n, i) => `<button type="button" class="ap-rot-bar${i ? '' : ' on'}" data-rot="${i}" role="tab" aria-selected="${!i}" aria-label="Destaque ${i + 1}: ${esc(n.title)}"><i></i></button>`).join('')}
+    </div>
+  </div>`;
+}
+
 /* Conteúdo abaixo do seletor (destaque + vitrine) para a categoria atual */
 function newsBodyHTML() {
   const list = sortedNews();
@@ -1524,7 +1539,7 @@ function newsBodyHTML() {
   if (!feat) return `<p class="ap-empty">Nenhuma notícia publicada ainda.</p>`;
   if (PHONE()) return `<section class="td-list">${filtered.map((n, k) => todayCard(n, k)).join('')}</section>`;
   return `
-    <section class="reveal">${featureCard(feat)}</section>
+    <section class="reveal">${featureRotator(filtered)}</section>
     ${rest.length ? `
     <section class="ap-shelf reveal">
       <div class="ap-shelf-head">
@@ -1540,9 +1555,12 @@ function newsBodyHTML() {
 
 /* Radar decorativo atrás do título de Notícias: ondas que pulsam e "usuários conectados" em órbita */
 function newsRadar() {
-  const people = radar.slice(0, 5).map((r, k) => [r, RADAR_COLORS[k][0], RADAR_COLORS[k][1], 1, k * 72]);
-  // nas órbitas de dentro só pontinhos de luz, para não atrapalhar a leitura do título
-  const sparks = [[2, 40], [2, 220], [3, 120], [3, 300]];
+  // no celular as logos ficam todas na órbita de fora (as de dentro só têm pontinhos de luz, para não
+  // atrapalhar a leitura do título); no computador, onde o radar é bem maior, elas se espalham pelas três
+  // órbitas (a do meio gira para o outro lado)
+  const SPREAD = [[1, 0], [2, 60], [1, 180], [2, 240], [3, 120]];
+  const people = radar.slice(0, 5).map((r, k) => [r, RADAR_COLORS[k][0], RADAR_COLORS[k][1], ...(PHONE() ? [1, k * 72] : SPREAD[k])]);
+  const sparks = PHONE() ? [[2, 40], [2, 220], [3, 120], [3, 300]] : [[1, 90], [1, 270], [2, 150], [3, 300]];
   return `
   <div class="nr" aria-hidden="true">
     <span class="nr-glow"></span>
@@ -1620,11 +1638,14 @@ function renderNews(view) {
   const swapBody = async () => {
     const token = {}; swapping = token;
     if (reduceMotion()) { body.innerHTML = newsBodyHTML(); setupBody(true); return; }
-    body.style.minHeight = body.offsetHeight + 'px'; // evita "pulo" da página durante a troca
-    const out = body.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(8px)' }],
-      { duration: 180, easing: 'ease-in', fill: 'forwards' });
+    // no computador o #news-body não tem caixa própria (display: contents): anima cada parte dele
+    const flat = getComputedStyle(body).display === 'contents';
+    const fh = flat ? 0 : body.offsetHeight;
+    if (!flat) body.style.minHeight = fh + 'px'; // evita "pulo" da página durante a troca
+    const outs = (flat ? [...body.children] : [body]).map((el) => el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(8px)' }],
+      { duration: 180, easing: 'ease-in', fill: 'forwards' }));
     // segue mesmo se o navegador atrasar a animação (aba em segundo plano, por exemplo)
-    await Promise.race([out.finished, new Promise((r) => setTimeout(r, 220))]);
+    await Promise.race([Promise.all(outs.map((o) => o.finished)), new Promise((r) => setTimeout(r, 220))]);
     if (swapping !== token) return; // outro clique chegou antes
     body.innerHTML = newsBodyHTML();
     setupBody(true);
@@ -1654,6 +1675,7 @@ function renderNews(view) {
   function setupBody(shown) {
     paintTints(body);
     body.querySelectorAll('.reveal').forEach((el) => (shown ? el.classList.add('in') : io.observe(el)));
+    setupRotator(body.querySelector('.ap-rot'));
     const sc = body.querySelector('.ap-scroller'); if (!sc) return;
     const paddles = body.querySelectorAll('.ap-paddle');
     const box = body.querySelector('.ap-paddles');
@@ -1669,6 +1691,27 @@ function renderNews(view) {
     sc.addEventListener('scroll', update, { passive: true });
     new ResizeObserver(update).observe(sc);
     update();
+  }
+  /* destaque rotativo: a barrinha da notícia atual enche em 10 s (animação CSS) e, quando termina,
+     passa para a próxima; com o mouse em cima, a animação pausa e a troca espera junto */
+  function setupRotator(rot) {
+    if (!rot) return;
+    const cards = [...rot.querySelectorAll('.ap-feature')], bars = [...rot.querySelectorAll('.ap-rot-bar')];
+    let cur = 0, timer = 0;
+    const go = (k) => {
+      if (!rot.isConnected) return clearInterval(timer);
+      k = (k + cards.length) % cards.length;
+      cards.forEach((c, i) => { c.classList.toggle('on', i === k); c.tabIndex = i === k ? 0 : -1; });
+      bars.forEach((b, i) => {
+        b.classList.toggle('on', i === k); b.classList.toggle('done', i < k); b.setAttribute('aria-selected', i === k);
+        if (i === k) { const f = b.firstElementChild; f.style.animation = 'none'; void f.offsetWidth; f.style.animation = ''; }
+      });
+      cur = k;
+    };
+    rot.addEventListener('animationend', (e) => { if (e.target.parentElement?.classList.contains('on') && e.target.parentElement.classList.contains('ap-rot-bar')) go(cur + 1); });
+    rot.addEventListener('click', (e) => { const b = e.target.closest('[data-rot]'); if (b) { e.stopPropagation(); go(+b.dataset.rot); } });
+    // sem animações (preferência do sistema), a troca é feita só pelo relógio
+    if (reduceMotion()) timer = setInterval(() => { if (!rot.matches(':hover')) go(cur + 1); }, ROT_MS);
   }
   setupBody(false);
   // virou de celular para tela grande (ou o contrário): troca o tipo de cartão
@@ -3303,7 +3346,18 @@ window.addEventListener('hashchange', route);
   const view = document.getElementById('view');
   if (!view || !('IntersectionObserver' in window)) return;
   const io = new IntersectionObserver((entries) => entries.forEach((e) => e.target.classList.toggle('offscreen', !e.isIntersecting)), { rootMargin: '120px 0px' });
-  const watch = () => { io.disconnect(); view.querySelectorAll('.wrap > *').forEach((el) => io.observe(el)); };
+  // bloco sem caixa própria (display: contents, como as notícias no computador): observa as partes de dentro,
+  // e volta a observar quando elas são trocadas
+  const inner = new MutationObserver(() => watch());
+  const watch = () => {
+    io.disconnect(); inner.disconnect();
+    view.querySelectorAll('.wrap > *').forEach((el) => {
+      if (getComputedStyle(el).display !== 'contents') return io.observe(el);
+      el.classList.remove('offscreen');
+      [...el.children].forEach((c) => io.observe(c));
+      inner.observe(el, { childList: true });
+    });
+  };
   new MutationObserver(watch).observe(view, { childList: true });
   watch();
   const hidden = () => document.documentElement.classList.toggle('tab-hidden', document.hidden);
@@ -3617,10 +3671,8 @@ paintIcons();
     await window.HC_loadRemote?.();
     await loadImages();
     cleanupImages();
-    // celular, primeira vez que a pessoa abre o site: o banner do topo desce com uma animação
-    let heroSeen = false;
-    try { heroSeen = sessionStorage.getItem('hc-hero-intro') === '1'; sessionStorage.setItem('hc-hero-intro', '1'); } catch {}
-    if (!heroSeen && PHONE()) {
+    // celular, toda vez que o site é aberto ou recarregado: o banner do topo desce com uma animação
+    if (PHONE()) {
       document.body.classList.add('hero-intro');
       // com a tela de carregamento aberta, a animação espera parada e só conta o tempo depois que ela sai
       const off = () => setTimeout(() => document.body.classList.remove('hero-intro'), 2200);

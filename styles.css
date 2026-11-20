@@ -753,6 +753,39 @@ html { scrollbar-color: #c7c7cc transparent; scrollbar-width: thin; }
 .ap-feature:hover .ap-link svg { transform: translateX(3px); }
 .ap-feature:focus-visible { box-shadow: 0 0 0 4px rgba(6, 122, 87, .5); }
 
+/* destaque rotativo (5 notícias mais recentes, uma a cada 10 s) */
+.ap-rot { position: relative; height: clamp(420px, 46vw, 600px); border-radius: 28px; overflow: hidden; background: #111; isolation: isolate; }
+.ap-rot .ap-feature { position: absolute; inset: 0; height: auto; opacity: 0; visibility: hidden; transition: opacity .9s ease, visibility 0s linear .9s; }
+.ap-rot .ap-feature.on { opacity: 1; visibility: visible; transition: opacity .9s ease; z-index: 1; }
+/* a foto da notícia atual se aproxima devagar enquanto ela está no ar */
+.ap-rot .ap-feature .ap-feature-media img { transform: scale(1.02); transition: transform 1.4s var(--ap-ease); }
+.ap-rot .ap-feature.on .ap-feature-media img { transform: scale(1.09); transition: transform var(--rot-ms, 10s) linear; }
+/* o texto entra de baixo, um item depois do outro */
+.ap-rot .ap-feature-text > * { opacity: 0; transform: translateY(14px); transition: opacity .3s ease, transform .3s ease; }
+.ap-rot .ap-feature.on .ap-feature-text > * { opacity: 1; transform: none; transition: opacity .7s ease, transform .8s var(--ap-ease); }
+.ap-rot .ap-feature.on .ap-feature-text > :nth-child(1) { transition-delay: .25s; }
+.ap-rot .ap-feature.on .ap-feature-text > :nth-child(2) { transition-delay: .33s; }
+.ap-rot .ap-feature.on .ap-feature-text > :nth-child(3) { transition-delay: .41s; }
+.ap-rot .ap-feature.on .ap-feature-text > :nth-child(4) { transition-delay: .49s; }
+/* barrinhas de tempo em cima, como nos stories */
+.ap-rot-bars { position: absolute; z-index: 3; left: 26px; right: 26px; top: 20px; display: flex; gap: 6px; }
+.ap-rot-bars::before { content: ''; position: absolute; z-index: -1; left: -26px; right: -26px; top: -20px; height: 90px; pointer-events: none; background: linear-gradient(180deg, rgba(0, 0, 0, .38), rgba(0, 0, 0, 0)); }
+.ap-rot-bar { position: relative; flex: 1; height: 16px; padding: 0; border: 0; background: none; cursor: pointer; }
+.ap-rot-bar::before, .ap-rot-bar i { content: ''; position: absolute; left: 0; right: 0; top: 6px; height: 3.5px; border-radius: 4px; }
+.ap-rot-bar::before { background: rgba(255, 255, 255, .32); transition: background .2s; }
+.ap-rot-bar:hover::before { background: rgba(255, 255, 255, .5); }
+.ap-rot-bar i { background: #fff; transform-origin: 0 50%; transform: scaleX(0); box-shadow: 0 0 8px rgba(255, 255, 255, .5); }
+.ap-rot-bar.done i { transform: none; }
+.ap-rot-bar.on i { animation: apRotBar var(--rot-ms, 10s) linear forwards; }
+.ap-rot:hover .ap-rot-bar.on i { animation-play-state: paused; }
+.ap-rot:hover .ap-feature.on .ap-feature-media img { transform: scale(1.06); transition: transform 1.4s var(--ap-ease); }
+.ap-rot-bar:focus-visible { outline: none; } .ap-rot-bar:focus-visible::before { background: #fff; }
+@keyframes apRotBar { to { transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .ap-rot-bar.on i { animation: none; transform: none; }
+  .ap-rot .ap-feature.on .ap-feature-media img { transform: scale(1.02); transition: none; }
+}
+
 /* vitrine */
 .ap-shelf { margin-top: 72px; }
 .ap-shelf-head h2 {
@@ -2664,6 +2697,34 @@ body:not(.is-admin) .admin-only { display: none !important; }
   #ag-box, .ag-ph { grid-column: 2; grid-row: 1; margin: 24px 0 0; width: 100%; max-width: none; }
   .ag-polo { grid-column: 1 / -1; }
 }
+
+/* =========================================================
+   NOTÍCIAS — no computador, como o Agendar: título, radar e categorias à esquerda,
+   notícia em destaque à direita e "Mais notícias" embaixo, na largura toda.
+   O conteúdo das categorias (#news-body) vira parte da grade com display: contents.
+   ========================================================= */
+@media (min-width: 1240px) {
+  .news-page { max-width: 1320px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); grid-template-rows: auto auto auto; column-gap: 56px; }
+  .news-page > .ap-hero { grid-column: 1; grid-row: 1; align-self: end; text-align: left; padding: 150px 0 0; }
+  .news-page > .ap-hero h1 { font-size: clamp(42px, 4.2vw, 64px); }
+  .news-page > .ap-hero .ap-sub { margin-left: 0; margin-right: 0; max-width: 520px; font-size: 19px; }
+  /* radar grande por trás do título e das categorias, como na versão centralizada */
+  .news-page > .ap-hero .nr { --size: 520px; left: 46%; top: calc(50% + 75px); }
+  .news-page > .ap-hero .nr-user { width: 46px; height: 46px; margin: -23px 0 0 -23px; font-size: 14px; box-shadow: 0 0 0 3px var(--bg), 0 10px 22px -8px var(--b); }
+  .news-page > .ap-hero .nr-user i { width: 12px; height: 12px; }
+  .news-page > .ap-pills { grid-column: 1; grid-row: 2; align-self: start; margin: 30px 0 0; }
+  .news-page > .news-body { display: contents; }
+  .news-body > section:first-child, .news-body > .ap-empty { grid-column: 2; grid-row: 1 / span 2; align-self: center; margin-top: 24px; }
+  .news-body > .ap-shelf { grid-column: 1 / -1; grid-row: 3; }
+  /* destaque mais baixo e com o texto proporcional à coluna */
+  .news-body .ap-feature, .news-body .ap-rot { height: clamp(460px, 38vw, 560px); }
+  .news-body .ap-rot .ap-feature { height: auto; }
+  .news-body .ap-feature-text { padding: 0 34px 38px; }
+  .news-body .ap-feature-text h2 { font-size: clamp(26px, 2.3vw, 34px); }
+  .news-body .ap-feature-text p { font-size: 16.5px; }
+}
+/* telas médias: sem a contagem nas categorias, para elas caberem inteiras na coluna da esquerda */
+@media (min-width: 1240px) and (max-width: 1439px) { .news-page > .ap-pills .ap-pill small { display: none; } }
 
 /* =========================================================
    DESEMPENHO — pausa animações fora da tela, com a guia escondida
