@@ -85,7 +85,7 @@
 /* no do meio as pernas passam das laterais da forma: o esmaecido é mais longo e some por
    completo um pouco acima da borda de baixo (o logo fica por cima dessa parte) */
 .ifm-curso .ifm-art { -webkit-mask: linear-gradient(to top, transparent 0, transparent calc(var(--fade) * .3), rgba(0, 0, 0, .5) calc(var(--fade) * .7), #000 var(--fade)); mask: linear-gradient(to top, transparent 0, transparent calc(var(--fade) * .3), rgba(0, 0, 0, .5) calc(var(--fade) * .7), #000 var(--fade)); }
-.ifm-curso.sel .ifm-art { --fade: 26%; }
+.ifm-curso.sel .ifm-art { --fade: 26%; clip-path: inset(0 0 5% 0 round 0 0 var(--r) var(--r)); } /* corta as pernas um pouco antes da borda, onde já estão transparentes */
 @keyframes ifmRing { 0% { opacity: .9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.32); } }
 
 /* personagens: recolhidos ficam dentro da forma; expandidos saem por cima dela,
