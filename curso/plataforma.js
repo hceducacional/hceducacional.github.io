@@ -145,6 +145,70 @@ window.HC_xp = (() => {
   return { ID, get: () => { const d = cur(); return { xp: d.xp, ...levelOf(d.xp) }; }, add, merge, pull, flush: () => { if (timer) push(); }, levelOf, need, RANKS, FAMILIAS: FAM, rankOf };
 })();
 
+/* =========================================================
+   SALDO HC (moeda do jogo)
+   Cada lição concluída rende moedas pelas conquistas da pontuação: 35,27 por estrela, +87,76 ao chegar no Superstar
+   e mais +97,43 ao chegar no Megastar (quem chega no Megastar passou pelo Superstar: 176,35 + 87,76 + 97,43 = 361,54 no máximo).
+   Valores com centavos: sempre arredondados para 2 casas. Rende toda vez que a lição é concluída, inclusive ao refazer.
+   Guardado como dois totais que só crescem — "ganho" e "gasto" — e saldo = ganho − gasto; assim, ao juntar
+   aparelho e conta, fica o maior de cada um e nenhum aparelho apaga moedas (nem compras) de outro.
+   Fica salvo no aparelho e na conta (tabela informatica_progresso, linha "saldo-hc").
+   ========================================================= */
+window.HC_cash = (() => {
+  const ID = 'saldo-hc';
+  const POR_ESTRELA = 35.27, SUPERSTAR = 87.76, MEGASTAR = 97.43; // valores quebrados: o saldo fica mais realista
+  const c2 = (v) => Math.round((+v || 0) * 100) / 100; // centavos
+  const uid = () => auth?.user?.id || 'anon';
+  const key = () => `hc:info:${uid()}:${ID}`;
+  const read = () => { try { return JSON.parse(localStorage.getItem(key()) || 'null'); } catch { return null; } };
+  const write = (d) => { try { localStorage.setItem(key(), JSON.stringify(d)); } catch {} };
+  const cur = () => ({ ganho: 0, gasto: 0, hist: [], savedAt: 0, ...(read() || {}) });
+  const online = () => auth?.user && typeof sb !== 'undefined' && sb;
+  /* quanto uma lição rende: estrelas (0–5) e o título (''/'super'/'mega'); o Megastar soma também o bônus do Superstar */
+  const ganhoDe = (estrelas, rank) => c2(estrelas * POR_ESTRELA + (rank === 'mega' ? SUPERSTAR + MEGASTAR : rank === 'super' ? SUPERSTAR : 0));
+
+  let timer = 0;
+  const push = () => {
+    clearTimeout(timer); timer = 0;
+    const d = read(); if (!d || !online()) return;
+    sb.from('informatica_progresso').upsert({ user_id: auth.user.id, licao: ID, dados: d, updated_at: new Date().toISOString() })
+      .then(({ error }) => { if (error) console.info('Saldo HC salvo só neste aparelho:', error.message); });
+  };
+  /* credita moedas (motivo: id da lição etc.); grava no aparelho na hora e na conta logo depois */
+  const add = (n, motivo = '') => {
+    n = c2(n); if (n <= 0) return cur();
+    const d = cur();
+    d.ganho = c2(d.ganho + n); d.savedAt = Date.now();
+    d.hist = [{ v: n, m: motivo, em: d.savedAt }, ...(d.hist || [])].slice(0, 40); // últimos ganhos (para um extrato no futuro)
+    write(d);
+    if (!timer) timer = setTimeout(push, 1500);
+    return d;
+  };
+  const merge = (remote) => {
+    if (!remote || typeof remote.ganho !== 'number') return false;
+    const local = read();
+    const g = Math.max(local?.ganho || 0, remote.ganho), s = Math.max(local?.gasto || 0, remote.gasto || 0);
+    const changed = !local || g !== local.ganho || s !== (local.gasto || 0);
+    const hist = (local?.ganho || 0) >= remote.ganho ? local?.hist : remote.hist;
+    write({ ganho: g, gasto: s, hist: hist || [], savedAt: Math.max(local?.savedAt || 0, remote.savedAt || 0) });
+    if (online() && (g > remote.ganho || s > (remote.gasto || 0))) push(); // este aparelho tinha mais: manda para a conta
+    return changed;
+  };
+  const pull = async () => {
+    if (!online()) return false;
+    const { data } = await sb.from('informatica_progresso').select('dados').eq('user_id', auth.user.id).eq('licao', ID).maybeSingle();
+    if (data?.dados) return merge(data.dados);
+    if (read()) push();
+    return false;
+  };
+  addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && timer) push(); });
+  addEventListener('pagehide', () => { if (timer) push(); });
+  const get = () => { const d = cur(); return { saldo: Math.max(0, c2(d.ganho - (d.gasto || 0))), ganho: d.ganho, gasto: d.gasto || 0, hist: d.hist || [] }; };
+  return { ID, get, add, merge, pull, ganhoDe, POR_ESTRELA, SUPERSTAR, MEGASTAR, flush: () => { if (timer) push(); } };
+})();
+/* valor em moedas no formato do jogo: 1.250,00 */
+window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 (() => {
   let mod = 0; // módulo do aluno (banner e "Seu curso")
   // módulo aberto (expandido) na lista; fica guardado enquanto a aba estiver aberta, para voltar da lição com ele aberto
@@ -397,7 +461,13 @@ window.HC_xp = (() => {
             <div class="pf-xp-bar"><i style="--w:${(x.pct / 100).toFixed(4)}"></i></div>
             <small class="pf-xp-sub">${n(x.rest)} de ${n(x.proximo)} XP neste nível · todo XP das lições soma aqui, inclusive ao refazer</small>
           </div>
+          ${window.HC_cash ? `<span class="pf-cash" title="Saldo HC: cada estrela rende 35,27, o Superstar +87,76 e o Megastar +97,43"><span class="pf-cash-txt"><small>Saldo HC</small><b>${cashParts(window.HC_cash.get().saldo)}</b></span><img src="assets/moeda/moeda.webp" alt="" draggable="false"></span>` : ''}
         </div>`;
+  }
+  /* "1.250,00" com os centavos menores */
+  function cashParts(v) {
+    const [a, b] = window.HC_cashFmt(v).split(',');
+    return `${a}<small>,${b}</small>`;
   }
 
   function render(view, sub = '') {
@@ -684,8 +754,10 @@ window.HC_xp = (() => {
     let changed = false;
     const xpRow = data.find((r) => r.licao === window.HC_xp.ID);
     if (xpRow ? window.HC_xp.merge(xpRow.dados) : (window.HC_xp.pull(), false)) changed = true;
+    const cashRow = data.find((r) => r.licao === window.HC_cash.ID);
+    if (cashRow ? window.HC_cash.merge(cashRow.dados) : (window.HC_cash.pull(), false)) changed = true;
     data.forEach(({ licao, dados }) => {
-      if (licao === window.HC_xp.ID) return;
+      if (licao === window.HC_xp.ID || licao === window.HC_cash.ID) return;
       const key = `hc:info:${auth.user.id}:${licao}`;
       let local = null; try { local = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
       if (!local || (dados?.savedAt || 0) > (local.savedAt || 0)) { try { localStorage.setItem(key, JSON.stringify(dados)); changed = true; } catch {} }

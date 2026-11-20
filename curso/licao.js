@@ -854,7 +854,7 @@
           <span class="lc-lv-av">${nn}</span>
           <span class="lc-lv-who"><strong>Nível ${nn}</strong><small>de ${N} · Lição ${L.numero}</small></span>
           <div class="lc-sup" id="lc-sup"></div>
-          ${isAdmin() ? '<button type="button" class="lc-xptest" id="lc-xptest" title="Só administradores veem este botão">Testar tela de XP</button>' : ''}
+          ${isAdmin() ? '<button type="button" class="lc-xptest" id="lc-xptest" title="Só administradores veem este botão">Testar tela de XP</button><button type="button" class="lc-xptest" id="lc-lrtest" title="Só administradores veem este botão (nada é salvo)">Testar moedas</button>' : ''}
           <span class="lc-kind${isGame ? ' game' : ''}">${isGame ? 'Minijogo' : 'Digitação'}</span>
         </div>
         <h2 class="lc-lv-title">${esc(lv.titulo)}</h2>
@@ -865,6 +865,13 @@
         <div class="lc-over" id="lc-over" hidden></div>`;
       kbMount(); supRender();
       $q('#lc-xptest')?.addEventListener('click', (e) => { e.currentTarget.blur(); const rf = window.HC_xp?.rankOf?.(window.HC_xp.get().xp)?.falta || 0; xpScreen({ test: true, gained: Math.max(600 + Math.round(Math.random() * 2400), rf && rf < 8000 ? rf + 250 : 0) }); });
+      // prévia da tela final com as moedas (pontuação de mentira; o saldo não muda)
+      $q('#lc-lrtest')?.addEventListener('click', (e) => {
+        e.currentTarget.blur();
+        const p = [7400, 10600, 11500, 12700][Math.floor(Math.random() * 4)], C = window.HC_cash;
+        showFinale({ a: accuracy(), rating: 'Excelente', fast: [st.time || 6, 0], slow: [st.time || 40, 0], g: grade(st.xp), record: '', test: true, ptsTest: p,
+          cash: C ? { from: C.get().saldo, gain: C.ganhoDe(starsOf(p), rankOf(p)), review: false } : null });
+      });
       paintProgress(); paintStats(); gaugeLevel(lv);
       ({ typing: typingInit, hacker: hackerInit, fila: filaInit, memoria: memoInit })[lv.tipo](lv);
     }
@@ -1274,9 +1281,17 @@
       const slow = times.length ? times.reduce((m, x) => (x[0] > m[0] ? x : m)) : [st.time, 0];
       const g = grade(st.xp);
       const first = (meName() || '').split(' ')[0];
+      // saldo HC: a lição concluída rende moedas pelas estrelas, Superstar e Megastar (revendo o resultado não rende)
+      let cash = null;
+      if (window.HC_cash) {
+        const p = ptsOf(st), from = window.HC_cash.get().saldo;
+        const gain = review ? 0 : window.HC_cash.ganhoDe(starsOf(p), rankOf(p));
+        if (gain) window.HC_cash.add(gain, L.id);
+        cash = { from, gain, review };
+      }
       // todas as informações ficam só na tela final animada; por baixo fica apenas um espaço vazio
       body.innerHTML = '<section class="lc-results-blank" aria-hidden="true"></section>';
-      showFinale({ a, rating, fast, slow, g, record });
+      showFinale({ a, rating, fast, slow, g, record, cash });
     }
 
     /* ---------- tela final animada (por cima da área da plataforma) ----------
@@ -1314,9 +1329,9 @@
       };
       setTimeout(() => requestAnimationFrame(tick), delay);
     }
-    function showFinale({ a, rating, fast, slow, g, record }) {
+    function showFinale({ a, rating, fast, slow, g, record, cash = null, test = false, ptsTest = null }) {
       document.querySelector('.lr')?.remove();
-      const pts = Math.min(PTS_MAX, Math.round((st.levelPts || []).reduce((t, x) => t + (x || 0), 0)));
+      const pts = ptsTest ?? Math.min(PTS_MAX, Math.round((st.levelPts || []).reduce((t, x) => t + (x || 0), 0)));
       const rk = rankOf(pts);
       let ci; try { const last = +sessionStorage.getItem('hc:lr:c'); do { ci = Math.floor(Math.random() * LR_COLORS.length); } while (ci === last && LR_COLORS.length > 1); sessionStorage.setItem('hc:lr:c', ci); } catch { ci = Math.floor(Math.random() * LR_COLORS.length); }
       const [c1, c2] = LR_COLORS[ci];
@@ -1363,10 +1378,15 @@
             </div>
           </div>
         </div>
+        ${cash ? `<div class="lr-cash">
+          <div class="lr-cash-box" role="status" aria-label="Saldo HC: ${window.HC_cashFmt(cash.from + cash.gain)}"><div class="lr-cash-pill"><span class="lr-cash-val" aria-hidden="true"></span></div><span class="lr-cash-coin" aria-hidden="true"><i class="lr-cash-glow"></i><i class="lr-cash-wave"></i><span class="lr-cash-radar"><i></i><i></i><i></i></span><img src="assets/moeda/moeda.webp" alt="" draggable="false"></span></div>
+          <span class="lr-cash-note">${cash.review ? 'Seu saldo HC' : cash.gain ? `<b>+${window.HC_cashFmt(cash.gain)}</b> moedas nesta lição` : 'Conquiste estrelas para ganhar moedas'}</span>
+        </div>` : ''}
         <div class="lr-foot"><span class="lr-wait" role="status"><em>Aguarde, registrando seus dados</em><span class="lr-spin" aria-hidden="true"></span></span><button type="button" class="lr-go" data-lr="go">Continuar ${svg('play', true)}</button></div>
         <div class="lr-bands">${[0, 1, 2, 3, 4, 5, 6].map((k) => `<i style="--k:${k}"></i>`).join('')}</div>`;
       document.body.append(el);
       requestAnimationFrame(() => el.classList.add('in'));
+      const money = cash ? cashFx(el, cash, reduce) : null;
       if (!reduce) decode(el.querySelector('.lr-congrats'), 2000);
       ['superstar', 'megastar'].forEach((k) => { new Image().src = `assets/estrelas/titulo-${k}.png`; }); // já deixa as imagens prontas
 
@@ -1387,7 +1407,7 @@
         ], { duration: r ? 1300 : 900, easing: 'cubic-bezier(.4, 0, .2, 1)' });
       };
       const showRank = (r) => {
-        flashFx(r);
+        flashFx(r); money?.earn(r === 'mega' ? window.HC_cash.MEGASTAR : window.HC_cash.SUPERSTAR, burst, r === 'mega' ? 9 : 7);
         el.classList.remove('super', 'mega'); el.classList.add(r);
         word.innerHTML = `<img src="assets/estrelas/titulo-${r === 'mega' ? 'megastar' : 'superstar'}.png" alt="${RANK_NAME[r]}">`; burst.classList.remove('go'); void burst.offsetWidth; burst.classList.add('go');
       };
@@ -1404,14 +1424,14 @@
         fill.style.transform = `scaleX(${p.toFixed(4)})`;
         if (v >= STAR_AT[0] && !el.classList.contains('starred')) el.classList.add('starred'); // o número sai do branco na 1ª estrela
         // cada estrela nova surge na ponta da barra (as antigas vão ficando atrás) e um feixe de brilho corre pela parte cheia
-        rstars.forEach((s, i) => { if (v >= STAR_AT[i] && !s.classList.contains('on')) { s.classList.add('on'); flashFx(); beam.classList.remove('go'); void beam.offsetWidth; beam.classList.add('go'); } });
+        rstars.forEach((s, i) => { if (v >= STAR_AT[i] && !s.classList.contains('on')) { s.classList.add('on'); flashFx(); money?.earn(window.HC_cash.POR_ESTRELA, s, 4); beam.classList.remove('go'); void beam.offsetWidth; beam.classList.add('go'); } });
         if (v >= MEGA_AT && !el.classList.contains('mega')) showRank('mega');
         else if (v >= SUPER_AT && v < MEGA_AT && !el.classList.contains('super')) showRank('super');
       };
       // no fim: as estrelas da barra dão um pulinho e somem encolhendo para trás; só então aparecem no lugar delas, ao lado dos pontos
       const land = () => { el.classList.add('land'); stars.forEach((s, i) => s.classList.toggle('on', pts >= STAR_AT[i])); };
       const finish = () => {
-        paint(pts); num.textContent = shown;
+        paint(pts); num.textContent = shown; money?.settle();
         if (reduce) { land(); el.classList.add('done'); return; }
         const n = starsOf(pts);
         el.classList.add('leave');
@@ -1442,6 +1462,7 @@
       el.querySelector('[data-lr="go"]').addEventListener('click', () => {
         if (el.dataset.xp) return;
         el.dataset.xp = '1';
+        if (test) return close();
         // primeiro a tela de XP; o Continuar dela faz a volta à plataforma
         const xs = !reduce && window.HC_xp ? xpScreen({ gained: runXp, onDone: () => backHome(xs) }) : null;
         if (!xs) backHome(null);
@@ -1460,6 +1481,175 @@
       const onHash = () => { if (!el.classList.contains('out')) el.remove(); }; // saiu por outro caminho (menu, voltar)
       window.addEventListener('hashchange', onHash, { once: true });
       el.addEventListener('keydown', (e) => { if (e.key === 'Enter' && el.classList.contains('done') && e.target === el) el.querySelector('[data-lr="go"]').click(); });
+    }
+    /* ---------- saldo HC na tela final ----------
+       Entrada: a moeda vem de perto do aluno, girando pelas perspectivas, e "cai" para o fundo até parar no
+       canto de cima; aí a barrinha branca abre por trás dela e o saldo atual aparece.
+       Depois, a cada estrela que acende (e no Superstar/Megastar) saem moedas da conquista, girando e voando
+       em arco até a moeda da barrinha; cada uma que chega faz a moeda dar um pulso rápido (seguidas, viram um pulsar), sobe o "+35,27" e o saldo rola
+       como um odômetro (com centavos), liso. Enquanto ganha, o número fica amarelo; no fim, verde, e a moeda brilha
+       soltando círculos de radar. */
+    // perspectivas da moeda em sequência de giro/tombo (p1 frente, p2 três quartos, p3 quase de perfil, p7 perfil, p4 verso…)
+    const COIN_FR = [1, 2, 3, 7, 6, 5, 8, 9, 11, 12, 10, 4].map((k) => `assets/moeda/p${k}.webp`);
+    // um giro completo da moeda de frente (o segundo número espelha a imagem; p4 é o verso)
+    const COIN_SPIN = [[1, 1], [2, 1], [3, 1], [7, 1], [3, -1], [4, 1], [3, 1], [7, 1], [3, -1], [2, -1], [1, 1]];
+    function cashFx(el, { from, gain }, reduce) {
+      COIN_FR.concat('assets/moeda/moeda.webp').forEach((src) => { new Image().src = src; });
+      const box = el.querySelector('.lr-cash'), pill = el.querySelector('.lr-cash-pill'), val = el.querySelector('.lr-cash-val');
+      const coin = el.querySelector('.lr-cash-coin'), coinImg = coin.querySelector('img');
+      const C = (v) => Math.round(v * 100); // tudo em centavos por dentro (sem erro de arredondamento)
+      const fromC = C(from), finalC = C(from + gain);
+      /* odômetro em centavos: casas 0 e 1 são os centavos (menores), depois a vírgula e as casas inteiras com ponto de milhar */
+      const n = Math.max(3, String(finalC).length);
+      const cols = [], seps = [];
+      let html = '';
+      for (let k = n - 1; k >= 0; k--) {
+        html += `<span class="od-c${k < 2 ? ' cent' : ''}" data-k="${k}"><span class="od-s">${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((d) => `<i>${d}</i>`).join('')}</span></span>`;
+        if (k === 2) html += '<span class="od-sep cent">,</span>';
+        else if (k > 2 && (k - 2) % 3 === 0) html += `<span class="od-sep" data-k="${k}">.</span>`;
+      }
+      val.innerHTML = `<span class="od">${html}</span>`;
+      val.querySelectorAll('.od-c').forEach((c) => cols.push([+c.dataset.k, c, c.firstElementChild]));
+      val.querySelectorAll('.od-sep[data-k]').forEach((c) => seps.push([+c.dataset.k, c]));
+      const draw = (v) => { // v em centavos (pode ter fração enquanto rola)
+        cols.forEach(([k, c, strip]) => {
+          const p = 10 ** k;
+          // a casa só rola quando a de baixo vira de 9 para 0 (como num odômetro de verdade)
+          let o = Math.floor(v / p) % 10;
+          if (k === 0) o = v % 10; else { const r = v % p; if (r > p - 1) o += r - (p - 1); }
+          strip.style.transform = `translateY(${(-o).toFixed(3)}em)`;
+          c.classList.toggle('lead', k > 2 && v < p - .001);
+        });
+        seps.forEach(([k, s]) => s.classList.toggle('lead', v < 10 ** k - .001));
+      };
+      let shown = fromC, target = fromC, raf = 0, last = 0, ended = false;
+      const tone = () => { // amarelo enquanto ganha; verde quando terminou tudo
+        if (ended && shown === finalC && !flying.length) { pill.classList.remove('rise'); if (gain > 0 && !pill.classList.contains('win')) replay(coin, 'fin'); // terminou: a moeda brilha e solta círculos de radar
+           pill.classList.toggle('win', gain > 0); }
+      };
+      const loop = (now) => {
+        raf = 0; if (!el.isConnected) return;
+        const dt = Math.min(64, now - (last || now)); last = now;
+        shown += (target - shown) * (1 - Math.exp(-dt / 280)); // chega devagarinho no valor novo
+        if (Math.abs(target - shown) < .5) shown = target;
+        draw(shown);
+        if (shown !== target) raf = requestAnimationFrame(loop); else { last = 0; tone(); }
+      };
+      const credit = (c) => { target += c; pill.classList.add('rise'); if (!raf) raf = requestAnimationFrame(loop); };
+      draw(fromC);
+      const flying = [];
+      if (reduce) { box.classList.add('c1', 'c2', 'c3'); target = shown = finalC; draw(finalC); ended = true; tone(); return { earn() {}, settle() {} }; }
+
+      /* giro da moeda pelas perspectivas: frames = quantas trocas, cada uma um pouco mais lenta (ms0 → ms1) */
+      let spinT = 0;
+      const spin = (frames = COIN_SPIN.length, ms0 = 55, ms1 = 55) => {
+        clearTimeout(spinT); let i = 0;
+        const next = () => {
+          const [k, m] = COIN_SPIN[i % COIN_SPIN.length], endNow = i >= frames - 1;
+          coinImg.src = endNow ? 'assets/moeda/moeda.webp' : `assets/moeda/p${k}.webp`;
+          coinImg.style.transform = !endNow && m < 0 ? 'scaleX(-1)' : '';
+          if (!endNow) { i++; spinT = setTimeout(next, ms0 + (ms1 - ms0) * (i / frames) ** 2); }
+        };
+        next();
+      };
+
+      /* ENTRADA: moeda caindo de perto do aluno para o fundo → barrinha abre → saldo aparece */
+      let ready = false; const queue = [];
+      const T0 = 2400;
+      setTimeout(() => {
+        if (!el.isConnected) return;
+        box.classList.add('c1');
+        const r = coin.getBoundingClientRect(), host = el.getBoundingClientRect();
+        // começa grande e desfocada, perto do centro da tela, como se estivesse na frente do rosto do aluno
+        const dx = host.left + host.width * .5 - (r.left + r.width / 2), dy = host.top + host.height * .52 - (r.top + r.height / 2);
+        coin.animate([
+          { transform: `translate(${dx}px, ${dy}px) translateY(-50%) scale(6) rotate(-24deg)`, opacity: 0, filter: 'blur(14px)' },
+          { opacity: 1, offset: .14 },
+          { transform: `translate(${dx * .18}px, ${dy * .12}px) translateY(-50%) scale(1.5) rotate(6deg)`, filter: 'blur(1px)', offset: .62 },
+          { transform: 'translateY(-50%) scale(.9) rotate(-2deg)', filter: 'blur(0)', offset: .84 },
+          { transform: 'translateY(-50%) scale(1.06)', offset: .93 },
+          { transform: 'translateY(-50%) scale(1)', opacity: 1, filter: 'blur(0)' },
+        ], { duration: 1500, easing: 'cubic-bezier(.3, .55, .35, 1)', fill: 'backwards' });
+        spin(30, 34, 120); // gira rápido no ar e vai desacelerando até parar de frente
+        setTimeout(() => { if (el.isConnected) { replay(coin, 'land'); } }, 1350);
+        setTimeout(() => { if (el.isConnected) box.classList.add('c2'); }, 1450); // a barrinha abre por trás da moeda
+        setTimeout(() => { if (!el.isConnected) return; box.classList.add('c3'); setTimeout(() => { ready = true; queue.splice(0).forEach((f) => f()); }, 650); }, 2050);
+      }, T0);
+
+      /* "+35,27" subindo da barrinha */
+      const plus = (c) => {
+        const b = document.createElement('b'); b.className = 'lr-cash-plus'; b.textContent = `+${window.HC_cashFmt(c / 100)}`;
+        box.append(b);
+        b.addEventListener('animationend', () => b.remove());
+      };
+      /* cada moeda que chega: a moeda dá um pulso rápido (cresce e volta). Se outra chega enquanto ela ainda está
+         voltando, o pulso recomeça na hora do tamanho em que ela estava — com várias moedas seguidas fica um pulsar rápido */
+      let pulseA = null;
+      const hit = () => {
+        let s0 = 1;
+        try { const m = new DOMMatrixReadOnly(getComputedStyle(coinImg).transform); s0 = m.a || 1; } catch {}
+        pulseA?.cancel();
+        pulseA = coinImg.animate([{ transform: `scale(${s0})` }, { transform: 'scale(1.2)', offset: .28 }, { transform: 'scale(1)' }], { duration: 320, easing: 'cubic-bezier(.3, .7, .4, 1)' });
+        pill.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.035)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'ease-out' });
+        replay(coin, 'hit');
+      };
+
+      /* moedas voando: um único laço de quadros cuida de todas */
+      let fRaf = 0;
+      const fly = (now) => {
+        fRaf = 0; if (!el.isConnected) return;
+        for (let j = flying.length - 1; j >= 0; j--) {
+          const c = flying[j], t = (now - c.t0) / c.d;
+          if (t < 0) continue;
+          if (t >= 1) { c.node.remove(); flying.splice(j, 1); c.land(); continue; }
+          const e = t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; // sai devagar, acelera no meio e entra na barrinha
+          const x = (1 - e) * (1 - e) * c.x0 + 2 * (1 - e) * e * c.cx + e * e * c.x1;
+          const y = (1 - e) * (1 - e) * c.y0 + 2 * (1 - e) * e * c.cy + e * e * c.y1;
+          const s = t < .18 ? .3 + (t / .18) * .9 : 1.2 - (t - .18) / .82 * .62; // nasce pequena, cresce e encolhe ao entrar
+          c.node.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) scale(${s.toFixed(3)})`;
+          c.node.style.opacity = t < .08 ? t / .08 : 1;
+          const fi = (c.f0 + Math.floor((now - c.t0) / c.fd)) % COIN_FR.length;
+          if (fi !== c.fi) { c.fi = fi; c.img.src = COIN_FR[fi]; }
+        }
+        if (flying.length) fRaf = requestAnimationFrame(fly);
+      };
+      const launch = (amountC, x0, y0, count) => {
+        const host = el.getBoundingClientRect(), b = coin.getBoundingClientRect();
+        const x1 = b.left + b.width / 2 - host.left, y1 = b.top + b.height / 2 - host.top;
+        const share = Math.floor(amountC / count);
+        let landed = 0;
+        for (let i = 0; i < count; i++) {
+          const node = document.createElement('i'); node.className = 'lr-fcoin';
+          const img = document.createElement('img'); img.alt = ''; img.draggable = false; node.append(img); el.append(node);
+          const jx = (Math.random() - .5) * 60, jy = (Math.random() - .5) * 40;
+          flying.push({
+            node, img, fi: -1, f0: Math.floor(Math.random() * COIN_FR.length), fd: 50 + Math.random() * 35,
+            x0: x0 + jx, y0: y0 + jy, x1, y1, cx: (x0 + x1) / 2 + (Math.random() - .5) * 220, cy: Math.min(y0, y1) - 90 - Math.random() * 140,
+            t0: performance.now() + i * 85, d: 950 + Math.random() * 350,
+            land: () => { landed++; if (landed === 1) plus(amountC); credit(i === count - 1 ? amountC - share * (count - 1) : share); hit(); },
+          });
+        }
+        if (!fRaf) fRaf = requestAnimationFrame(fly);
+      };
+      const earn = (amount, srcEl, count = 4) => {
+        if (!el.isConnected || !srcEl) return;
+        // a posição de saída é a da conquista agora; se a barrinha ainda estiver entrando, as moedas esperam
+        const host = el.getBoundingClientRect(), a = srcEl.getBoundingClientRect();
+        const x0 = a.left + a.width / 2 - host.left, y0 = a.top + a.height / 2 - host.top;
+        const go = () => launch(C(amount), x0, y0, count);
+        if (ready) go(); else queue.push(go);
+      };
+      // terminada a contagem: o saldo mostrado é exatamente o novo saldo e o número fica verde
+      const settle = () => {
+        const check = () => {
+          if (!el.isConnected) return;
+          if (!ready || flying.length) return setTimeout(check, 300);
+          ended = true;
+          if (target !== finalC) credit(finalC - target); else tone();
+        };
+        setTimeout(check, 600);
+      };
+      return { earn, settle };
     }
     /* confetes: papeizinhos coloridos caindo de cima, num <canvas> leve; param sozinhos depois de alguns segundos */
     function confetti(host) {

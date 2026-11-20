@@ -66,7 +66,18 @@
   transform-origin: 0 50%; transform: scaleX(0); animation: pfXpBar 1.4s var(--ease) .5s forwards; }
 @keyframes pfXpBar { to { transform: scaleX(var(--w)); } }
 .pf-xp-sub { font-size: 12.5px; color: rgba(255, 255, 255, .55); }
+/* saldo HC (moeda do jogo) ao lado do XP: pílula branca com a moeda saindo pela direita */
+.pf-cash { flex: none; position: relative; display: flex; align-items: center; height: 58px; padding: 0 50px 0 20px; margin-right: 12px; border-radius: 18px; background: #fff; color: #1d1d1f;
+  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, .6); }
+.pf-cash-txt { display: flex; flex-direction: column; line-height: 1; }
+.pf-cash-txt > small { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #86868b; margin-bottom: 4px; }
+.pf-cash-txt b { font-size: 24px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.pf-cash-txt b small { font-size: .55em; font-weight: 800; }
+.pf-cash img { position: absolute; right: -22px; top: 50%; width: 68px; height: 68px; object-fit: contain; transform: translateY(-50%); filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .35)); }
 @media (max-width: 700px) {
+  .pf-xp { flex-wrap: wrap; }
+  .pf-cash { width: calc(100% - 24px); height: 52px; }
+  .pf-cash img { width: 58px; height: 58px; right: -14px; }
   .pf-xp { gap: 14px; padding: 14px; border-radius: 18px; }
   .pf-xp-lvl { width: 64px; height: 64px; border-radius: 17px; }
   .pf-xp-lvl b { font-size: 26px; }
