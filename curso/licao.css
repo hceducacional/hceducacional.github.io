@@ -1468,7 +1468,7 @@ body.lc-bg-on .lc-shell { border-color: rgba(255, 255, 255, .12); box-shadow: 0 
 .xpr-xp b { color: #fff; font-weight: 800; }
 
 /* troféu atual: círculo + troféu que sai por cima dele */
-.xpr-cur { position: absolute; z-index: 2; left: 49%; top: 18px; width: var(--cd); height: var(--cd); margin-left: calc(var(--cd) / -2); }
+.xpr-cur { position: absolute; z-index: 2; left: 49%; top: calc(18px + (100% - 18px - var(--cd)) / 2); /* no meio da faixa, na vertical */ width: var(--cd); height: var(--cd); margin-left: calc(var(--cd) / -2); }
 .xpr-disc { position: absolute; inset: 0; border-radius: 50%;
   background: radial-gradient(circle at 50% 38%, #fff 0%, color-mix(in srgb, var(--rc2) 45%, #fff) 55%, var(--rc2) 100%);
   box-shadow: 0 0 0 4px rgba(255, 255, 255, .9), 0 14px 28px -12px rgba(0, 0, 0, .45), inset 0 -8px 18px color-mix(in srgb, var(--rc1) 35%, transparent); }

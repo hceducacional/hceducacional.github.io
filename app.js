@@ -3618,9 +3618,15 @@ paintIcons();
     // celular, primeira vez que a pessoa abre o site: o banner do topo desce com uma animação
     let heroSeen = false;
     try { heroSeen = sessionStorage.getItem('hc-hero-intro') === '1'; sessionStorage.setItem('hc-hero-intro', '1'); } catch {}
-    if (!heroSeen && PHONE()) { document.body.classList.add('hero-intro'); setTimeout(() => document.body.classList.remove('hero-intro'), 2200); }
+    if (!heroSeen && PHONE()) {
+      document.body.classList.add('hero-intro');
+      // com a tela de carregamento aberta, a animação espera parada e só conta o tempo depois que ela sai
+      const off = () => setTimeout(() => document.body.classList.remove('hero-intro'), 2200);
+      document.documentElement.classList.contains('hc-splash') ? addEventListener('hc:splash-done', off, { once: true }) : off();
+    }
     navigator.storage?.persist?.(); // pede ao navegador para não apagar as imagens
   } catch (e) { console.warn('Imagens:', e); }
   paintLogo();
   route();
+  dispatchEvent(new Event('hc:ready')); // a tela de carregamento do celular pode sair
 })();
