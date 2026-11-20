@@ -56,7 +56,7 @@
               <span class="ifm-glow"></span>
               <span class="ifm-shape"><i class="ifm-shine"></i></span>
               <span class="ifm-ring"></span>
-              <span class="ifm-art"><span class="ifm-float">${o.art.map(([src, c]) => `<img class="${c}" src="${IMG}${src}" alt="" draggable="false" decoding="async">`).join('')}</span></span>
+              <span class="ifm-art"><span class="ifm-cut"><span class="ifm-float">${o.art.map(([src, c]) => `<img class="${c}" src="${IMG}${src}" alt="" draggable="false" decoding="async">`).join('')}</span></span></span>
             </span>
             <span class="ifm-name">${o.logo
               ? '<img class="ifm-logo" src="assets/plataforma-informatica.webp" width="900" height="184" alt="" draggable="false">'
@@ -171,5 +171,5 @@
     });
   }
 
-  window.HC_menu = { render };
+  window.HC_menu = { render, SCENES };
 })();

@@ -43,6 +43,76 @@ const HC_CURSO = {
 /* as lições só rodam no computador (teclado físico e tela grande); no celular e no tablet o aluno vê o progresso */
 window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine)').matches;
 
+/* =========================================================
+   XP GERAL E NÍVEL DO ALUNO
+   Todo XP ganho (ou perdido) em qualquer lição soma num total geral do aluno, inclusive ao refazer
+   a lição ou repetir só alguns níveis. O total vira o nível geral: 1.000 XP para chegar ao nível 1,
+   1.150 para o 2, 1.300 para o 3… (cada nível pede 150 XP a mais que o anterior).
+   Fica salvo no aparelho e na conta (tabela informatica_progresso, linha "xp-geral").
+   ========================================================= */
+window.HC_xp = (() => {
+  const ID = 'xp-geral';
+  const BASE = 1000, STEP = 150; // XP para o nível 1 e quanto cada nível seguinte pede a mais
+  const uid = () => auth?.user?.id || 'anon';
+  const key = () => `hc:info:${uid()}:${ID}`;
+  const need = (n) => BASE + STEP * n; // XP para ir do nível n para o n + 1
+  const levelOf = (xp) => {
+    let n = 0, rest = xp;
+    while (rest >= need(n)) { rest -= need(n); n++; }
+    return { nivel: n, rest, falta: need(n) - rest, proximo: need(n), pct: (rest / need(n)) * 100 };
+  };
+  const read = () => { try { return JSON.parse(localStorage.getItem(key()) || 'null'); } catch { return null; } };
+  const write = (d) => { try { localStorage.setItem(key(), JSON.stringify(d)); } catch {} };
+  /* primeira vez neste aparelho: começa com o XP das lições que o aluno já fez */
+  const seed = () => {
+    let xp = 0;
+    try {
+      const pre = `hc:info:${uid()}:licao-`;
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k?.startsWith(pre)) xp += Math.max(0, +JSON.parse(localStorage.getItem(k) || 'null')?.xp || 0);
+      }
+    } catch {}
+    return { xp, savedAt: 0 };
+  };
+  const cur = () => read() || seed();
+  const online = () => auth?.user && typeof sb !== 'undefined' && sb;
+
+  let timer = 0;
+  const push = () => {
+    clearTimeout(timer); timer = 0;
+    const d = read(); if (!d || !online()) return;
+    sb.from('informatica_progresso').upsert({ user_id: auth.user.id, licao: ID, dados: d, updated_at: new Date().toISOString() })
+      .then(({ error }) => { if (error) console.info('XP geral salvo só neste aparelho:', error.message); });
+  };
+  /* soma (ou tira) XP; grava no aparelho na hora e na conta a cada poucos segundos */
+  const add = (n) => {
+    n = Math.round(n || 0); if (!n) return;
+    const d = cur();
+    d.xp = Math.max(0, d.xp + n); d.savedAt = Date.now();
+    write(d);
+    if (!timer) timer = setTimeout(push, 4000);
+  };
+  /* junta com o que está na conta: fica o maior total (assim nenhum aparelho apaga XP de outro) */
+  const merge = (remote) => {
+    if (!remote || typeof remote.xp !== 'number') return false;
+    const local = read();
+    if (local && local.xp >= remote.xp) { if (local.xp > remote.xp && online()) push(); return false; }
+    write({ xp: remote.xp, savedAt: Math.max(remote.savedAt || 0, Date.now()) });
+    return true;
+  };
+  const pull = async () => {
+    if (!online()) return false;
+    const { data } = await sb.from('informatica_progresso').select('dados').eq('user_id', auth.user.id).eq('licao', ID).maybeSingle();
+    if (data?.dados) return merge(data.dados);
+    if (!read()) { write(seed()); push(); } // ainda não existe na conta: começa com o XP das lições
+    return false;
+  };
+  addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && timer) push(); });
+  addEventListener('pagehide', () => { if (timer) push(); });
+  return { ID, get: () => { const d = cur(); return { xp: d.xp, ...levelOf(d.xp) }; }, add, merge, pull, flush: () => { if (timer) push(); }, levelOf, need };
+})();
+
 (() => {
   let mod = 0; // módulo do aluno (banner e "Seu curso")
   // módulo aberto (expandido) na lista; fica guardado enquanto a aba estiver aberta, para voltar da lição com ele aberto
@@ -281,6 +351,23 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
       </section>`;
   }
 
+  /* widget do XP geral e do nível do aluno (em "Seu curso") */
+  function xpWidget() {
+    const x = window.HC_xp.get(), nv = String(x.nivel).padStart(2, '0'), n = (v) => v.toLocaleString('pt-BR');
+    return `
+        <div class="pf-xp" role="group" aria-label="Nível ${x.nivel}, ${n(x.xp)} XP">
+          <span class="pf-xp-lvl"><small>Nível</small><b>${nv}</b></span>
+          <div class="pf-xp-main">
+            <div class="pf-xp-top">
+              <span class="pf-xp-total"><strong>${n(x.xp)}</strong> XP</span>
+              <span class="pf-xp-next">Faltam <b>${n(x.falta)} XP</b> para o nível ${String(x.nivel + 1).padStart(2, '0')}</span>
+            </div>
+            <div class="pf-xp-bar"><i style="--w:${(x.pct / 100).toFixed(4)}"></i></div>
+            <small class="pf-xp-sub">${n(x.rest)} de ${n(x.proximo)} XP neste nível · todo XP das lições soma aqui, inclusive ao refazer</small>
+          </div>
+        </div>`;
+  }
+
   function render(view, sub = '') {
     const ln = /^licao-(\d+)$/.exec(sub);
     mergeExtras();
@@ -317,6 +404,7 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
             <span class="pf-stat-txt"><small>${label}</small><strong>${esc(val)}</strong></span>
           </div>`).join('')}
         </div>
+        ${xpWidget()}
       </section>
 
       <section class="pf-mods">
@@ -560,9 +648,12 @@ window.HC_isComputer = () => innerWidth >= 760 && matchMedia('(any-pointer: fine
     if (synced || !auth?.user || typeof sb === 'undefined' || !sb) return;
     synced = true;
     const { data, error } = await sb.from('informatica_progresso').select('licao, dados').eq('user_id', auth.user.id);
-    if (error || !data?.length) return;
+    if (error) return;
     let changed = false;
+    const xpRow = data.find((r) => r.licao === window.HC_xp.ID);
+    if (xpRow ? window.HC_xp.merge(xpRow.dados) : (window.HC_xp.pull(), false)) changed = true;
     data.forEach(({ licao, dados }) => {
+      if (licao === window.HC_xp.ID) return;
       const key = `hc:info:${auth.user.id}:${licao}`;
       let local = null; try { local = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
       if (!local || (dados?.savedAt || 0) > (local.savedAt || 0)) { try { localStorage.setItem(key, JSON.stringify(dados)); changed = true; } catch {} }

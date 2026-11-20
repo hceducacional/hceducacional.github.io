@@ -52,6 +52,7 @@
   const lsKey = (id) => `hc:info:${uid()}:${id}`;
   const readLocal = (id) => { try { return JSON.parse(localStorage.getItem(lsKey(id)) || 'null'); } catch { return null; } };
   function saveProgress(id, data) {
+    window.HC_xp?.flush(); // o XP geral vai para a conta junto com o progresso da lição
     data.savedAt = Date.now();
     try { localStorage.setItem(lsKey(id), JSON.stringify(data)); } catch {}
     if (auth?.user && typeof sb !== 'undefined' && sb) {
@@ -153,7 +154,168 @@
   /* =========================================================
      Abrir uma lição
      ========================================================= */
+  /* =========================================================
+     TELA DE XP ("Você está subindo de nível!")
+     Aparece depois do Continuar da tela final. Fundo e faixa branca iguais aos da tela de
+     seleção da plataforma (classes .ifm-* do curso/menu.css). O anel mostra quanto falta para o
+     próximo nível: ele enche com o XP ganho na lição e, a cada nível conquistado, completa,
+     o número troca com um estouro de brilho e o anel recomeça.
+     test = prévia do administrador (XP de mentira, nada é salvo).
+     ========================================================= */
+  /* cor do miolo do anel conforme o nível: uma cor a cada faixa de 10 níveis (0–10, 11–20, 21–30…).
+     São 25 cores e, depois, as mesmas 25 numa versão mais intensa (50 faixas); a partir do nível 501 tudo recomeça.
+     Cada cor = [brilho, meio, borda] do degradê. */
+  const LV_COLORS = [
+    ['#8ec5ff', '#2f7fe0', '#163f99'], ['#8ee59a', '#2fae5f', '#14713d'], ['#c9a7ff', '#7c4ddb', '#3f1f8f'], ['#ffc48a', '#f07a22', '#a3420a'],
+    ['#ffa8cf', '#e0458c', '#8f1650'], ['#8af0f5', '#17b3c2', '#0b6470'], ['#ff9a9a', '#e03b3b', '#8f1414'], ['#ffe58a', '#e6b10f', '#946a00'],
+    ['#a9b4ff', '#4a55d6', '#232a85'], ['#d4f58a', '#84c21a', '#466e06'], ['#f5a3ff', '#c23fd6', '#6c1480'], ['#8af5d2', '#14b88a', '#0a6b4f'],
+    ['#ffb3a0', '#f2674a', '#9c2e17'], ['#a6e3ff', '#2aa6e0', '#0f5f8a'], ['#f0a0b8', '#b8325e', '#650f30'], ['#b8f5c8', '#3ccf76', '#16733c'],
+    ['#e0c8ff', '#a07ae6', '#5a3a9c'], ['#ffd59a', '#f59e0b', '#8a5200'], ['#8ad0d8', '#1f7f8c', '#0b3f47'], ['#ff9ec0', '#e8285f', '#8a0a32'],
+    ['#c8ccd6', '#5b6475', '#262b36'], ['#9ff0c0', '#0f9f58', '#045230'], ['#9ab8ff', '#2456d6', '#0c2a80'], ['#f0c79a', '#b9732e', '#6b3a0f'],
+    ['#ffa6f5', '#a21fd6', '#4d0870'],
+  ];
+  const mixHex = (h, to, k) => '#' + [1, 3, 5].map((i) => Math.round(parseInt(h.slice(i, i + 2), 16) * (1 - k) + to * k).toString(16).padStart(2, '0')).join('');
+  const LV_BANDS = 50; // 50 faixas de 10 níveis = 500 níveis por volta
+  function levelColor(n) {
+    const band = (n <= 10 ? 0 : Math.floor((n - 1) / 10)) % LV_BANDS;
+    const [a, b, c] = LV_COLORS[band % LV_COLORS.length];
+    if (band < LV_COLORS.length) return [a, b, c];
+    return [mixHex(a, 255, .25), mixHex(b, 0, .18), mixHex(c, 0, .35)]; // 2ª volta: brilho mais claro e fundo mais profundo
+  }
+
+  function xpScreen({ gained = 0, test = false, onDone }) {
+    const X = window.HC_xp; if (!X) return onDone?.();
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const now = X.get().xp;
+    const before = test ? now : Math.max(0, now - gained);
+    const after = before + gained;
+    const L0 = X.levelOf(before), L1 = X.levelOf(after);
+    const SC = window.HC_menu?.SCENES || [{ b: '46 20 26', a1: '251 113 133', a2: '251 146 60', a3: '250 204 21' }];
+    const s = SC[Math.floor(Math.random() * SC.length)];
+    const nn = (n) => String(n).padStart(2, '0');
+    const fmtN = (v) => Math.round(v).toLocaleString('pt-BR');
+    const up = L1.nivel - L0.nivel;
+    const el = document.createElement('section');
+    el.className = 'ifm xpn';
+    el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Seu nível');
+    el.innerHTML = `
+      <div class="ifm-bg" aria-hidden="true"><div class="ifm-sky on" style="--b:${s.b};--a1:${s.a1};--a2:${s.a2};--a3:${s.a3}"></div><div class="ifm-dots"></div></div>
+      <div class="ifm-white" aria-hidden="true"></div>
+      <div class="xpn-text">
+        <div class="xpn-up" aria-live="polite"><span class="xpn-arrows" aria-hidden="true">${'<i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 15 7-7 7 7"/></svg></i>'.repeat(3)}</span><b>Experiência aumentada</b></div>
+        <h2 class="xpn-title"><span>Você está</span> <span>subindo de nível!</span></h2>
+        <p class="xpn-gain"><b class="xpn-plus">${gained >= 0 ? '+' : '−'}<span id="xpn-plus">0</span> XP</b> nesta lição</p>
+        <p class="xpn-need" id="xpn-need">Faltam <b>${fmtN(L0.falta)} XP</b> para o nível ${nn(L0.nivel + 1)}</p>
+      </div>
+      <div class="xpn-badge" aria-live="polite">
+        <span class="xpn-glow"></span>
+        <svg class="xpn-ring" viewBox="0 0 200 200" aria-hidden="true">
+          <defs>
+            <linearGradient id="xpnRed" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f05a5a"/><stop offset="1" stop-color="#c81e3c"/></linearGradient>
+            <linearGradient id="xpnGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9a2e"/><stop offset="1" stop-color="#ffd84a"/></linearGradient>
+            <radialGradient id="xpnGreen" cx=".42" cy=".3" r=".8">${levelColor(L0.nivel).map((c, i) => `<stop class="xr-stop" offset="${[0, .45, 1][i]}" style="stop-color:${c}"/>`).join('')}</radialGradient>
+          </defs>
+          <circle class="xr-disc" cx="100" cy="100" r="97" fill="url(#xpnRed)"/>
+          <circle class="xr-track" cx="100" cy="100" r="79" fill="none" stroke="rgba(0,0,0,.14)" stroke-width="26" pathLength="100" stroke-dasharray="100 100" transform="rotate(-90 100 100)"/>
+          <circle class="xpn-arc" cx="100" cy="100" r="79" fill="none" stroke="url(#xpnGold)" stroke-width="26" stroke-linecap="butt" pathLength="100" stroke-dasharray="100 100" stroke-dashoffset="100" transform="rotate(-90 100 100)"/>
+          <circle class="xr-border" cx="100" cy="100" r="97" fill="none" stroke="#fff" stroke-width="2.5" pathLength="100" stroke-dasharray="100 100" transform="rotate(-90 100 100)"/>
+          <circle class="xr-white" cx="100" cy="100" r="63" fill="#fff"/>
+          <circle class="xr-green" cx="100" cy="100" r="56" fill="url(#xpnGreen)"/>
+          <path class="xr-shine" d="M60 78 Q100 40 140 78 L140 70 Q100 30 60 70 Z" fill="rgba(255,255,255,.16)"/>
+        </svg>
+        <span class="xpn-num" id="xpn-num"><b>${nn(L0.nivel)}</b></span>
+        <span class="xpn-burst"><i class="xpn-ring2"></i>${Array.from({ length: 12 }, (_, k) => `<i class="xpn-spark" style="--a:${k * 30}deg"></i>`).join('')}</span>
+      </div>
+      <p class="ifm-wait xpn-wait" role="status"><em>Aguarde, registrando seus dados</em><span class="ifm-spin" aria-hidden="true"></span></p>
+      <button type="button" class="xpn-go">Continuar <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/></svg></button>`;
+    document.body.append(el);
+    const arc = el.querySelector('.xpn-arc'), numBox = el.querySelector('#xpn-num'), plus = el.querySelector('#xpn-plus');
+    const need = el.querySelector('#xpn-need'), badge = el.querySelector('.xpn-badge');
+    let arcOn = false; // o arco só aparece depois que o anel está montado (antes, a ponta dele ficava visível)
+    const setArc = (pct) => {
+      pct = Math.max(0, Math.min(100, pct));
+      arc.setAttribute('stroke-dashoffset', (100 - pct).toFixed(2));
+      arc.style.opacity = arcOn && pct > .4 ? '' : '0'; // vazio, nem a pontinha aparece
+    };
+    setArc(0);
+    // o arco dourado aparece desenhando até onde o aluno estava, depois que as peças do anel entram
+    arc.classList.add('intro');
+    setTimeout(() => { if (el.isConnected) { arcOn = true; setArc(L0.pct); } }, reduce ? 0 : 2050);
+    setTimeout(() => arc.classList.remove('intro'), reduce ? 0 : 3300);
+    let lvShown = L0.nivel;
+    /* troca do número: o antigo sobe e some, o novo cai girando com um estouro de brilho */
+    const stops = el.querySelectorAll('.xr-stop'), upEl = el.querySelector('.xpn-up');
+    /* troca do número em sequência: o antigo encolhe e some primeiro; só então o novo entra, junto com a
+       cor nova do miolo (se a faixa de níveis mudou) e o estouro de brilho. Nunca um por cima do outro. */
+    let flipT = 0;
+    const flip = (n) => {
+      clearTimeout(flipT);
+      numBox.querySelectorAll('b.out').forEach((x) => x.remove()); // troca anterior ainda saindo: some na hora
+      const old = numBox.querySelector('b');
+      if (old) { old.className = 'out'; setTimeout(() => old.remove(), 320); }
+      flipT = setTimeout(() => {
+        if (!el.isConnected) return;
+        numBox.querySelectorAll('b:not(.out)').forEach((x) => x.remove());
+        const b = document.createElement('b'); b.textContent = nn(n); b.className = 'in'; numBox.append(b);
+        levelColor(n).forEach((c, i) => { if (stops[i]) stops[i].style.stopColor = c; });
+        badge.classList.remove('boom'); void badge.offsetWidth; badge.classList.add('boom');
+        // "Experiência aumentada" surge da esquerda para a direita a cada nível conquistado
+        upEl.classList.remove('show', 'rest'); void upEl.offsetWidth; upEl.classList.add('show'); // revela de novo a cada nível
+      }, old ? 300 : 0);
+    };
+    const paint = (xp) => {
+      const l = X.levelOf(xp);
+      if (l.nivel !== lvShown) { lvShown = l.nivel; flip(l.nivel); setArc(0); }
+      else setArc(l.pct);
+      plus.textContent = fmtN(Math.abs(xp - before));
+      need.innerHTML = `Faltam <b>${fmtN(l.falta)} XP</b> para o nível ${nn(l.nivel + 1)}`;
+    };
+    const finish = () => {
+      paint(after);
+      if (!test) X.flush();
+      // as setas param de forma suave: cada uma termina a volta em que está e só então fica a seta parada no centro
+      setTimeout(() => {
+        if (!upEl.classList.contains('show')) return upEl.classList.add('rest');
+        const anims = [...upEl.querySelectorAll('.xpn-arrows i')].flatMap((i) => i.getAnimations());
+        anims.forEach((an) => { const it = an.effect.getComputedTiming().currentIteration || 0; an.effect.updateTiming({ iterations: it + 1 }); });
+        Promise.all(anims.map((an) => an.finished.catch(() => {}))).then(() => el.isConnected && upEl.classList.add('rest'));
+      }, 400);
+      setTimeout(() => el.classList.add('done'), reduce ? 0 : 900);
+    };
+    requestAnimationFrame(() => el.classList.add('in'));
+    if (reduce || !gained) { setTimeout(finish, reduce ? 0 : 3400); }
+    else {
+      /* o anel começa a encher depois da entrada; leva mais tempo quando há níveis a subir */
+      const D = Math.min(14000, 4800 + up * 2200); // contagem calma; mais tempo a cada nível conquistado
+      setTimeout(() => {
+        const t0 = performance.now();
+        const step = (t) => {
+          if (!el.isConnected) return;
+          const p = Math.min(1, (t - t0) / D), e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; // começa e termina devagar
+          paint(before + gained * e);
+          if (p < 1) requestAnimationFrame(step); else finish();
+        };
+        requestAnimationFrame(step);
+      }, 3500);
+    }
+    const go = () => {
+      if (el.dataset.leaving) return; el.dataset.leaving = '1';
+      if (onDone) return onDone(el);
+      el.classList.add('leave'); setTimeout(() => el.remove(), 700);
+    };
+    el.querySelector('.xpn-go').addEventListener('click', go);
+    const onKey = (e) => {
+      if (!el.isConnected) return removeEventListener('keydown', onKey, true);
+      if (e.key === 'Enter' && el.classList.contains('done')) { e.preventDefault(); e.stopPropagation(); go(); }
+      else if (e.key === 'Escape' && test) go();
+    };
+    addEventListener('keydown', onKey, true);
+    addEventListener('hashchange', () => { if (!el.dataset.leaving) el.remove(); }, { once: true });
+    return el;
+  }
+
   async function open(view, L, meta = {}) {
+    window.HC_xp?.pull().catch(() => {}); // traz o XP geral da conta antes de somar o desta lição
     view.innerHTML = '<div class="wrap"><p class="me-loading">Carregando a lição…</p></div>';
     const saved = await loadProgress(L.id);
     if (!view.isConnected) return;
@@ -163,6 +325,8 @@
     // progresso salvo antes da pontuação ser dividida entre os níveis: pontos de nível acima da parte de cada um são descartados
     if (saved?.levelPts?.some((x) => x > PTS_MAX / N + 1)) saved.levelPts = [];
     let st = saved && !saved.done ? { ...fresh(), ...saved } : fresh();
+    let runXp = 0; // XP ganho (ou perdido) desde que a lição foi aberta, para a tela de XP
+    const gain = (n) => { if (!n) return; runXp += n; window.HC_xp?.add(n); };
     // lição já concluída: o resultado salvo é o recorde do aluno. Refazer não apaga nada;
     // só uma pontuação maior substitui o recorde (no fim da lição)
     let best = saved?.done ? saved : null;
@@ -350,11 +514,11 @@
     /* acerto e erro valem para todos os tipos de nível */
     function hit(k) {
       presses.push(performance.now()); speedWake();
-      st.hits++; st.xp += 5; paintStats(); spark(); kb?.flash(k, true);
+      st.hits++; st.xp += 5; gain(5); paintStats(); spark(); kb?.flash(k, true);
       score(true);
     }
     function miss(k) {
-      st.errors++; st.xp = Math.max(0, st.xp - (1 + Math.floor(Math.random() * 6))); paintStats(); if (k) kb?.flash(k, false);
+      st.errors++; { const was = st.xp; st.xp = Math.max(0, st.xp - (1 + Math.floor(Math.random() * 6))); gain(st.xp - was); } paintStats(); if (k) kb?.flash(k, false);
       score(false);
     }
 
@@ -627,6 +791,7 @@
           <span class="lc-lv-av">${nn}</span>
           <span class="lc-lv-who"><strong>Nível ${nn}</strong><small>de ${N} · Lição ${L.numero}</small></span>
           <div class="lc-sup" id="lc-sup"></div>
+          ${isAdmin() ? '<button type="button" class="lc-xptest" id="lc-xptest" title="Só administradores veem este botão">Testar tela de XP</button>' : ''}
           <span class="lc-kind${isGame ? ' game' : ''}">${isGame ? 'Minijogo' : 'Digitação'}</span>
         </div>
         <h2 class="lc-lv-title">${esc(lv.titulo)}</h2>
@@ -636,6 +801,7 @@
         ${kbHTML()}
         <div class="lc-over" id="lc-over" hidden></div>`;
       kbMount(); supRender();
+      $q('#lc-xptest')?.addEventListener('click', (e) => { e.currentTarget.blur(); xpScreen({ test: true, gained: 600 + Math.round(Math.random() * 2400) }); });
       paintProgress(); paintStats(); gaugeLevel(lv);
       ({ typing: typingInit, hacker: hackerInit, fila: filaInit, memoria: memoInit })[lv.tipo](lv);
     }
@@ -1105,7 +1271,7 @@
           <div class="lr-stage">
             <h2 class="lr-congrats">Parabéns!</h2>
             <div class="lr-ribbon">
-              <span class="lr-tab"></span>
+              <span class="lr-tab"></span><i class="lr-flash" aria-hidden="true"></i>
               ${userAvatar(auth.profile || { name }, 'lr-av')}
               <div class="lr-who"><strong>${esc(name)}</strong><small>Lição ${L.numero} · ${esc(L.titulo)}</small><div class="lr-track"><div class="lr-bar"><i class="lr-fill"><b class="lr-beam"></b></i></div><div class="lr-rstars">${STAR_AT.map((_, i) => `<span class="lr-rstar" style="--i:${i}">${['amarela', 'superstar', 'megastar'].map((k) => `<img class="s-${k}" src="assets/estrelas/estrela-${k}.png" alt="" draggable="false">`).join('')}</span>`).join('')}</div><b class="lr-rnum">0</b></div></div>
               <div class="lr-score">
@@ -1144,7 +1310,22 @@
       const num = el.querySelector('.lr-num'), fill = el.querySelector('.lr-fill'), stars = el.querySelectorAll('.lr-star');
       const track = el.querySelector('.lr-track'), rnum = el.querySelector('.lr-rnum'), rstars = el.querySelectorAll('.lr-rstar'), beam = el.querySelector('.lr-beam');
       const burst = el.querySelector('.lr-burst'), word = el.querySelector('.lr-word');
+      /* flash na faixa do nome (como no vídeo de referência): a faixa fica toda branca por um instante, cobrindo
+         nome e barra, e o branco vai saindo da esquerda para a direita; no Superstar/Megastar ele dura mais */
+      const flash = el.querySelector('.lr-flash');
+      const flashFx = (r) => {
+        if (reduce) return;
+        flash.getAnimations().forEach((a) => a.cancel());
+        flash.animate([
+          { opacity: 0, backgroundPosition: '100% 0' },
+          { opacity: 1, backgroundPosition: '100% 0', offset: .08 },
+          { opacity: 1, backgroundPosition: '100% 0', offset: r ? .3 : .25 },
+          { opacity: .9, backgroundPosition: '45% 0', offset: .7 },
+          { opacity: 0, backgroundPosition: '0% 0' },
+        ], { duration: r ? 1500 : 1000, easing: 'ease-out' });
+      };
       const showRank = (r) => {
+        flashFx(r);
         el.classList.remove('super', 'mega'); el.classList.add(r);
         word.innerHTML = `<img src="assets/estrelas/titulo-${r === 'mega' ? 'megastar' : 'superstar'}.png" alt="${RANK_NAME[r]}">`; burst.classList.remove('go'); void burst.offsetWidth; burst.classList.add('go');
       };
@@ -1161,7 +1342,7 @@
         fill.style.transform = `scaleX(${p.toFixed(4)})`;
         if (v >= STAR_AT[0] && !el.classList.contains('starred')) el.classList.add('starred'); // o número sai do branco na 1ª estrela
         // cada estrela nova surge na ponta da barra (as antigas vão ficando atrás) e um feixe de brilho corre pela parte cheia
-        rstars.forEach((s, i) => { if (v >= STAR_AT[i] && !s.classList.contains('on')) { s.classList.add('on'); beam.classList.remove('go'); void beam.offsetWidth; beam.classList.add('go'); } });
+        rstars.forEach((s, i) => { if (v >= STAR_AT[i] && !s.classList.contains('on')) { s.classList.add('on'); flashFx(); beam.classList.remove('go'); void beam.offsetWidth; beam.classList.add('go'); } });
         if (v >= MEGA_AT && !el.classList.contains('mega')) showRank('mega');
         else if (v >= SUPER_AT && v < MEGA_AT && !el.classList.contains('super')) showRank('super');
       };
@@ -1197,15 +1378,22 @@
       };
       // Continuar: a mesma abertura do início da lição, com "Retornando à plataforma" embaixo do logo
       el.querySelector('[data-lr="go"]').addEventListener('click', () => {
+        if (el.dataset.xp) return;
+        el.dataset.xp = '1';
+        // primeiro a tela de XP; o Continuar dela faz a volta à plataforma
+        const xs = !reduce && window.HC_xp ? xpScreen({ gained: runXp, onDone: () => backHome(xs) }) : null;
+        if (!xs) backHome(null);
+      });
+      const backHome = (xs) => {
         const I = window.HC_intro;
-        if (reduce || !I) return close(() => { location.hash = '#informatica/cursos'; });
+        if (reduce || !I) { xs?.remove(); return close(() => { location.hash = '#informatica/cursos'; }); }
         if (el.dataset.leaving) return;
         el.dataset.leaving = '1'; // as faixas da abertura passam por cima da tela de resultado
         const n = parseInt(String(L.id).split('-')[1], 10) || 1;
         I.play(n, L, { label: 'Retornando à plataforma', sub: 'Lição concluída' });
-        setTimeout(() => { el.remove(); location.hash = '#informatica/cursos'; I.end(); }, I.PEAK + 200);
-      });
-      el.querySelector('[data-lr="again"]').addEventListener('click', () => close(() => { st = fresh(); play(); }));
+        setTimeout(() => { el.remove(); xs?.remove(); location.hash = '#informatica/cursos'; I.end(); }, I.PEAK + 200);
+      };
+      el.querySelector('[data-lr="again"]').addEventListener('click', () => close(() => { st = fresh(); runXp = 0; play(); }));
       el.querySelector('[data-lr="report"]').addEventListener('click', () => report(a, rating, fast, slow, g));
       const onHash = () => { if (!el.classList.contains('out')) el.remove(); }; // saiu por outro caminho (menu, voltar)
       window.addEventListener('hashchange', onHash, { once: true });

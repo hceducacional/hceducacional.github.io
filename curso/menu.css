@@ -4,6 +4,7 @@
    apenas durante a troca de botão).
    ========================================================= */
 @property --fade { syntax: '<percentage>'; inherits: false; initial-value: 0%; }
+@property --cutb { syntax: '<length>'; inherits: true; initial-value: 0px; }
 
 .ifm { --s: clamp(120px, min(15.5vw, 28vh), 250px); --gap: calc(var(--s) * 1.55); --shift: calc(var(--s) * .45); --r: calc(var(--s) * .13);
   --spring: cubic-bezier(.34, 1.56, .64, 1); --soft: cubic-bezier(.22, 1, .36, 1);
@@ -85,7 +86,10 @@
 /* no do meio as pernas passam das laterais da forma: o esmaecido é mais longo e some por
    completo um pouco acima da borda de baixo (o logo fica por cima dessa parte) */
 .ifm-curso .ifm-art { -webkit-mask: linear-gradient(to top, transparent 0, transparent calc(var(--fade) * .3), rgba(0, 0, 0, .5) calc(var(--fade) * .7), #000 var(--fade)); mask: linear-gradient(to top, transparent 0, transparent calc(var(--fade) * .3), rgba(0, 0, 0, .5) calc(var(--fade) * .7), #000 var(--fade)); }
-.ifm-curso.sel .ifm-art { --fade: 26%; clip-path: inset(0 0 5% 0 round 0 0 var(--r) var(--r)); } /* corta as pernas um pouco antes da borda, onde já estão transparentes */
+.ifm-curso.sel .ifm-art { --fade: 26%; }
+/* corte de verdade (overflow) das pernas um pouco antes da borda, onde já estão transparentes:
+   em telas grandes só o esmaecido deixava uma linha fina aparecendo abaixo da forma */
+.ifm-curso.sel .ifm-cut { --cutb: calc(var(--s) * .07); }
 @keyframes ifmRing { 0% { opacity: .9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.32); } }
 
 /* personagens: recolhidos ficam dentro da forma; expandidos saem por cima dela,
@@ -98,9 +102,8 @@
   -webkit-mask: linear-gradient(to top, transparent 0, #000 var(--fade)); mask: linear-gradient(to top, transparent 0, #000 var(--fade));
   transition: clip-path .55s var(--soft), scale .85s var(--spring), --fade .6s ease; }
 .ifm-opt.sel .ifm-art { clip-path: inset(0 0 0 0 round 0 0 var(--r) var(--r)); scale: 1.42; --fade: 16%; }
-.ifm-float { position: absolute; top: var(--ay); bottom: 0; left: var(--ax); right: var(--ax); }
-.ifm-opt.sel .ifm-float { animation: ifmFloat 3.2s ease-in-out .9s infinite alternate; }
-@keyframes ifmFloat { to { transform: translateY(-2.2%); } }
+.ifm-cut { position: absolute; inset: 0 0 var(--cutb) 0; overflow: hidden; transition: --cutb .55s var(--soft); }
+.ifm-float { position: absolute; top: var(--ay); bottom: calc(var(--cutb) * -1); left: var(--ax); right: var(--ax); }
 .ifm-art img { position: absolute; display: block; width: auto; max-width: none; pointer-events: none; }
 .ifm-art img.solo { left: 50%; bottom: -52%; height: 146%; transform: translateX(-50%); }
 .ifm-art img.c { z-index: 2; left: 50%; bottom: -48%; height: 142%; transform: translateX(-50%); }
