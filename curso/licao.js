@@ -162,26 +162,8 @@
      o número troca com um estouro de brilho e o anel recomeça.
      test = prévia do administrador (XP de mentira, nada é salvo).
      ========================================================= */
-  /* cor do miolo do anel conforme o nível: uma cor a cada faixa de 10 níveis (0–10, 11–20, 21–30…).
-     São 25 cores e, depois, as mesmas 25 numa versão mais intensa (50 faixas); a partir do nível 501 tudo recomeça.
-     Cada cor = [brilho, meio, borda] do degradê. */
-  const LV_COLORS = [
-    ['#8ec5ff', '#2f7fe0', '#163f99'], ['#8ee59a', '#2fae5f', '#14713d'], ['#c9a7ff', '#7c4ddb', '#3f1f8f'], ['#ffc48a', '#f07a22', '#a3420a'],
-    ['#ffa8cf', '#e0458c', '#8f1650'], ['#8af0f5', '#17b3c2', '#0b6470'], ['#ff9a9a', '#e03b3b', '#8f1414'], ['#ffe58a', '#e6b10f', '#946a00'],
-    ['#a9b4ff', '#4a55d6', '#232a85'], ['#d4f58a', '#84c21a', '#466e06'], ['#f5a3ff', '#c23fd6', '#6c1480'], ['#8af5d2', '#14b88a', '#0a6b4f'],
-    ['#ffb3a0', '#f2674a', '#9c2e17'], ['#a6e3ff', '#2aa6e0', '#0f5f8a'], ['#f0a0b8', '#b8325e', '#650f30'], ['#b8f5c8', '#3ccf76', '#16733c'],
-    ['#e0c8ff', '#a07ae6', '#5a3a9c'], ['#ffd59a', '#f59e0b', '#8a5200'], ['#8ad0d8', '#1f7f8c', '#0b3f47'], ['#ff9ec0', '#e8285f', '#8a0a32'],
-    ['#c8ccd6', '#5b6475', '#262b36'], ['#9ff0c0', '#0f9f58', '#045230'], ['#9ab8ff', '#2456d6', '#0c2a80'], ['#f0c79a', '#b9732e', '#6b3a0f'],
-    ['#ffa6f5', '#a21fd6', '#4d0870'],
-  ];
-  const mixHex = (h, to, k) => '#' + [1, 3, 5].map((i) => Math.round(parseInt(h.slice(i, i + 2), 16) * (1 - k) + to * k).toString(16).padStart(2, '0')).join('');
-  const LV_BANDS = 50; // 50 faixas de 10 níveis = 500 níveis por volta
-  function levelColor(n) {
-    const band = (n <= 10 ? 0 : Math.floor((n - 1) / 10)) % LV_BANDS;
-    const [a, b, c] = LV_COLORS[band % LV_COLORS.length];
-    if (band < LV_COLORS.length) return [a, b, c];
-    return [mixHex(a, 255, .25), mixHex(b, 0, .18), mixHex(c, 0, .35)]; // 2ª volta: brilho mais claro e fundo mais profundo
-  }
+  /* cor do miolo do anel conforme o nível: fica em curso/plataforma.js (window.HC_levelColor), usada também no banner do nível */
+  const levelColor = (n) => window.HC_levelColor(n);
 
   function xpScreen({ gained = 0, test = false, onDone }) {
     const X = window.HC_xp; if (!X) return onDone?.();

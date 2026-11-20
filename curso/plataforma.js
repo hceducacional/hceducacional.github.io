@@ -206,6 +206,29 @@ window.HC_cash = (() => {
   const get = () => { const d = cur(); return { saldo: Math.max(0, c2(d.ganho - (d.gasto || 0))), ganho: d.ganho, gasto: d.gasto || 0, hist: d.hist || [] }; };
   return { ID, get, add, merge, pull, ganhoDe, POR_ESTRELA, SUPERSTAR, MEGASTAR, flush: () => { if (timer) push(); } };
 })();
+window.HC_levelColor = (() => {
+  /* cor do miolo do anel conforme o nível: uma cor a cada faixa de 10 níveis (0–10, 11–20, 21–30…).
+     São 25 cores e, depois, as mesmas 25 numa versão mais intensa (50 faixas); a partir do nível 501 tudo recomeça.
+     Cada cor = [brilho, meio, borda] do degradê. */
+  const LV_COLORS = [
+    ['#8ec5ff', '#2f7fe0', '#163f99'], ['#8ee59a', '#2fae5f', '#14713d'], ['#c9a7ff', '#7c4ddb', '#3f1f8f'], ['#ffc48a', '#f07a22', '#a3420a'],
+    ['#ffa8cf', '#e0458c', '#8f1650'], ['#8af0f5', '#17b3c2', '#0b6470'], ['#ff9a9a', '#e03b3b', '#8f1414'], ['#ffe58a', '#e6b10f', '#946a00'],
+    ['#a9b4ff', '#4a55d6', '#232a85'], ['#d4f58a', '#84c21a', '#466e06'], ['#f5a3ff', '#c23fd6', '#6c1480'], ['#8af5d2', '#14b88a', '#0a6b4f'],
+    ['#ffb3a0', '#f2674a', '#9c2e17'], ['#a6e3ff', '#2aa6e0', '#0f5f8a'], ['#f0a0b8', '#b8325e', '#650f30'], ['#b8f5c8', '#3ccf76', '#16733c'],
+    ['#e0c8ff', '#a07ae6', '#5a3a9c'], ['#ffd59a', '#f59e0b', '#8a5200'], ['#8ad0d8', '#1f7f8c', '#0b3f47'], ['#ff9ec0', '#e8285f', '#8a0a32'],
+    ['#c8ccd6', '#5b6475', '#262b36'], ['#9ff0c0', '#0f9f58', '#045230'], ['#9ab8ff', '#2456d6', '#0c2a80'], ['#f0c79a', '#b9732e', '#6b3a0f'],
+    ['#ffa6f5', '#a21fd6', '#4d0870'],
+  ];
+  const mixHex = (h, to, k) => '#' + [1, 3, 5].map((i) => Math.round(parseInt(h.slice(i, i + 2), 16) * (1 - k) + to * k).toString(16).padStart(2, '0')).join('');
+  const LV_BANDS = 50; // 50 faixas de 10 níveis = 500 níveis por volta
+  function levelColor(n) {
+    const band = (n <= 10 ? 0 : Math.floor((n - 1) / 10)) % LV_BANDS;
+    const [a, b, c] = LV_COLORS[band % LV_COLORS.length];
+    if (band < LV_COLORS.length) return [a, b, c];
+    return [mixHex(a, 255, .25), mixHex(b, 0, .18), mixHex(c, 0, .35)]; // 2ª volta: brilho mais claro e fundo mais profundo
+  }
+  return levelColor;
+})();
 /* valor em moedas no formato do jogo: 1.250,00 */
 window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -369,6 +392,230 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   }
   const progress = (n) => { try { return JSON.parse(localStorage.getItem(`hc:info:${auth?.user?.id || 'anon'}:licao-${n}`) || 'null'); } catch { return null; } };
 
+  /* =========================================================
+     BANNERS DINÂMICOS (carrossel do topo da plataforma)
+     1º: o banner do módulo (fixo). 2º: Saldo HC. 3º: nível e XP. Os dinâmicos mostram o progresso
+     do aluno e animam as informações (na área escura da esquerda) só na primeira vez que o banner entra.
+     Imagem de fundo: o administrador troca pelo lápis (fica em cursoEdit, ids "bsaldo" e "bnivel");
+     sem imagem, cada um tem um fundo próprio desenhado aqui.
+     ========================================================= */
+  const PF_SLIDE_MS = 9000;
+  const PF_BANNERS = { bsaldo: 'Banner do saldo', bnivel: 'Banner do nível', bpatente: 'Banner das patentes' };
+  const bannerImg = (id) => edits().find((x) => x.id === id)?.image || '';
+  const nf = (v) => v.toLocaleString('pt-BR');
+  const bannerBg = (id, deco) => {
+    const img = bannerImg(id);
+    return `<div class="pf-hero-bg pfb-bg pfb-bg-${id}">${img ? `<span class="pf-hero-img" style="--img:url('${esc(imgUrl(img))}')"></span>` : deco}</div>`;
+  };
+  const admPen = (id) => (isAdmin() ? `<div class="pf-adm pfb-adm"><button class="pf-adm-btn" type="button" data-editbanner="${id}" aria-label="Trocar a imagem de fundo do ${PF_BANNERS[id].toLowerCase()}" title="Trocar imagem de fundo">${svg('pen')}</button></div>` : '');
+  function cashBanner() {
+    if (!window.HC_cash) return '';
+    const c = window.HC_cash.get(), C = window.HC_cash, last = c.hist[0];
+    const lastTxt = last ? `Último ganho <b>+${window.HC_cashFmt(last.v)}</b>${/^licao-\d+$/.test(last.m || '') ? ` · Lição ${String(last.m.split('-')[1]).padStart(2, '0')}` : ''}` : 'Conclua lições e ganhe moedas pelas estrelas';
+    return `
+          <div class="pf-slide pfb pfb-cash" data-b="saldo" aria-roledescription="slide" aria-label="2 de 4: Saldo HC ${window.HC_cashFmt(c.saldo)}">
+            ${bannerBg('bsaldo', `<img class="pfb-deco-coin" src="assets/moeda/p2.webp" alt="" draggable="false"><img class="pfb-deco-coin d2" src="assets/moeda/p5.webp" alt="" draggable="false"><img class="pfb-deco-coin d3" src="assets/moeda/p9.webp" alt="" draggable="false">`)}
+            <div class="pfb-body">
+              <div class="pfb-coin" aria-hidden="true"><i class="pfb-glow"></i><span class="pfb-radar"><i></i><i></i><i></i></span><img src="assets/moeda/moeda.webp" alt="" draggable="false"></div>
+              <div class="pfb-info">
+                <span class="pill">Saldo HC</span>
+                <strong class="pfb-cash-val" data-cash="${Math.round(c.saldo * 100)}" aria-hidden="true"></strong>
+                <p class="pfb-sub">${lastTxt}</p>
+                <div class="pfb-rates"><span><img src="assets/estrelas/estrela-amarela.png" alt="">${window.HC_cashFmt(C.POR_ESTRELA)}</span><span><img src="assets/estrelas/estrela-superstar.png" alt="">+${window.HC_cashFmt(C.SUPERSTAR)}</span><span><img src="assets/estrelas/estrela-megastar.png" alt="">+${window.HC_cashFmt(C.MEGASTAR)}</span></div>
+              </div>
+            </div>
+            ${admPen('bsaldo')}
+          </div>`;
+  }
+  function levelBanner() {
+    const X = window.HC_xp; if (!X) return '';
+    const x = X.get();
+    return `
+          <div class="pf-slide pfb pfb-lvl" data-b="nivel" aria-roledescription="slide" aria-label="3 de 4: nível ${x.nivel}, ${nf(x.xp)} XP">
+            ${bannerBg('bnivel', `<svg class="pfb-deco-ring" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="80"/><circle cx="100" cy="100" r="60"/><circle cx="100" cy="100" r="40"/></svg>`)}
+            <div class="pfb-body">
+              <div class="pfb-ring" aria-hidden="true" style="--p:${(x.pct / 100).toFixed(4)}">
+                <span class="pfb-ring-glow"></span>
+                <svg viewBox="0 0 200 200">
+                  <defs>
+                    <linearGradient id="pfbRed" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f05a5a"/><stop offset="1" stop-color="#c81e3c"/></linearGradient>
+                    <linearGradient id="pfbGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9a2e"/><stop offset="1" stop-color="#ffd84a"/></linearGradient>
+                    <radialGradient id="pfbCore" cx=".42" cy=".3" r=".8">${window.HC_levelColor(x.nivel).map((c, i) => `<stop offset="${[0, .45, 1][i]}" stop-color="${c}"/>`).join('')}</radialGradient>
+                  </defs>
+                  <circle class="pr-disc" cx="100" cy="100" r="97" fill="url(#pfbRed)"/>
+                  <circle class="pr-track" cx="100" cy="100" r="79" fill="none" stroke="rgba(0,0,0,.14)" stroke-width="26" pathLength="100" stroke-dasharray="100 100" transform="rotate(-90 100 100)"/>
+                  <circle class="pr-arc" cx="100" cy="100" r="79" fill="none" stroke="url(#pfbGold)" stroke-width="26" stroke-linecap="butt" pathLength="100" stroke-dasharray="100 100" transform="rotate(-90 100 100)"/>
+                  <circle class="pr-border" cx="100" cy="100" r="97" fill="none" stroke="#fff" stroke-width="2.5" pathLength="100" stroke-dasharray="100 100" transform="rotate(-90 100 100)"/>
+                  <circle class="pr-white" cx="100" cy="100" r="63" fill="#fff"/>
+                  <circle class="pr-core" cx="100" cy="100" r="56" fill="url(#pfbCore)"/>
+                  <path class="pr-shine" d="M60 78 Q100 40 140 78 L140 70 Q100 30 60 70 Z" fill="rgba(255,255,255,.16)"/>
+                </svg>
+                <b class="pfb-ring-num" data-count="${x.nivel}" data-pad="2">00</b>
+              </div>
+              <div class="pfb-info">
+                <span class="pill">Seu nível</span>
+                <strong class="pfb-xp"><span data-count="${x.xp}">0</span><small> XP</small></strong>
+                <p class="pfb-sub">Faltam <b>${nf(x.falta)} XP</b> para o nível ${String(x.nivel + 1).padStart(2, '0')}</p>
+                <p class="pfb-sub pfb-sub2">${nf(x.rest)} de ${nf(x.proximo)} XP neste nível · todo XP das lições soma aqui</p>
+              </div>
+            </div>
+            ${admPen('bnivel')}
+          </div>`;
+  }
+  /* banner das patentes: troféu da patente atual, família, quanto falta para a próxima e o botão para ver todas */
+  function rankBanner() {
+    const X = window.HC_xp; if (!X) return '';
+    const xp = X.get().xp, r = X.rankOf(xp), pos = r.i + 1, total = X.RANKS.length;
+    return `
+          <div class="pf-slide pfb pfb-pat" data-b="patente" style="--rc1:${r.c1};--rc2:${r.c2}" aria-roledescription="slide" aria-label="4 de 4: patente ${esc(r.nome)}">
+            ${bannerBg('bpatente', `<span class="pfb-deco-rays"></span><img class="pfb-deco-trophy" src="${esc(r.img)}" alt="" draggable="false" style="filter:${r.tf} drop-shadow(0 30px 40px rgba(0,0,0,.5))">`)}
+            <div class="pfb-body">
+              <div class="pfb-trophy" aria-hidden="true"><i class="pfb-tglow"></i><img src="${esc(r.img)}" alt="" draggable="false" style="filter:${r.tf}"><i class="pfb-shine" style="--m:url('${esc(new URL(r.img, location.href).href)}')"></i></div>
+              <div class="pfb-info">
+                <span class="pill">Sua patente · ${pos} de ${total}</span>
+                <strong class="pfb-rname">${esc(r.nome)}</strong>
+                <div class="pfb-pnext">
+                  ${r.next ? `<span>Faltam <b><span data-count="${r.falta}">0</span> XP</b> para <b>${esc(r.next.nome)}</b></span>` : '<span><b>Patente máxima!</b> Você chegou ao topo.</span>'}
+                  <div class="pfb-pbar"><i data-p="${(r.pct / 100).toFixed(4)}"></i></div>
+                </div>
+                <button class="slide-cta pfb-cta" type="button" data-ranks>Ver patentes ${svg('next')}</button>
+              </div>
+            </div>
+            ${admPen('bpatente')}
+          </div>`;
+  }
+  /* janela com todas as patentes: conquistadas (com o troféu colorido), a atual em destaque e as próximas (apagadas, com o XP que pedem) */
+  function ranksSheet(onClose) {
+    const X = window.HC_xp; if (!X || document.querySelector('.lk')) return;
+    const xp = X.get().xp, cur = X.rankOf(xp), F = X.FAMILIAS;
+    const fams = [...new Set(X.RANKS.map((r) => r.fam))];
+    const wrap = document.createElement('div');
+    wrap.className = 'lk pfr';
+    wrap.innerHTML = `<div class="lk-backdrop"></div>
+      <div class="lk-card pfr-card" role="dialog" aria-modal="true" aria-labelledby="pfr-t" style="--rc1:${cur.c1};--rc2:${cur.c2}">
+        <div class="pfr-head">
+          <img src="${esc(cur.img)}" alt="" style="filter:${cur.tf}">
+          <div><small>Sua patente</small><h2 id="pfr-t">${esc(cur.nome)}</h2><p>${nf(xp)} XP · ${cur.i + 1} de ${X.RANKS.length} patentes${cur.next ? ` · faltam <b>${nf(cur.falta)} XP</b> para ${esc(cur.next.nome)}` : ''}</p></div>
+          <button type="button" class="pfr-x" aria-label="Fechar">×</button>
+        </div>
+        <div class="pfr-list">
+          ${fams.map((f) => `
+          <section class="pfr-fam" style="--c1:${F[f].c1};--c2:${F[f].c2}">
+            <h3>${esc(F[f].nome)}</h3>
+            ${X.RANKS.filter((r) => r.fam === f).map((r) => {
+              const st = r.i < cur.i ? 'ok' : r.i === cur.i ? 'cur' : 'lock';
+              const tag = st === 'ok' ? 'Conquistada' : st === 'cur' ? 'Atual' : `Faltam ${nf(r.xp - xp)} XP`;
+              return `<div class="pfr-row ${st}"${st === 'cur' ? ' data-cur' : ''}><img src="${esc(r.img)}" alt="" style="filter:${st === 'lock' ? 'grayscale(1) brightness(.75)' : r.tf}"><span class="pfr-name"><b>${esc(r.nome)}</b><small>${nf(r.xp)} XP</small></span><em>${st === 'ok' ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>` : ''}${tag}</em></div>`;
+            }).join('')}
+          </section>`).join('')}
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    const close = () => { wrap.classList.remove('in'); setTimeout(() => { wrap.remove(); onClose?.(); }, 300); };
+    wrap.querySelector('.lk-backdrop').addEventListener('click', close);
+    wrap.querySelector('.pfr-x').addEventListener('click', close);
+    wrap.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    requestAnimationFrame(() => {
+      wrap.classList.add('in'); wrap.querySelector('.pfr-x').focus({ preventScroll: true });
+      const list = wrap.querySelector('.pfr-list'), c = wrap.querySelector('[data-cur]');
+      if (c) list.scrollTop = Math.max(0, c.offsetTop - list.offsetTop - list.clientHeight / 2 + c.offsetHeight / 2);
+    });
+  }
+  /* saldo em odômetro (centavos): cada casa é uma fita 0–9 que rola; casas da frente ainda zero ficam recolhidas */
+  function odometer(el, finalC) {
+    const n = Math.max(3, String(finalC).length);
+    let html = '';
+    for (let k = n - 1; k >= 0; k--) {
+      html += `<span class="od-c${k < 2 ? ' cent' : ''}" data-k="${k}"><span class="od-s">${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((d) => `<i>${d}</i>`).join('')}</span></span>`;
+      if (k === 2) html += '<span class="od-sep cent">,</span>';
+      else if (k > 2 && (k - 2) % 3 === 0) html += `<span class="od-sep" data-k="${k}">.</span>`;
+    }
+    el.innerHTML = `<span class="od">${html}</span>`;
+    const cols = [...el.querySelectorAll('.od-c')].map((c) => [+c.dataset.k, c, c.firstElementChild]);
+    const seps = [...el.querySelectorAll('.od-sep[data-k]')].map((c) => [+c.dataset.k, c]);
+    return (v) => {
+      cols.forEach(([k, c, strip]) => {
+        const p = 10 ** k;
+        let o = Math.floor(v / p) % 10;
+        if (k === 0) o = v % 10; else { const r = v % p; if (r > p - 1) o += r - (p - 1); }
+        strip.style.transform = `translateY(${(-o).toFixed(3)}em)`;
+        c.classList.toggle('lead', k > 2 && v < p - .001);
+      });
+      seps.forEach(([k, s]) => s.classList.toggle('lead', v < 10 ** k - .001));
+    };
+  }
+  /* anima as informações do banner que entrou (o verdadeiro e a cópia usada na volta do carrossel) */
+  const tween = (ms, delay, fn, done) => {
+    const t0 = performance.now() + delay;
+    const step = (now) => {
+      const t = Math.min(1, Math.max(0, (now - t0) / ms));
+      fn(1 - Math.pow(1 - t, 4)); // começa rápido e assenta devagar
+      if (t < 1) requestAnimationFrame(step); else done?.();
+    };
+    requestAnimationFrame(step);
+  };
+  function playBanner(slide, reduce) {
+    const b = slide.dataset.b;
+    slide._run = (slide._run || 0) + 1; const run = slide._run, alive = () => slide._run === run && slide.isConnected;
+    if (b === 'saldo') {
+      const el = slide.querySelector('.pfb-cash-val'), fin = +el.dataset.cash, draw = el._draw ||= odometer(el, fin), coin = slide.querySelector('.pfb-coin');
+      coin.classList.remove('fin');
+      if (reduce) return draw(fin);
+      draw(0);
+      tween(2200, 900, (e) => alive() && draw(fin * e), () => { if (alive()) { coin.classList.remove('fin'); void coin.offsetWidth; coin.classList.add('fin'); } });
+    } else if (b === 'patente') {
+      const bar = slide.querySelector('.pfb-pbar i'), fin = +bar.dataset.p;
+      if (reduce) { bar.style.transform = `scaleX(${fin})`; return; }
+      bar.style.transform = 'scaleX(0)';
+      tween(1800, 900, (e) => alive() && (bar.style.transform = `scaleX(${(fin * e).toFixed(4)})`));
+      slide.querySelectorAll('[data-count]').forEach((n) => { const v = +n.dataset.count; n.textContent = '0'; tween(1800, 900, (e) => alive() && (n.textContent = nf(Math.round(v * e)))); });
+    } else if (b === 'nivel') {
+      const arc = slide.querySelector('.pr-arc'), pct = +slide.querySelector('.pfb-ring').style.getPropertyValue('--p') || 0;
+      if (arc) {
+        const put = (v) => { arc.style.strokeDashoffset = (100 - v * 100).toFixed(2); };
+        if (reduce) put(pct);
+        else { put(0); setTimeout(() => { // depois que o aro termina de montar, o arco dourado desenha até o progresso
+          const t0 = performance.now(), D = 1600;
+          const step = (now) => { if (!alive()) return; const t = Math.min(1, (now - t0) / D), e = t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; put(pct * e); if (t < 1) requestAnimationFrame(step); };
+          requestAnimationFrame(step);
+        }, 1500); }
+      }
+      slide.querySelectorAll('[data-count]').forEach((n) => {
+        const fin = +n.dataset.count, pad = +n.dataset.pad || 0;
+        const put = (v) => { n.textContent = pad ? String(Math.round(v)).padStart(pad, '0') : nf(Math.round(v)); };
+        if (reduce) return put(fin);
+        put(0); tween(1800, 700, (e) => alive() && put(fin * e));
+      });
+    }
+  }
+  function heroCarousel(view) {
+    const box = view.querySelector('.pf-car'), track = box?.querySelector('.pf-track');
+    if (!track || typeof loopTrack !== 'function') return;
+    const dotsBox = box.querySelector('.dots'), dots = [...dotsBox.querySelectorAll('.dot')], car = box.querySelector('.pf-hero');
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let cur = 0;
+    const loop = loopTrack(track, (i) => {
+      cur = i;
+      dots.forEach((d, k) => { d.classList.remove('active'); if (k === i) { void d.offsetWidth; d.classList.add('active'); } });
+      // cada banner anima as informações só na primeira vez que aparece (ao abrir ou voltar para a página);
+      // depois elas ficam paradas no lugar e saem junto com o banner. Vale para o verdadeiro e a cópia da volta.
+      const b = ['mod', 'saldo', 'nivel', 'patente'][i];
+      track.querySelectorAll(`[data-b="${b}"]:not(.seen)`).forEach((sl) => { sl.classList.add('seen'); playBanner(sl, reduce); });
+    });
+    dotsBox.addEventListener('animationend', (e) => { if (e.target.classList.contains('dot-fill') && box.isConnected) loop.go(cur + 1); });
+    dotsBox.addEventListener('click', (e) => { const d = e.target.closest('.dot'); if (d) loop.go(+d.dataset.i); });
+    car.addEventListener('mouseenter', () => box.classList.add('paused'));
+    car.addEventListener('mouseleave', () => box.classList.remove('paused'));
+    let x0 = null;
+    car.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+    car.addEventListener('touchend', (e) => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 40) loop.go(cur + (dx < 0 ? 1 : -1)); });
+    // clones (da volta do carrossel) não têm o clique; o lápis e o botão funcionam só nos verdadeiros
+    // "Ver patentes": funciona também na cópia (o botão é o mesmo para o aluno)
+    track.querySelectorAll('[data-ranks]').forEach((btn) => btn.addEventListener('click', (e) => { e.stopPropagation(); box.classList.add('paused'); ranksSheet(() => box.classList.remove('paused')); }));
+    track.querySelectorAll('.pf-slide:not(.clone) [data-editbanner]').forEach((btn) => btn.addEventListener('click', (e) => { e.stopPropagation(); editCard(view, btn.dataset.editbanner); }));
+    loop.go(0, true);
+  }
+
   /* fundo do banner do módulo: a imagem própria do módulo ou, se não houver, a do banner
      da Plataforma de Informática da tela de início (com a versão de celular dele) */
   function heroBg(m) {
@@ -486,16 +733,26 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     ];
     view.innerHTML = `
     <div class="wrap pf">
-      <section class="pf-hero">
-        <div class="pf-hero-bg">${heroBg(m)}</div>
-        <div class="pf-hero-text">
-          <img class="pf-hero-logo" src="assets/plataforma-informatica.webp" width="900" height="184" alt="Plataforma de Informática" />
-          <span class="pill">${esc(m.nivel)} · Módulo ${mod + 1}</span>
-          <h2>${esc(m.titulo)}</h2>
-          <p>${esc(m.subtitulo)}</p>
-          <button class="slide-cta" type="button" data-lesson="${first + 1}">${window.HC_isComputer() ? `Começar a lição ${String(first + 1).padStart(2, '0')}` : 'Ver meu progresso'} ${svg('next')}</button>
+      <div class="pf-car">
+      <section class="pf-hero" aria-roledescription="carrossel">
+        <div class="carousel-track pf-track">
+          <div class="pf-slide" data-b="mod" aria-roledescription="slide" aria-label="1 de 4">
+            <div class="pf-hero-bg">${heroBg(m)}</div>
+            <div class="pf-hero-text">
+              <img class="pf-hero-logo" src="assets/plataforma-informatica.webp" width="900" height="184" alt="Plataforma de Informática" />
+              <span class="pill">${esc(m.nivel)} · Módulo ${mod + 1}</span>
+              <h2>${esc(m.titulo)}</h2>
+              <p>${esc(m.subtitulo)}</p>
+              <button class="slide-cta" type="button" data-lesson="${first + 1}">${window.HC_isComputer() ? `Começar a lição ${String(first + 1).padStart(2, '0')}` : 'Ver meu progresso'} ${svg('next')}</button>
+            </div>
+          </div>
+          ${cashBanner()}
+          ${levelBanner()}
+          ${rankBanner()}
         </div>
       </section>
+      <div class="dots">${[0, 1, 2, 3].map((i) => `<button class="dot" data-i="${i}" style="--slide-ms:${PF_SLIDE_MS}ms" aria-label="Banner ${i + 1}"><span class="dot-fill"></span></button>`).join('')}</div>
+      </div>
 
       <section>
         <h2 class="shelf-title"><span class="ap-grad">Seu curso.</span><span> Onde você está na Plataforma de Informática.</span></h2>
@@ -542,6 +799,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     </div>`;
 
     bindLessons(view, view);
+    heroCarousel(view);
     view.querySelector('.slide-cta[data-lesson]')?.addEventListener('click', (e) => openN(+e.currentTarget.dataset.lesson));
 
     /* cards dos módulos: abrir/fechar revela as lições logo abaixo, com animação */
@@ -611,9 +869,11 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   /* administrador: janela para trocar a foto de capa e os textos de um módulo ('m0') ou lição ('l0-2' ou 'x:<id>') */
   function editCard(view, target) {
     if (!isAdmin() || document.querySelector('.lk')) return;
-    const isMod = target[0] === 'm';
+    const isMod = target[0] === 'm', isBanner = target in PF_BANNERS;
     let cur, title, fields, size, ratio;
-    if (isMod) {
+    if (isBanner) {
+      cur = { imagem: bannerImg(target) }; title = PF_BANNERS[target]; size = '1600 × 420 (informações à esquerda; no celular a imagem é cortada pelo centro)'; ratio = '1597 / 420'; fields = [];
+    } else if (isMod) {
       const mi = +target.slice(1); cur = HC_CURSO.modulos[mi]; title = `Módulo ${mi + 1}`; size = '1000 × 1250'; ratio = '4 / 5';
       fields = [['nome', 'Nome do módulo'], ['nivel', 'Nível (ex.: Nível iniciante)'], ['desc', 'Descrição no card', 1], ['secao', 'Título ao abrir (ex.: Primeiro comando.)'], ['secaoComplemento', 'Complemento do título'], ['texto', 'Texto de apresentação', 1]];
     } else {
@@ -628,7 +888,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     wrap.className = 'lk au';
     wrap.innerHTML = `<div class="lk-backdrop"></div>
       <form class="lk-card au-card pf-ed" role="dialog" aria-modal="true" aria-labelledby="ed-t" novalidate>
-        <h2 id="ed-t">Editar ${isMod ? 'módulo' : 'lição'}</h2>
+        <h2 id="ed-t">Editar ${isBanner ? 'banner' : isMod ? 'módulo' : 'lição'}</h2>
         <p class="lk-sub">${esc(title)} · as mudanças aparecem para todos os alunos.</p>
         <div class="pf-ed-cover" style="aspect-ratio:${ratio}"><div class="pf-ed-prev"></div>
           <div class="pf-ed-acts"><button type="button" class="pf-ed-btn" data-ed="pick">${svg('photo')}Trocar foto</button><button type="button" class="pf-ed-btn" data-ed="clear">Remover</button></div>
@@ -641,7 +901,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       </form>`;
     document.body.appendChild(wrap);
     const prev = wrap.querySelector('.pf-ed-prev'), file = wrap.querySelector('input[type=file]'), msg = wrap.querySelector('.lk-msg');
-    const show = () => { const src = img === undefined ? cur.imagem : img; prev.innerHTML = src ? `<img src="${esc(imgUrl(src))}" alt="">` : `<span>${svg('photo')}Sem foto de capa</span>`; wrap.querySelector('[data-ed="clear"]').hidden = !src; };
+    const show = () => { const src = img === undefined ? cur.imagem : img; prev.innerHTML = src ? `<img src="${esc(imgUrl(src))}" alt="">` : `<span>${svg('photo')}${isBanner ? 'Fundo padrão (sem imagem)' : 'Sem foto de capa'}</span>`; wrap.querySelector('[data-ed="clear"]').hidden = !src; };
     show();
     const close = () => { wrap.classList.remove('in'); setTimeout(() => wrap.remove(), 300); };
     wrap.querySelector('.lk-backdrop').addEventListener('click', close);

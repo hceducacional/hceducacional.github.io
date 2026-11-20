@@ -438,6 +438,18 @@ window.HC_CONTENT = {
       "desc": "Uma revisão completa de todas as teclas aprendidas no módulo.",
       "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/ef4cae18-000b-438e-99d9-c0061875e2a6.webp",
       "titulo": "Revisão Geral 1"
+    },
+    {
+      "id": "bpatente",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/cf9bfaff-1841-4c3f-92c4-af71060d5dd5.webp"
+    },
+    {
+      "id": "bsaldo",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/44ea318c-19b0-4848-88d7-fdb262f10de0.webp"
+    },
+    {
+      "id": "bnivel",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/f9f337f6-ad36-40e8-b63f-b58ddff50da3.webp"
     }
   ],
   "loginBanner": [
