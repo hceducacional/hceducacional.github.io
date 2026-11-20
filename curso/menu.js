@@ -9,14 +9,15 @@
    ========================================================= */
 (() => {
   const IMG = 'assets/menu-info/';
-  /* para trocar os personagens, substitua os arquivos em assets/menu-info (PNG/WebP sem fundo) */
+  /* para trocar os personagens, substitua os arquivos em assets/menu-info (PNG/WebP sem fundo).
+     progresso e perfil têm duas poses: "base" com o botão recolhido e "alt" (…-sel.webp) quando ele se expande */
   const OPTS = [
-    { id: 'progresso', label: 'progresso', hint: 'para ver o seu progresso', g1: '#0ba5a4', g2: '#72de6c', t1: '#0e9f92', t2: '#4fc95a',
-      art: [['progresso.webp', 'solo']] },
+    { id: 'progresso', label: 'progresso', hint: 'para ver o seu progresso', g1: '#ffd65c', g2: '#ff8a3d', t1: '#fbbf24', t2: '#fb7a3c',
+      art: [['progresso.webp', 'solo base'], ['progresso-sel.webp', 'solo alt']] },
     { id: 'curso', logo: true, hint: 'para começar', g1: '#f7154c', g2: '#ff8f4e',
-      art: [['aluno-celular.webp', 'l'], ['aluno-notebook.webp', 'r'], ['aluna-oculos.webp', 'c']] },
+      art: [['aluno-celular.webp', 'l'], ['aluno-notebook.webp', 'r'], ['aluna-cabelo.webp', 'c']] },
     { id: 'perfil', label: 'seu perfil', hint: 'para ver o seu perfil', g1: '#2fd6ec', g2: '#1d56d6', t1: '#18b4d4', t2: '#2563eb',
-      art: [['perfil.webp', 'solo']] },
+      art: [['perfil.webp', 'solo base'], ['perfil-sel.webp', 'solo alt']] },
   ];
   /* as mesmas cores dos cenários das lições: b = fundo escuro; a1, a2, a3 = luzes de aurora */
   const SCENES = [
@@ -56,7 +57,7 @@
               <span class="ifm-glow"></span>
               <span class="ifm-shape"><i class="ifm-shine"></i></span>
               <span class="ifm-ring"></span>
-              <span class="ifm-art"><span class="ifm-cut"><span class="ifm-float">${o.art.map(([src, c]) => `<img class="${c}" src="${IMG}${src}" alt="" draggable="false" decoding="async">`).join('')}</span></span></span>
+              <span class="ifm-art"><span class="ifm-cut"><span class="ifm-float">${o.art.map(([src, c]) => `<img class="${c}" src="${IMG}${src}?v=${window.HC_V || ''}" alt="" draggable="false" decoding="async">`).join('')}</span></span></span>
             </span>
             <span class="ifm-name">${o.logo
               ? '<img class="ifm-logo" src="assets/plataforma-informatica.webp" width="900" height="184" alt="" draggable="false">'

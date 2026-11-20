@@ -106,6 +106,10 @@
 .ifm-float { position: absolute; top: var(--ay); bottom: calc(var(--cutb) * -1); left: var(--ax); right: var(--ax); }
 .ifm-art img { position: absolute; display: block; width: auto; max-width: none; pointer-events: none; }
 .ifm-art img.solo { left: 50%; bottom: -52%; height: 146%; transform: translateX(-50%); }
+/* duas poses: a "alt" aparece (e a "base" some) quando o botão se expande */
+.ifm-art img.base, .ifm-art img.alt { transition: opacity .32s ease; }
+.ifm-art img.alt, .ifm-opt.sel .ifm-art img.base { opacity: 0; }
+.ifm-opt.sel .ifm-art img.alt { opacity: 1; }
 .ifm-art img.c { z-index: 2; left: 50%; bottom: -48%; height: 142%; transform: translateX(-50%); }
 .ifm-art img.l { left: -12%; bottom: -60%; height: 140%; }
 .ifm-art img.r { right: -22%; bottom: -60%; height: 140%; }
