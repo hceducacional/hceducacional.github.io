@@ -25,6 +25,7 @@
     sombra: '<div class="av-pv av-pv-paper av-pv-ghost">' + [['b', 'f'], ['o', 'j'], ['m', 'j'], [' ', ' '], ['d', 'f'], ['i', 'j'], ['a', 'f']].map(([g, k], i) => (g === ' ' ? '<i></i>' : `<span class="${k === 'f' ? 'l' : 'r'}${i < 2 ? ' ok' : i === 2 ? ' cur' : ''}"><u>${g}</u>${k}</span>`)).join('') + '</div>',
     hacker: '<div class="av-pv av-pv-term"><em>Terminal de segurança</em><div><span>F</span><span class="on"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15"/></svg>␣</span><span>J</span></div></div>',
     fila: '<div class="av-pv av-pv-fila"><div><i style="--c:#34d399"></i><i style="--c:#a78bfa"></i><i style="--c:#fbbf24"></i></div><b style="--c:#34d399;--x:0;--y:2">F</b><b style="--c:#fbbf24;--x:2;--y:1">J</b><b style="--c:#a78bfa;--x:1;--y:0" class="on">␣</b></div>',
+    estrelas: '<div class="av-pv av-pv-est"><i class="l"></i><span class="s1" style="--c:#7dd3fc"><b>sol</b></span><span class="s2" style="--c:#fde047"><b><u>pl</u>ano</b></span><span class="s3" style="--c:#f0abfc"><b>cometa</b></span><em>+60</em></div>',
     corrida: '<div class="av-pv av-pv-run"><i class="g"></i><span class="bot"><i></i><i></i></span><i class="laser"></i><b style="--lc:#a78bfa">␣</b><b style="--lc:#fbbf24;--x:1">J</b><em>Perfeito!</em></div>',
   };
 
@@ -117,6 +118,25 @@
           match: (n) => n.tipo === 'corrida',
           info: (n) => `meta ${n.meta}`,
         },
+        {
+          cod: 'MJ-04', nome: 'Palavras das Estrelas', prev: 'estrelas',
+          desc: 'Um céu noturno com nebulosas: estrelas surgem, cada uma com uma palavra e um anel de tempo em volta. O aluno digita a palavra antes de o anel acabar; a estrela explode em faíscas, um cometa leva os pontos ao placar e fica um ponto de luz no céu, ligado aos anteriores, formando a constelação do aluno. Palavras mais longas valem mais.',
+          como: [
+            'A primeira letra escolhe a estrela (se duas começarem igual, vai a que tem menos tempo, e a letra seguinte troca para a outra se for dela); as letras certas ficam verdes',
+            'Backspace solta a estrela escolhida para trocar de palavra; letra errada zera o combo, mas não tira vida',
+            'Três tipos pelo tamanho: azul (até 4 letras), dourada (5–6) e Supernova (7 ou mais, maior e com 8 pontas)',
+            'Pontos: 10 por letra × o combo (+10% a cada estrela seguida, até ×2) e +50% (“Rápido!”) se pegar com mais da metade do tempo',
+            'O céu enche com o progresso (de 2 até 4 estrelas ao mesmo tempo), o tempo de cada estrela encurta e as palavras ficam mais longas',
+            'Se o anel acabar, a estrela cai apagada e o aluno perde uma vida; depois vêm 2,5 s mais calmos',
+            'Sem vidas: “O céu escureceu!” → reviver com o Saldo HC (mesma regra e animação dos outros minijogos) ou recomeçar do zero',
+            'Só usa palavras escritas com as teclas que a lição já ensinou; com poucas teclas (ex.: só F e J), as palavras viram sequências como “fjf” e “jjff”',
+          ],
+          campos: [['meta', 'Quantas estrelas o aluno precisa capturar'], ['palavras', 'Lista de palavras (opcional; sem ela, usa o banco do jogo)'], ['vidas', 'Quantas vidas (opcional; padrão 3)']],
+          match: (n) => n.tipo === 'estrelas',
+          // ainda não está em nenhuma lição: o teste usa o alfabeto inteiro e um nível de exemplo
+          teste: { teclas: 'abcdefghijklmnopqrstuvwxyz'.split(''), nivel: { tipo: 'estrelas', titulo: 'Minijogo: Palavras das Estrelas', dica: 'Digite a palavra de uma estrela antes que o anel acabe. Palavras longas valem mais, e Backspace troca de estrela.', meta: 15 } },
+          info: (n) => `meta ${n.meta}`,
+        },
       ],
     },
     {
@@ -127,7 +147,7 @@
         { cod: 'PC-03', nome: 'Teclado virtual', icon: 'monitor', desc: 'Janela suspensa embaixo da tela que só abre pelo botão "Ver teclado virtual". Cores por dedo, a próxima tecla acesa, o dedo certo escrito em cima e fecha sozinha em 10 s (barrinha de tempo, × ou Esc).' },
         { cod: 'PC-04', nome: 'Nível concluído', icon: 'check', desc: 'A medalha com o número do nível é "apertada" e solta ondas de radar; frase de comemoração letra por letra, pontos contando, tempo no nível e o quadro "A seguir" com a barra da lição.' },
         { cod: 'PC-05', nome: 'Tela de XP e patentes', icon: 'trophy', teste: { auto: 'xp' }, desc: 'No fim da lição: "Você está subindo de nível!", o aro de XP enchendo, a patente atual (25 patentes) e a próxima.' },
-        { cod: 'PC-06', nome: 'Resultado e Saldo HC', icon: 'party', teste: { auto: 'moedas' }, desc: 'A tela final com estrelas, pontuação e recorde. As moedas voam das estrelas para o Saldo HC: 35,27 por estrela, +87,76 no Superstar e +97,43 no Megastar. O saldo pode ser gasto para reviver nos minijogos com vidas (MJ-01, MJ-02 e MJ-03).' },
+        { cod: 'PC-06', nome: 'Resultado e Saldo HC', icon: 'party', teste: { auto: 'moedas' }, desc: 'A tela final com estrelas, pontuação e recorde. As moedas voam das estrelas para o Saldo HC: 35,27 por estrela, +87,76 no Superstar e +97,43 no Megastar. O saldo pode ser gasto para reviver nos minijogos com vidas (MJ-01 a MJ-04).' },
         { cod: 'PC-07', nome: 'Cenários de cor', icon: 'sun', desc: 'Cada vez que a lição começa, um cenário é sorteado (Aurora boreal, Oceano profundo, Pôr do sol, Galáxia, Lavanda, Coral, Meia-noite) e pinta o cartão, as formas flutuantes, a folha e o teclado.' },
         { cod: 'PC-08', nome: 'Suporte (pular nível)', icon: 'lock', desc: 'O cadeado no topo do nível: com a senha do suporte, o professor escolhe "Ir para…" qualquer nível ou o resultado. Administradores já entram liberados.' },
       ],
@@ -385,9 +405,9 @@
       const p = it.teste?.pick;
       if (typeof p === 'function' && hits.some(p)) hits = hits.filter(p);
       const lv = p === 'longest' ? hits.reduce((a, b) => ((b.texto || '').length > (a.texto || '').length ? b : a), hits[0]) : hits[0];
-      niveis = lv ? [clone(lv)] : [clone(CURTO)];
+      niveis = lv ? [clone(lv)] : [clone(it.teste?.nivel || CURTO)];
     } else niveis = [clone(CURTO)];
-    const L = { id: `teste-${cod}`, numero: '00', titulo: `${cod} · ${it.nome}`, teclas: base?.teclas || ['f', ' ', 'j'], intro: '', cards: [], niveis };
+    const L = { id: `teste-${cod}`, numero: '00', titulo: `${cod} · ${it.nome}`, teclas: it.teste?.teclas || base?.teclas || ['f', ' ', 'j'], intro: '', cards: [], niveis };
     return { L, meta: { teste: { cod, nome: it.nome, voltar: `#config/informatica/${cod}`, auto: it.teste?.auto } } };
   }
 

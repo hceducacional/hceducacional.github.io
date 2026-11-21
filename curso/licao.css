@@ -2192,3 +2192,115 @@ body.lc-bg-on .lc-shell { border-color: rgba(255, 255, 255, .12); box-shadow: 0 
 @keyframes lcHcCur { 50% { opacity: .35; } }
 @media (max-width: 640px) { .lc-hero-cover .pf-lc { transform: scale(1.05); } }
 @media (prefers-reduced-motion: reduce) { .lc-hero-cover kbd, .lc-hero-cover .pf-lc-segs i { animation: none; opacity: 1; } }
+
+/* =========================================================
+   MJ-04 · Palavras das Estrelas
+   Céu noturno com nebulosas e estrelas piscando; cada estrela tem uma palavra e um anel de tempo.
+   Captura: clarão, faíscas, cometa até o placar e um ponto de luz na constelação do aluno.
+   ========================================================= */
+.lc-shell .lc-term.lc-est { height: clamp(360px, calc(100vh - 400px), 470px); border-radius: 22px; background: #05061a;
+  box-shadow: inset 0 0 0 1px rgba(167, 139, 250, .25), 0 20px 44px -26px rgba(0, 0, 0, .9); }
+.lc-est::after { background: none; }
+.lc-est.hurt { animation: lcHkHurt .45s ease; }
+.lc-est-title { color: #c4b5fd; }
+.lc-est-title i { background: #fde047; box-shadow: 0 0 10px #fde047; }
+.lc-est .lc-hk-bar .lc-fl-combo { margin-left: auto; }
+.lc-est-pts { min-width: 6.5em; color: #fef9c3; background: rgba(253, 224, 71, .1); box-shadow: inset 0 0 0 1px rgba(253, 224, 71, .25); }
+.lc-est-pts b { color: #fde047; }
+.lc-est-pts.pop { animation: lcEstPts .45s cubic-bezier(.18, .89, .32, 1.28); }
+@keyframes lcEstPts { 40% { transform: scale(1.18); box-shadow: inset 0 0 0 1px rgba(253, 224, 71, .6), 0 0 22px rgba(253, 224, 71, .55); } }
+
+.lc-est-world { position: absolute; left: 0; right: 0; top: 50px; bottom: 44px; overflow: hidden; }
+.lc-est-world.nope { animation: lcEstNope .35s ease; }
+@keyframes lcEstNope { 25% { transform: translateX(-4px); } 60% { transform: translateX(3px); } }
+/* céu: degradê, três nebulosas que respiram, duas camadas de estrelinhas piscando e estrelas cadentes */
+.lc-est-sky { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 110%, #1e1b4b 0%, #0b0b2b 45%, #05061a 100%); }
+.lc-est-sky .neb { position: absolute; border-radius: 50%; filter: blur(34px); opacity: .55; animation: lcEstNeb 14s ease-in-out infinite alternate; }
+.lc-est-sky .n1 { left: -8%; top: -20%; width: 46%; height: 80%; background: radial-gradient(circle, rgba(139, 92, 246, .7), transparent 70%); }
+.lc-est-sky .n2 { right: -10%; top: 20%; width: 50%; height: 90%; background: radial-gradient(circle, rgba(236, 72, 153, .45), transparent 70%); animation-duration: 18s; animation-delay: -6s; }
+.lc-est-sky .n3 { left: 30%; bottom: -40%; width: 44%; height: 80%; background: radial-gradient(circle, rgba(34, 211, 238, .35), transparent 70%); animation-duration: 16s; animation-delay: -3s; }
+@keyframes lcEstNeb { to { transform: translate(4%, 6%) scale(1.15); opacity: .8; } }
+.lc-est-sky .dots { position: absolute; inset: -10%; background-repeat: repeat; }
+.lc-est-sky .d1 { background-image: radial-gradient(1.2px 1.2px at 20px 30px, #fff, transparent), radial-gradient(1px 1px at 90px 80px, rgba(255, 255, 255, .8), transparent),
+  radial-gradient(1.4px 1.4px at 150px 20px, #fde68a, transparent), radial-gradient(1px 1px at 60px 140px, #fff, transparent), radial-gradient(1.2px 1.2px at 180px 120px, #c4b5fd, transparent);
+  background-size: 200px 160px; animation: lcEstTw 3.2s ease-in-out infinite alternate; }
+.lc-est-sky .d2 { background-image: radial-gradient(1px 1px at 40px 60px, rgba(255, 255, 255, .7), transparent), radial-gradient(1.6px 1.6px at 120px 110px, #fff, transparent),
+  radial-gradient(1px 1px at 230px 40px, #a5f3fc, transparent), radial-gradient(1.2px 1.2px at 260px 150px, rgba(255, 255, 255, .8), transparent);
+  background-size: 290px 190px; animation: lcEstTw 4.4s ease-in-out infinite alternate-reverse, lcEstDrift 90s linear infinite; }
+@keyframes lcEstTw { from { opacity: .35; } to { opacity: 1; } }
+@keyframes lcEstDrift { to { transform: translateX(-290px); } }
+.lc-est-sky .shoot { position: absolute; width: 110px; height: 2px; border-radius: 2px; opacity: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .9)); transform: rotate(-24deg); animation: lcEstShoot 9s ease-in infinite; }
+.lc-est-sky .s1 { left: 58%; top: 8%; animation-delay: 2s; }
+.lc-est-sky .s2 { left: 18%; top: 22%; animation-delay: 6.5s; animation-duration: 11s; }
+@keyframes lcEstShoot { 0%, 88% { opacity: 0; translate: 0 0; } 90% { opacity: 1; } 100% { opacity: 0; translate: -180px 80px; } }
+
+/* constelação: linhas finas que se desenham e pontos de luz onde as estrelas foram capturadas */
+.lc-est-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.lc-est-lines line { stroke: rgba(224, 231, 255, .35); stroke-width: 1.2; stroke-dasharray: 1; stroke-dashoffset: 1; vector-effect: non-scaling-stroke; animation: lcEstLine .9s .25s ease-out forwards; }
+@keyframes lcEstLine { to { stroke-dashoffset: 0; } }
+.lc-est-const { position: absolute; inset: 0; }
+.lc-est-const i { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px 2px var(--sc), 0 0 16px var(--sc); animation: lcEstDot .6s .2s cubic-bezier(.18, .89, .32, 1.28) both, lcEstTw 2.6s 1s ease-in-out infinite alternate; }
+@keyframes lcEstDot { from { transform: scale(0); opacity: 0; } }
+.lc-est-world.done .lc-est-const i { animation: lcEstDot .6s both, lcEstGlow .9s ease-in-out 2 alternate; }
+.lc-est-world.done .lc-est-lines line { stroke: rgba(253, 224, 71, .7); transition: stroke .4s; }
+@keyframes lcEstGlow { to { transform: scale(2.2); } }
+
+/* uma estrela */
+.lc-est-stars { position: absolute; inset: 0; }
+.lc-est-star { position: absolute; width: 112px; height: 112px; margin: -56px 0 0 -56px; animation: lcEstIn .55s cubic-bezier(.18, .89, .32, 1.28) both; }
+@keyframes lcEstIn { from { transform: scale(0) rotate(-40deg); opacity: 0; } }
+.lc-est-in { position: absolute; inset: 0; animation: lcEstFloat var(--fd, 3s) ease-in-out infinite alternate; }
+@keyframes lcEstFloat { to { transform: translateY(-6px); } }
+.lc-est-star .ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.lc-est-star .ring circle { fill: none; stroke-width: 3.5; }
+.lc-est-star .ring .trk { stroke: rgba(255, 255, 255, .08); }
+.lc-est-star .ring .arc { stroke: var(--sc); stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 0; filter: drop-shadow(0 0 4px var(--sc)); transition: stroke .3s; }
+.lc-est-star.low .ring .arc { stroke: #fb7185; filter: drop-shadow(0 0 5px #fb7185); }
+.lc-est-star.low .lc-est-in { animation: lcEstFloat var(--fd, 3s) ease-in-out infinite alternate, lcEstWarn .5s ease-in-out infinite alternate; }
+@keyframes lcEstWarn { to { filter: brightness(.75); } }
+.lc-est-star .shape { position: absolute; left: 50%; top: 50%; width: 78px; height: 78px; margin: -39px 0 0 -39px; overflow: visible; transform: rotate(var(--r)); filter: drop-shadow(0 0 10px color-mix(in srgb, var(--sc) 70%, transparent)); animation: lcEstSpin 26s linear infinite; }
+.lc-est-star .shape path { stroke: var(--sc); stroke-width: 5; stroke-linejoin: round; }
+@keyframes lcEstSpin { to { rotate: 360deg; } }
+.lc-est-star .shape.tap { animation: lcEstSpin 26s linear infinite, lcEstTap .22s ease; }
+@keyframes lcEstTap { 50% { scale: 1.12; filter: drop-shadow(0 0 18px var(--sc)) brightness(1.2); } }
+.lc-est-star.t-azul .shape { width: 68px; height: 68px; margin: -34px 0 0 -34px; }
+.lc-est-star.t-nova .shape { width: 90px; height: 90px; margin: -45px 0 0 -45px; }
+.lc-est-star.t-nova .lc-est-in::before { content: ''; position: absolute; inset: 6px; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 10%, rgba(240, 171, 252, .25) 12%, transparent 14% 35%, rgba(240, 171, 252, .2) 37%, transparent 39% 60%, rgba(240, 171, 252, .25) 62%, transparent 64% 85%, rgba(240, 171, 252, .2) 87%, transparent 89%); animation: lcEstSpin 9s linear infinite reverse; }
+/* a palavra numa pílula de vidro escuro sobre a estrela */
+.lc-est-star .word { position: absolute; left: 50%; top: 56%; translate: -50% -50%; display: flex; padding: 4px 9px; border-radius: 10px; white-space: nowrap;
+  background: rgba(8, 10, 34, .78); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14), 0 6px 16px -8px rgba(0, 0, 0, .9);
+  font: 800 16px/1.1 ui-monospace, "SF Mono", Menlo, monospace; color: #f8fafc; letter-spacing: .02em; transition: box-shadow .2s, background .2s; }
+.lc-est-star .word i { font-style: normal; transition: color .15s, text-shadow .15s; }
+.lc-est-star .word i.ok { color: #6ee7b7; text-shadow: 0 0 8px rgba(110, 231, 183, .7); }
+.lc-est-star .word.shake { animation: lcEstShake .3s ease; }
+@keyframes lcEstShake { 25% { translate: calc(-50% - 5px) -50%; box-shadow: inset 0 0 0 2px #fb7185; } 60% { translate: calc(-50% + 4px) -50%; } }
+.lc-est-star .val { position: absolute; right: 4px; top: 6px; padding: 2px 6px; border-radius: 999px; font: 800 10.5px/1.2 ui-monospace, Menlo, monospace; color: #0b0b2b; background: var(--sc); box-shadow: 0 0 10px color-mix(in srgb, var(--sc) 60%, transparent); }
+/* escolhida: cresce, a pílula ganha a cor da estrela e o anel engrossa */
+.lc-est-star.lock { z-index: 2; }
+.lc-est-star.lock .lc-est-in { scale: 1.12; transition: scale .2s; }
+.lc-est-star.lock .word { background: rgba(8, 10, 34, .92); box-shadow: inset 0 0 0 2px var(--sc), 0 0 18px color-mix(in srgb, var(--sc) 55%, transparent); }
+.lc-est-star.lock .ring circle { stroke-width: 5; }
+/* capturada: clarão, faíscas e "+pontos" */
+.lc-est-star.got .shape { animation: lcEstBoom .55s ease-out forwards; }
+.lc-est-star.got .ring, .lc-est-star.got .word, .lc-est-star.got .val { transition: opacity .25s; opacity: 0; }
+@keyframes lcEstBoom { 40% { scale: 1.55; filter: drop-shadow(0 0 26px var(--sc)) brightness(1.6); } 100% { scale: .2; opacity: 0; } }
+.lc-est-star .flash { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: radial-gradient(circle, #fff, var(--sc) 45%, transparent 70%); animation: lcEstFlash .6s ease-out forwards; }
+@keyframes lcEstFlash { from { transform: scale(.4); opacity: 1; } to { transform: scale(5); opacity: 0; } }
+.lc-est-star .spark { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px 2px var(--sc); animation: lcEstSpark .75s cubic-bezier(.2, .7, .3, 1) forwards; }
+@keyframes lcEstSpark { from { transform: rotate(var(--a)) translateX(8px) scale(1); opacity: 1; } to { transform: rotate(var(--a)) translateX(var(--d)) scale(.2); opacity: 0; } }
+.lc-est-star .plus { position: absolute; left: 50%; top: 18%; translate: -50% 0; display: flex; flex-direction: column; align-items: center; gap: 2px; white-space: nowrap; font: 800 18px/1 ui-monospace, Menlo, monospace; color: #fff; text-shadow: 0 0 12px var(--sc), 0 2px 6px rgba(0, 0, 0, .6); animation: lcEstPlus 1s ease-out forwards; }
+.lc-est-star .plus em { font: 700 10px/1 inherit; font-style: normal; letter-spacing: .08em; text-transform: uppercase; padding: 3px 7px; border-radius: 999px; color: #422006; background: linear-gradient(135deg, #fde047, #f59e0b); text-shadow: none; }
+@keyframes lcEstPlus { 0% { opacity: 0; transform: translateY(10px) scale(.6); } 20% { opacity: 1; transform: translateY(0) scale(1.1); } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-26px); } }
+/* apagada: perde a cor e cai girando */
+.lc-est-star.gone { animation: lcEstFall .9s cubic-bezier(.55, 0, .9, .4) forwards; }
+.lc-est-star.gone .shape { filter: grayscale(1) brightness(.5); transition: filter .3s; }
+.lc-est-star.gone .ring, .lc-est-star.gone .val { opacity: 0; transition: opacity .2s; }
+@keyframes lcEstFall { to { transform: translateY(140px) rotate(70deg) scale(.6); opacity: 0; } }
+.lc-est-star.fade { transition: opacity .5s, transform .5s; opacity: 0; transform: scale(.6); }
+/* cometa que leva os pontos até o placar */
+.lc-est-comet { position: absolute; z-index: 2; width: 46px; height: 8px; pointer-events: none; border-radius: 999px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--sc) 70%, transparent) 55%, #fff); box-shadow: 0 0 14px var(--sc); }
+.lc-est-comet::after { content: ''; position: absolute; right: -3px; top: 50%; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; background: #fff; box-shadow: 0 0 12px 4px var(--sc); }
+
+@media (prefers-reduced-motion: reduce) {
+  .lc-est-sky .neb, .lc-est-sky .dots, .lc-est-sky .shoot, .lc-est-in, .lc-est-star .shape, .lc-est-star.t-nova .lc-est-in::before { animation: none !important; }
+}

@@ -1,7 +1,7 @@
 /* =========================================================
    PLATAFORMA DE INFORMÁTICA — motor das lições (curso/licao.js + licao.css)
    Roda qualquer lição definida em window.HC_LICOES (ex.: curso/licao-01.js):
-   digitação, minijogos (Varredura Hacker, Fila de Ancoragem, Eco da Memória),
+   digitação, minijogos (Varredura Hacker, Fila de Ancoragem, Corrida das Teclas, Palavras das Estrelas),
    XP com estrelas, tempo, precisão, resultado final e relatório.
 
    Progresso: salvo por aluno no aparelho (localStorage) e no Supabase
@@ -83,7 +83,7 @@
   /* ---------- visual escuro, herdado dos cards das lições ---------- */
   const TINT0 = '22, 60, 48';
   /* cor do cartão de cada tipo de nível (a de digitação é a do card da lição) */
-  const KIND_TINT = { hacker: '24, 46, 110', fila: '30, 70, 90', corrida: '70, 32, 120' };
+  const KIND_TINT = { hacker: '24, 46, 110', fila: '30, 70, 90', corrida: '70, 32, 120', estrelas: '30, 28, 92' };
   const CARD_TINTS = ['24, 46, 110', '70, 32, 120', '120, 40, 30', '30, 70, 90'];
   /* cenários do cartão do nível: um sorteado a cada vez que a lição começa (nunca o mesmo da vez anterior).
      base = cor escura do fundo; a1, a2, a3 = as três luzes de aurora que flutuam devagar por trás */
@@ -918,7 +918,7 @@
           cash: C ? { from: C.get().saldo, gain: C.ganhoDe(starsOf(p), rankOf(p)), review: false } : null });
       });
       paintProgress(); paintStats(); gaugeLevel(lv);
-      ({ typing: typingInit, hacker: hackerInit, fila: filaInit, corrida: corridaInit })[lv.tipo](lv);
+      ({ typing: typingInit, hacker: hackerInit, fila: filaInit, corrida: corridaInit, estrelas: estrelasInit })[lv.tipo](lv);
     }
     function goal(n, total) {
       const t = $q('#lc-goal-txt'), b = $q('#lc-goal-bar'); if (!t) return;
@@ -1646,14 +1646,270 @@
       }
     }
 
+    /* ---------- MINIJOGO: PALAVRAS DAS ESTRELAS (MJ-04) ----------
+       Um céu noturno com nebulosas; estrelas surgem com uma palavra e um anel de tempo em volta.
+       O aluno digita a palavra de uma estrela: a primeira letra escolhe a estrela (a que tem menos
+       tempo, se duas começarem igual; a letra seguinte troca para a outra, se for dela). Ao completar, a estrela
+       explode em faíscas, um cometa voa até o placar e fica um ponto de luz no céu, ligado aos anteriores
+       (a constelação do aluno). Backspace solta a estrela escolhida para trocar de palavra.
+       - Pontos: 10 por letra × o combo (+10% a cada estrela seguida, até ×2) e +50% se pegar rápido.
+       - Cores pelo tamanho: azul (até 4 letras), dourada (5–6) e Supernova (7+), maior e com 8 pontas.
+       - O céu enche com o progresso (de 2 até 4 estrelas ao mesmo tempo) e o tempo de cada uma encurta.
+       - Se o anel acabar, a estrela cai apagada e o aluno perde uma vida; depois vêm 2,5 s mais calmos.
+       - Palavras: as do campo "palavras" do nível ou o banco abaixo, só as que usam as teclas da lição.
+         Com poucas teclas (ex.: só F e J), as palavras viram sequências com as teclas da lição.
+       - Vidas (padrão 3) e reviver com o Saldo HC, iguais aos do MJ-01, MJ-02 e MJ-03. */
+    const EST_BANCO = ('sol lua mar ceu rio luz cor paz voz mel flor casa bola gato pato vida nuvem terra '
+      + 'tempo livro mundo festa sonho verde amigo plano chuva campo praia ponte barco carta noite '
+      + 'piano vento folha fruta areia fogo neve onda bolo bota cair nave doce leite janela escola '
+      + 'cometa planeta galaxia estrela foguete teclado tela mouse janela brilho caneta caderno '
+      + 'ciencia viagem musica jardim cidade montanha floresta horizonte computador internet '
+      + 'universo amizade alegria desenho palavra pergunta resposta lanterna cachorro borboleta').split(' ');
+    const EST_TIER = (n) => (n <= 4 ? { c: 'azul', cor: '#7dd3fc' } : n <= 6 ? { c: 'ouro', cor: '#fde047' } : { c: 'nova', cor: '#f0abfc' });
+    const EST_SLOTS = [[12, 30], [31, 26], [50, 32], [69, 26], [88, 30], [14, 74], [33, 70], [52, 76], [71, 70], [89, 74]];
+    function estPath(pts, ro, ri) { // estrela de "pts" pontas num quadro de 100 × 100
+      let d = '';
+      for (let i = 0; i < pts * 2; i++) {
+        const r = i % 2 ? ri : ro, a = (Math.PI / pts) * i - Math.PI / 2;
+        d += `${i ? 'L' : 'M'}${(50 + r * Math.cos(a)).toFixed(1)} ${(50 + r * Math.sin(a)).toFixed(1)}`;
+      }
+      return d + 'Z';
+    }
+    const EST_SHAPE = { 5: estPath(5, 46, 21), 8: estPath(8, 47, 27) };
+    function estFila(lv, n) {
+      const ok = (w) => w && [...w].every((c) => L.teclas.includes(c));
+      let pool = [...new Set((lv.palavras || EST_BANCO).map((w) => String(w).toLowerCase().trim()))].filter(ok);
+      if (pool.length < 6) { // poucas teclas: sequências de 3 a 6 com as teclas da lição
+        const ks = L.teclas.filter((k) => k !== ' ');
+        pool = Array.from({ length: 30 }, (_, i) => Array.from({ length: 3 + (i % 4) }, () => ks[Math.floor(Math.random() * ks.length)]).join(''));
+      }
+      const out = []; let bag = [];
+      for (let i = 0; i < n; i++) {
+        if (!bag.length) bag = pool.slice().sort(() => Math.random() - .5);
+        out.push(bag.pop());
+      }
+      // as palavras crescem com o progresso (com um pouco de mistura)
+      return out.map((w) => [w, w.length + Math.random() * 3.5]).sort((a, b) => a[1] - b[1]).map((x) => x[0]);
+    }
+    function estrelasInit(lv) {
+      game.score = 0; game.meta = lv.meta; game.paused = true; game.run = estrelasRun;
+      game.maxLives = lv.vidas || 3; game.lives = game.maxLives; game.revives = 0; game.combo = 0;
+      estReset(lv);
+      $q('#lc-stage').innerHTML = `
+        <div class="lc-term lc-est" id="lc-est">
+          <div class="lc-hk-bar">
+            <span class="lc-hk-title lc-est-title"><i></i>Palavras das Estrelas</span>
+            ${livesHTML()}
+            <span class="lc-fl-combo" id="lc-fl-combo" data-on="0">Combo <b>×0</b></span>
+            <span class="lc-hk-time lc-est-pts" id="lc-est-pts"><b>0</b> pts</span>
+          </div>
+          <div class="lc-est-world" id="lc-est-world">
+            <div class="lc-est-sky" aria-hidden="true"><i class="neb n1"></i><i class="neb n2"></i><i class="neb n3"></i><i class="dots d1"></i><i class="dots d2"></i><i class="shoot s1"></i><i class="shoot s2"></i></div>
+            <svg class="lc-est-lines" id="lc-est-lines" aria-hidden="true"></svg>
+            <div class="lc-est-const" id="lc-est-const" aria-hidden="true"></div>
+            <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+              <radialGradient id="lc-est-g-azul" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#f0f9ff"/><stop offset=".55" stop-color="#7dd3fc"/><stop offset="1" stop-color="#0ea5e9"/></radialGradient>
+              <radialGradient id="lc-est-g-ouro" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fffbeb"/><stop offset=".55" stop-color="#fde047"/><stop offset="1" stop-color="#f59e0b"/></radialGradient>
+              <radialGradient id="lc-est-g-nova" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fdf4ff"/><stop offset=".5" stop-color="#f0abfc"/><stop offset="1" stop-color="#a855f7"/></radialGradient>
+            </defs></svg>
+            <div class="lc-est-stars" id="lc-est-stars"></div>
+          </div>
+          <p class="lc-hk-log" id="lc-hk-log"><span>&gt;</span> <em>Digite a palavra de uma estrela antes que o anel de tempo acabe.</em></p>
+          ${startOverlay('Palavras das Estrelas')}
+        </div>`;
+      goal(0, game.meta); bindStart(); kbTarget(null);
+    }
+    function estReset(lv) {
+      game.stars = []; game.lock = null; game.uid = 0; game.pts = 0; game.slowUntil = 0; game.nextIn = 0; game.lastPt = null;
+      game.queue = estFila(lv, game.meta + 12);
+      game.need = game.queue.slice(0, game.meta).reduce((s, w) => s + w.length, 0); // a barra de estrelas conta letras
+      game.ph = 0; game.pe = 0;
+    }
+    const estProg = () => Math.min(1, game.score / Math.max(1, game.meta));
+    function estSpawn() {
+      const used = new Set(game.stars.map((s) => s.slot));
+      const free = EST_SLOTS.map((_, i) => i).filter((i) => !used.has(i) && i !== game.lastSlot);
+      if (!free.length || !game.queue.length) return;
+      // de preferência uma palavra cuja 1ª letra não está no céu (a escolha da estrela fica clara)
+      const firsts = new Set(game.stars.map((s) => s.w[0]));
+      let qi = game.queue.slice(0, 5).findIndex((w) => !firsts.has(w[0]));
+      if (qi < 0) qi = 0;
+      const w = game.queue.splice(qi, 1)[0];
+      if (game.queue.length < 4) game.queue.push(...estFila(L.niveis[st.lvl], 8));
+      const slot = free[Math.floor(Math.random() * free.length)]; game.lastSlot = slot;
+      const [sx, sy] = EST_SLOTS[slot], x = sx + (Math.random() - .5) * 5, y = sy + (Math.random() - .5) * 6;
+      const t = EST_TIER(w.length), p = estProg();
+      const life = (6.6 - 2.4 * p + .5 * w.length) * (performance.now() < game.slowUntil ? 1.4 : 1);
+      const s = { id: game.uid++, w, slot, x, y, typed: 0, life, left: life, pts: w.length * 10, el: document.createElement('div') };
+      s.el.className = `lc-est-star t-${t.c}`;
+      s.el.style.cssText = `left:clamp(60px, ${x.toFixed(1)}%, calc(100% - 60px));top:clamp(58px, ${y.toFixed(1)}%, calc(100% - 58px));--sc:${t.cor};--r:${Math.round(Math.random() * 40 - 20)}deg;--fd:${(2.6 + Math.random() * 1.6).toFixed(2)}s`;
+      s.el.innerHTML = `
+        <div class="lc-est-in">
+          <svg class="ring" viewBox="0 0 120 120"><circle class="trk" cx="60" cy="60" r="55"/><circle class="arc" cx="60" cy="60" r="55" pathLength="100"/></svg>
+          <svg class="shape" viewBox="0 0 100 100"><path d="${EST_SHAPE[t.c === 'nova' ? 8 : 5]}" fill="url(#lc-est-g-${t.c})"/></svg>
+          <span class="word">${[...w].map((c) => `<i>${esc(c)}</i>`).join('')}</span>
+          <small class="val">${s.pts}</small>
+        </div>`;
+      s.arc = s.el.querySelector('.arc');
+      $q('#lc-est-stars')?.appendChild(s.el);
+      game.stars.push(s);
+      const n = game.stars.length;
+      game.nextIn = (1.9 - .9 * p) * (n >= 2 ? 1.35 : 1) + Math.random() * .5;
+    }
+    function estrelasRun() {
+      cancelAnimationFrame(game.raf);
+      let last = performance.now();
+      const world = $q('#lc-est-world');
+      world?.classList.add('go');
+      const frame = (t) => {
+        if (!alive || !world?.isConnected) return;
+        game.raf = requestAnimationFrame(frame);
+        const dt = Math.min(.05, (t - last) / 1000); last = t;
+        if (busy || game.paused || document.visibilityState !== 'visible') return;
+        const p = estProg(), maxOn = 2 + Math.round(p * 2);
+        game.nextIn -= dt;
+        if (game.score + game.stars.length < game.meta && (!game.stars.length || (game.nextIn <= 0 && game.stars.length < maxOn))) estSpawn();
+        for (const s of [...game.stars]) {
+          s.left -= dt * (performance.now() < game.slowUntil ? .7 : 1);
+          const f = Math.max(0, s.left / s.life);
+          s.arc.style.strokeDashoffset = (100 * (1 - f)).toFixed(2);
+          if (f < .3 && !s.low) { s.low = true; s.el.classList.add('low'); }
+          if (s.left <= 0) estLose(s);
+        }
+      };
+      game.raf = requestAnimationFrame(frame);
+    }
+    function estPaintPts(bump) {
+      const el = $q('#lc-est-pts'); if (!el) return;
+      el.querySelector('b').textContent = Math.round(game.pts).toLocaleString('pt-BR');
+      if (bump) replay(el, 'pop');
+    }
+    function estDrop(s = game.lock) { // solta a estrela escolhida (Backspace ou quando ela se apaga)
+      if (!s) return;
+      s.typed = 0; s.el.classList.remove('lock');
+      s.el.querySelectorAll('.word i').forEach((i) => i.classList.remove('ok'));
+      if (game.lock === s) { game.lock = null; kbTarget(null); }
+    }
+    function estLose(s) {
+      game.stars = game.stars.filter((x) => x !== s);
+      estDrop(s);
+      s.el.classList.add('gone'); setTimeout(() => s.el.remove(), 900);
+      miss(null); game.combo = 0; filaCombo();
+      replay($q('#lc-est'), 'hurt');
+      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.slowUntil = performance.now() + 2500;
+      if (game.lives <= 0) return estDown();
+      mjLog(`A estrela “${s.w}” se apagou · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
+    }
+    function estDown() {
+      cancelAnimationFrame(game.raf); $q('#lc-est-world')?.classList.remove('go');
+      mjDown({
+        term: $q('#lc-est'), titulo: 'O céu escureceu!', texto: `Você capturou <b>${game.score} de ${game.meta}</b> estrelas.`,
+        onResume: () => { game.stars.forEach((x) => x.el.remove()); game.stars = []; game.lock = null; game.nextIn = .6; game.slowUntil = performance.now() + 2500; estrelasRun(); },
+        onRestart: (term) => {
+          game.stars.forEach((x) => x.el.remove()); game.score = 0; game.combo = 0; filaCombo();
+          estReset(L.niveis[st.lvl]); estPaintPts();
+          $q('#lc-est-lines') && ($q('#lc-est-lines').innerHTML = ''); $q('#lc-est-const') && ($q('#lc-est-const').innerHTML = '');
+          term.insertAdjacentHTML('beforeend', startOverlay('Palavras das Estrelas')); bindStart();
+          mjLog('Digite a palavra de uma estrela antes que o anel de tempo acabe.');
+        },
+      });
+    }
+    /* captura: a estrela explode em faíscas, um cometa leva os pontos ao placar
+       e fica um ponto de luz no céu, ligado ao anterior (a constelação) */
+    function estCatch(s) {
+      game.stars = game.stars.filter((x) => x !== s); game.lock = null; kbTarget(null);
+      { // posição real (a estrela pode ter sido empurrada para dentro nas bordas)
+        const wr = $q('#lc-est-world')?.getBoundingClientRect(), r = s.el.getBoundingClientRect();
+        if (wr?.width) { s.x = ((r.left + r.width / 2 - wr.left) / wr.width) * 100; s.y = ((r.top + r.height / 2 - wr.top) / wr.height) * 100; }
+      }
+      game.score++; game.combo++; goal(game.score, game.meta); filaCombo();
+      const fast = s.left / s.life > .55, mult = 1 + Math.min(10, game.combo - 1) * .1;
+      const got = Math.round(s.pts * mult * (fast ? 1.5 : 1));
+      game.pts += got;
+      s.el.classList.remove('lock', 'low'); s.el.classList.add('got');
+      const inn = s.el.querySelector('.lc-est-in');
+      inn.insertAdjacentHTML('beforeend', `<i class="flash"></i>${Array.from({ length: 12 }, (_, i) => `<i class="spark" style="--a:${i * 30 + Math.random() * 14}deg;--d:${48 + Math.random() * 34}px"></i>`).join('')}<b class="plus">+${got}${fast ? '<em>Rápido!</em>' : ''}</b>`);
+      setTimeout(() => s.el.remove(), 1000);
+      estComet(s); estConst(s);
+      const tag = game.combo >= 3 ? ` · combo ×${game.combo}` : '';
+      mjLog(`Estrela capturada: “${s.w}”${tag}`, 'ok');
+      if (game.score >= game.meta) {
+        game.paused = true; cancelAnimationFrame(game.raf);
+        game.stars.forEach((x) => { x.el.classList.add('fade'); setTimeout(() => x.el.remove(), 600); }); game.stars = [];
+        $q('#lc-est-world')?.classList.add('done');
+        mjLog('Constelação completa!', 'ok');
+        return setTimeout(complete, 1300);
+      }
+    }
+    function estComet(s) {
+      const term = $q('#lc-est'), pill = $q('#lc-est-pts'), world = $q('#lc-est-world'); if (!term || !pill || !world) return;
+      const tr = term.getBoundingClientRect(), wr = world.getBoundingClientRect(), pr = pill.getBoundingClientRect();
+      const x0 = wr.left - tr.left + (s.x / 100) * wr.width, y0 = wr.top - tr.top + (s.y / 100) * wr.height;
+      const x1 = pr.left - tr.left + pr.width / 2, y1 = pr.top - tr.top + pr.height / 2;
+      const c = document.createElement('i'); c.className = 'lc-est-comet'; c.style.setProperty('--sc', s.el.style.getPropertyValue('--sc'));
+      c.style.left = `${x0}px`; c.style.top = `${y0}px`;
+      const ang = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI;
+      c.style.setProperty('--ang', `${ang}deg`);
+      term.appendChild(c);
+      const a = c.animate([
+        { transform: `translate(-50%,-50%) rotate(${ang}deg) scale(.4)`, opacity: 0 },
+        { offset: .15, transform: `translate(-50%,-50%) rotate(${ang}deg) scale(1)`, opacity: 1 },
+        { transform: `translate(calc(-50% + ${x1 - x0}px), calc(-50% + ${y1 - y0}px)) rotate(${ang}deg) scale(.6)`, opacity: .9 },
+      ], { duration: 650, delay: 120, easing: 'cubic-bezier(.5, 0, .75, .4)', fill: 'both' });
+      a.onfinish = () => { c.remove(); estPaintPts(true); };
+    }
+    function estConst(s) {
+      const box = $q('#lc-est-const'), lines = $q('#lc-est-lines'); if (!box || !lines) return;
+      box.insertAdjacentHTML('beforeend', `<i style="left:${s.x}%;top:${s.y}%;--sc:${s.el.style.getPropertyValue('--sc')}"></i>`);
+      if (game.lastPt) {
+        const [ax, ay] = game.lastPt;
+        lines.insertAdjacentHTML('beforeend', `<line x1="${ax}%" y1="${ay}%" x2="${s.x}%" y2="${s.y}%" pathLength="1"/>`);
+      }
+      game.lastPt = [s.x, s.y];
+    }
+    function estKey(k) {
+      if (game.paused) return;
+      let s = game.lock;
+      if (!s) {
+        const cand = game.stars.filter((x) => x.w[0] === k).sort((a, b) => a.left - b.left);
+        if (!cand.length) {
+          miss(k); game.combo = 0; filaCombo(); replay($q('#lc-est-world'), 'nope');
+          return mjLog(game.stars.length ? `Nenhuma estrela começa com “${k.toUpperCase()}”` : 'Espere a próxima estrela aparecer', 'warn');
+        }
+        s = game.lock = cand[0]; s.el.classList.add('lock');
+      }
+      if (s.w[s.typed] !== k) { // duas estrelas com o mesmo começo: a letra seguinte decide qual é
+        const pre = s.w.slice(0, s.typed) + k, alt = game.stars.find((x) => x !== s && x.w.startsWith(pre));
+        if (alt) {
+          estDrop(s); s = game.lock = alt; alt.typed = pre.length - 1; alt.el.classList.add('lock');
+          alt.el.querySelectorAll('.word i').forEach((i, n) => i.classList.toggle('ok', n < alt.typed));
+        }
+      }
+      if (s.w[s.typed] === k) {
+        hit(k);
+        s.el.querySelectorAll('.word i')[s.typed]?.classList.add('ok');
+        s.typed++;
+        replay(s.el.querySelector('.shape'), 'tap');
+        if (s.typed >= s.w.length) return estCatch(s);
+        kbTarget(s.w[s.typed]);
+      } else {
+        miss(k); game.combo = 0; filaCombo(); replay(s.el.querySelector('.word'), 'shake');
+        mjLog(`Tecla errada: a próxima letra de “${s.w}” é “${s.w[s.typed].toUpperCase()}” · Backspace troca de estrela`, 'warn');
+      }
+    }
+
     /* ---------- início dos minijogos de tempo (botão + 3, 2, 1) ---------- */
     const startOverlay = (name) => `<div class="lc-start" id="lc-start"><span>${svg('play', true)}</span><h4>${name}</h4><button type="button" class="lc-start-btn">Iniciar minijogo</button><small>ou aperte Enter</small></div>`;
     function bindStart() { $q('.lc-start-btn')?.addEventListener('click', countdown); }
     async function countdown() {
       const ov = $q('#lc-start'); if (!ov || game.counting) return; game.counting = true;
-      for (const n of [3, 2, 1]) { if (!ov.isConnected) return; ov.innerHTML = `<b class="lc-count">${n}</b>`; await sleep(800); }
-      if (!ov.isConnected) return;
-      ov.remove(); game.paused = false; (game.run || hackerRun)();
+      const g = game; // "Recomeçar o minijogo" mostra o botão de novo: a contagem precisa poder rodar outra vez
+      try {
+        for (const n of [3, 2, 1]) { if (!ov.isConnected) return; ov.innerHTML = `<b class="lc-count">${n}</b>`; await sleep(800); }
+        if (!ov.isConnected) return;
+        ov.remove(); game.paused = false; (game.run || hackerRun)();
+      } finally { g.counting = false; }
     }
     function shake(sel) { replay(view.querySelector(sel), 'shake'); }
 
@@ -1667,6 +1923,7 @@
       }
       if (lv.tipo === 'typing') return typingKey(k);
       if (lv.tipo === 'corrida') return corridaKey(k);
+      if (lv.tipo === 'estrelas') return estKey(k);
       if (lv.tipo === 'fila') return filaKey(k);
       if (lv.tipo === 'hacker') { if (game.paused) return; return hackerKey(k); }
     }
@@ -1679,7 +1936,12 @@
       if (k === 'escape' && kbOpen) { e.preventDefault(); return kbShow(false); }
       const lv = L.niveis[st.lvl];
       if (k === 'backspace' && lv?.tipo === 'typing' && !game.intro && !busy) { e.preventDefault(); return typingBack(); }
-      if (k === 'enter' && (lv?.tipo === 'hacker' || lv?.tipo === 'fila' || lv?.tipo === 'corrida') && game.paused) { e.preventDefault(); return countdown(); }
+      if (k === 'enter' && (lv?.tipo === 'hacker' || lv?.tipo === 'fila' || lv?.tipo === 'corrida' || lv?.tipo === 'estrelas') && game.paused) { e.preventDefault(); return countdown(); }
+      if (lv?.tipo === 'estrelas' && !game.intro) { // palavras: todas as letras contam, Backspace troca de estrela
+        if (k === 'backspace') { e.preventDefault(); if (!busy && !game.paused) estDrop(); return; }
+        if (k === ' ') { e.preventDefault(); return; }
+        if (/^[a-zç]$/.test(k)) { e.preventDefault(); return press(k); }
+      }
       if (game.intro === 'found' && k === 'enter') { e.preventDefault(); kb?.flash('enter', true); game.introDone = true; return smoothResize(() => typingInit(lv)); }
       if (game.intro && k.length === 1) { e.preventDefault(); return press(k); }
       if (L.teclas.includes(k)) { e.preventDefault(); return press(k); }
