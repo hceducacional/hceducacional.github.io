@@ -116,6 +116,32 @@
 .ifm-art img.l { left: -12%; bottom: -60%; height: 140%; }
 .ifm-art img.r { right: -22%; bottom: -60%; height: 140%; }
 
+/* ícones 3D em volta do personagem (progresso e loja): surgem um a um num flash quando o
+   botão se expande — estouro de luz branca, raios girando e o ícone pulando com mola —
+   e depois ficam flutuando devagar. Recolhido: somem rápido. */
+.ifm-deco { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.ifm-dc { --t: calc(.4s + var(--n) * .17s); position: absolute; left: calc(var(--x) * 100%); top: calc(var(--y) * 100%); width: calc(var(--w) * 100%);
+  margin-left: calc(var(--w) * -50%); translate: 0 -50%; opacity: 0; scale: .3; rotate: var(--r0); transition: opacity .18s ease, scale .25s ease; }
+.ifm-dc img { position: relative; z-index: 1; display: block; width: 100%; height: auto; filter: drop-shadow(0 calc(var(--s) * .03) calc(var(--s) * .04) rgba(0, 0, 0, .28)); }
+/* estouro de luz */
+.ifm-dc::before { content: ''; position: absolute; left: 50%; top: 50%; width: 150%; aspect-ratio: 1; margin: -75% 0 0 -75%; border-radius: 50%; opacity: 0;
+  background: radial-gradient(closest-side, #fff 0%, rgba(255, 255, 255, .85) 22%, color-mix(in srgb, var(--g1) 55%, transparent) 48%, transparent 72%); }
+/* raios girando */
+.ifm-dc::after { content: ''; position: absolute; left: 50%; top: 50%; width: 220%; aspect-ratio: 1; margin: -110% 0 0 -110%; opacity: 0;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .95) 0deg 3deg, transparent 3deg 30deg);
+  -webkit-mask: radial-gradient(closest-side, transparent 18%, #000 30%, transparent 70%); mask: radial-gradient(closest-side, transparent 18%, #000 30%, transparent 70%); }
+.ifm-opt.sel .ifm-dc { animation: ifmDcIn .75s var(--spring) var(--t) both; }
+.ifm-opt.sel .ifm-dc::before { animation: ifmDcFlash .6s ease-out var(--t) both; }
+.ifm-opt.sel .ifm-dc::after { animation: ifmDcRays .7s ease-out var(--t) both; }
+.ifm-opt.sel .ifm-dc img { animation: ifmDcPop .5s ease-out var(--t) both, ifmDcBob calc(3.2s + var(--n) * .45s) ease-in-out calc(var(--t) + .75s) infinite alternate; }
+@keyframes ifmDcIn { 0% { opacity: 0; scale: .2; rotate: calc(var(--r0) - 35deg); } 30% { opacity: 1; } 100% { opacity: 1; scale: 1; rotate: var(--r0); } }
+@keyframes ifmDcFlash { 0% { opacity: 1; transform: scale(.15); } 40% { opacity: .95; } 100% { opacity: 0; transform: scale(1.25); } }
+@keyframes ifmDcRays { 0% { opacity: 0; transform: scale(.3) rotate(0deg); } 25% { opacity: .9; } 100% { opacity: 0; transform: scale(1.15) rotate(50deg); } }
+/* o ícone nasce "aceso" (branco) e volta à cor */
+@keyframes ifmDcPop { 0% { filter: brightness(3) drop-shadow(0 0 0 transparent); } 100% { filter: brightness(1) drop-shadow(0 calc(var(--s) * .03) calc(var(--s) * .04) rgba(0, 0, 0, .28)); } }
+@keyframes ifmDcBob { from { transform: translateY(4%) rotate(-3deg); } to { transform: translateY(-5%) rotate(3deg); } }
+.ifm.still .ifm-opt.sel .ifm-dc { opacity: 1; scale: 1; }
+
 /* nome / logo embaixo */
 .ifm-name { position: relative; z-index: 3; display: flex; justify-content: center; margin-top: calc(var(--s) * .05);
   transform-origin: 50% 0; transition: scale .7s var(--spring), translate .7s var(--spring); }
@@ -124,8 +150,8 @@
 .ifm-opt.sel .ifm-name { scale: 1.32; translate: 0 calc(var(--s) * .12); }
 .ifm-logo { width: calc(var(--s) * 1.2); max-width: none; height: auto; margin-top: calc(var(--s) * -.1); filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .25)); }
 .ifm-curso.sel .ifm-name { scale: 1.75; translate: 0 calc(var(--s) * -.24); }
-/* "seu perfil" fica na parte escura: o degradê clareia para ler bem */
-.ifm-perfil .ifm-name b { background: linear-gradient(90deg, #5eead4, #38bdf8 55%, #60a5fa); -webkit-background-clip: text; background-clip: text; }
+/* "loja de itens" fica na parte escura: o degradê clareia para ler bem */
+.ifm-loja .ifm-name b { background: linear-gradient(90deg, #5eead4, #38bdf8 55%, #60a5fa); -webkit-background-clip: text; background-clip: text; }
 
 /* botões que ainda não abrem nada balançam de leve */
 .ifm-opt.nope .ifm-in { animation: ifmNope .45s ease; }
