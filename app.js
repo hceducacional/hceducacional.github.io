@@ -3189,12 +3189,13 @@ function acervoUnlock() {
   });
 }
 /* página dedicada: Configurações › Conteúdo de Informática */
-function renderAcervo(view) {
+function renderAcervo(view, cod = '') {
   let ok = false; try { ok = sessionStorage.getItem(acervoKey) === ACERVO_HASH; } catch {}
   view.innerHTML = `
   <div class="wrap av-page">
-    <a class="back-link" href="#config"><i data-icon="left"></i>Configurações</a>
-    ${pageHead('Configurações', 'Conteúdo de Informática.', 'O acervo do professor: os estilos de nível, os minijogos e as peças que formam as lições do curso de Informática.')}
+    ${cod ? '<a class="back-link" href="#config/informatica"><i data-icon="left"></i>Conteúdo de Informática</a>'
+      : `<a class="back-link" href="#config"><i data-icon="left"></i>Configurações</a>
+    ${pageHead('Configurações', 'Conteúdo de Informática.', 'O acervo do professor: os estilos de nível, os minijogos e as peças que formam as lições do curso de Informática.')}`}
     ${ok ? '<div id="acervo-panel"></div>' : `
       <section class="av-locked">
         <span class="lk-icon av-lk-icon"><i data-icon="lock"></i></span>
@@ -3204,8 +3205,8 @@ function renderAcervo(view) {
       </section>`}
   </div>`;
   paintIcons(view);
-  if (ok) return acervoRender();
-  const ask = async () => { if (await acervoUnlock()) renderAcervo(view); };
+  if (ok) return acervoRender(cod);
+  const ask = async () => { if (await acervoUnlock()) renderAcervo(view, cod); };
   $('#av-unlock').addEventListener('click', ask);
   ask();
 }
@@ -3234,10 +3235,10 @@ async function renderAcervoTest(view, cod) {
 
 /* o acervo (curso/acervo.js e .css) só é baixado quando a página é aberta */
 let acervoLoad = null;
-function acervoRender() {
+function acervoRender(cod = '') {
   const box = $('#acervo-panel'); if (!box) return;
   acervoLoad ||= Promise.all(['curso/acervo.css', 'curso/acervo.js'].map(lazy));
-  acervoLoad.then(() => window.HC_acervo.render(box, paintIcons))
+  acervoLoad.then(() => (cod ? window.HC_acervo.renderItem(box, cod, paintIcons) : window.HC_acervo.render(box, paintIcons)))
     .catch(() => { acervoLoad = null; box.innerHTML = '<p class="av-loading">Não foi possível carregar o acervo. Verifique a internet e tente de novo.</p>'; });
 }
 
@@ -3335,6 +3336,7 @@ function route() {
   else if (r === 'config/noticias') renderNewsAdmin(view);
   else if (r === 'config/informatica') renderAcervo(view);
   else if (r.startsWith('config/informatica/teste/')) renderAcervoTest(view, r.split('/')[3]);
+  else if (r.startsWith('config/informatica/')) renderAcervo(view, r.split('/')[2]);
   else if (r === 'noticias') renderNews(view);
   else if (r.startsWith('noticias/')) { // link compartilhado de uma notícia
     const n = news.find((x) => x.id === r.slice(9));

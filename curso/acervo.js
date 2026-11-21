@@ -25,7 +25,7 @@
     sombra: '<div class="av-pv av-pv-paper av-pv-ghost">' + [['b', 'f'], ['o', 'j'], ['m', 'j'], [' ', ' '], ['d', 'f'], ['i', 'j'], ['a', 'f']].map(([g, k], i) => (g === ' ' ? '<i></i>' : `<span class="${k === 'f' ? 'l' : 'r'}${i < 2 ? ' ok' : i === 2 ? ' cur' : ''}"><u>${g}</u>${k}</span>`)).join('') + '</div>',
     hacker: '<div class="av-pv av-pv-term"><em>Terminal de segurança</em><div><span>F</span><span class="on"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15"/></svg>␣</span><span>J</span></div></div>',
     fila: '<div class="av-pv av-pv-fila"><div><i style="--c:#34d399"></i><i style="--c:#a78bfa"></i><i style="--c:#fbbf24"></i></div><b style="--c:#34d399;--x:0;--y:2">F</b><b style="--c:#fbbf24;--x:2;--y:1">J</b><b style="--c:#a78bfa;--x:1;--y:0" class="on">␣</b></div>',
-    memoria: '<div class="av-pv av-pv-memo"><small>Memorize a sequência…</small><div><span>F</span><span class="lit">␣</span><span>J</span></div></div>',
+    corrida: '<div class="av-pv av-pv-run"><i class="g"></i><span class="bot"><i></i><i></i></span><i class="laser"></i><b style="--lc:#a78bfa">␣</b><b style="--lc:#fbbf24;--x:1">J</b><em>Perfeito!</em></div>',
   };
 
   /* ---------- o acervo ---------- */
@@ -70,7 +70,7 @@
       ],
     },
     {
-      id: 'mj', titulo: 'Minijogos', sub: 'Desafios entre os níveis de texto: reflexo, ritmo e memória com as teclas da lição.',
+      id: 'mj', titulo: 'Minijogos', sub: 'Desafios entre os níveis de texto: reflexo, ritmo e precisão com as teclas da lição.',
       itens: [
         {
           cod: 'MJ-01', nome: 'Varredura Hacker', prev: 'hacker',
@@ -89,19 +89,33 @@
         },
         {
           cod: 'MJ-02', nome: 'Fila de Ancoragem', prev: 'fila',
-          desc: 'Cada tecla tem uma coluna colorida. Os blocos descem em fila e o aluno tecla a tecla do bloco que chegou ao alvo; ao acertar, a fila anda.',
-          como: ['Cada coluna (e tecla) tem a sua cor', 'Só o primeiro bloco da fila vale', 'Mostra 5 blocos por vez'],
-          campos: [['meta', 'Quantas teclas o aluno precisa ancorar']],
+          desc: 'Um porto à noite: contêineres coloridos caem pelas colunas (uma por tecla) rumo à doca. O de baixo é o primeiro da fila e o aluno tecla a tecla dele para ancorá-lo. Se um contêiner bater na doca, ela sofre um dano e o aluno perde uma vida.',
+          como: [
+            'A queda acelera conforme a fila avança (de 4,2 s até 2,3 s da entrada à doca); o selo no topo mostra a velocidade',
+            'De vez em quando chega uma rajada de 3 contêineres colados',
+            'Combo: acertos seguidos acendem o contador (amarelo a partir de 3, rosa a partir de 10); tecla errada zera o combo, mas não tira vida',
+            'O primeiro da fila tem uma seta e fica vermelho perto da doca',
+            'Vidas (padrão 3); depois de um dano, 2,5 s em câmera lenta',
+            'Sem vidas: “Doca danificada!” → reviver com o Saldo HC (mesma regra e animação do MJ-01) ou recomeçar do zero',
+          ],
+          campos: [['meta', 'Quantos contêineres o aluno precisa ancorar'], ['vidas', 'Quantas vidas (opcional; padrão 3)']],
           match: (n) => n.tipo === 'fila',
           info: (n) => `meta ${n.meta}`,
         },
         {
-          cod: 'MJ-03', nome: 'Eco da Memória', prev: 'memoria',
-          desc: 'As teclas acendem numa sequência; depois o aluno repete a mesma ordem. Cada rodada é maior que a anterior.',
-          como: ['Na vez do aluno, o teclado virtual não entrega a resposta', 'Errou: conta como erro e a rodada recomeça com uma sequência nova', 'Também dá para clicar nas teclas da tela'],
-          campos: [['rodadas', 'Tamanho de cada sequência, ex.: [3, 4] = uma de 3 e uma de 4 teclas']],
-          match: (n) => n.tipo === 'memoria',
-          info: (n) => `rodadas ${n.rodadas.join(', ')}`,
+          cod: 'MJ-03', nome: 'Corrida das Teclas', prev: 'corrida',
+          desc: 'Um robozinho corre por uma pista à noite e vírus de computador, cada um com uma tecla, vêm na direção dele. Quando o vírus entra na faixa verde em frente ao robô, o aluno tecla a tecla do vírus e o robô o elimina com um laser. Quanto mais perto do robô, melhor a nota. Substituiu o antigo Eco da Memória.',
+          como: [
+            'Acertou: o robô dispara o laser e o vírus estoura em luz; notas Perfeito, Ótimo ou Bom e combo nos acertos seguidos',
+            'Teclar antes da faixa é “Cedo demais” e a tecla errada zera o combo (nenhum dos dois tira vida)',
+            'Se o vírus chegar ao robô, ele é infectado e perde uma vida; depois vêm 2,5 s mais devagar',
+            'A corrida acelera com o progresso (de 4,0 s até 2,2 s para o vírus cruzar a pista) e às vezes vêm vírus em dupla',
+            'O contador mostra os metros percorridos',
+            'Sem vidas: “Robô infectado!” → reviver com o Saldo HC (mesma regra e animação do MJ-01 e MJ-02) ou recomeçar do zero',
+          ],
+          campos: [['meta', 'Quantos vírus o aluno precisa eliminar'], ['vidas', 'Quantas vidas (opcional; padrão 3)']],
+          match: (n) => n.tipo === 'corrida',
+          info: (n) => `meta ${n.meta}`,
         },
       ],
     },
@@ -113,7 +127,7 @@
         { cod: 'PC-03', nome: 'Teclado virtual', icon: 'monitor', desc: 'Janela suspensa embaixo da tela que só abre pelo botão "Ver teclado virtual". Cores por dedo, a próxima tecla acesa, o dedo certo escrito em cima e fecha sozinha em 10 s (barrinha de tempo, × ou Esc).' },
         { cod: 'PC-04', nome: 'Nível concluído', icon: 'check', desc: 'A medalha com o número do nível é "apertada" e solta ondas de radar; frase de comemoração letra por letra, pontos contando, tempo no nível e o quadro "A seguir" com a barra da lição.' },
         { cod: 'PC-05', nome: 'Tela de XP e patentes', icon: 'trophy', teste: { auto: 'xp' }, desc: 'No fim da lição: "Você está subindo de nível!", o aro de XP enchendo, a patente atual (25 patentes) e a próxima.' },
-        { cod: 'PC-06', nome: 'Resultado e Saldo HC', icon: 'party', teste: { auto: 'moedas' }, desc: 'A tela final com estrelas, pontuação e recorde. As moedas voam das estrelas para o Saldo HC: 35,27 por estrela, +87,76 no Superstar e +97,43 no Megastar. O saldo pode ser gasto para reviver na Varredura Hacker (MJ-01).' },
+        { cod: 'PC-06', nome: 'Resultado e Saldo HC', icon: 'party', teste: { auto: 'moedas' }, desc: 'A tela final com estrelas, pontuação e recorde. As moedas voam das estrelas para o Saldo HC: 35,27 por estrela, +87,76 no Superstar e +97,43 no Megastar. O saldo pode ser gasto para reviver nos minijogos com vidas (MJ-01, MJ-02 e MJ-03).' },
         { cod: 'PC-07', nome: 'Cenários de cor', icon: 'sun', desc: 'Cada vez que a lição começa, um cenário é sorteado (Aurora boreal, Oceano profundo, Pôr do sol, Galáxia, Lavanda, Coral, Meia-noite) e pinta o cartão, as formas flutuantes, a folha e o teclado.' },
         { cod: 'PC-08', nome: 'Suporte (pular nível)', icon: 'lock', desc: 'O cadeado no topo do nível: com a senha do suporte, o professor escolhe "Ir para…" qualquer nível ou o resultado. Administradores já entram liberados.' },
       ],
@@ -163,6 +177,48 @@
     </button>`;
   };
 
+  /* card grande da lista (como os de "Mantenha-se conectado"): capa animada, resumo e "Acessar" */
+  const KICK = { dg: 'Nível de digitação', mj: 'Minijogo', pc: 'Peça de toda lição' };
+  const resumo = (t) => { const i = t.indexOf('. '); return i > 0 && i < 170 ? t.slice(0, i + 1) : t.length > 170 ? t.slice(0, 168) + '…' : t; };
+  const tileHTML = (it, list) => {
+    const c = countOf(it, list);
+    return `
+      <a class="av-tile" data-g="${it.g}" href="#config/informatica/${it.cod}" aria-label="${esc(it.nome)}: acessar">
+        <span class="av-tile-cover" aria-hidden="true"><span class="av-tile-art">${prevOf(it)}</span></span>
+        <span class="av-tile-txt">
+          <small>${KICK[it.g]} · ${it.cod}</small>
+          <strong>${esc(it.nome)}</strong>
+          <span>${esc(resumo(it.desc))}</span>
+        </span>
+        <span class="av-tile-bar">
+          <span class="av-tile-ico">${it.cod.slice(0, 2)}</span>
+          <span class="av-tile-who"><b>${esc(it.nome)}</b><small>${c == null ? 'Em todas as lições' : `${c} ${c === 1 ? 'nível' : 'níveis'} nas lições`}</small></span>
+          <span class="av-tile-go">Acessar</span>
+        </span>
+      </a>`;
+  };
+
+  /* lições: capa (as teclas da lição + uma barrinha por nível) e card no mesmo estilo dos itens */
+  const lessonStats = (L) => { const g = L.niveis.filter((n) => n.tipo !== 'typing').length; return { tot: L.niveis.length, games: g, typing: L.niveis.length - g }; };
+  const lessonCover = (L) => `<div class="av-pv av-pv-lesson"><div class="keys">${L.teclas.map((k) => `<kbd>${k === ' ' ? 'Espaço' : esc(k.toUpperCase())}</kbd>`).join('')}</div><div class="segs">${L.niveis.map((n, i) => `<i class="${n.tipo === 'typing' ? 'd' : 'm'}" style="--i:${i}"></i>`).join('')}</div></div>`;
+  const lessonTile = (L) => {
+    const st = lessonStats(L);
+    return `
+      <a class="av-tile" data-g="ls" href="#config/informatica/${esc(L.id)}" aria-label="Lição ${esc(L.numero)}: acessar">
+        <span class="av-tile-cover" aria-hidden="true"><span class="av-tile-art">${lessonCover(L)}</span></span>
+        <span class="av-tile-txt">
+          <small>Lição ${esc(L.numero)} · ${st.tot} níveis</small>
+          <strong>${esc(L.titulo)}</strong>
+          <span>${esc(resumo(L.intro || ''))}</span>
+        </span>
+        <span class="av-tile-bar">
+          <span class="av-tile-ico">${esc(L.numero)}</span>
+          <span class="av-tile-who"><b>Lição ${esc(L.numero)}</b><small>${st.typing} de digitação · ${st.games} minijogos</small></span>
+          <span class="av-tile-go">Acessar</span>
+        </span>
+      </a>`;
+  };
+
   /* detalhes do item escolhido (direita), em blocos separados */
   function detailHTML(it, list) {
     const c = countOf(it, list);
@@ -187,19 +243,6 @@
       </div>`;
   }
 
-  /* aba "Mapa das lições": cada nível de cada lição com o código do acervo */
-  function mapHTML(list) {
-    if (!list.length) return '<p class="av-note">Nenhuma lição pronta ainda.</p>';
-    return list.map((L) => `
-      <section class="av-map">
-        <header><span class="av-cod">Lição ${esc(L.numero)}</span><h3>${esc(L.titulo)}</h3><small>${L.niveis.length} níveis</small></header>
-        <ol class="av-map-list">${L.niveis.map((n, i) => {
-          const cs = codesOf(n), g = cs[0]?.slice(0, 2).toLowerCase();
-          return `<li class="g-${g}"><span class="av-map-n">${i + 1}</span><span class="av-map-t">${esc(n.titulo)}</span><span class="av-map-c">${cs.map((x) => `<button type="button" data-go="${x}">${x}</button>`).join('')}</span></li>`;
-        }).join('')}</ol>
-      </section>`).join('');
-  }
-
   const TABS = [...GRUPOS.map((g) => ({ id: g.id, nome: g.titulo, n: g.itens.length })), { id: 'mapa', nome: 'Mapa das lições', n: null }];
   const mem = { get: (k, d) => { try { return localStorage.getItem('hc-av-' + k) || d; } catch { return d; } }, set: (k, v) => { try { localStorage.setItem('hc-av-' + k, v); } catch {} } };
 
@@ -209,7 +252,6 @@
     const tot = list.reduce((s, L) => s + L.niveis.length, 0);
     const games = list.reduce((s, L) => s + L.niveis.filter((n) => n.tipo !== 'typing').length, 0);
     let tab = mem.get('tab', 'dg'); if (!TABS.some((t) => t.id === tab)) tab = 'dg';
-    const pick = {}; GRUPOS.forEach((g) => { pick[g.id] = mem.get('it-' + g.id, g.itens[0].cod); });
 
     box.innerHTML = `
       <div class="av">
@@ -233,34 +275,101 @@
     function show() {
       box.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === tab));
       if (tab === 'mapa') {
-        pane.className = 'av-pane is-map';
-        pane.innerHTML = `<p class="av-pane-sub">Cada nível das lições prontas com o código do acervo. Clique num código para ver o item.</p>${mapHTML(list)}`;
+        pane.className = 'av-pane';
+        pane.dataset.g = 'ls';
+        pane.innerHTML = `<p class="av-pane-sub">As lições prontas. Abra uma para ver cada nível com o código do acervo; as próximas lições aparecem aqui assim que forem montadas.</p>
+          ${list.length ? `<div class="av-tiles">${list.map(lessonTile).join('')}</div>` : '<p class="av-note">Nenhuma lição pronta ainda.</p>'}`;
       } else {
-        const g = GRUPOS.find((x) => x.id === tab), it = g.itens.find((x) => x.cod === pick[tab]) || g.itens[0];
+        const g = GRUPOS.find((x) => x.id === tab);
         pane.className = 'av-pane';
         pane.dataset.g = g.id;
         pane.innerHTML = `
           <p class="av-pane-sub">${esc(g.sub)}</p>
-          <div class="av-split">
-            <div class="av-cards" role="list">${g.itens.map((x) => cardHTML(x, list, x === it)).join('')}</div>
-            <article class="av-det" id="av-det" aria-live="polite">${detailHTML(it, list)}</article>
-          </div>`;
+          <div class="av-tiles">${g.itens.map((x) => tileHTML(x, list)).join('')}</div>`;
       }
       paint(pane);
     }
-    function go(cod) {
-      const it = ALL.find((x) => x.cod === cod); if (!it) return;
-      tab = it.g; pick[tab] = cod; mem.set('tab', tab); mem.set('it-' + tab, cod); show();
-      box.querySelector('#av-det')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
+    const go = (cod) => { if (ALL.some((x) => x.cod === cod)) location.hash = `#config/informatica/${cod}`; };
     box.addEventListener('click', (e) => {
       const t = e.target.closest('[data-tab]');
       if (t) { tab = t.dataset.tab; mem.set('tab', tab); return show(); }
-      const c = e.target.closest('[data-it]');
-      if (c) { pick[tab] = c.dataset.it; mem.set('it-' + tab, c.dataset.it); show(); if (innerWidth < 900) box.querySelector('#av-det')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
       const m = e.target.closest('[data-go]'); if (m) go(m.dataset.go);
     });
     show();
+  }
+
+  /* ---------- página de um item (Configurações › Conteúdo de Informática › MJ-03) ---------- */
+  async function renderItem(box, cod, paint = () => {}) {
+    box.innerHTML = '<p class="av-loading">Carregando…</p>';
+    const list = await lessons();
+    const L = list.find((x) => x.id === cod);
+    if (L) return lessonPage(box, L, list, paint);
+    const it = ALL.find((x) => x.cod === cod);
+    if (!it) { box.innerHTML = '<p class="av-note">Item não encontrado no acervo.</p>'; return false; }
+    const g = GRUPOS.find((x) => x.id === it.g), irmaos = g.itens.filter((x) => x !== it);
+    try { localStorage.setItem('hc-av-tab', it.g); } catch {}
+    box.innerHTML = `
+      <div class="av av-item-page" data-g="${it.g}">
+        <section class="av-ip-hero">
+          <div class="av-ip-cover" aria-hidden="true"><span class="av-tile-art">${prevOf(it)}</span></div>
+          <div class="av-ip-head">
+            <small class="av-ip-kick">${KICK[it.g]}</small>
+            <h2>${esc(it.nome)}</h2>
+            <div class="av-det-tags"><span class="av-cod">${it.cod}</span>${countOf(it, list) != null ? `<span class="av-count">${countOf(it, list)} ${countOf(it, list) === 1 ? 'nível' : 'níveis'}</span>` : '<span class="av-count">Todas as lições</span>'}</div>
+            <p class="av-ip-desc">${esc(it.desc)}</p>
+            <div class="av-det-act">
+              <a class="av-test" href="#config/informatica/teste/${it.cod}"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/></svg>Testar</a>
+              <p class="av-ask">Para mudar: peça <b>“no ${it.cod}, …”</b></p>
+            </div>
+            ${it.teste?.auto ? `<p class="av-test-note">O teste abre um nível curto e já mostra ${it.teste.auto === 'xp' ? 'a tela de XP' : 'a tela final com as moedas'} (nada é salvo).</p>` : ''}
+          </div>
+        </section>
+        <div class="av-blocks">
+          ${it.como ? `<section class="av-block"><h4><i data-icon="check"></i>Como funciona</h4><ul class="av-how">${it.como.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></section>` : ''}
+          ${it.campos ? `<section class="av-block"><h4><i data-icon="settings"></i>Ajustes de cada nível</h4><dl class="av-fields">${it.campos.map(([k, v]) => `<dt><code>${esc(k)}</code></dt><dd>${esc(v)}</dd>`).join('')}</dl></section>` : ''}
+          <section class="av-block wide"><h4><i data-icon="grid"></i>Onde aparece</h4>${usage(it, list)}</section>
+        </div>
+        ${irmaos.length ? `<section class="av-more"><h3>Outros: ${esc(g.titulo.toLowerCase())}</h3><div class="av-tiles">${irmaos.map((x) => tileHTML(x, list)).join('')}</div></section>` : ''}
+      </div>`;
+    paint(box);
+    return it;
+  }
+
+  /* página de uma lição: resumo, composição (quantos níveis de cada código) e o mapa dos níveis */
+  function lessonPage(box, L, list, paint) {
+    const st = lessonStats(L);
+    const comp = {}; L.niveis.forEach((n) => codesOf(n).forEach((c) => { comp[c] = (comp[c] || 0) + 1; }));
+    try { localStorage.setItem('hc-av-tab', 'mapa'); } catch {}
+    box.innerHTML = `
+      <div class="av av-item-page" data-g="ls">
+        <section class="av-ip-hero">
+          <div class="av-ip-cover" aria-hidden="true"><span class="av-tile-art">${lessonCover(L)}</span></div>
+          <div class="av-ip-head">
+            <small class="av-ip-kick">Lição ${esc(L.numero)}</small>
+            <h2>${esc(L.titulo)}</h2>
+            <div class="av-det-tags"><span class="av-cod">${st.tot} níveis</span><span class="av-count">${st.typing} de digitação</span><span class="av-count">${st.games} minijogos</span></div>
+            <p class="av-ip-desc">${esc(L.intro || '')}</p>
+            <div class="av-det-act">
+              <a class="av-test" href="#informatica/${esc(L.id)}"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/></svg>Abrir a lição</a>
+              <p class="av-ask">A lição de verdade, como o aluno vê (o progresso é salvo)</p>
+            </div>
+          </div>
+        </section>
+        <div class="av-blocks">
+          <section class="av-block wide"><h4><i data-icon="grid"></i>Composição da lição</h4>
+            <div class="av-comp">${Object.entries(comp).sort((a, b) => a[0].localeCompare(b[0])).map(([c, n]) => { const it = ALL.find((x) => x.cod === c); return `<a class="av-comp-i g-${it.g}" href="#config/informatica/${c}"><span class="av-cod">${c}</span><b>${esc(it.nome)}</b><em>×${n}</em></a>`; }).join('')}</div>
+          </section>
+          <section class="av-block wide"><h4><i data-icon="check"></i>Os ${st.tot} níveis, em ordem</h4>
+            <ol class="av-map-list">${L.niveis.map((n, i) => {
+              const cs = codesOf(n), g = cs[0]?.slice(0, 2).toLowerCase();
+              return `<li class="g-${g}"><span class="av-map-n">${i + 1}</span><span class="av-map-t">${esc(n.titulo)}</span><span class="av-map-c">${cs.map((x) => `<a href="#config/informatica/${x}">${x}</a>`).join('')}</span></li>`;
+            }).join('')}</ol>
+          </section>
+        </div>
+        ${list.length > 1 ? `<section class="av-more"><h3>Outras lições</h3><div class="av-tiles">${list.filter((x) => x !== L).map(lessonTile).join('')}</div></section>` : ''}
+      </div>`;
+    paint(box);
+    return L;
   }
 
   /* ---------- teste: monta uma lição curta só com o item escolhido ---------- */
@@ -279,8 +388,8 @@
       niveis = lv ? [clone(lv)] : [clone(CURTO)];
     } else niveis = [clone(CURTO)];
     const L = { id: `teste-${cod}`, numero: '00', titulo: `${cod} · ${it.nome}`, teclas: base?.teclas || ['f', ' ', 'j'], intro: '', cards: [], niveis };
-    return { L, meta: { teste: { cod, nome: it.nome, voltar: '#config/informatica', auto: it.teste?.auto } } };
+    return { L, meta: { teste: { cod, nome: it.nome, voltar: `#config/informatica/${cod}`, auto: it.teste?.auto } } };
   }
 
-  window.HC_acervo = { render, testLesson, GRUPOS };
+  window.HC_acervo = { render, renderItem, testLesson, GRUPOS, has: (cod) => ALL.some((x) => x.cod === cod) };
 })();

@@ -662,8 +662,8 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
             const state = !l.arquivo ? 'Em breve' : p?.done ? 'Concluída' : p ? `Nível ${Math.min(p.lvl + 1, p.total)} de ${p.total}` : `${HC_NIVEIS[n] || ''}`;
             const go = !l.arquivo ? 'Em breve' : !window.HC_isComputer() ? 'Ver' : p?.done ? 'Refazer' : p && p.lvl > 0 ? 'Continuar' : 'Acessar';
             return `
-          <li class="pf-lesson${l.arquivo ? '' : ' soon'}" style="--i:${k};--tint:${TINTS[i % TINTS.length]}" data-lesson="${n}" tabindex="0" aria-label="Lição ${num}: ${esc(l.titulo)}">
-            <div class="pf-lesson-img">${slot(l.imagem, 'Imagem da lição', '1000 × 1000', i)}</div>
+          <li class="pf-lesson${l.arquivo ? '' : ' soon'}" style="--i:${k};--tint:${l.arquivo ? '74, 30, 8' : TINTS[i % TINTS.length]}" data-lesson="${n}" tabindex="0" aria-label="Lição ${num}: ${esc(l.titulo)}">
+            ${l.arquivo ? `<div class="pf-lesson-img pf-lcover" data-cover="${esc(l.arquivo)}" data-n="${n}" aria-hidden="true"></div>` : `<div class="pf-lesson-img">${slot(l.imagem, 'Imagem da lição', '1000 × 1000', i)}</div>`}
             <div class="pf-lesson-app">
               <div class="pf-lesson-text">
                 <span class="pf-lesson-tag">${esc(l.tag)}</span>
@@ -837,7 +837,22 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     Promise.all([load('curso/licao.css'), load('curso/teclado.js'), load('curso/licao.js'), load(l.arquivo)]).catch(() => {});
     setTimeout(go, INTRO_PEAK);
   };
+  /* capa das lições prontas (a mesma do acervo do professor): as teclas da lição e uma barrinha por nível.
+     As barrinhas dos níveis que o aluno já fez ficam acesas; a do nível atual pulsa.
+     Os dados da lição (arquivo pequeno) são baixados só para desenhar a capa. */
+  function lessonCovers(root) {
+    root.querySelectorAll('.pf-lcover[data-cover]').forEach((box) => {
+      const n = +box.dataset.n;
+      load(box.dataset.cover).then(() => {
+        const L = window.HC_LICOES?.[`licao-${n}`]; if (!L || !box.isConnected) return;
+        const p = progress(n), done = p?.done ? L.niveis.length : p?.lvl || 0;
+        box.innerHTML = `<div class="pf-lc"><div class="pf-lc-keys">${L.teclas.map((k, i) => `<kbd style="--i:${i}">${k === ' ' ? 'Espaço' : esc(k.toUpperCase())}</kbd>`).join('')}</div>
+          <div class="pf-lc-segs${done ? ' has' : ''}">${L.niveis.map((lv, i) => `<i class="${lv.tipo === 'typing' ? 'd' : 'm'}${i < done ? ' on' : ''}${p && !p.done && i === done ? ' cur' : ''}" style="--i:${i}"></i>`).join('')}</div></div>`;
+      }).catch(() => {});
+    });
+  }
   function bindLessons(view, root) {
+    lessonCovers(root);
     root.querySelectorAll('.pf-lesson[data-lesson]').forEach((b) => {
       b.addEventListener('click', () => openN(+b.dataset.lesson));
       b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openN(+b.dataset.lesson); } });

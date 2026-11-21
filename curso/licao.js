@@ -83,7 +83,7 @@
   /* ---------- visual escuro, herdado dos cards das lições ---------- */
   const TINT0 = '22, 60, 48';
   /* cor do cartão de cada tipo de nível (a de digitação é a do card da lição) */
-  const KIND_TINT = { hacker: '24, 46, 110', fila: '30, 70, 90', memoria: '70, 32, 120' };
+  const KIND_TINT = { hacker: '24, 46, 110', fila: '30, 70, 90', corrida: '70, 32, 120' };
   const CARD_TINTS = ['24, 46, 110', '70, 32, 120', '120, 40, 30', '30, 70, 90'];
   /* cenários do cartão do nível: um sorteado a cada vez que a lição começa (nunca o mesmo da vez anterior).
      base = cor escura do fundo; a1, a2, a3 = as três luzes de aurora que flutuam devagar por trás */
@@ -428,8 +428,11 @@
       }
       body.innerHTML = `
       <div class="lc-wel">
-        <article class="lc-hero">
-          <div class="lc-hero-img">${meta.imagem ? `<img src="${esc(meta.imagem)}" alt="">` : `<span class="lc-hero-ph" style="--k:${meta.k || 0}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg></span>`}</div>
+        <article class="lc-hero" style="--tint:74, 30, 8">
+          <div class="lc-hero-img lc-hero-cover" aria-hidden="true">
+            <div class="pf-lc"><div class="pf-lc-keys">${L.teclas.map((k, i) => `<kbd style="--i:${i}">${k === ' ' ? 'Espaço' : esc(k.toUpperCase())}</kbd>`).join('')}</div>
+            <div class="pf-lc-segs${doneN ? ' has' : ''}">${L.niveis.map((lv, i) => `<i class="${lv.tipo === 'typing' ? 'd' : 'm'}${i < doneN ? ' on' : ''}${resume && i === doneN ? ' cur' : ''}" style="--i:${i}"></i>`).join('')}</div></div>
+          </div>
           <div class="lc-hero-app">
             <div class="lc-hero-text">
               ${meta.tag ? `<span class="lc-hero-tag">${esc(meta.tag)}</span>` : ''}
@@ -572,7 +575,7 @@
        Os 13.000 pontos são divididos entre todos os níveis da lição (13.000 ÷ nº de níveis cada).
        Em cada nível: parte do nível já feita × precisão no nível × a parte dele nos 13.000.
        Sem errar nada em nenhum nível, a lição termina com 13.000. O medidor nunca desce. */
-    const needOf = (lv) => (lv.tipo === 'typing' ? lv.texto.length : lv.tipo === 'memoria' ? lv.rodadas.reduce((a, b) => a + b, 0) : lv.meta);
+    const needOf = (lv) => (lv.tipo === 'typing' ? lv.texto.length : lv.meta);
     const PER = PTS_MAX / N; // pontos que cada nível vale
     const gs = { stars: 0, rank: '' }; // o que o medidor já mostrou (para animar só o que é novo)
     const totalPts = () => Math.min(PTS_MAX, (st.levelPts || []).reduce((a, x, i) => a + (i === st.lvl && phase === 'play' ? 0 : (x || 0)), 0) + (phase === 'play' ? (game.lp || 0) : 0));
@@ -915,7 +918,7 @@
           cash: C ? { from: C.get().saldo, gain: C.ganhoDe(starsOf(p), rankOf(p)), review: false } : null });
       });
       paintProgress(); paintStats(); gaugeLevel(lv);
-      ({ typing: typingInit, hacker: hackerInit, fila: filaInit, memoria: memoInit })[lv.tipo](lv);
+      ({ typing: typingInit, hacker: hackerInit, fila: filaInit, corrida: corridaInit })[lv.tipo](lv);
     }
     function goal(n, total) {
       const t = $q('#lc-goal-txt'), b = $q('#lc-goal-bar'); if (!t) return;
@@ -1207,7 +1210,6 @@
       game.hk = null;
       goal(0, game.meta); hackerPaint(); bindStart();
     }
-    function hackerLog(t, cls = '') { const l = $q('#lc-hk-log'); if (l) { l.className = 'lc-hk-log ' + cls; l.innerHTML = `<span>&gt;</span> <em>${esc(t)}</em>`; } }
     function hackerKindPick() {
       if (game.grace > 0) { game.grace--; return 'slow'; }
       const r = Math.random(), fast = game.streak >= 5 ? .45 : game.streak >= 2 ? .28 : .15;
@@ -1242,10 +1244,6 @@
       const b = document.createElement('i'); b.className = 'lc-burst' + (ok ? '' : ' bad'); el.appendChild(b); setTimeout(() => b.remove(), 700);
       if (ok) { const f = document.createElement('span'); f.className = 'lc-hk-plus'; f.textContent = '+1'; el.appendChild(f); setTimeout(() => f.remove(), 800); }
     }
-    function hackerLives(lostAt) {
-      const box = $q('#lc-hk-lives'); if (!box) return;
-      [...box.children].forEach((h, i) => { h.classList.toggle('off', i >= game.lives); if (i === lostAt) replay(h, 'break'); });
-    }
     function hackerRun() {
       clearInterval(game.timer);
       game.timer = setInterval(() => {
@@ -1261,37 +1259,59 @@
     }
     /* perde uma vida; devolve false se acabaram */
     function hackerHurt(msg) {
-      game.lives = Math.max(0, game.lives - 1); hackerLives(game.lives);
+      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
       replay($q('#lc-hkt'), 'hurt');
       game.grace = 2;
       if (game.lives <= 0) { hackerDown(); return false; }
-      hackerLog(`${msg} · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
+      mjLog(`${msg} · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
       return true;
     }
     function hackerKey(k) {
       if (k === game.target) {
         hit(k); hackerBurst(k, true); game.score++; game.streak++; goal(game.score, game.meta);
-        hackerLog(game.streak >= 3 ? `Ameaça neutralizada · sequência de ${game.streak}` : 'Ameaça neutralizada', 'ok');
-        if (game.score >= game.meta) { game.paused = true; hackerLog('Sistema protegido!', 'ok'); return setTimeout(complete, 400); }
+        mjLog(game.streak >= 3 ? `Ameaça neutralizada · sequência de ${game.streak}` : 'Ameaça neutralizada', 'ok');
+        if (game.score >= game.meta) { game.paused = true; mjLog('Sistema protegido!', 'ok'); return setTimeout(complete, 400); }
         hackerNext(); hackerPaint();
       } else {
         miss(k); game.streak = 0; shake(hkSel(game.target));
         game.left = Math.max(.35, game.left - game.limit * .25); // tecla errada: perde um quarto do tempo
-        hackerLog('Tecla errada: o tempo encurtou', 'warn'); hackerPaint();
+        mjLog('Tecla errada: o tempo encurtou', 'warn'); hackerPaint();
       }
     }
-    /* sem vidas: reviver com o Saldo HC ou recomeçar */
+    /* sem vidas (MJ-01): reviver com o Saldo HC ou recomeçar */
     function hackerDown() {
-      game.paused = true;
-      const C = window.HC_cash, cost = hkRevCost(), saldo = C ? C.get().saldo : 0, can = !!C && saldo >= cost; // vale também no modo de teste: o saldo é descontado de verdade
+      mjDown({
+        term: $q('#lc-hkt'), titulo: 'Sistema invadido!', texto: `Você neutralizou <b>${game.score} de ${game.meta}</b> ameaças.`,
+        onResume: () => { hackerNext(); hackerPaint(); },
+        onRestart: (term) => {
+          game.score = 0; game.streak = 0; game.grace = 0; hackerNext(true); hackerPaint();
+          term.insertAdjacentHTML('beforeend', startOverlay('Varredura Hacker')); bindStart();
+          mjLog('Aguardando a varredura…');
+        },
+      });
+    }
+
+    /* ---------- vidas e reviver (todos os minijogos com vidas) ----------
+       Sem vidas, a tela do minijogo mostra o saldo e duas saídas: reviver com o Saldo HC
+       (15,00, e o dobro a cada nova vez no mesmo nível; desconta de verdade, também no Testar)
+       ou recomeçar do zero. Usa os ids #lc-hk-lives e #lc-hk-log, que todo minijogo com vidas tem. */
+    function mjLog(t, cls = '') { const l = $q('#lc-hk-log'); if (l) { l.className = 'lc-hk-log ' + cls; l.innerHTML = `<span>&gt;</span> <em>${esc(t)}</em>`; } }
+    function mjLives(lostAt) {
+      const box = $q('#lc-hk-lives'); if (!box) return;
+      [...box.children].forEach((h, i) => { h.classList.toggle('off', i >= game.lives); if (i === lostAt) replay(h, 'break'); });
+    }
+    const livesHTML = () => `<span class="lc-hk-lives" id="lc-hk-lives" aria-label="Vidas">${Array.from({ length: game.maxLives }, () => `<b>${HEART}</b>`).join('')}</span>`;
+    function mjDown(o) {
+      game.paused = true; game.mj = o;
+      const C = window.HC_cash, cost = hkRevCost(), saldo = C ? C.get().saldo : 0, can = !!C && saldo >= cost;
       const fmtC = (v) => (window.HC_cashFmt ? window.HC_cashFmt(v) : v.toFixed(2).replace('.', ','));
-      hackerLog('Sistema invadido!', 'err');
-      const term = $q('#lc-hkt'); if (!term) return;
+      mjLog(o.titulo, 'err');
+      const term = o.term; if (!term) return;
       term.insertAdjacentHTML('beforeend', `
-        <div class="lc-hk-over" id="lc-hk-over" role="dialog" aria-label="Sistema invadido">
+        <div class="lc-hk-over" id="lc-hk-over" role="dialog" aria-label="${esc(o.titulo)}">
           <span class="lc-hk-over-ico">${HEART}</span>
-          <h4>Sistema invadido!</h4>
-          <p>Você neutralizou <b>${game.score} de ${game.meta}</b> ameaças. ${C ? 'Use o seu Saldo HC para reviver e continuar daqui, sem voltar ao começo.' : 'Recomece o minijogo para tentar de novo.'}</p>
+          <h4>${esc(o.titulo)}</h4>
+          <p>${o.texto} ${C ? 'Use o seu Saldo HC para reviver e continuar daqui, sem voltar ao começo.' : 'Recomece o minijogo para tentar de novo.'}</p>
           ${C ? `<div class="lc-hk-wallet"><img src="assets/moeda/moeda.webp" alt="" draggable="false"><span>Seu saldo</span><b>${fmtC(saldo)}</b></div>
           <button type="button" class="lc-hk-revive" ${can ? '' : 'disabled'}>Reviver com ${game.maxLives} vidas<span><img src="assets/moeda/moeda.webp" alt="" draggable="false">${fmtC(cost)}</span></button>
           ${!can ? '<small class="lc-hk-poor">Saldo insuficiente. Ganhe moedas com as estrelas das lições.</small>' : ''}` : ''}
@@ -1302,20 +1322,18 @@
         e.currentTarget.blur();
         if (!C.spend(cost, `${L.id}:reviver`)) return; // o saldo mudou em outro lugar
         game.revives++;
-        hackerTransfer(ov, saldo, saldo - cost, cost, fmtC);
+        mjTransfer(ov, saldo, saldo - cost, cost, fmtC);
       });
       ov.querySelector('.lc-hk-restart').addEventListener('click', (e) => {
         e.currentTarget.blur();
-        game.score = 0; game.streak = 0; game.grace = 0; game.lives = game.maxLives; game.revives = 0; hackerLives(-1);
-        goal(0, game.meta); hackerNext(true); hackerPaint();
-        ov.remove(); term.insertAdjacentHTML('beforeend', startOverlay('Varredura Hacker')); bindStart();
-        hackerLog('Aguardando a varredura…');
+        game.lives = game.maxLives; game.revives = 0; mjLives(-1); goal(0, game.meta);
+        ov.remove(); o.onRestart(term);
       });
     }
     /* reviver: animação do Saldo HC sendo transferido para o sistema do jogo.
        As moedas saem da carteira e correm pelo cabo até as vidas; o saldo desce contando, a barra
        enche e cada coração acende quando um terço das moedas chega. Depois vem o 3, 2, 1. */
-    async function hackerTransfer(ov, from, to, cost, fmtC) {
+    async function mjTransfer(ov, from, to, cost, fmtC) {
       const COIN = '<img src="assets/moeda/moeda.webp" alt="" draggable="false">';
       ov.classList.add('xfer');
       ov.innerHTML = `
@@ -1341,97 +1359,290 @@
         requestAnimationFrame(step);
       });
       if (!ov.isConnected) return;
-      game.lives = game.maxLives; hackerLives(-1);
+      game.lives = game.maxLives; mjLives(-1);
       ov.classList.add('done');
       ov.querySelector('#lc-xf-st').textContent = `${game.maxLives} vidas`;
       ov.querySelector('#lc-xf-txt').textContent = 'Sistema restaurado!';
-      hackerLog(`Sistema restaurado · −${fmtC(cost)} HC`, 'ok');
+      mjLog(`Sistema restaurado · −${fmtC(cost)} HC`, 'ok');
       await sleep(900);
-      hackerResume(ov);
+      mjResume(ov);
     }
-    async function hackerResume(ov) {
+    async function mjResume(ov) {
       ov.classList.remove('xfer', 'done');
       for (const n of [3, 2, 1]) { if (!ov.isConnected) return; ov.innerHTML = `<b class="lc-count">${n}</b>`; await sleep(700); }
       if (!ov.isConnected) return;
-      ov.remove(); hackerNext(); hackerPaint(); game.paused = false;
+      ov.remove(); game.mj?.onResume(); game.paused = false;
     }
 
-    /* ---------- MINIJOGO: FILA DE ANCORAGEM ---------- */
-    // Fila de Ancoragem: cada coluna (e as teclas dela) com uma cor
+
+    /* ---------- MINIJOGO: FILA DE ANCORAGEM (MJ-02) ----------
+       Contêineres caem pelas colunas (uma cor por tecla) rumo à doca. O de baixo é o primeiro da fila:
+       o aluno tecla a tecla dele para ancorá-lo. Se ele bater na doca, a doca sofre um dano (perde uma vida).
+       - Dinâmico: a queda acelera conforme a fila avança (de 4,2 s até 2,3 s da entrada à doca) e às vezes
+         chega uma "rajada" de 3 contêineres colados. Depois de um dano, 2,5 s em câmera lenta.
+       - Combo: acertos seguidos acendem o contador e a coluna; tecla errada zera o combo (não tira vida).
+       - Vidas (padrão 3, campo "vidas") e reviver com o Saldo HC, iguais aos do MJ-01. */
     const FILA_CORES = ['#34d399', '#a78bfa', '#fbbf24', '#f472b6', '#38bdf8', '#fb923c'];
     const filaCor = (k) => FILA_CORES[Math.max(0, L.teclas.indexOf(k)) % FILA_CORES.length];
+    const laneOf = (k) => Math.max(0, L.teclas.indexOf(k));
     function filaInit(lv) {
-      game.score = 0; game.meta = lv.meta;
-      game.queue = Array.from({ length: lv.meta }, (_, i) => ({ id: i, k: L.teclas[Math.floor(Math.random() * L.teclas.length)] }));
+      game.score = 0; game.meta = lv.meta; game.paused = true; game.run = filaRun;
+      game.maxLives = lv.vidas || 3; game.lives = game.maxLives; game.revives = 0; game.combo = 0; game.best = 0;
+      game.items = []; game.spawned = 0; game.uid = 0; game.burst = 0; game.slowUntil = 0;
+      const n = L.teclas.length;
       $q('#lc-stage').innerHTML = `
-        <div class="lc-term lc-fila">
-          <div class="lc-lanes" style="grid-template-columns:repeat(${L.teclas.length},1fr)">${L.teclas.map((k) => `<span style="--lc:${filaCor(k)}"></span>`).join('')}</div>
-          <div class="lc-dock" style="grid-template-columns:repeat(${L.teclas.length},1fr)">${L.teclas.map((k) => `<span style="--lc:${filaCor(k)}">${keyLabel(k)}</span>`).join('')}</div>
-          <div class="lc-fila-items" id="lc-fila"></div>
+        <div class="lc-term lc-fila2" id="lc-fl" style="--n:${n}">
+          <div class="lc-hk-bar">
+            <span class="lc-hk-title lc-fl-title"><i></i>Fila de Ancoragem</span>
+            ${livesHTML()}
+            <span class="lc-fl-combo" id="lc-fl-combo" data-on="0">Combo <b>×0</b></span>
+            <span class="lc-hk-time lc-fl-spd" id="lc-fl-spd">1,0×</span>
+          </div>
+          <div class="lc-fl-field" id="lc-fl-field">
+            ${L.teclas.map((k, i) => `<span class="lc-fl-lane" style="--i:${i};--lc:${filaCor(k)}"></span>`).join('')}
+            <div class="lc-fl-items" id="lc-fila"></div>
+            <div class="lc-fl-dock">${L.teclas.map((k, i) => `<span class="lc-fl-slot" data-fk="${k === ' ' ? 'space' : k}" style="--i:${i};--lc:${filaCor(k)}"><b>${keyGlyph(k)}</b><small>${keyLabel(k)}</small></span>`).join('')}</div>
+          </div>
+          <p class="lc-hk-log" id="lc-hk-log"><span>&gt;</span> <em>Doca pronta. Aguardando os contêineres…</em></p>
+          ${startOverlay('Fila de Ancoragem')}
         </div>`;
-      goal(0, game.meta); filaPaint();
+      goal(0, game.meta); bindStart(); kbTarget(null);
     }
-    function filaPaint() {
-      const box = $q('#lc-fila'); if (!box) return;
-      const lane = (k) => (L.teclas.indexOf(k) + .5) / L.teclas.length * 100;
-      const show = game.queue.slice(0, 5);
-      // reaproveita os blocos que já estão na tela, para eles deslizarem até o alvo
-      [...box.children].forEach((el) => { if (!show.some((q) => String(q.id) === el.dataset.id)) el.remove(); });
-      show.forEach((q, i) => {
-        let el = box.querySelector(`[data-id="${q.id}"]`);
-        if (!el) { el = document.createElement('span'); el.className = 'lc-fk'; el.style.setProperty('--lc', filaCor(q.k)); el.dataset.id = q.id; el.textContent = keyGlyph(q.k); el.style.left = lane(q.k) + '%'; el.style.bottom = (18 + 5 * 52) + 'px'; box.appendChild(el); void el.offsetWidth; }
-        el.style.bottom = (18 + i * 52) + 'px'; el.classList.toggle('on', i === 0);
+    /* tempo de queda (s, da entrada até a doca): acelera com o progresso; câmera lenta depois de um dano */
+    const filaFall = () => {
+      const t = 4.2 - (4.2 - 2.3) * Math.min(1, game.score / Math.max(1, game.meta));
+      return performance.now() < game.slowUntil ? t * 1.7 : t;
+    };
+    function filaSpawn() {
+      if (game.score + game.items.length >= game.meta) return;
+      const prev = game.items[game.items.length - 1]?.k;
+      let k = L.teclas[Math.floor(Math.random() * L.teclas.length)];
+      if (k === prev && Math.random() < .5) k = L.teclas[Math.floor(Math.random() * L.teclas.length)]; // menos repetição seguida
+      const it = { id: game.uid++, k, y: 0, el: document.createElement('span') };
+      it.el.className = 'lc-fl-box'; it.el.style.setProperty('--lc', filaCor(k)); it.el.style.setProperty('--i', laneOf(k));
+      it.el.innerHTML = `<b>${keyGlyph(k)}</b>`;
+      $q('#lc-fila')?.appendChild(it.el);
+      game.items.push(it); game.spawned++;
+      // a próxima entrada: rajadas (3 coladas) de vez em quando; o espaço entre elas encolhe com o progresso
+      if (game.burst > 0) game.burst--; else if (game.score > 4 && Math.random() < .16) { game.burst = 2; mjLog('Rajada de contêineres!', 'warn'); }
+      const p = Math.min(1, game.score / Math.max(1, game.meta));
+      game.gap = game.burst > 0 ? .1 : .3 - .1 * p + Math.random() * .08;
+    }
+    function filaRun() {
+      cancelAnimationFrame(game.raf);
+      let last = performance.now();
+      const field = $q('#lc-fl-field');
+      const frame = (t) => {
+        if (!alive || !field?.isConnected) return;
+        game.raf = requestAnimationFrame(frame);
+        const dt = Math.min(.05, (t - last) / 1000); last = t;
+        if (busy || game.paused || document.visibilityState !== 'visible') return;
+        const v = 1 / filaFall();
+        const top = game.items[game.items.length - 1];
+        if (!top || top.y >= game.gap) filaSpawn();
+        const H = field.clientHeight - 74; // a doca ocupa a parte de baixo
+        game.items.forEach((it, i) => {
+          it.y += v * dt;
+          it.el.style.transform = `translate3d(-50%, ${(it.y * H).toFixed(1)}px, 0)`;
+          if (i === 0 && !it.el.classList.contains('on')) { it.el.classList.add('on'); kbTarget(it.k); }
+          it.el.classList.toggle('warn', i === 0 && it.y > .78);
+        });
+        const first = game.items[0];
+        if (first && first.y >= 1) filaCrash(first);
+        const spd = $q('#lc-fl-spd'); if (spd) { const x = `${(4.2 / filaFall()).toFixed(1).replace('.', ',')}×`; if (spd.textContent !== x) spd.textContent = x; }
+      };
+      game.raf = requestAnimationFrame(frame);
+    }
+    function filaCombo() {
+      const c = $q('#lc-fl-combo'); if (!c) return;
+      c.dataset.on = game.combo >= 3 ? (game.combo >= 10 ? '2' : '1') : '0';
+      c.querySelector('b').textContent = `×${game.combo}`;
+      if (game.combo >= 3) replay(c, 'pop');
+    }
+    function filaSlot(k) { return view.querySelector(`.lc-fl-slot[data-fk="${k === ' ' ? 'space' : k}"]`); }
+    /* contêiner bateu na doca: dano */
+    function filaCrash(it) {
+      game.items.shift(); it.el.classList.add('crash'); it.el.style.transform += ' scale(1.2, .4)'; setTimeout(() => it.el.remove(), 450);
+      miss(null); game.combo = 0; filaCombo();
+      replay(filaSlot(it.k), 'hurt'); replay($q('#lc-fl'), 'hurt');
+      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.slowUntil = performance.now() + 2500;
+      if (game.lives <= 0) return filaDown();
+      mjLog(`Um contêiner bateu na doca · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
+      kbTarget(game.items[0]?.k ?? null);
+    }
+    function filaDown() {
+      cancelAnimationFrame(game.raf);
+      mjDown({
+        term: $q('#lc-fl'), titulo: 'Doca danificada!', texto: `Você ancorou <b>${game.score} de ${game.meta}</b> contêineres.`,
+        onResume: () => { game.items.forEach((x) => x.el.remove()); game.items = []; game.slowUntil = performance.now() + 2500; filaRun(); },
+        onRestart: (term) => {
+          game.items.forEach((x) => x.el.remove()); game.items = []; game.score = 0; game.combo = 0; game.burst = 0; filaCombo();
+          term.insertAdjacentHTML('beforeend', startOverlay('Fila de Ancoragem')); bindStart();
+          mjLog('Doca pronta. Aguardando os contêineres…');
+        },
       });
-      kbTarget(game.queue[0]?.k ?? null);
     }
     function filaKey(k) {
-      const first = game.queue[0]; if (!first) return;
+      if (game.paused) return;
+      const first = game.items[0]; if (!first) return;
       if (k === first.k) {
-        hit(k); game.queue.shift(); game.score++; goal(game.score, game.meta); filaPaint();
-        if (game.score >= game.meta) setTimeout(complete, 300);
-      } else { miss(k); shake('.lc-fk.on'); }
+        hit(k); game.items.shift(); game.score++; game.combo++; game.best = Math.max(game.best, game.combo); goal(game.score, game.meta); filaCombo();
+        first.el.classList.remove('on', 'warn'); first.el.classList.add('dock');
+        first.el.style.transform += ' scale(1.25)'; // a escala junto com a posição: o contêiner cresce no lugar, sem escorregar
+        setTimeout(() => first.el.remove(), 420);
+        const slot = filaSlot(k); replay(slot, 'hit');
+        if (slot) { const f = document.createElement('i'); f.className = 'lc-fl-plus'; f.textContent = game.combo >= 3 ? `×${game.combo}` : '+1'; slot.appendChild(f); setTimeout(() => f.remove(), 800); }
+        mjLog(game.combo >= 5 ? `Ancorado! Combo de ${game.combo}` : 'Contêiner ancorado', 'ok');
+        if (game.score >= game.meta) { game.paused = true; cancelAnimationFrame(game.raf); mjLog('Fila completa: doca organizada!', 'ok'); kbTarget(null); return setTimeout(complete, 450); }
+        kbTarget(game.items[0]?.k ?? null);
+      } else {
+        miss(k); game.combo = 0; filaCombo(); replay(first.el, 'shake');
+        mjLog('Tecla errada: o combo zerou', 'warn');
+      }
     }
 
-    /* ---------- MINIJOGO: ECO DA MEMÓRIA ---------- */
-    function memoInit(lv) {
-      game.rounds = lv.rodadas; game.round = 0; game.state = 'idle';
+    /* ---------- MINIJOGO: CORRIDA DAS TECLAS (MJ-03) ----------
+       Um robozinho corre por uma pista à noite; vírus de computador com uma tecla vêm na direção dele.
+       Na faixa de acerto (em frente ao corredor), o aluno tecla a tecla do vírus e o robô o elimina com um laser:
+       quanto mais perto do corredor, melhor a nota (Perfeito / Ótimo / Bom). Teclar antes da faixa
+       é "Cedo demais" e conta como erro (zera o combo, sem tirar vida). Se o vírus chegar ao corredor,
+       ele é atingido e perde uma vida.
+       - A corrida acelera com o progresso (o vírus leva de 4,0 s até 2,2 s para cruzar a pista);
+         às vezes vêm portais em dupla. Depois de um tropeço, 2,5 s mais devagar.
+       - Vidas (padrão 3, campo "vidas") e reviver com o Saldo HC, iguais aos do MJ-01 e MJ-02. */
+    const RUN_X = .2, RUN_ZONE = .3; // posição do corredor e tamanho da faixa de acerto (fração da pista)
+    function corridaInit(lv) {
+      game.score = 0; game.meta = lv.meta; game.paused = true; game.run = corridaRun;
+      game.maxLives = lv.vidas || 3; game.lives = game.maxLives; game.revives = 0; game.combo = 0;
+      game.gates = []; game.uid = 0; game.dist = 0; game.slowUntil = 0; game.pair = 0; game.nextGap = .45;
       $q('#lc-stage').innerHTML = `
-        <div class="lc-memo">
-          <p class="lc-memo-msg" id="lc-memo-msg"></p>
-          <div class="lc-memo-keys">${L.teclas.map((k) => `<button type="button" class="lc-mk${k === ' ' ? ' space' : ''}" data-mk="${k === ' ' ? 'space' : k}">${keyLabel(k)}</button>`).join('')}</div>
+        <div class="lc-term lc-run" id="lc-run">
+          <div class="lc-hk-bar">
+            <span class="lc-hk-title lc-run-title"><i></i>Corrida das Teclas</span>
+            ${livesHTML()}
+            <span class="lc-fl-combo" id="lc-fl-combo" data-on="0">Combo <b>×0</b></span>
+            <span class="lc-hk-time" id="lc-run-m">0 m</span>
+          </div>
+          <div class="lc-run-world" id="lc-run-world">
+            <div class="lc-run-sky" aria-hidden="true"><i class="moon"></i></div>
+            <div class="lc-run-par far" aria-hidden="true"><div></div></div>
+            <div class="lc-run-par near" aria-hidden="true"><div></div></div>
+            <div class="lc-run-ground" aria-hidden="true"><div></div></div>
+            <div class="lc-run-zone" aria-hidden="true"><span>Faixa de acerto</span></div>
+            <div class="lc-run-gates" id="lc-run-gates"></div>
+            <i class="lc-laser" id="lc-laser"></i>
+            <div class="lc-runner" id="lc-runner" aria-hidden="true">
+              <span class="lc-runner-body"><i class="eye"></i><i class="eye"></i></span>
+              <span class="lc-runner-gun"></span>
+              <span class="lc-runner-legs"><i></i><i></i></span>
+              <span class="lc-runner-shadow"></span>
+            </div>
+            <b class="lc-run-rate" id="lc-run-rate"></b>
+          </div>
+          <p class="lc-hk-log" id="lc-hk-log"><span>&gt;</span> <em>Vírus à vista! Tecle a tecla de cada vírus quando ele entrar na faixa.</em></p>
+          ${startOverlay('Corrida das Teclas')}
         </div>`;
-      view.querySelectorAll('.lc-mk').forEach((b) => b.addEventListener('pointerdown', (e) => { e.preventDefault(); press(b.dataset.mk === 'space' ? ' ' : b.dataset.mk); }));
-      goal(0, game.rounds.length);
-      setTimeout(memoShow, 600);
+      goal(0, game.meta); bindStart(); kbTarget(null);
     }
-    const memoMsg = (t, cls = '') => { const m = $q('#lc-memo-msg'); if (m) { m.textContent = t; m.className = 'lc-memo-msg ' + cls; } };
-    const memoKey = (k) => view.querySelector(`.lc-mk[data-mk="${k === ' ' ? 'space' : k}"]`);
-    async function memoShow() {
-      if (!alive || busy || !$q('#lc-memo-msg')) return;
-      const len = game.rounds[game.round];
-      game.seq = Array.from({ length: len }, () => L.teclas[Math.floor(Math.random() * L.teclas.length)]);
-      game.input = 0; game.state = 'show';
-      memoMsg(`Memorize a sequência de ${len} teclas…`, 'show');
-      await sleep(700);
-      for (const k of game.seq) {
-        if (!alive || !$q('#lc-memo-msg')) return;
-        const b = memoKey(k); b?.classList.add('lit'); kbTarget(k); await sleep(520); b?.classList.remove('lit'); kbTarget(null); await sleep(300);
-      }
-      game.state = 'play'; memoMsg('Sua vez! Repita a sequência.', 'play'); // na sua vez, o teclado não entrega a resposta
+    const runTravel = () => {
+      const t = 4 - 1.8 * Math.min(1, game.score / Math.max(1, game.meta));
+      return performance.now() < game.slowUntil ? t * 1.6 : t;
+    };
+    function corridaSpawn() {
+      if (game.score + game.gates.length >= game.meta) return;
+      const prev = game.gates[game.gates.length - 1]?.k;
+      let k = L.teclas[Math.floor(Math.random() * L.teclas.length)];
+      if (k === prev && Math.random() < .5) k = L.teclas[Math.floor(Math.random() * L.teclas.length)];
+      const g = { id: game.uid++, k, x: 1.08, el: document.createElement('span') };
+      g.el.className = 'lc-gate lc-virus'; g.el.style.setProperty('--lc', filaCor(k)); g.el.style.setProperty('--r', `${Math.random() * 360}deg`);
+      g.el.innerHTML = `<span class="vbody"><i class="spikes"></i><i class="core"><u></u><u></u></i></span><b>${keyGlyph(k)}</b>`;
+      $q('#lc-run-gates')?.appendChild(g.el);
+      game.gates.push(g);
+      // distância até o próximo vírus: duplas de vez em quando; encolhe com o progresso
+      const p = Math.min(1, game.score / Math.max(1, game.meta));
+      if (game.pair > 0) { game.pair--; game.nextGap = .2; }
+      else if (game.score > 3 && Math.random() < .18) { game.pair = 1; game.nextGap = .2; }
+      else game.nextGap = .5 - .14 * p + Math.random() * .12;
     }
-    function memoPress(k) {
-      if (game.state !== 'play') return;
-      const b = memoKey(k);
-      if (k === game.seq[game.input]) {
-        hit(k); game.input++; replay(b, 'good'); setTimeout(() => b?.classList.remove('good'), 330);
-        if (game.input === game.seq.length) {
-          game.state = 'idle'; game.round++; goal(game.round, game.rounds.length);
-          if (game.round >= game.rounds.length) { memoMsg('Sequência correta!', 'ok'); return setTimeout(complete, 700); }
-          memoMsg('Sequência correta! Agora uma maior…', 'ok'); setTimeout(memoShow, 1200);
-        }
+    function corridaRun() {
+      cancelAnimationFrame(game.raf);
+      let last = performance.now();
+      const world = $q('#lc-run-world'), far = world?.querySelector('.far > div'), near = world?.querySelector('.near > div'), ground = world?.querySelector('.lc-run-ground > div');
+      $q('#lc-runner')?.classList.add('go');
+      const frame = (t) => {
+        if (!alive || !world?.isConnected) return;
+        game.raf = requestAnimationFrame(frame);
+        const dt = Math.min(.05, (t - last) / 1000); last = t;
+        if (busy || game.paused || document.visibilityState !== 'visible') return;
+        const v = 1 / runTravel(), W = world.clientWidth;
+        game.dist += v * dt;
+        // cenário em camadas (só transform): longe devagar, perto rápido
+        far.style.transform = `translate3d(${-((game.dist * W * .15) % (W * .5))}px,0,0)`;
+        near.style.transform = `translate3d(${-((game.dist * W * .45) % (W * .5))}px,0,0)`;
+        ground.style.transform = `translate3d(${-((game.dist * W) % 80)}px,0,0)`;
+        const lastG = game.gates[game.gates.length - 1];
+        if (!lastG || lastG.x <= 1.08 - game.nextGap) corridaSpawn();
+        game.gates.forEach((g, i) => {
+          g.x -= v * dt;
+          g.el.style.transform = `translate3d(${(g.x * W).toFixed(1)}px,0,0)`;
+          const inZone = g.x - RUN_X <= RUN_ZONE;
+          if (i === 0) { if (!g.el.classList.contains('on')) { g.el.classList.add('on'); kbTarget(g.k); } g.el.classList.toggle('zone', inZone); }
+        });
+        const first = game.gates[0];
+        if (first && first.x <= RUN_X - .015) corridaCrash(first);
+        const m = $q('#lc-run-m'); if (m) { const txt = `${Math.round(game.dist * 40)} m`; if (m.textContent !== txt) m.textContent = txt; }
+      };
+      game.raf = requestAnimationFrame(frame);
+    }
+    /* laser: sai do canhão do robô até o vírus (largura medida na hora) */
+    function corridaLaser(g) {
+      const las = $q('#lc-laser'), world = $q('#lc-run-world'); if (!las || !world) return;
+      const W = world.clientWidth, x0 = RUN_X * W + 36, x1 = g.x * W - 20;
+      las.style.left = `${x0}px`; las.style.width = `${Math.max(10, x1 - x0)}px`; las.style.setProperty('--lc', g.el.style.getPropertyValue('--lc'));
+      replay(las, 'fire');
+    }
+    function corridaRate(txt, cls) { const r = $q('#lc-run-rate'); if (r) { r.textContent = txt; r.className = 'lc-run-rate ' + cls; replay(r, 'show'); } }
+    function corridaCrash(g) {
+      game.gates.shift(); g.el.classList.add('crash'); setTimeout(() => g.el.remove(), 450);
+      miss(null); game.combo = 0; filaCombo();
+      replay($q('#lc-runner'), 'trip'); replay($q('#lc-run'), 'hurt'); corridaRate('Infectado!', 'bad');
+      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.slowUntil = performance.now() + 2500;
+      if (game.lives <= 0) return corridaDown();
+      mjLog(`Um vírus atingiu o robô · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
+      kbTarget(game.gates[0]?.k ?? null);
+    }
+    function corridaDown() {
+      cancelAnimationFrame(game.raf); $q('#lc-runner')?.classList.remove('go');
+      mjDown({
+        term: $q('#lc-run'), titulo: 'Robô infectado!', texto: `Você eliminou <b>${game.score} de ${game.meta}</b> vírus.`,
+        onResume: () => { game.gates.forEach((x) => x.el.remove()); game.gates = []; game.nextGap = .45; game.slowUntil = performance.now() + 2500; corridaRun(); },
+        onRestart: (term) => {
+          game.gates.forEach((x) => x.el.remove()); game.gates = []; game.score = 0; game.combo = 0; game.dist = 0; game.pair = 0; game.nextGap = .45; filaCombo();
+          term.insertAdjacentHTML('beforeend', startOverlay('Corrida das Teclas')); bindStart();
+          mjLog('Vírus à vista! Tecle a tecla de cada vírus quando ele entrar na faixa.');
+        },
+      });
+    }
+    function corridaKey(k) {
+      if (game.paused) return;
+      const g = game.gates[0]; if (!g) return;
+      const d = g.x - RUN_X;
+      if (k === g.k && d <= RUN_ZONE) {
+        hit(k); game.gates.shift(); game.score++; game.combo++; goal(game.score, game.meta); filaCombo();
+        const [txt, cls] = d <= .07 ? ['Perfeito!', 'perfect'] : d <= .17 ? ['Ótimo!', 'great'] : ['Bom', 'good'];
+        corridaRate(game.combo >= 3 ? `${txt} ×${game.combo}` : txt, cls);
+        g.el.classList.remove('on', 'zone'); g.el.classList.add('zap'); setTimeout(() => g.el.remove(), 520);
+        corridaLaser(g); replay($q('#lc-runner'), 'shoot');
+        mjLog(game.combo >= 5 ? `Vírus eliminado · combo de ${game.combo}` : 'Vírus eliminado', 'ok');
+        if (game.score >= game.meta) { game.paused = true; cancelAnimationFrame(game.raf); $q('#lc-runner')?.classList.remove('go'); mjLog('Pista limpa: todos os vírus eliminados!', 'ok'); kbTarget(null); return setTimeout(complete, 500); }
+        kbTarget(game.gates[0]?.k ?? null);
       } else {
-        miss(k); game.state = 'idle'; b?.classList.add('wrong'); setTimeout(() => b?.classList.remove('wrong'), 450);
-        memoMsg('Tecla errada. Vamos de novo!', 'err'); setTimeout(memoShow, 1400);
+        miss(k); game.combo = 0; filaCombo(); replay(g.el, 'shake');
+        const early = k === g.k;
+        corridaRate(early ? 'Cedo demais' : 'Tecla errada', 'bad');
+        mjLog(early ? 'Cedo demais: espere o vírus entrar na faixa' : 'Tecla errada: o combo zerou', 'warn');
       }
     }
 
@@ -1442,7 +1653,7 @@
       const ov = $q('#lc-start'); if (!ov || game.counting) return; game.counting = true;
       for (const n of [3, 2, 1]) { if (!ov.isConnected) return; ov.innerHTML = `<b class="lc-count">${n}</b>`; await sleep(800); }
       if (!ov.isConnected) return;
-      ov.remove(); game.paused = false; hackerRun();
+      ov.remove(); game.paused = false; (game.run || hackerRun)();
     }
     function shake(sel) { replay(view.querySelector(sel), 'shake'); }
 
@@ -1455,7 +1666,7 @@
         kb?.flash(k, false); return shake('.lc-new h3 kbd');
       }
       if (lv.tipo === 'typing') return typingKey(k);
-      if (lv.tipo === 'memoria') return memoPress(k);
+      if (lv.tipo === 'corrida') return corridaKey(k);
       if (lv.tipo === 'fila') return filaKey(k);
       if (lv.tipo === 'hacker') { if (game.paused) return; return hackerKey(k); }
     }
@@ -1468,7 +1679,7 @@
       if (k === 'escape' && kbOpen) { e.preventDefault(); return kbShow(false); }
       const lv = L.niveis[st.lvl];
       if (k === 'backspace' && lv?.tipo === 'typing' && !game.intro && !busy) { e.preventDefault(); return typingBack(); }
-      if (k === 'enter' && lv?.tipo === 'hacker' && game.paused) { e.preventDefault(); return countdown(); }
+      if (k === 'enter' && (lv?.tipo === 'hacker' || lv?.tipo === 'fila' || lv?.tipo === 'corrida') && game.paused) { e.preventDefault(); return countdown(); }
       if (game.intro === 'found' && k === 'enter') { e.preventDefault(); kb?.flash('enter', true); game.introDone = true; return smoothResize(() => typingInit(lv)); }
       if (game.intro && k.length === 1) { e.preventDefault(); return press(k); }
       if (L.teclas.includes(k)) { e.preventDefault(); return press(k); }

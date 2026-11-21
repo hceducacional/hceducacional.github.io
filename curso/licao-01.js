@@ -20,7 +20,7 @@
               apresenta   → um cartão explicando o desafio novo antes de começar.
    - hacker:  "Varredura Hacker" — tecle o alvo antes do tempo acabar (meta = acertos)
    - fila:    "Fila de Ancoragem" — tecle a tecla que chega no alvo (meta = teclas)
-   - memoria: "Eco da Memória" — repita a sequência que acende (uma rodada por tamanho)
+   - corrida: "Corrida das Teclas" — tecle a tecla de cada vírus quando ele entrar na faixa; o robô o elimina com um laser (meta = vírus)
    ========================================================= */
 (() => {
   // teclado ABNT2: o que cada mão digita com a técnica de dez dedos
@@ -43,7 +43,7 @@
     cards: [
       ['F, J e Espaço', 'Os dois relevos da linha de referência e os polegares: a base de toda a digitação.'],
       ['A sombra das palavras', 'Digite o ritmo de frases reais: cada letra vira F ou J conforme a mão que a digitaria.'],
-      ['Minijogos', 'Desafios de reflexo, ritmo e memória: Varredura Hacker, Fila de Ancoragem e Eco da Memória.'],
+      ['Minijogos', 'Desafios de reflexo e ritmo: Varredura Hacker, Fila de Ancoragem e Corrida das Teclas.'],
     ],
     niveis: [
       /* 1 · DESCOBERTA */
@@ -68,7 +68,7 @@
           exemplo: sombra('bom dia'),
         },
       }),
-      { tipo: 'memoria', titulo: 'Minijogo: Eco da Memória', dica: 'Preste atenção à ordem em que as teclas acendem e repita exatamente igual.', rodadas: [3, 4] },
+      { tipo: 'corrida', titulo: 'Minijogo: Corrida das Teclas', dica: 'Vírus à vista! Quando um vírus entrar na faixa verde, tecle a tecla dele e o robô dispara o laser. Quanto mais perto, melhor a nota!', meta: 25 },
       F({ titulo: 'Sombra: bom dia, turma', frase: 'Bom dia, turma!', dica: 'Repare: o B, o D e o T são da mão esquerda; o O, o M e o I, da direita.' }),
       F({ titulo: 'Sombra: cada mão tem o seu lado', frase: 'A mão esquerda faz o F e a direita faz o J', dica: 'Uma frase sobre você mesmo! Siga a cor da letra pequena: amarelo é esquerda, azul é direita.' }),
       { tipo: 'hacker', titulo: 'Minijogo: Varredura Hacker intermediária', dica: 'Intercepte os pacotes de dados alternando a digitação rápida dentro do tempo.', meta: 15, velocidade: 1.8 },
@@ -88,7 +88,7 @@
       F({ titulo: 'Sombra: o que vem por aí', frase: 'Na próxima lição as letras U, R e K entram em cena', dica: 'Olhe a letra pequena do U, do R e do K: você já sabe de que lado cada uma vai ficar.' }),
       { tipo: 'fila', titulo: 'Minijogo: Fila de Ancoragem de precisão extrema', dica: 'O desafio final da fila! Tecle 80 teclas com velocidade e coordenação.', meta: 80 },
       F({ titulo: 'Sombra: o dia a dia no computador', frase: 'Escrever um e-mail, fazer um trabalho, buscar uma vaga: tudo começa no teclado', dica: 'Digitar bem abre portas. Este é o tipo de texto que você vai escrever de verdade.' }),
-      { tipo: 'memoria', titulo: 'Minijogo: Memória suprema', dica: 'Sequências de até 6 teclas para fixar de vez a linha de referência.', rodadas: [4, 5, 6] },
+      { tipo: 'corrida', titulo: 'Minijogo: Corrida das Teclas turbo', dica: 'A pista mais longa da lição: vírus em dupla e o robô cada vez mais rápido. Busque o Perfeito!', meta: 40 },
       F({ titulo: 'O grande texto final', frase: 'Parabéns! Você chegou ao fim da primeira lição. Seus indicadores já sabem o caminho de casa e seus polegares cuidam dos espaços. Agora é seguir em frente', dica: 'A consolidação de tudo: o texto mais longo da lição, correndo como numa máquina de escrever.' }),
       { tipo: 'hacker', titulo: 'Desafio final: Varredura Hacker suprema', dica: 'Defesa total! Responda rápido aos fluxos alternados.', meta: 25, velocidade: 3.2 },
     ],
