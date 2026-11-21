@@ -405,7 +405,7 @@
 
     /* ---------- tela de boas-vindas ---------- */
     function welcome() {
-      phase = 'welcome'; paintProgress(); shell.classList.add('is-wel');
+      phase = 'welcome'; paintProgress(); shell.classList.add('is-wel'); kbPopDrop();
       const resume = saved && !saved.done && st.lvl > 0;
       const finished = saved?.done;
       const p = saved || null, tot = p ? p.hits + p.errors : 0;
@@ -527,12 +527,10 @@
       </div>`;
       paintStats();
       gaugeBuild();
-      // só ao começar do nível 1 o teclado aparece por 5 s (para o aluno ver que ele existe);
-      // ao continuar a lição, já começa recolhido
-      kbOpen = st.lvl === 0;
+      // o teclado virtual começa fechado: só aparece quando o aluno clica em "Ver teclado virtual"
+      kbOpen = false;
       presses = []; speedShown = 0; speedRun();
       level();
-      if (kbOpen) kbTimer = setTimeout(() => kbShow(false), 5000);
       clearInterval(tick);
       tick = setInterval(() => {
         if (!view.isConnected || !alive) return stop();
@@ -750,12 +748,35 @@
        últimos 3 segundos; enche quando o aluno digita rápido e vai esvaziando quando ele para.
        Cor de azul (devagar) a vermelho (bem rápido); PPM = (teclas por minuto) ÷ 5. */
     const SPEED_WIN = 3000, SPEED_MAX = 60; // PPM em que a pílula fica cheia
+    const reduceFx = matchMedia('(prefers-reduced-motion: reduce)').matches;
     let presses = [], speedShown = 0, speedTick = null;
     // roda só enquanto há algo para mostrar: começa na tecla certa (speedWake) e para sozinho quando a pílula zera
     function speedRun() {
       clearInterval(speedTick); speedTick = null;
       const fill = $q('#lc-speed-fill'); if (fill) { fill.style.width = '0%'; fill.classList.add('zero'); }
       const num = $q('#lc-ppm'); if (num) num.textContent = '0';
+      speedHeat(0);
+    }
+    /* calor do medidor: 0 parado · 1 aquecendo · 2 rápido (chamas pequenas e faíscas) · 3 pegando fogo */
+    const HEAT_AT = [10, 22, 35], HEAT_TXT = ['Velocidade', 'Aquecendo…', 'Rápido!', 'Pegando fogo!'];
+    function speedHeat(h) {
+      const box = $q('#lc-speed'); if (!box || box.dataset.heat === String(h)) return;
+      const up = h > +box.dataset.heat;
+      box.dataset.heat = h;
+      const lbl = $q('#lc-spd-lbl'); if (lbl) lbl.textContent = HEAT_TXT[h];
+      if (up && h >= 2) replay(box, 'boost');
+    }
+    /* faíscas saindo da ponta da barra */
+    function speedSparks(h, t) {
+      const fx = $q('#lc-spd-fx'); if (!fx || h < 2 || fx.childElementCount > 26) return;
+      const n = h === 3 ? 3 : Math.random() < .6 ? 1 : 0;
+      for (let i = 0; i < n; i++) {
+        const sp = document.createElement('i');
+        const a = (-150 + Math.random() * 120) * Math.PI / 180, d = 16 + Math.random() * (h === 3 ? 34 : 20);
+        sp.style.cssText = `left:${(t * 100).toFixed(1)}%;--dx:${(Math.cos(a) * d).toFixed(1)}px;--dy:${(Math.sin(a) * d).toFixed(1)}px;--s:${(.6 + Math.random() * .8).toFixed(2)};--d:${Math.round(420 + Math.random() * 380)}ms`;
+        sp.addEventListener('animationend', () => sp.remove(), { once: true });
+        fx.appendChild(sp);
+      }
     }
     function speedWake() {
       if (speedTick) return;
@@ -771,8 +792,10 @@
         if (fill && num) {
           const t = Math.min(1, speedShown / SPEED_MAX);
           fill.style.width = `${(t * 100).toFixed(1)}%`;
-          fill.style.setProperty('--h', Math.round(215 - 215 * t)); // 215 = azul … 0 = vermelho
+          fill.style.setProperty('--h', Math.round(215 - 215 * Math.min(1, speedShown / HEAT_AT[2]))); // 215 = azul … 0 = vermelho (vermelho quando pega fogo)
           num.textContent = Math.round(speedShown);
+          const h = speedShown >= HEAT_AT[2] ? 3 : speedShown >= HEAT_AT[1] ? 2 : speedShown >= HEAT_AT[0] ? 1 : 0;
+          speedHeat(h); if (!reduceFx) speedSparks(h, t);
         }
         if (!speedShown && !presses.length) { clearInterval(speedTick); speedTick = null; fill?.classList.add('zero'); }
       }, 80);
@@ -780,20 +803,49 @@
     const KB_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>';
     const kbHTML = () => `
       <div class="lc-kbar">
-        <span class="lc-speed" role="img" aria-label="Velocidade de digitação"><span class="lc-speed-pill"><i id="lc-speed-fill"></i></span><b id="lc-ppm">0</b><small>PPM</small></span>
-        <button type="button" class="lc-kbtn${kbOpen ? ' open' : ''}" id="lc-kbtn" aria-expanded="${kbOpen}" aria-controls="lc-kbwrap">${KB_ICO}<span>${kbOpen ? 'Ocultar teclado' : 'Ver teclado virtual'}</span><b aria-hidden="true">⌄</b></button>
-      </div>
-      <div class="lc-kbwrap${kbOpen ? ' open' : ''}" id="lc-kbwrap"><div class="lc-kb" id="lc-kb"></div></div>`;
-    function kbShow(open) {
-      kbOpen = open; clearTimeout(kbTimer);
-      const w = $q('#lc-kbwrap'), b = $q('#lc-kbtn'); if (!w || !b) return;
-      w.classList.toggle('open', open); b.classList.toggle('open', open);
+        <span class="lc-speed" id="lc-speed" data-heat="0" role="img" aria-label="Velocidade de digitação">
+          <span class="lc-spd-key" aria-hidden="true"><i class="fl f1"></i><i class="fl f2"></i><i class="fl f3"></i><b><img src="assets/icons/logo-hc.webp" alt="" draggable="false"></b></span>
+          <span class="lc-spd-body">
+            <span class="lc-spd-top"><em id="lc-spd-lbl">${HEAT_TXT[0]}</em><span class="lc-spd-num"><b id="lc-ppm">0</b><small>PPM</small></span></span>
+            <span class="lc-spd-track"><span class="lc-speed-pill"><i id="lc-speed-fill"></i></span><span class="lc-spd-fx" id="lc-spd-fx"></span></span>
+          </span>
+        </span>
+        <button type="button" class="lc-kbtn${kbOpen ? ' open' : ''}" id="lc-kbtn" aria-expanded="${kbOpen}" aria-controls="lc-kbpop">${KB_ICO}<span>${kbOpen ? 'Ocultar teclado' : 'Ver teclado virtual'}</span><b aria-hidden="true">⌄</b></button>
+      </div>`;
+    /* teclado virtual numa janela suspensa, presa embaixo da tela (fora do cartão, para não mexer no layout);
+       fica no <body> e recebe as cores do cenário */
+    let kbPop = null;
+    function kbPopEl() {
+      if (kbPop?.isConnected) return kbPop;
+      kbPop = document.createElement('div');
+      kbPop.className = 'lc-kbpop'; kbPop.id = 'lc-kbpop';
+      kbPop.setAttribute('role', 'dialog'); kbPop.setAttribute('aria-label', 'Teclado virtual');
+      kbPop.innerHTML = `<div class="lc-kbpop-head"><span>${KB_ICO}Teclado virtual</span><b class="lc-kbpop-time" title="Fecha sozinho em 10 segundos"><i></i></b><button type="button" class="lc-kbpop-x" aria-label="Fechar o teclado virtual">×</button></div><div class="lc-kb"></div>`;
+      kbPop.querySelector('.lc-kbpop-x').addEventListener('click', (e) => { e.currentTarget.blur(); kbShow(false); });
+      document.body.appendChild(kbPop);
+      return kbPop;
+    }
+    function kbPopDrop() { kb?.destroy(); kb = null; kbPop?.remove(); kbPop = null; }
+    const KB_AUTO = 10000; // o teclado fecha sozinho depois de 10 s (a barrinha do topo mostra o tempo)
+    function kbShow(open, restart = true) {
+      kbOpen = open;
+      if (restart) {
+        clearTimeout(kbTimer);
+        if (open) kbTimer = setTimeout(() => kbShow(false), KB_AUTO);
+        const bar = kbPop?.querySelector('.lc-kbpop-time i');
+        if (bar) { bar.style.transition = 'none'; bar.style.transform = 'scaleX(1)'; void bar.offsetWidth; if (open) { bar.style.transition = `transform ${KB_AUTO}ms linear`; bar.style.transform = 'scaleX(0)'; } }
+      }
+      if (kbPop) { ['--a1', '--a2', '--a3'].forEach((v) => kbPop.style.setProperty(v, shell.style.getPropertyValue(v))); kbPop.classList.toggle('open', open); }
+      const b = $q('#lc-kbtn'); if (!b) return;
+      b.classList.toggle('open', open);
       b.setAttribute('aria-expanded', open); b.querySelector('span').textContent = open ? 'Ocultar teclado' : 'Ver teclado virtual';
     }
     function kbMount() {
       kb?.destroy(); kb = null;
-      const box = $q('#lc-kb'); if (!box || !window.HC_teclado) return;
+      if (!window.HC_teclado) return;
+      const box = kbPopEl().querySelector('.lc-kb'); box.innerHTML = '';
       kb = window.HC_teclado(box);
+      kbShow(kbOpen, false); // trocar de nível não reinicia a contagem
       $q('#lc-kbtn')?.addEventListener('click', (e) => { kbShow(!kbOpen); e.currentTarget.blur(); }); // a barra de espaço volta a digitar, e não a apertar o botão
     }
     const kbTarget = (k) => kb?.target(k);
@@ -830,7 +882,9 @@
       main.style.setProperty('--c1', `rgb(${t.join(' ')})`); // a cor do cartão desliza de um nível para o outro
       main.classList.remove('enter'); void main.offsetWidth; main.classList.add('enter');
       const nn = String(st.lvl + 1).padStart(2, '0');
+      main.classList.remove('is-typing');
       main.innerHTML = `
+        <div class="lc-fun" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="o1"></i><i class="o2"></i><i class="x1">+</i><i class="x2">+</i><i class="x3">✦</i><i class="x4">✦</i><i class="q1"></i></div>
         <span class="lc-lv-mark" aria-hidden="true">${nn}</span>
         <div class="lc-lv-head">
           <span class="lc-lv-av">${nn}</span>
@@ -941,7 +995,7 @@
       over.hidden = false;
       over.innerHTML = `
         <div class="lc-cel" role="status" aria-live="polite">
-          <div class="lc-cel-rays" aria-hidden="true"></div>
+          <div class="lc-cel-radar" aria-hidden="true"><i></i><i></i><i></i></div>
           <div class="lc-cel-badge" aria-hidden="true">
             <svg viewBox="0 0 120 120"><circle class="trk" cx="60" cy="60" r="52"/><circle class="arc" cx="60" cy="60" r="52" pathLength="100"/></svg>
             <span class="lc-cel-num">${nn}</span>
@@ -1019,46 +1073,65 @@
       game.intro = null; game.t0 = 0;
       game.pos = 0; game.text = lv.texto;
       const g = lv.sombra || ''; // a frase de verdade por trás do ritmo (uma letra por tecla)
-      // máquina de escrever: o texto numa linha só que corre para a esquerda, mantendo o cursor no mesmo lugar
+      // folha de papel com várias linhas: cada palavra (com o espaço depois dela) fica inteira na mesma linha
+      const ch = (c, i) => `<span class="lc-ch${c === ' ' ? ' sp' : g ? (c === 'f' ? ' l' : ' r') : ''}" data-i="${i}"${g && c !== ' ' ? ` data-g="${esc(g[i])}"` : ''}>${c === ' ' ? '&nbsp;' : esc(c)}</span>`;
+      const words = [...lv.texto.matchAll(/\S+\s*|\s+/g)].map((m) => `<span class="lc-wd">${[...m[0]].map((c, j) => ch(c, m.index + j)).join('')}</span>`).join('');
+      $q('#lc-main').classList.add('is-typing');
       $q('#lc-stage').innerHTML = `
-        <div class="lc-line${g ? ' ghost' : ''}" id="lc-line">
-          <div class="lc-line-win"><div class="lc-line-text" id="lc-line-text">${[...lv.texto].map((c, i) => `<span class="lc-ch${c === ' ' ? ' sp' : g ? (c === 'f' ? ' l' : ' r') : ''}" data-i="${i}"${g && c !== ' ' ? ` data-g="${esc(g[i])}"` : ''}>${c === ' ' ? '&nbsp;' : esc(c)}</span>`).join('')}</div></div>
+        <div class="lc-paper${g ? ' ghost' : ''}" id="lc-line">
+          <div class="lc-paper-win" id="lc-win"><div class="lc-line-text" id="lc-line-text">${words}</div></div>
           <span class="lc-start-tip" id="lc-start-tip">Comece a digitar</span>
+          <div class="lc-paper-foot"><b class="lc-pbar"><i id="lc-pbar"></i></b><span class="lc-pcount" id="lc-pcount">0 / ${lv.texto.length}</span></div>
         </div>
         <p class="lc-home">${g ? 'Letra da <b class="l">mão esquerda</b> → <kbd>F</kbd> · letra da <b class="r">mão direita</b> → <kbd>J</kbd> · entre as palavras, <kbd>Espaço</kbd>' : 'Volte os dedos para a posição inicial <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd> – <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>Ç</kbd> depois de cada tecla'}</p>`;
       game.chs = [...view.querySelectorAll('#lc-line-text .lc-ch')];
-      typeMeasure();
       game.chs[0]?.classList.add('cur');
+      typeMeasure();
       kbTarget(game.text[0] ?? null);
       if (!game.onResize) {
         const mine = game, fn = () => { if (game !== mine || !mine.chs?.[0]?.isConnected) return removeEventListener('resize', fn); typeMeasure(); };
         game.onResize = fn; addEventListener('resize', fn);
       }
     }
-    /* mede uma vez onde cada letra fica; se o texto não cabe, liga o modo "máquina de escrever" */
+    /* mede em que linha cada letra caiu; a janela mostra 3 linhas e sobe quando o cursor chega na terceira */
+    const TYPE_ROWS = 3;
     function typeMeasure() {
-      const line = $q('#lc-line'), strip = $q('#lc-line-text'); if (!line || !strip) return;
-      line.classList.remove('roll'); strip.style.transform = '';
-      const win = strip.parentElement.clientWidth;
-      game.roll = strip.scrollWidth > win - 8;
-      line.classList.toggle('roll', game.roll);
-      game.win = win;
-      game.mid = game.chs.map((el) => el.offsetLeft + el.offsetWidth / 2);
+      const paper = $q('#lc-line'), win = $q('#lc-win'), strip = $q('#lc-line-text'); if (!paper || !strip || !game.chs) return;
+      strip.style.transition = 'none'; strip.style.transform = ''; paper.classList.remove('one');
+      const top0 = strip.getBoundingClientRect().top, tops = [], bots = [];
+      game.lineOf = game.chs.map((el) => {
+        const r = el.getBoundingClientRect(), t = Math.round(r.top - top0);
+        let k = tops.findIndex((v) => Math.abs(v - t) < 6);
+        if (k < 0) { tops.push(t); bots.push(0); k = tops.length - 1; }
+        bots[k] = Math.max(bots[k], Math.ceil(r.bottom - top0));
+        return k;
+      });
+      game.tops = tops;
+      paper.classList.toggle('one', tops.length === 1); // texto curto: uma linha centralizada
+      win.style.height = `${bots[Math.min(TYPE_ROWS, tops.length) - 1] + 4}px`;
+      game.off = -1;
       typeScroll(true);
+      const tip = $q('#lc-start-tip'), c0 = game.chs[0];
+      if (tip && c0) { const pr = paper.getBoundingClientRect(), r = c0.getBoundingClientRect(); const half = tip.offsetWidth / 2 + 10; tip.style.left = `${Math.min(Math.max(r.left - pr.left + r.width / 2, half), pr.width - half)}px`; tip.style.setProperty('--ax', `${r.left - pr.left + r.width / 2 - Math.min(Math.max(r.left - pr.left + r.width / 2, half), pr.width - half)}px`); tip.style.top = `${r.top - pr.top}px`; }
     }
     function typeScroll(instant) {
-      if (!game.roll) return;
-      const strip = $q('#lc-line-text'); if (!strip) return;
-      const x = game.mid[Math.min(game.pos, game.mid.length - 1)] ?? 0;
-      const anchor = game.win * 0.42; // o cursor fica parado um pouco antes do meio, como o carro de uma máquina de escrever
+      const strip = $q('#lc-line-text'); if (!strip || !game.tops) return;
+      const line = game.lineOf[Math.min(game.pos, game.chs.length - 1)] || 0;
+      const off = Math.max(0, Math.min(line - 1, game.tops.length - TYPE_ROWS));
+      if (off === game.off) return;
+      game.off = off;
       strip.style.transition = instant ? 'none' : '';
-      strip.style.transform = `translate3d(${Math.round(anchor - x)}px,0,0)`;
+      strip.style.transform = `translate3d(0,${-game.tops[off]}px,0)`;
     }
     function typingPaint() {
       const prev = game.chs[game.pos - 1], cur = game.chs[game.pos];
       prev?.classList.remove('cur'); prev?.classList.add('ok');
       cur?.classList.add('cur');
-      if (game.pos === 1) $q('#lc-start-tip')?.remove();
+      if (prev && prev.parentElement !== cur?.parentElement) replay(prev.parentElement, 'pop'); // palavra terminada: um pulinho
+      if (game.pos === 1) $q('#lc-start-tip')?.classList.add('gone');
+      const bar = $q('#lc-pbar'), cnt = $q('#lc-pcount');
+      if (bar) bar.style.width = `${(game.pos / game.text.length) * 100}%`;
+      if (cnt) cnt.textContent = `${game.pos} / ${game.text.length}`;
       typeScroll();
       kbTarget(game.text[game.pos] ?? null);
     }
@@ -1072,6 +1145,7 @@
       } else {
         miss(k);
         const cur = view.querySelector(`.lc-ch[data-i="${game.pos}"]`);
+        cur?.classList.add('had'); // a letra que teve erro fica marcada depois de acertada
         replay(cur, 'bad'); setTimeout(() => cur?.classList.remove('bad'), 480);
       }
     }
@@ -1234,6 +1308,7 @@
       if (e.target.closest?.('input, textarea, select')) return;
       const k = e.key === ' ' || e.key === 'Spacebar' ? ' ' : (e.key || '').toLowerCase();
       if (phase !== 'play') return;
+      if (k === 'escape' && kbOpen) { e.preventDefault(); return kbShow(false); }
       const lv = L.niveis[st.lvl];
       if (k === 'enter' && lv?.tipo === 'hacker' && game.paused) { e.preventDefault(); return countdown(); }
       if (game.intro === 'found' && k === 'enter') { e.preventDefault(); kb?.flash('enter', true); game.introDone = true; return smoothResize(() => typingInit(lv)); }
@@ -1243,12 +1318,12 @@
       if (lv?.tipo === 'typing' && k.length === 1 && /\S/.test(k) && !busy) { miss(k); shake(`.lc-ch[data-i="${game.pos}"]`); }
     }
     document.addEventListener('keydown', onKey);
-    function stop() { content?.classList.remove('lc-page'); bgWatch.disconnect(); dropBg(); alive = false; clearTimeout(kbTimer); clearInterval(speedTick); clearInterval(tick); clearInterval(game.timer); clearInterval(gs.glint); kb?.destroy(); document.removeEventListener('keydown', onKey); }
+    function stop() { content?.classList.remove('lc-page'); bgWatch.disconnect(); dropBg(); alive = false; clearTimeout(kbTimer); clearInterval(speedTick); clearInterval(tick); clearInterval(game.timer); clearInterval(gs.glint); kbPopDrop(); document.removeEventListener('keydown', onKey); }
     window.addEventListener('hashchange', stop, { once: true });
 
     /* ---------- resultado ---------- */
     function results(review = false) {
-      phase = 'results'; clearInterval(game.timer); paintProgress(); shell.classList.remove('is-wel');
+      phase = 'results'; clearInterval(game.timer); paintProgress(); shell.classList.remove('is-wel'); kbPopDrop();
       st.done = true; st.lvl = N;
       // refazendo: só salva se superou o recorde; senão o recorde anterior continua valendo
       let record = '';

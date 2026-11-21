@@ -1600,3 +1600,238 @@ body.lc-bg-on .lc-shell { border-color: rgba(255, 255, 255, .12); box-shadow: 0 
   .lr-cash-note { margin-right: 34px; font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) { .lr-cash-pill, .lr-cash-val { transition: none; } }
+
+/* =========================================================
+   Cartão do nível colorido + folha de digitação com várias linhas
+   O cartão ganha as três cores do cenário sorteado (a1, a2, a3) e formas
+   que flutuam devagar; o texto fica numa folha clara, como um caderno,
+   com 3 linhas visíveis que sobem conforme o aluno avança.
+   ========================================================= */
+.lc-shell .lc-main {
+  background:
+    radial-gradient(55% 60% at 0% 0%, rgb(var(--a1) / .55), transparent 70%),
+    radial-gradient(50% 60% at 100% 8%, rgb(var(--a2) / .5), transparent 70%),
+    radial-gradient(70% 55% at 45% 110%, rgb(var(--a3) / .5), transparent 72%),
+    radial-gradient(rgba(255, 255, 255, .07) 1px, transparent 1.3px) 0 0 / 22px 22px,
+    color-mix(in srgb, var(--c1) 72%, #06060a);
+}
+.lc-shell .lc-main.is-typing { display: flex; flex-direction: column; }
+.lc-shell .lc-main.is-typing > .lc-stage { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 6px 0 2px; }
+
+/* formas que flutuam no fundo do cartão */
+.lc-shell .lc-main > .lc-fun { position: absolute; inset: 0; z-index: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.lc-fun i { position: absolute; display: block; font-style: normal; animation: lcFloat 9s ease-in-out infinite alternate; will-change: transform; }
+.lc-fun .b1 { left: -60px; bottom: -70px; width: 220px; height: 220px; border-radius: 50%; background: rgb(var(--a1) / .35); }
+.lc-fun .b2 { right: -40px; bottom: 18%; width: 130px; height: 130px; border-radius: 50%; background: rgb(var(--a2) / .32); animation-duration: 11s; }
+.lc-fun .b3 { left: 38%; top: -50px; width: 110px; height: 110px; border-radius: 50%; background: rgb(var(--a3) / .25); animation-duration: 13s; }
+.lc-fun .o1 { right: 22%; bottom: 7%; width: 54px; height: 54px; border-radius: 50%; border: 6px solid rgb(var(--a3) / .55); animation-duration: 7s; }
+.lc-fun .o2 { left: 6%; top: 46%; width: 26px; height: 26px; border-radius: 50%; border: 4px solid rgb(var(--a2) / .6); animation-duration: 8s; }
+.lc-fun .q1 { left: 18%; bottom: 10%; width: 46px; height: 46px; border-radius: 12px; border: 5px solid rgb(var(--a1) / .55); rotate: 18deg; animation-duration: 10s; }
+.lc-fun .x1, .lc-fun .x2 { font: 800 34px/1 Inter, system-ui, sans-serif; color: rgb(var(--a1) / .7); }
+.lc-fun .x1 { right: 8%; top: 32%; animation-duration: 6s; }
+.lc-fun .x2 { left: 46%; bottom: 4%; color: rgb(var(--a2) / .7); animation-duration: 8.5s; }
+.lc-fun .x3, .lc-fun .x4 { font-size: 22px; color: #fde68a; opacity: .75; animation: lcTwinkle 2.6s ease-in-out infinite; }
+.lc-fun .x3 { left: 30%; top: 38%; }
+.lc-fun .x4 { right: 30%; bottom: 22%; animation-delay: 1.2s; }
+@keyframes lcFloat { from { transform: translate3d(0, 0, 0) rotate(0deg); } to { transform: translate3d(14px, -18px, 0) rotate(14deg); } }
+@keyframes lcTwinkle { 0%, 100% { transform: scale(.7); opacity: .35; } 50% { transform: scale(1.15); opacity: .95; } }
+
+/* cabeçalho, título e dica com mais cor */
+.lc-shell .lc-lv-head { background: rgba(0, 0, 0, .22); }
+.lc-shell .lc-kind { background: linear-gradient(135deg, rgb(var(--a1)), rgb(var(--a2))); color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .25); box-shadow: 0 6px 16px -8px rgb(var(--a2)); }
+.lc-shell .lc-lv-title { text-shadow: 0 2px 12px rgba(0, 0, 0, .25); }
+.lc-shell .lc-tip { align-items: center; background: rgba(255, 255, 255, .12); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.lc-shell .lc-tip b { padding: 4px 10px; border-radius: 999px; background: #fde047; color: #422006; letter-spacing: .08em; }
+
+/* a folha */
+.lc-paper { --ink-d: #9aa3b4; position: relative; padding: 62px clamp(18px, 3vw, 42px) 20px; border-radius: 26px; background: #fffdf9; color: #1f2937;
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, .16), 0 28px 60px -28px rgba(0, 0, 0, .75), inset 0 -5px 0 rgba(15, 23, 42, .06);
+  animation: lcPaperIn .6s cubic-bezier(.2, .9, .3, 1.2) both; }
+@keyframes lcPaperIn { from { opacity: 0; transform: translateY(18px) scale(.97); } }
+.lc-paper-win { position: relative; overflow: hidden; transition: height .45s cubic-bezier(.22, .9, .3, 1); }
+.lc-paper .lc-line-text { display: flex; flex-wrap: wrap; justify-content: flex-start; row-gap: .32em; font: 600 clamp(28px, 3vw, 44px)/1.3 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: 0;
+  will-change: transform; transition: transform .5s cubic-bezier(.22, .9, .3, 1); }
+.lc-paper.one .lc-line-text { justify-content: center; }
+.lc-wd { display: inline-flex; white-space: nowrap; }
+.lc-wd.pop { animation: lcWordPop .35s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes lcWordPop { 40% { transform: translateY(-4px) scale(1.05); } }
+
+.lc-shell .lc-paper .lc-ch { min-width: .64em; margin: 0 1px; padding: .02em .04em; border-radius: 7px; text-align: center; color: var(--ink-d); text-shadow: none; transition: color .15s, background .15s; }
+.lc-shell .lc-paper .lc-ch.ok { color: #047a3a; background: #d9f9e3; }
+.lc-shell .lc-paper .lc-ch.ok.had { color: #b45309; background: #fdecc4; }
+.lc-shell .lc-paper .lc-ch.cur { color: #111827; background: rgb(var(--a1) / .26); box-shadow: inset 0 0 0 2px rgb(var(--a1) / .7); }
+.lc-shell .lc-paper .lc-ch.cur::after { left: 14%; right: 14%; bottom: .06em; height: 4px; background: rgb(var(--a1)); }
+.lc-shell .lc-paper .lc-ch.sp.cur { background: rgb(var(--a1) / .3); }
+.lc-shell .lc-paper .lc-ch.bad { color: #dc2626; background: #fee2e2; box-shadow: inset 0 0 0 2px #fca5a5; }
+
+/* sombra (frase de verdade em cima de cada F/J) na folha clara */
+.lc-paper.ghost .lc-line-text { row-gap: .5em; }
+.lc-shell .lc-paper.ghost .lc-ch { min-width: 1.02em; padding: 1.85em .04em .08em; font-size: .6em; border-radius: 12px; }
+.lc-shell .lc-paper.ghost .lc-ch.cur::after { bottom: -.12em; }
+.lc-shell .lc-paper .lc-ch.l[data-g]::before { color: #d97706; }
+.lc-shell .lc-paper .lc-ch.r[data-g]::before { color: #0891b2; }
+.lc-shell .lc-paper .lc-ch.ok[data-g]::before { color: #059669; opacity: .9; }
+.lc-shell .lc-paper .lc-ch.ok.had[data-g]::before { color: #b45309; }
+.lc-shell .lc-paper .lc-ch.cur[data-g]::before { text-shadow: none; }
+
+/* balão "Comece a digitar" em cima da primeira letra */
+.lc-shell .lc-paper .lc-start-tip { z-index: 3; left: 50%; top: 50px; transform: translate(-50%, calc(-100% - 12px)); padding: 7px 14px; border-radius: 12px; white-space: nowrap;
+  background: linear-gradient(135deg, rgb(var(--a1)), rgb(var(--a2))); color: #fff; font: 700 13px/1.2 Inter, system-ui, sans-serif; text-shadow: 0 1px 2px rgba(0, 0, 0, .25);
+  box-shadow: 0 10px 22px -10px rgb(var(--a2)); animation: lcTipBob 1.6s ease-in-out infinite; transition: opacity .25s, scale .25s; }
+.lc-shell .lc-paper .lc-start-tip::after { content: ''; position: absolute; left: calc(50% + var(--ax, 0px)); bottom: -6px; width: 12px; height: 12px; margin-left: -6px; border-radius: 2px; background: rgb(var(--a2)); rotate: 45deg; z-index: -1; }
+.lc-shell .lc-paper .lc-start-tip.gone { opacity: 0; scale: .6; pointer-events: none; }
+@keyframes lcTipBob { 50% { transform: translate(-50%, calc(-100% - 18px)); } }
+
+/* barra de progresso da folha */
+.lc-paper-foot { display: flex; align-items: center; gap: 14px; margin-top: 22px; }
+.lc-pbar { position: relative; flex: 1; height: 8px; border-radius: 999px; background: #eceff5; }
+.lc-pbar i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: inherit; background: linear-gradient(90deg, rgb(var(--a1)), rgb(var(--a2)), rgb(var(--a3))); transition: width .3s cubic-bezier(.22, .9, .3, 1); }
+.lc-pbar i::after { content: ''; position: absolute; right: -8px; top: 50%; width: 16px; height: 16px; margin-top: -8px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 4px rgb(var(--a3)), 0 3px 8px rgba(0, 0, 0, .25); }
+.lc-pcount { flex: none; min-width: 4.5em; text-align: right; font: 700 13px/1 Inter, system-ui, sans-serif; color: #64748b; font-variant-numeric: tabular-nums; }
+
+.lc-shell .lc-main.is-typing .lc-home { margin-top: 18px; color: rgba(255, 255, 255, .8); }
+
+/* tecla nova / apresentação: painel colorido com a tecla pulando */
+.lc-shell .lc-new { padding: 38px 22px; border-radius: 26px; background: linear-gradient(135deg, rgb(var(--a1) / .45), rgb(var(--a2) / .4) 55%, rgb(var(--a3) / .4));
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .22), 0 24px 50px -28px rgba(0, 0, 0, .7); }
+.lc-shell .lc-new p { color: rgba(255, 255, 255, .88); }
+.lc-shell .lc-new h3 { text-shadow: 0 3px 14px rgba(0, 0, 0, .25); }
+.lc-shell .lc-new h3 kbd { animation: lcKeyBounce 1.4s cubic-bezier(.3, 1.4, .5, 1) infinite; }
+@keyframes lcKeyBounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-10px) rotate(-4deg); } }
+.lc-shell .lc-new.ok { background: linear-gradient(135deg, rgba(16, 185, 129, .5), rgba(34, 211, 238, .38)); box-shadow: inset 0 0 0 1.5px rgba(167, 243, 208, .4), 0 24px 50px -28px rgba(0, 0, 0, .7); }
+.lc-shell .lc-new.ok h3 { color: #fff; }
+.lc-shell .lc-new.ok h3 kbd, .lc-shell .lc-new-go kbd { animation: none; }
+.lc-shell .lc-new.lc-apr { background: linear-gradient(135deg, rgb(var(--a1) / .4), rgb(var(--a2) / .38)); }
+
+@media (max-width: 640px) {
+  /* celular: a barra de estrelas fica fina (metade do tamanho) para a folha ter espaço */
+  .lc-grid { grid-template-columns: 66px 1fr; gap: 10px; }
+  .lc-grid > .lc-gauge { zoom: .5; }
+  .lc-paper { padding: 56px 14px 16px; border-radius: 20px; }
+  .lc-paper .lc-line-text { font-size: 24px; }
+  .lc-shell .lc-new { padding: 28px 14px; }
+  .lc-fun .b2, .lc-fun .o1, .lc-fun .x2 { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lc-fun i, .lc-paper, .lc-wd.pop, .lc-shell .lc-new h3 kbd, .lc-shell .lc-paper .lc-start-tip { animation: none !important; }
+  .lc-paper .lc-line-text, .lc-paper-win { transition: none; }
+}
+
+/* =========================================================
+   Teclado virtual em janela suspensa (só abre pelo botão)
+   Fica preso embaixo da tela, por cima de tudo, sem empurrar o cartão.
+   ========================================================= */
+.lc-kbpop { --a1: 110 231 183; --a2: 56 189 248; position: fixed; z-index: 70; left: 50%; bottom: calc(var(--tab-b, -52px) + 72px); width: min(860px, calc(100vw - 32px));
+  padding: 12px 16px 16px; border-radius: 26px; color: #fff; font-family: Inter, system-ui, sans-serif;
+  background: linear-gradient(160deg, rgb(var(--a1) / .22), transparent 45%), linear-gradient(20deg, rgb(var(--a2) / .2), transparent 50%), rgba(16, 14, 24, .9);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14), 0 30px 70px -20px rgba(0, 0, 0, .8);
+  opacity: 0; visibility: hidden; transform: translate(-50%, 30px) scale(.97);
+  transition: opacity .3s ease, transform .45s cubic-bezier(.22, 1, .36, 1), visibility 0s .45s; }
+.lc-kbpop.open { opacity: 1; visibility: visible; transform: translate(-50%, 0); transition: opacity .25s ease, transform .5s cubic-bezier(.22, 1.2, .36, 1), visibility 0s; }
+.lc-kbpop-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.lc-kbpop-head span { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: rgba(255, 255, 255, .75); }
+.lc-kbpop-head svg { width: 18px; height: 18px; color: rgb(var(--a1)); }
+.lc-kbpop-x { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 50%; cursor: pointer; background: rgba(255, 255, 255, .12); color: #fff; font: 400 20px/1 Inter, system-ui, sans-serif; transition: background .2s; }
+.lc-kbpop-x:hover { background: rgba(255, 255, 255, .24); }
+/* o aviso do dedo vira um título em cima do teclado */
+.lc-kbpop .kb { display: flex; flex-direction: column-reverse; gap: 10px; }
+.lc-kbpop .kb-finger { position: static; transform: none; min-height: 1.3em; font-size: 15px; text-align: center; color: rgba(255, 255, 255, .75); }
+.lc-kbpop .kb-finger b { color: #fde047; }
+/* cores do teclado escuro (as mesmas do cartão) */
+.lc-kbpop .kb-board { background: rgba(0, 0, 0, .3); box-shadow: inset 0 0 0 .5px rgba(255, 255, 255, .12); }
+.lc-kbpop .kb-key:not([data-f]) { --bg: rgba(255, 255, 255, .1); --fg: rgba(255, 255, 255, .8); }
+.lc-kbpop .kb-key { box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .18); }
+.lc-kbpop .kb-key.mod b { color: rgba(255, 255, 255, .6); }
+.lc-kbpop .kb-key.target { box-shadow: 0 0 0 2.5px rgba(0, 0, 0, .55), 0 0 0 5px #fff; }
+.lc-kbpop .kb-key.target::before { inset: -11px; border-radius: 16px; box-shadow: 0 0 0 6px rgba(255, 255, 255, .16); }
+.lc-kbpop .kb-key.hit { box-shadow: 0 0 18px rgba(16, 185, 129, .8); }
+@media (max-width: 640px) { .lc-kbpop { width: calc(100vw - 16px); padding: 10px 8px 10px; } .lc-kbpop .kb-board { padding: 8px; gap: 4px; } .lc-kbpop .kb-row { gap: 4px; } .lc-kbpop .kb-key { height: 36px; } }
+@media (prefers-reduced-motion: reduce) { .lc-kbpop, .lc-kbpop.open { transition: opacity .2s, visibility 0s; transform: translate(-50%, 0); } }
+/* barrinha que vai diminuindo até o teclado fechar sozinho */
+.lc-kbpop-head span { flex: none; }
+.lc-kbpop-time { flex: 1; height: 6px; margin: 0 16px; border-radius: 999px; overflow: hidden; background: rgba(255, 255, 255, .1); }
+.lc-kbpop-time i { display: block; height: 100%; border-radius: inherit; transform-origin: left center; background: linear-gradient(90deg, rgb(var(--a1)), rgb(var(--a2))); }
+
+/* =========================================================
+   Medidor de velocidade: tecla que pega fogo e barra que solta faíscas
+   data-heat: 0 parado · 1 aquecendo · 2 rápido · 3 pegando fogo
+   ========================================================= */
+.lc-speed { --hc: 125 211 252; gap: 12px; padding: 8px 18px 8px 8px; border-radius: 20px; background: rgba(0, 0, 0, .28);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12), 0 10px 26px -16px rgba(0, 0, 0, .7); transition: box-shadow .4s, background .4s; }
+.lc-speed[data-heat="1"] { --hc: 251 191 36; }
+.lc-speed[data-heat="2"] { --hc: 251 146 60; box-shadow: inset 0 0 0 1px rgb(var(--hc) / .45), 0 0 26px -6px rgb(var(--hc) / .55); }
+.lc-speed[data-heat="3"] { --hc: 248 113 113; background: rgba(60, 10, 0, .45); box-shadow: inset 0 0 0 1.5px rgb(251 146 60 / .7), 0 0 34px -4px rgb(249 115 22 / .75); }
+.lc-speed.boost { animation: lcSpdBoost .45s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes lcSpdBoost { 40% { transform: scale(1.06); } }
+
+/* a tecla */
+.lc-spd-key { position: relative; flex: none; display: grid; place-items: center; width: 46px; height: 46px; }
+.lc-spd-key b { position: relative; z-index: 2; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 11px; background: linear-gradient(180deg, #fff, #e5e7eb);
+  color: #1f2937; font: 800 18px/1 Inter, system-ui, sans-serif; box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .14), 0 6px 14px -6px rgba(0, 0, 0, .6); transition: background .35s, color .35s, box-shadow .35s; }
+.lc-speed[data-heat="2"] .lc-spd-key b { background: linear-gradient(180deg, #fff7ed, #fdba74); color: #9a3412; }
+.lc-speed[data-heat="3"] .lc-spd-key b { background: linear-gradient(180deg, #fef3c7, #fb923c 70%, #ea580c); color: #7c2d12; box-shadow: inset 0 -4px 0 rgba(124, 45, 18, .3), 0 0 22px rgb(249 115 22 / .9); animation: lcKeyShake .18s linear infinite; }
+@keyframes lcKeyShake { 25% { transform: translate(.6px, -.6px) rotate(-1.5deg); } 75% { transform: translate(-.6px, .4px) rotate(1.5deg); } }
+/* chamas atrás da tecla */
+.lc-spd-key .fl { position: absolute; z-index: 1; bottom: 22px; width: 24px; height: 40px; border-radius: 50% 50% 45% 45% / 62% 62% 38% 38%; transform-origin: 50% 100%;
+  background: radial-gradient(ellipse at 50% 80%, #fff7cc 0%, #fde047 22%, #fb923c 52%, #ef4444 78%, rgba(239, 68, 68, 0) 100%);
+  filter: drop-shadow(0 0 6px rgba(251, 146, 60, .8)); opacity: 0; scale: .2; transition: opacity .35s, scale .45s cubic-bezier(.3, 1.5, .5, 1); animation: lcFlame .5s ease-in-out infinite alternate; }
+.lc-spd-key .f1 { left: -2px; rotate: -24deg; animation-delay: -.2s; }
+.lc-spd-key .f2 { left: 10px; width: 26px; height: 56px; bottom: 24px; }
+.lc-spd-key .f3 { right: -2px; rotate: 24deg; animation-delay: -.35s; }
+.lc-speed[data-heat="2"] .fl { opacity: .9; scale: .65; }
+.lc-speed[data-heat="3"] .fl { opacity: 1; scale: 1.15; }
+@keyframes lcFlame { from { transform: scaleY(.82) skewX(-4deg); } to { transform: scaleY(1.12) skewX(5deg); } }
+
+/* rótulo, número e barra */
+.lc-spd-body { display: flex; flex-direction: column; gap: 7px; }
+.lc-spd-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.lc-spd-top em { font: 700 11.5px/1 Inter, system-ui, sans-serif; font-style: normal; letter-spacing: .06em; text-transform: uppercase; color: rgb(var(--hc)); transition: color .35s; }
+.lc-spd-num { display: inline-flex; align-items: baseline; gap: 4px; }
+.lc-speed .lc-spd-num b { min-width: 2ch; font-size: 22px; font-weight: 800; }
+.lc-speed .lc-spd-num small { margin: 0; }
+.lc-speed[data-heat="3"] .lc-spd-num b { color: #fed7aa; text-shadow: 0 0 12px rgba(251, 146, 60, .8); }
+.lc-spd-track { position: relative; display: block; }
+.lc-speed .lc-speed-pill { display: block; width: 210px; height: 14px; }
+.lc-speed[data-heat="3"] .lc-speed-pill i { box-shadow: 0 0 16px hsl(var(--h) 92% 56% / .9), 0 0 4px #fff inset; }
+/* faíscas */
+.lc-spd-fx { position: absolute; inset: 0; pointer-events: none; }
+.lc-spd-fx i { position: absolute; top: 50%; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: #fff7cc; box-shadow: 0 0 6px 2px #fb923c, 0 0 2px #fde047;
+  animation: lcSparkFly var(--d) cubic-bezier(.2, .7, .4, 1) forwards; }
+@keyframes lcSparkFly { from { transform: translate(0, 0) scale(var(--s)); opacity: 1; } to { transform: translate(var(--dx), calc(var(--dy) + 10px)) scale(0); opacity: 0; } }
+
+@media (max-width: 640px) { .lc-speed .lc-speed-pill { width: 120px; } .lc-speed { padding-right: 12px; } }
+@media (prefers-reduced-motion: reduce) { .lc-spd-key .fl, .lc-spd-key b, .lc-speed.boost { animation: none !important; } }
+/* a tecla do medidor traz a logo do HC */
+.lc-spd-key b img { width: 30px; height: auto; display: block; pointer-events: none; user-select: none; }
+
+/* =========================================================
+   Nível concluído: radar no lugar dos raios girando.
+   A medalha é "apertada" (afunda e volta com mola) e a cada aperto
+   uma onda de radar sai de trás dela.
+   ========================================================= */
+.lc-shell .lc-over:has(.lc-cel) { background: radial-gradient(55% 50% at 50% 36%, color-mix(in srgb, var(--c1, #10b981) 45%, transparent), transparent 72%), rgba(8, 10, 14, .86); }
+.lc-cel-badge > svg .arc { filter: none; } /* a sombra do SVG era cortada num quadrado em volta da bola */
+.lc-cel-badge::before { box-shadow: 0 0 0 6px rgba(110, 231, 183, .14), 0 0 40px 6px rgba(16, 185, 129, .45), inset 0 -6px 14px rgba(0, 0, 0, .25), inset 0 0 0 1px rgba(255, 255, 255, .25); }
+.lc-cel-badge { animation: lcCelBadge .7s cubic-bezier(.18, .89, .32, 1.28) both, lcCelPress 1.6s cubic-bezier(.3, 0, .2, 1) .8s infinite; }
+@keyframes lcCelPress {
+  0% { transform: scale(1); }
+  9% { transform: scale(.86); }           /* afunda, como um botão apertado */
+  22% { transform: scale(1.07); }         /* volta com mola */
+  34%, 100% { transform: scale(1); }
+}
+.lc-cel-radar { position: absolute; top: 70px; left: 50%; width: 0; height: 0; pointer-events: none; }
+.lc-cel-radar i { position: absolute; left: -56px; top: -56px; width: 112px; height: 112px; border-radius: 50%; opacity: 0;
+  border: 2px solid rgba(110, 231, 183, .75); background: radial-gradient(circle, transparent 55%, rgba(52, 211, 153, .22) 100%);
+  animation: lcCelRadar 1.6s cubic-bezier(.15, .6, .35, 1) infinite; animation-delay: calc(.94s + var(--k, 0s)); }
+.lc-cel-radar i:nth-child(2) { --k: .22s; border-color: rgba(103, 232, 249, .6); }
+.lc-cel-radar i:nth-child(3) { --k: .44s; border-width: 1.5px; border-color: rgba(255, 255, 255, .35); }
+@keyframes lcCelRadar {
+  0% { opacity: 0; transform: scale(1); }
+  8% { opacity: 1; }
+  100% { opacity: 0; transform: scale(3.3); }
+}
+@media (prefers-reduced-motion: reduce) { .lc-cel-radar { display: none; } .lc-cel-badge { animation: none; } }
+/* com o aviso de nível concluído na tela, a folha clara escurece para não brigar com a medalha */
+.lc-paper { transition: filter .35s ease; }
+.lc-main:has(> .lc-over:not([hidden]) .lc-cel) .lc-paper { filter: brightness(.3) saturate(.6); }
