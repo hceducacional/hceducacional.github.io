@@ -862,7 +862,8 @@
 .lr-ch { display: inline-block; text-align: center; white-space: pre; }
 .lr-ch.scr { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-weight: 600; font-size: .78em; color: rgba(255, 255, 255, .55); text-shadow: 0 0 18px rgba(255, 255, 255, .35); }
 .lr-ch.ok { animation: lrChOk .45s var(--e) both; }
-@keyframes lrChOk { from { transform: translateY(-6px) scale(1.12); color: #fff; text-shadow: 0 0 26px rgba(255, 255, 255, .8); } }
+/* a letra certa acende e assenta só pelo tamanho (sem cair de cima), para nada descer no fim */
+@keyframes lrChOk { from { transform: scale(1.12); color: #fff; text-shadow: 0 0 26px rgba(255, 255, 255, .8); } }
 .lr-ribbon { position: relative; display: grid; grid-template-columns: 22% auto minmax(0, 1fr) auto; align-items: center; gap: 20px; min-height: 108px; margin-right: 5%; padding-right: 30px;
   background: linear-gradient(90deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .1)); border-radius: 0 26px 26px 0; box-shadow: 0 24px 50px -30px rgba(0, 0, 0, .6);
   transform: translateX(-105%); }
@@ -1519,7 +1520,7 @@ body.lc-bg-on .lc-shell { border-color: rgba(255, 255, 255, .12); box-shadow: 0 
    Depois: moedas voando das estrelas até ela, "+35,27" subindo e o saldo rolando em odômetro.
    Cor do saldo: escuro parado → amarelo enquanto ganha (.rise) → verde no fim (.win).
    ========================================================= */
-.lr-cash { position: absolute; z-index: 5; top: 128px; right: 118px; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; pointer-events: none; }
+.lr-cash { position: absolute; z-index: 5; top: 164px; right: 118px; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; pointer-events: none; }
 .lr.out .lr-cash { opacity: 0; transition: opacity .4s; }
 .lr-cash-box { position: relative; }
 .lr-cash-pill { position: relative; display: flex; align-items: center; height: 66px; padding: 0 74px 0 30px; border-radius: 20px; background: #fff;
@@ -1579,7 +1580,7 @@ body.lc-bg-on .lc-shell { border-color: rgba(255, 255, 255, .12); box-shadow: 0 
 .lr-fcoin { position: absolute; z-index: 6; left: -29px; top: -29px; width: 58px; height: 58px; pointer-events: none; opacity: 0; will-change: transform; }
 .lr-fcoin img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .3)); }
 @media (max-width: 900px) {
-  .lr-cash { top: 96px; right: 70px; }
+  .lr-cash { top: 144px; right: 70px; }
   .lr-cash-pill { height: 54px; padding: 0 58px 0 22px; border-radius: 16px; }
   .lr-cash-val { font-size: 34px; }
   .lr-cash-coin { width: 88px; height: 88px; right: -38px; }

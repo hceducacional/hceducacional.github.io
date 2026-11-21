@@ -2014,6 +2014,9 @@
       h.innerHTML = [...word].map((c) => `<span class="lr-ch" aria-hidden="true">${esc(c)}</span>`).join('');
       const spans = [...h.children];
       spans.forEach((s) => { s.style.width = `${s.getBoundingClientRect().width}px`; }); // trava a largura de cada letra para nada pular
+      // trava também a altura: as letras embaralhadas (fonte monoespaçada) deixavam a linha mais alta e, ao se acertarem,
+      // o título e a faixa de baixo davam uma "descidinha"
+      h.style.height = `${h.getBoundingClientRect().height}px`;
       const rnd = () => POOL[Math.floor(Math.random() * POOL.length)];
       spans.forEach((s) => { s.classList.add('scr'); s.textContent = rnd(); });
       const at = spans.map((_, i) => 350 + i * 120 + Math.random() * 90); // quando cada letra se acerta

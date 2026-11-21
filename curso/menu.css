@@ -130,16 +130,18 @@
 .ifm-dc::after { content: ''; position: absolute; left: 50%; top: 50%; width: 220%; aspect-ratio: 1; margin: -110% 0 0 -110%; opacity: 0;
   background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .95) 0deg 3deg, transparent 3deg 30deg);
   -webkit-mask: radial-gradient(closest-side, transparent 18%, #000 30%, transparent 70%); mask: radial-gradient(closest-side, transparent 18%, #000 30%, transparent 70%); }
-.ifm-opt.sel .ifm-dc { animation: ifmDcIn .75s var(--spring) var(--t) both; }
+/* entrada sem mola: o ícone para exatamente no lugar, sem passar do tamanho e voltar (isso parecia uma "descidinha" no fim) */
+.ifm-opt.sel .ifm-dc { animation: ifmDcIn .7s var(--soft) var(--t) both; }
 .ifm-opt.sel .ifm-dc::before { animation: ifmDcFlash .6s ease-out var(--t) both; }
 .ifm-opt.sel .ifm-dc::after { animation: ifmDcRays .7s ease-out var(--t) both; }
-.ifm-opt.sel .ifm-dc img { animation: ifmDcPop .5s ease-out var(--t) both, ifmDcBob calc(3.2s + var(--n) * .45s) ease-in-out calc(var(--t) + .75s) infinite alternate; }
+.ifm-opt.sel .ifm-dc img { animation: ifmDcPop .5s ease-out var(--t) both, ifmDcBob calc(4.4s + var(--n) * .6s) ease-in-out calc(var(--t) + .75s) infinite; }
 @keyframes ifmDcIn { 0% { opacity: 0; scale: .2; rotate: calc(var(--r0) - 35deg); } 30% { opacity: 1; } 100% { opacity: 1; scale: 1; rotate: var(--r0); } }
 @keyframes ifmDcFlash { 0% { opacity: 1; transform: scale(.15); } 40% { opacity: .95; } 100% { opacity: 0; transform: scale(1.25); } }
 @keyframes ifmDcRays { 0% { opacity: 0; transform: scale(.3) rotate(0deg); } 25% { opacity: .9; } 100% { opacity: 0; transform: scale(1.15) rotate(50deg); } }
 /* o ícone nasce "aceso" (branco) e volta à cor */
 @keyframes ifmDcPop { 0% { filter: brightness(3) drop-shadow(0 0 0 transparent); } 100% { filter: brightness(1) drop-shadow(0 calc(var(--s) * .03) calc(var(--s) * .04) rgba(0, 0, 0, .28)); } }
-@keyframes ifmDcBob { from { transform: translateY(4%) rotate(-3deg); } to { transform: translateY(-5%) rotate(3deg); } }
+/* flutuação: começa e termina na posição de pouso (sem salto na hora em que começa) e só sobe */
+@keyframes ifmDcBob { 0%, 100% { transform: none; } 50% { transform: translateY(-6%) rotate(3deg); } }
 .ifm.still .ifm-opt.sel .ifm-dc { opacity: 1; scale: 1; }
 
 /* nome / logo embaixo */
