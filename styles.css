@@ -4429,3 +4429,11 @@ html.lk-lock, html.lk-lock body { overflow: hidden; }
   .cx-tile.ig-open .cx-app::before { opacity: 1; }
   .cx-app { isolation: isolate; }
 }
+
+/* Configurações › Conteúdo de Informática (acervo do professor, com senha) */
+[data-acc="acervo"] { --c: #0ea5a4; --c2: #134e4a; }
+.av-lk-icon { background: linear-gradient(160deg, #14b8a6, #134e4a); }
+.av-locked { display: grid; justify-items: center; gap: 6px; max-width: 420px; margin: 20px auto; padding: 36px 28px; border-radius: 24px; background: var(--card); text-align: center; box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 18px 40px -28px rgba(0, 0, 0, .4); }
+.av-locked .lk-icon { margin: 0 0 10px; }
+.av-locked h2 { margin: 0; font-size: 22px; letter-spacing: -.02em; }
+.av-locked p { margin: 0 0 14px; color: var(--muted); }

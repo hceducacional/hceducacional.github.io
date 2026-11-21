@@ -184,6 +184,17 @@ window.HC_cash = (() => {
     if (!timer) timer = setTimeout(push, 1500);
     return d;
   };
+  /* gasta moedas (ex.: reviver num minijogo). Só gasta se houver saldo; devolve true se deu certo */
+  const spend = (n, motivo = '') => {
+    n = c2(n); if (n <= 0) return true;
+    const d = cur();
+    if (c2(d.ganho - (d.gasto || 0)) < n) return false;
+    d.gasto = c2((d.gasto || 0) + n); d.savedAt = Date.now();
+    d.hist = [{ v: -n, m: motivo, em: d.savedAt }, ...(d.hist || [])].slice(0, 40);
+    write(d);
+    if (!timer) timer = setTimeout(push, 1500);
+    return true;
+  };
   const merge = (remote) => {
     if (!remote || typeof remote.ganho !== 'number') return false;
     const local = read();
@@ -204,7 +215,7 @@ window.HC_cash = (() => {
   addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && timer) push(); });
   addEventListener('pagehide', () => { if (timer) push(); });
   const get = () => { const d = cur(); return { saldo: Math.max(0, c2(d.ganho - (d.gasto || 0))), ganho: d.ganho, gasto: d.gasto || 0, hist: d.hist || [] }; };
-  return { ID, get, add, merge, pull, ganhoDe, POR_ESTRELA, SUPERSTAR, MEGASTAR, flush: () => { if (timer) push(); } };
+  return { ID, get, add, spend, merge, pull, ganhoDe, POR_ESTRELA, SUPERSTAR, MEGASTAR, flush: () => { if (timer) push(); } };
 })();
 window.HC_levelColor = (() => {
   /* cor do miolo do anel conforme o nível: uma cor a cada faixa de 10 níveis (0–10, 11–20, 21–30…).
@@ -410,7 +421,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   const admPen = (id) => (isAdmin() ? `<div class="pf-adm pfb-adm"><button class="pf-adm-btn" type="button" data-editbanner="${id}" aria-label="Trocar a imagem de fundo do ${PF_BANNERS[id].toLowerCase()}" title="Trocar imagem de fundo">${svg('pen')}</button></div>` : '');
   function cashBanner() {
     if (!window.HC_cash) return '';
-    const c = window.HC_cash.get(), C = window.HC_cash, last = c.hist[0];
+    const c = window.HC_cash.get(), C = window.HC_cash, last = c.hist.find((h) => h.v > 0); // o histórico também guarda gastos (negativos)
     const lastTxt = last ? `Último ganho <b>+${window.HC_cashFmt(last.v)}</b>${/^licao-\d+$/.test(last.m || '') ? ` · Lição ${String(last.m.split('-')[1]).padStart(2, '0')}` : ''}` : 'Conclua lições e ganhe moedas pelas estrelas';
     return `
           <div class="pf-slide pfb pfb-cash" data-b="saldo" aria-roledescription="slide" aria-label="2 de 4: Saldo HC ${window.HC_cashFmt(c.saldo)}">

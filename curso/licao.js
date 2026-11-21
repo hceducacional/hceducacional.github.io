@@ -33,6 +33,7 @@
     download: '<path d="M12 3v12M7 10l5 5 5-5M4 21h16"/>',
     refresh: '<path d="M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.2L3 16M3 21v-5h5"/>',
     level: '<path d="M4 20V14M10 20V9M16 20V4M22 20H2"/>',
+    check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
   };
   const svg = (k, fill) => `<svg viewBox="0 0 24 24" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg>`;
 
@@ -103,10 +104,10 @@
     try { localStorage.setItem('hc-lc-scene', String(i)); } catch {}
     return SCENES[i] || SCENES[0];
   }
-  const topHTML = (L, prog) => `
+  const topHTML = (L, prog, T) => `
       <div class="lc-top">
-        <a class="lc-back" href="#informatica/cursos">${svg('back')}Lições</a>
-        <h1 class="lc-head"><span class="lc-grad">Lição ${L.numero}.</span> <span>${esc(L.titulo)}</span></h1>
+        <a class="lc-back" href="${T ? esc(T.voltar) : '#informatica/cursos'}">${svg('back')}${T ? 'Acervo' : 'Lições'}</a>
+        <h1 class="lc-head"><span class="lc-grad">${T ? 'Teste' : `Lição ${L.numero}`}.</span> <span>${esc(L.titulo)}</span>${T ? '<em class="lc-test-tag">Modo de teste · nada é salvo</em>' : ''}</h1>
         ${prog ? `<div class="lc-prog" aria-label="Progresso da lição"><span id="lc-prog-txt"></span><div class="lc-segs" id="lc-segs">${L.niveis.map((n) => `<i class="${n.tipo === 'typing' ? '' : 'g'}"></i>`).join('')}</div></div>` : ''}
       </div>`;
 
@@ -350,18 +351,20 @@
   }
 
   async function open(view, L, meta = {}) {
-    window.HC_xp?.pull().catch(() => {}); // traz o XP geral da conta antes de somar o desta lição
+    // modo de teste (acervo do professor): roda os níveis de verdade, mas não salva progresso, XP nem moedas
+    const TEST = meta.teste || null;
+    if (!TEST) window.HC_xp?.pull().catch(() => {}); // traz o XP geral da conta antes de somar o desta lição
     view.innerHTML = '<div class="wrap"><p class="me-loading">Carregando a lição…</p></div>';
-    const saved = await loadProgress(L.id);
+    const saved = TEST ? null : await loadProgress(L.id);
     if (!view.isConnected) return;
     const N = L.niveis.length;
-    if (!window.HC_isComputer()) return computerOnly(view, L, saved, meta);
+    if (!(window.HC_isComputer?.() ?? true)) return computerOnly(view, L, saved, meta);
     const fresh = () => ({ lvl: 0, xp: 0, time: 0, hits: 0, errors: 0, levelTimes: [], levelPts: [], done: false, total: N });
     // progresso salvo antes da pontuação ser dividida entre os níveis: pontos de nível acima da parte de cada um são descartados
     if (saved?.levelPts?.some((x) => x > PTS_MAX / N + 1)) saved.levelPts = [];
     let st = saved && !saved.done ? { ...fresh(), ...saved } : fresh();
     let runXp = 0; // XP ganho (ou perdido) desde que a lição foi aberta, para a tela de XP
-    const gain = (n) => { if (!n) return; runXp += n; window.HC_xp?.add(n); };
+    const gain = (n) => { if (!n) return; runXp += n; if (!TEST) window.HC_xp?.add(n); };
     // lição já concluída: o resultado salvo é o recorde do aluno. Refazer não apaga nada;
     // só uma pontuação maior substitui o recorde (no fim da lição)
     let best = saved?.done ? saved : null;
@@ -374,7 +377,7 @@
     view.innerHTML = `
     <div class="wrap lc lc-full" style="--tint:${tint}">
       <div class="lc-shell" style="--b:${scene.base};--a1:${scene.a1};--a2:${scene.a2};--a3:${scene.a3}" data-cena="${scene.nome}">
-        ${topHTML(L, true)}
+        ${topHTML(L, true, TEST)}
         <div id="lc-body"></div>
       </div>
     </div>`;
@@ -753,7 +756,8 @@
     // roda só enquanto há algo para mostrar: começa na tecla certa (speedWake) e para sozinho quando a pílula zera
     function speedRun() {
       clearInterval(speedTick); speedTick = null;
-      const fill = $q('#lc-speed-fill'); if (fill) { fill.style.width = '0%'; fill.classList.add('zero'); }
+      const fill = $q('#lc-speed-fill'); if (fill) { fill.style.width = '0%'; fill.classList.add('zero'); fill._sc = '1'; }
+      $q('#lc-speed')?.style.setProperty('--sc', 1);
       const num = $q('#lc-ppm'); if (num) num.textContent = '0';
       speedHeat(0);
     }
@@ -768,7 +772,7 @@
     }
     /* faíscas saindo da ponta da barra */
     function speedSparks(h, t) {
-      const fx = $q('#lc-spd-fx'); if (!fx || h < 2 || fx.childElementCount > 26) return;
+      const fx = $q('#lc-spd-fx'); if (!fx || h < 2 || fx.childElementCount > 14) return;
       const n = h === 3 ? 3 : Math.random() < .6 ? 1 : 0;
       for (let i = 0; i < n; i++) {
         const sp = document.createElement('i');
@@ -794,6 +798,8 @@
           fill.style.width = `${(t * 100).toFixed(1)}%`;
           fill.style.setProperty('--h', Math.round(215 - 215 * Math.min(1, speedShown / HEAT_AT[2]))); // 215 = azul … 0 = vermelho (vermelho quando pega fogo)
           num.textContent = Math.round(speedShown);
+          const sc = (1 + .3 * Math.min(1, speedShown / HEAT_AT[2])).toFixed(2); // a tecla da logo cresce com a velocidade
+          if (fill._sc !== sc) { fill._sc = sc; $q('#lc-speed')?.style.setProperty('--sc', sc); }
           const h = speedShown >= HEAT_AT[2] ? 3 : speedShown >= HEAT_AT[1] ? 2 : speedShown >= HEAT_AT[0] ? 1 : 0;
           speedHeat(h); if (!reduceFx) speedSparks(h, t);
         }
@@ -804,7 +810,7 @@
     const kbHTML = () => `
       <div class="lc-kbar">
         <span class="lc-speed" id="lc-speed" data-heat="0" role="img" aria-label="Velocidade de digitação">
-          <span class="lc-spd-key" aria-hidden="true"><i class="fl f1"></i><i class="fl f2"></i><i class="fl f3"></i><b><img src="assets/icons/logo-hc.webp" alt="" draggable="false"></b></span>
+          <span class="lc-spd-key" aria-hidden="true"><b><img src="assets/icons/logo-hc.webp" alt="" draggable="false"></b></span>
           <span class="lc-spd-body">
             <span class="lc-spd-top"><em id="lc-spd-lbl">${HEAT_TXT[0]}</em><span class="lc-spd-num"><b id="lc-ppm">0</b><small>PPM</small></span></span>
             <span class="lc-spd-track"><span class="lc-speed-pill"><i id="lc-speed-fill"></i></span><span class="lc-spd-fx" id="lc-spd-fx"></span></span>
@@ -870,7 +876,7 @@
 
     /* ---------- um nível ---------- */
     function level() {
-      if (st.lvl >= N) return results();
+      if (st.lvl >= N) return TEST ? testDone() : results();
       smoothResize(levelRender);
     }
     function levelRender() {
@@ -888,7 +894,7 @@
         <span class="lc-lv-mark" aria-hidden="true">${nn}</span>
         <div class="lc-lv-head">
           <span class="lc-lv-av">${nn}</span>
-          <span class="lc-lv-who"><strong>Nível ${nn}</strong><small>de ${N} · Lição ${L.numero}</small></span>
+          <span class="lc-lv-who"><strong>Nível ${nn}</strong><small>de ${N} · ${TEST ? 'Teste' : `Lição ${L.numero}`}</small></span>
           <div class="lc-sup" id="lc-sup"></div>
           ${isAdmin() ? '<button type="button" class="lc-xptest" id="lc-xptest" title="Só administradores veem este botão">Testar tela de XP</button><button type="button" class="lc-xptest" id="lc-lrtest" title="Só administradores veem este botão (nada é salvo)">Testar moedas</button>' : ''}
           <span class="lc-kind${isGame ? ' game' : ''}">${isGame ? 'Minijogo' : 'Digitação'}</span>
@@ -943,7 +949,7 @@
       box.querySelector('#lc-jump')?.addEventListener('change', (e) => {
         const v = e.target.value; e.target.value = ''; e.target.blur();
         if (v === 'pin') { supMode = 'set'; return supRender(true); }
-        if (v === 'r') return results();
+        if (v === 'r') return TEST ? testDone() : results();
         if (v !== '') { busy = false; st.lvl = +v; level(); }
       });
       const form = box.querySelector('form'), inp = form?.querySelector('input');
@@ -976,7 +982,7 @@
       st.levelPts[st.lvl] = Math.max(st.levelPts[st.lvl] || 0, pts); // guarda a melhor pontuação do nível
       const over = $q('#lc-over'); const n = st.lvl + 1;
       st.lvl++;
-      if (!best) saveProgress(L.id, { ...st, done: false }); // refazendo: o recorde salvo fica intacto até o fim
+      if (!best && !TEST) saveProgress(L.id, { ...st, done: false }); // refazendo: o recorde salvo fica intacto até o fim
       await celebrate(over, n, pts, st.levelTimes[n - 1]);
       if (!alive || !over.isConnected) return;
       level();
@@ -1139,8 +1145,10 @@
       const want = game.text[game.pos];
       if (k === want) {
         if (!game.t0) game.t0 = performance.now();
-        hit(k); game.pos++; typingPaint();
-        const min = (performance.now() - game.t0) / 60000;
+        // letra redigitada depois do Backspace: avança e fica verde, mas não conta pontos de novo
+        if (game.pos < (game.max || 0)) { kb?.flash(k, true); game.chs[game.pos]?.classList.remove('had'); }
+        else hit(k);
+        game.pos++; game.max = Math.max(game.max || 0, game.pos); typingPaint();
         if (game.pos >= game.text.length) setTimeout(complete, 250);
       } else {
         miss(k);
@@ -1149,54 +1157,203 @@
         replay(cur, 'bad'); setTimeout(() => cur?.classList.remove('bad'), 480);
       }
     }
+    /* Backspace: volta uma letra para o aluno apagar e corrigir */
+    function typingBack() {
+      if (!game.chs || game.pos <= 0 || game.pos >= game.text.length) return;
+      game.chs[game.pos]?.classList.remove('cur', 'bad');
+      game.pos--;
+      const el = game.chs[game.pos];
+      el.classList.remove('ok'); el.classList.add('cur');
+      replay(el, 'back');
+      const bar = $q('#lc-pbar'), cnt = $q('#lc-pcount');
+      if (bar) bar.style.width = `${(game.pos / game.text.length) * 100}%`;
+      if (cnt) cnt.textContent = `${game.pos} / ${game.text.length}`;
+      kb?.flash('backspace', true);
+      typeScroll(); kbTarget(game.text[game.pos] ?? null);
+    }
 
     /* ---------- MINIJOGO: VARREDURA HACKER ---------- */
+    /* ---------- MINIJOGO: VARREDURA HACKER (MJ-01) ----------
+       Uma tecla do terminal acende com um anel de tempo; o aluno a tecla antes de o anel acabar.
+       - Tempo variável: cada ameaça é Normal, Rápida (0,6× o tempo) ou Lenta (1,45×). Numa sequência
+         de acertos as rápidas aparecem mais; depois de perder uma vida vêm duas lentas, para respirar.
+       - Vidas (padrão 3, campo "vidas" do nível): o tempo acabar custa uma vida; tecla errada só come
+         um quarto do tempo da ameaça.
+       - Sem vidas, o sistema é "invadido": o aluno pode reviver com o Saldo HC (15,00 e o dobro a cada
+         nova vez no mesmo nível) e continua de onde parou, ou recomeçar o minijogo do zero. */
+    const HK_KIND = { normal: { f: 1, nome: 'Normal' }, fast: { f: .6, nome: 'Rápida' }, slow: { f: 1.45, nome: 'Lenta' } };
+    const HK_REVIVE = 15;
+    const HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.4-4.5-9.5-9C1 8.2 3.1 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.6 0 5.7 3.7 4.2 7-2.1 4.5-9.5 9-9.5 9Z"/></svg>';
+    const hkSel = (k) => `.lc-hk[data-hk="${k === ' ' ? 'space' : k}"]`;
+    const hkRevCost = () => HK_REVIVE * 2 ** (game.revives || 0);
     function hackerInit(lv) {
-      game.score = 0; game.meta = lv.meta; game.limit = Math.max(2.2, 5 * (1.6 / (lv.velocidade || 1.6))); // fica mais curto nos níveis mais rápidos
-      game.left = game.limit; game.target = L.teclas[Math.floor(Math.random() * L.teclas.length)]; game.paused = true;
+      game.score = 0; game.meta = lv.meta; game.paused = true;
+      game.base = Math.max(2.2, 5 * (1.6 / (lv.velocidade || 1.6))); // fica mais curto nos níveis mais rápidos
+      game.maxLives = lv.vidas || 3; game.lives = game.maxLives; game.revives = 0; game.streak = 0; game.grace = 0;
+      game.target = null; hackerNext(true);
       $q('#lc-stage').innerHTML = `
-        <div class="lc-term lc-hacker">
-          <div class="lc-term-bar"><span>Terminal de segurança</span><span id="lc-left">Tempo: ${game.limit.toFixed(1)}s</span></div>
-          <div class="lc-hk-keys">${L.teclas.map((k) => `<div class="lc-hk" data-hk="${k === ' ' ? 'space' : k}"><svg class="lc-ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15"/><circle class="lc-ring-v" cx="18" cy="18" r="15"/></svg><b>${keyGlyph(k)}</b><small>${keyLabel(k)}</small></div>`).join('')}</div>
-          <p class="lc-term-foot">Tecle a tecla destacada antes que o tempo acabe</p>
+        <div class="lc-term lc-hacker" id="lc-hkt">
+          <div class="lc-hk-fx" aria-hidden="true"><i class="lc-hk-sweep"></i></div>
+          <div class="lc-hk-bar">
+            <span class="lc-hk-title"><i></i>Varredura Hacker</span>
+            <span class="lc-hk-lives" id="lc-hk-lives" aria-label="Vidas">${Array.from({ length: game.maxLives }, () => `<b>${HEART}</b>`).join('')}</span>
+            <span class="lc-hk-kind" id="lc-hk-kind" data-k="normal">Ameaça normal</span>
+            <span class="lc-hk-time" id="lc-left">${game.limit.toFixed(1)}s</span>
+          </div>
+          <div class="lc-hk-keys">${L.teclas.map((k) => `<div class="lc-hk" data-hk="${k === ' ' ? 'space' : k}"><svg class="lc-hk-ring" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="55"/><circle class="v" cx="60" cy="60" r="55" pathLength="100"/></svg><b>${keyGlyph(k)}</b><small>${keyLabel(k)}</small></div>`).join('')}</div>
+          <p class="lc-hk-log" id="lc-hk-log"><span>&gt;</span> <em>Aguardando a varredura…</em></p>
           ${startOverlay('Varredura Hacker')}
         </div>`;
+      game.hk = null;
       goal(0, game.meta); hackerPaint(); bindStart();
+    }
+    function hackerLog(t, cls = '') { const l = $q('#lc-hk-log'); if (l) { l.className = 'lc-hk-log ' + cls; l.innerHTML = `<span>&gt;</span> <em>${esc(t)}</em>`; } }
+    function hackerKindPick() {
+      if (game.grace > 0) { game.grace--; return 'slow'; }
+      const r = Math.random(), fast = game.streak >= 5 ? .45 : game.streak >= 2 ? .28 : .15;
+      return r < fast ? 'fast' : r < fast + .2 ? 'slow' : 'normal';
+    }
+    function hackerNext(first) {
+      const pool = L.teclas.filter((k) => k !== game.target);
+      game.target = pool[Math.floor(Math.random() * pool.length)];
+      game.kind = first ? 'normal' : hackerKindPick();
+      game.limit = Math.max(1, game.base * HK_KIND[game.kind].f); game.left = game.limit;
+      const kd = $q('#lc-hk-kind');
+      if (kd && kd.dataset.k !== game.kind) { kd.dataset.k = game.kind; kd.textContent = `Ameaça ${HK_KIND[game.kind].nome.toLowerCase()}`; replay(kd, 'pop'); }
     }
     function hackerPaint() {
       const pct = Math.max(0, game.left / game.limit);
       const col = pct > .55 ? '#34d399' : pct > .28 ? '#fbbf24' : '#f43f5e';
-      // 20 vezes por segundo: as teclas ficam guardadas e só o que mudou é tocado (cor e alvo raramente mudam; o anel sim)
+      // 20 vezes por segundo: as teclas ficam guardadas e só o que mudou é tocado
       if (!game.hk || !game.hk[0]?.isConnected) game.hk = [...view.querySelectorAll('.lc-hk')];
       game.hk.forEach((el) => {
         const on = (el.dataset.hk === 'space' ? ' ' : el.dataset.hk) === game.target;
-        if (el.classList.contains('on') !== on) el.classList.toggle('on', on);
+        if (el.classList.contains('on') !== on) { el.classList.toggle('on', on); if (on) replay(el, 'arm'); }
+        if (on && el.dataset.k !== game.kind) el.dataset.k = game.kind;
         if (el._c !== col) { el._c = col; el.style.setProperty('--c', col); }
-        const p = on ? pct.toFixed(3) : '0';
+        const p = on ? (pct * 100).toFixed(1) : '0';
         if (el._p !== p) { el._p = p; el.style.setProperty('--p', p); }
       });
-      const l = $q('#lc-left'); if (l) l.textContent = `Tempo: ${game.left.toFixed(1)}s`;
+      const l = $q('#lc-left'); if (l) { const t = `${game.left.toFixed(1)}s`; if (l.textContent !== t) l.textContent = t; l.classList.toggle('low', pct <= .28); }
       kbTarget(game.target);
     }
-    function hackerNext() { const pool = L.teclas.filter((k) => k !== game.target); game.target = pool[Math.floor(Math.random() * pool.length)]; game.left = game.limit; }
     function hackerBurst(k, ok) {
-      const el = view.querySelector(`.lc-hk[data-hk="${k === ' ' ? 'space' : k}"]`); if (!el) return;
+      const el = view.querySelector(hkSel(k)); if (!el) return;
       const b = document.createElement('i'); b.className = 'lc-burst' + (ok ? '' : ' bad'); el.appendChild(b); setTimeout(() => b.remove(), 700);
+      if (ok) { const f = document.createElement('span'); f.className = 'lc-hk-plus'; f.textContent = '+1'; el.appendChild(f); setTimeout(() => f.remove(), 800); }
+    }
+    function hackerLives(lostAt) {
+      const box = $q('#lc-hk-lives'); if (!box) return;
+      [...box.children].forEach((h, i) => { h.classList.toggle('off', i >= game.lives); if (i === lostAt) replay(h, 'break'); });
     }
     function hackerRun() {
+      clearInterval(game.timer);
       game.timer = setInterval(() => {
-        if (!alive || busy || document.visibilityState !== 'visible') return;
+        if (!alive || busy || game.paused || document.visibilityState !== 'visible') return;
         game.left -= .05;
-        if (game.left <= 0) { hackerBurst(game.target, false); miss(null); hackerNext(); }
+        if (game.left <= 0) {
+          hackerBurst(game.target, false); miss(null); game.streak = 0;
+          if (!hackerHurt('Falha: a ameaça passou pelo firewall')) return;
+          hackerNext();
+        }
         hackerPaint();
       }, 50);
     }
+    /* perde uma vida; devolve false se acabaram */
+    function hackerHurt(msg) {
+      game.lives = Math.max(0, game.lives - 1); hackerLives(game.lives);
+      replay($q('#lc-hkt'), 'hurt');
+      game.grace = 2;
+      if (game.lives <= 0) { hackerDown(); return false; }
+      hackerLog(`${msg} · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
+      return true;
+    }
     function hackerKey(k) {
       if (k === game.target) {
-        hit(k); hackerBurst(k, true); game.score++; goal(game.score, game.meta);
-        if (game.score >= game.meta) return setTimeout(complete, 400);
+        hit(k); hackerBurst(k, true); game.score++; game.streak++; goal(game.score, game.meta);
+        hackerLog(game.streak >= 3 ? `Ameaça neutralizada · sequência de ${game.streak}` : 'Ameaça neutralizada', 'ok');
+        if (game.score >= game.meta) { game.paused = true; hackerLog('Sistema protegido!', 'ok'); return setTimeout(complete, 400); }
         hackerNext(); hackerPaint();
-      } else { miss(k); shake(`.lc-hk[data-hk="${game.target === ' ' ? 'space' : game.target}"]`); }
+      } else {
+        miss(k); game.streak = 0; shake(hkSel(game.target));
+        game.left = Math.max(.35, game.left - game.limit * .25); // tecla errada: perde um quarto do tempo
+        hackerLog('Tecla errada: o tempo encurtou', 'warn'); hackerPaint();
+      }
+    }
+    /* sem vidas: reviver com o Saldo HC ou recomeçar */
+    function hackerDown() {
+      game.paused = true;
+      const C = window.HC_cash, cost = hkRevCost(), saldo = C ? C.get().saldo : 0, can = !!C && saldo >= cost; // vale também no modo de teste: o saldo é descontado de verdade
+      const fmtC = (v) => (window.HC_cashFmt ? window.HC_cashFmt(v) : v.toFixed(2).replace('.', ','));
+      hackerLog('Sistema invadido!', 'err');
+      const term = $q('#lc-hkt'); if (!term) return;
+      term.insertAdjacentHTML('beforeend', `
+        <div class="lc-hk-over" id="lc-hk-over" role="dialog" aria-label="Sistema invadido">
+          <span class="lc-hk-over-ico">${HEART}</span>
+          <h4>Sistema invadido!</h4>
+          <p>Você neutralizou <b>${game.score} de ${game.meta}</b> ameaças. ${C ? 'Use o seu Saldo HC para reviver e continuar daqui, sem voltar ao começo.' : 'Recomece o minijogo para tentar de novo.'}</p>
+          ${C ? `<div class="lc-hk-wallet"><img src="assets/moeda/moeda.webp" alt="" draggable="false"><span>Seu saldo</span><b>${fmtC(saldo)}</b></div>
+          <button type="button" class="lc-hk-revive" ${can ? '' : 'disabled'}>Reviver com ${game.maxLives} vidas<span><img src="assets/moeda/moeda.webp" alt="" draggable="false">${fmtC(cost)}</span></button>
+          ${!can ? '<small class="lc-hk-poor">Saldo insuficiente. Ganhe moedas com as estrelas das lições.</small>' : ''}` : ''}
+          <button type="button" class="lc-hk-restart">${svg('refresh')}Recomeçar o minijogo</button>
+        </div>`);
+      const ov = $q('#lc-hk-over');
+      ov.querySelector('.lc-hk-revive')?.addEventListener('click', (e) => {
+        e.currentTarget.blur();
+        if (!C.spend(cost, `${L.id}:reviver`)) return; // o saldo mudou em outro lugar
+        game.revives++;
+        hackerTransfer(ov, saldo, saldo - cost, cost, fmtC);
+      });
+      ov.querySelector('.lc-hk-restart').addEventListener('click', (e) => {
+        e.currentTarget.blur();
+        game.score = 0; game.streak = 0; game.grace = 0; game.lives = game.maxLives; game.revives = 0; hackerLives(-1);
+        goal(0, game.meta); hackerNext(true); hackerPaint();
+        ov.remove(); term.insertAdjacentHTML('beforeend', startOverlay('Varredura Hacker')); bindStart();
+        hackerLog('Aguardando a varredura…');
+      });
+    }
+    /* reviver: animação do Saldo HC sendo transferido para o sistema do jogo.
+       As moedas saem da carteira e correm pelo cabo até as vidas; o saldo desce contando, a barra
+       enche e cada coração acende quando um terço das moedas chega. Depois vem o 3, 2, 1. */
+    async function hackerTransfer(ov, from, to, cost, fmtC) {
+      const COIN = '<img src="assets/moeda/moeda.webp" alt="" draggable="false">';
+      ov.classList.add('xfer');
+      ov.innerHTML = `
+        <div class="lc-hk-xfer">
+          <p class="lc-hk-xfer-tag">Transferência do Saldo HC</p>
+          <div class="lc-hk-xfer-row">
+            <div class="lc-hk-xfer-box from">${COIN}<small>Seu saldo</small><b id="lc-xf-saldo">${fmtC(from)}</b><em>−${fmtC(cost)}</em></div>
+            <div class="lc-hk-xfer-pipe" aria-hidden="true"><i class="flow"></i>${Array.from({ length: 9 }, (_, i) => `<span style="--d:${i * 120}ms">${COIN}</span>`).join('')}</div>
+            <div class="lc-hk-xfer-box to"><span class="lc-hk-xfer-hearts">${Array.from({ length: game.maxLives }, () => `<b>${HEART}</b>`).join('')}</span><small>Sistema</small><b id="lc-xf-st">Recarregando…</b></div>
+          </div>
+          <b class="lc-hk-xfer-bar"><i></i></b>
+          <p class="lc-hk-xfer-txt" id="lc-xf-txt">Transferindo ${fmtC(cost)} HC para o sistema…</p>
+        </div>`;
+      const DUR = 1800, t0 = performance.now(), num = ov.querySelector('#lc-xf-saldo'), hearts = [...ov.querySelectorAll('.lc-hk-xfer-hearts b')];
+      await new Promise((done) => {
+        const step = (t) => {
+          if (!ov.isConnected) return done();
+          const k = Math.min(1, (t - t0) / DUR), e = 1 - (1 - k) ** 2;
+          num.textContent = fmtC(from - (from - to) * e);
+          hearts.forEach((h, i) => { if (k >= (i + 1) / hearts.length * .92 && !h.classList.contains('on')) h.classList.add('on'); });
+          if (k < 1) requestAnimationFrame(step); else done();
+        };
+        requestAnimationFrame(step);
+      });
+      if (!ov.isConnected) return;
+      game.lives = game.maxLives; hackerLives(-1);
+      ov.classList.add('done');
+      ov.querySelector('#lc-xf-st').textContent = `${game.maxLives} vidas`;
+      ov.querySelector('#lc-xf-txt').textContent = 'Sistema restaurado!';
+      hackerLog(`Sistema restaurado · −${fmtC(cost)} HC`, 'ok');
+      await sleep(900);
+      hackerResume(ov);
+    }
+    async function hackerResume(ov) {
+      ov.classList.remove('xfer', 'done');
+      for (const n of [3, 2, 1]) { if (!ov.isConnected) return; ov.innerHTML = `<b class="lc-count">${n}</b>`; await sleep(700); }
+      if (!ov.isConnected) return;
+      ov.remove(); hackerNext(); hackerPaint(); game.paused = false;
     }
 
     /* ---------- MINIJOGO: FILA DE ANCORAGEM ---------- */
@@ -1310,16 +1467,33 @@
       if (phase !== 'play') return;
       if (k === 'escape' && kbOpen) { e.preventDefault(); return kbShow(false); }
       const lv = L.niveis[st.lvl];
+      if (k === 'backspace' && lv?.tipo === 'typing' && !game.intro && !busy) { e.preventDefault(); return typingBack(); }
       if (k === 'enter' && lv?.tipo === 'hacker' && game.paused) { e.preventDefault(); return countdown(); }
       if (game.intro === 'found' && k === 'enter') { e.preventDefault(); kb?.flash('enter', true); game.introDone = true; return smoothResize(() => typingInit(lv)); }
       if (game.intro && k.length === 1) { e.preventDefault(); return press(k); }
       if (L.teclas.includes(k)) { e.preventDefault(); return press(k); }
       // outra letra durante a digitação conta como erro (como no treino original)
-      if (lv?.tipo === 'typing' && k.length === 1 && /\S/.test(k) && !busy) { miss(k); shake(`.lc-ch[data-i="${game.pos}"]`); }
+      if (lv?.tipo === 'typing' && k.length === 1 && /\S/.test(k) && !busy) { miss(k); game.chs?.[game.pos]?.classList.add('had'); shake(`.lc-ch[data-i="${game.pos}"]`); }
     }
     document.addEventListener('keydown', onKey);
     function stop() { content?.classList.remove('lc-page'); bgWatch.disconnect(); dropBg(); alive = false; clearTimeout(kbTimer); clearInterval(speedTick); clearInterval(tick); clearInterval(game.timer); clearInterval(gs.glint); kbPopDrop(); document.removeEventListener('keydown', onKey); }
     window.addEventListener('hashchange', stop, { once: true });
+
+    /* ---------- fim do teste (acervo do professor) ---------- */
+    function testDone() {
+      phase = 'test'; paintProgress();
+      const main = $q('#lc-main'); if (!main) return;
+      main.classList.remove('is-typing');
+      main.innerHTML = `
+        <div class="lc-test-end">
+          <span class="lc-test-ok">${svg('check')}</span>
+          <h2>Teste concluído</h2>
+          <p>${esc(TEST.nome || L.titulo)}: precisão de ${Math.round(accuracy())}% em ${fmt(st.time)}. Nada foi salvo na conta.</p>
+          <p class="lc-test-hint">Quer mudar algo? Peça pelo código <b>${esc(TEST.cod || '')}</b>, por exemplo “no ${esc(TEST.cod || '')}, …”.</p>
+          <div class="lc-test-btns"><button type="button" class="btn-dark" data-t="again">${svg('refresh')}Testar de novo</button><a class="btn-soft" href="${esc(TEST.voltar)}">Voltar ao acervo</a></div>
+        </div>`;
+      main.querySelector('[data-t="again"]').addEventListener('click', () => { st = fresh(); play(); });
+    }
 
     /* ---------- resultado ---------- */
     function results(review = false) {
@@ -1761,7 +1935,8 @@ RESULTADOS
       document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
-    welcome();
+    if (TEST) { play(); if (TEST.auto) setTimeout(() => $q(TEST.auto === 'xp' ? '#lc-xptest' : '#lc-lrtest')?.click(), 900); }
+    else welcome();
   }
 
   window.HC_licao = { open };

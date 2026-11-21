@@ -936,6 +936,12 @@ function renderConfig(view) {
           ${secHead(2, 'Radar da página de Notícias', 'As 5 bolinhas que giram em volta do título “Acontece no HC”. Clique na foto para trocar; sem foto, aparecem as iniciais do nome.')}
           <div class="cfg-sec-body"><div id="radar-panel"></div></div>
         </section>`)}
+      <a class="cfg-w" data-acc="acervo" href="#config/informatica">
+        <span class="cfg-top"><span class="acc-icon cfg-ico"><i data-icon="lock"></i></span></span>
+        <strong class="cfg-title">Conteúdo de Informática</strong>
+        <span class="cfg-sub">Acervo do professor: estilos de nível, minijogos e peças das lições. Acesso com senha.</span>
+        <span class="cfg-open">Abrir página ${CHEV_SVG}</span>
+      </a>
     </div>
     <input type="file" id="file-link" accept="image/*" hidden>
     <input type="file" id="file-logo" accept="image/*" hidden>
@@ -2233,7 +2239,9 @@ function initAccordion() {
     setTimeout(() => { if (!m.classList.contains('in')) m.hidden = true; }, 320);
     lastFocus?.focus?.({ preventScroll: true });
   }
-  grid.addEventListener('click', (e) => {
+  grid.addEventListener('click', async (e) => {
+    const a = e.target.closest('a.cfg-w[data-acc="acervo"]');
+    if (a) { e.preventDefault(); if (await acervoUnlock()) location.hash = '#config/informatica'; return; } // só com a senha do professor
     const w = e.target.closest('button.cfg-w'); if (w) open(w.dataset.acc);
   });
   modals.forEach((m) => m.addEventListener('click', (e) => {
@@ -3123,6 +3131,116 @@ function focusEditor({ src, pos, round = false }) { // round: prévias em círcu
   });
 }
 
+/* ---------- Conteúdo de Informática (acervo do professor, com senha) ----------
+   A senha não fica escrita no site: só o resumo SHA-256 dela. Depois de acertar,
+   fica liberado até fechar o navegador. */
+const ACERVO_HASH = '618a865ecfa5327507b402d6a4d9bdfa52745e6da3296eb5ffcb5ec3add5d563';
+const acervoKey = 'hc-acervo-ok';
+async function sha256(t) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+  return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
+}
+function acervoUnlock() {
+  try { if (sessionStorage.getItem(acervoKey) === ACERVO_HASH) return Promise.resolve(true); } catch {}
+  return new Promise((resolve) => {
+    if (document.querySelector('.lk')) return resolve(false);
+    const wrap = document.createElement('div');
+    wrap.className = 'lk lk-acervo';
+    wrap.innerHTML = `
+      <div class="lk-backdrop"></div>
+      <form class="lk-card" role="dialog" aria-modal="true" aria-labelledby="av-lk-t">
+        <span class="lk-icon av-lk-icon"><i data-icon="lock"></i></span>
+        <h2 id="av-lk-t">Conteúdo de Informática</h2>
+        <p class="lk-sub">Área só do professor. Digite a senha para abrir o acervo.</p>
+        <div class="lk-field"><input type="password" autocomplete="off" placeholder="Senha" aria-label="Senha" required><button type="button" class="lk-eye" aria-label="Mostrar senha"><i data-icon="eye"></i></button></div>
+        <p class="lk-msg" role="alert"></p>
+        <div class="lk-actions"><button type="button" class="btn-soft av-lk-cancel">Cancelar</button><button type="submit" class="btn-dark">Abrir</button></div>
+      </form>`;
+    document.body.appendChild(wrap);
+    paintIcons(wrap);
+    const card = wrap.querySelector('.lk-card'), inp = wrap.querySelector('input'), msg = wrap.querySelector('.lk-msg');
+    const lastFocus = document.activeElement;
+    requestAnimationFrame(() => wrap.classList.add('in'));
+    setTimeout(() => inp.focus(), 60);
+    const close = (ok) => {
+      document.removeEventListener('keydown', onKey, true);
+      wrap.classList.remove('in'); setTimeout(() => wrap.remove(), 300);
+      if (!ok) lastFocus?.focus?.({ preventScroll: true });
+      resolve(ok);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(false); } };
+    document.addEventListener('keydown', onKey, true);
+    wrap.querySelector('.lk-backdrop').addEventListener('click', () => close(false));
+    wrap.querySelector('.av-lk-cancel').addEventListener('click', () => close(false));
+    wrap.querySelector('.lk-eye').addEventListener('click', (e) => {
+      const show = inp.type === 'password'; inp.type = show ? 'text' : 'password';
+      e.currentTarget.innerHTML = `<i data-icon="${show ? 'eyeoff' : 'eye'}"></i>`; paintIcons(e.currentTarget); inp.focus();
+    });
+    card.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (await sha256(inp.value) === ACERVO_HASH) {
+        try { sessionStorage.setItem(acervoKey, ACERVO_HASH); } catch {}
+        close(true);
+      } else {
+        msg.textContent = 'Senha incorreta.'; card.classList.remove('error'); void card.offsetWidth; card.classList.add('error');
+        inp.select();
+      }
+    });
+  });
+}
+/* página dedicada: Configurações › Conteúdo de Informática */
+function renderAcervo(view) {
+  let ok = false; try { ok = sessionStorage.getItem(acervoKey) === ACERVO_HASH; } catch {}
+  view.innerHTML = `
+  <div class="wrap av-page">
+    <a class="back-link" href="#config"><i data-icon="left"></i>Configurações</a>
+    ${pageHead('Configurações', 'Conteúdo de Informática.', 'O acervo do professor: os estilos de nível, os minijogos e as peças que formam as lições do curso de Informática.')}
+    ${ok ? '<div id="acervo-panel"></div>' : `
+      <section class="av-locked">
+        <span class="lk-icon av-lk-icon"><i data-icon="lock"></i></span>
+        <h2>Área só do professor</h2>
+        <p>Digite a senha para abrir o acervo.</p>
+        <button type="button" class="btn-dark" id="av-unlock">Digitar a senha</button>
+      </section>`}
+  </div>`;
+  paintIcons(view);
+  if (ok) return acervoRender();
+  const ask = async () => { if (await acervoUnlock()) renderAcervo(view); };
+  $('#av-unlock').addEventListener('click', ask);
+  ask();
+}
+/* teste de um item do acervo: roda o motor das lições com um nível só, sem salvar nada */
+const lazyFile = {};
+const lazy = (f) => lazyFile[f] ||= new Promise((ok, fail) => {
+  const src = `${f}?v=${window.HC_V || ''}`;
+  if (f.endsWith('.css')) { const l = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: src }); l.onload = ok; l.onerror = ok; document.head.append(l); return; }
+  const sc = Object.assign(document.createElement('script'), { src }); sc.onload = ok; sc.onerror = () => { delete lazyFile[f]; fail(); }; document.body.append(sc);
+});
+async function renderAcervoTest(view, cod) {
+  let ok = false; try { ok = sessionStorage.getItem(acervoKey) === ACERVO_HASH; } catch {}
+  if (!ok) { history.replaceState(null, '', '#config/informatica'); return renderAcervo(view); }
+  view.innerHTML = '<div class="wrap"><p class="me-loading">Preparando o teste…</p></div>';
+  try {
+    // plataforma.js traz o XP e o Saldo HC (usados nos testes da tela de XP e das moedas)
+    await Promise.all(['curso/licao.css', 'curso/acervo.css', 'curso/teclado.js', 'curso/licao.js', 'curso/acervo.js', ...(typeof HC_CURSO === 'undefined' ? ['curso/plataforma.js'] : [])].map(lazy));
+    const t = await window.HC_acervo.testLesson(cod);
+    if (!view.isConnected) return;
+    if (!t) { location.hash = '#config/informatica'; return; }
+    window.HC_licao.open(view, t.L, t.meta);
+  } catch {
+    view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir o teste. Verifique a internet e tente de novo.</p></div>';
+  }
+}
+
+/* o acervo (curso/acervo.js e .css) só é baixado quando a página é aberta */
+let acervoLoad = null;
+function acervoRender() {
+  const box = $('#acervo-panel'); if (!box) return;
+  acervoLoad ||= Promise.all(['curso/acervo.css', 'curso/acervo.js'].map(lazy));
+  acervoLoad.then(() => window.HC_acervo.render(box, paintIcons))
+    .catch(() => { acervoLoad = null; box.innerHTML = '<p class="av-loading">Não foi possível carregar o acervo. Verifique a internet e tente de novo.</p>'; });
+}
+
 /* Pop-up de confirmação (mesmo visual do pop-up de senha). Resolve true se confirmado. */
 function confirmDialog({ title, sub = '', image = '', ok = 'Excluir', icon = 'trash' }) {
   return new Promise((resolve) => {
@@ -3215,6 +3333,8 @@ function route() {
   if (r.split('/')[0] === 'config' && !window.HC_isAdmin?.()) window.HC_adminOnly?.(view, 'Configurações');
   else if (r === 'config') renderConfig(view);
   else if (r === 'config/noticias') renderNewsAdmin(view);
+  else if (r === 'config/informatica') renderAcervo(view);
+  else if (r.startsWith('config/informatica/teste/')) renderAcervoTest(view, r.split('/')[3]);
   else if (r === 'noticias') renderNews(view);
   else if (r.startsWith('noticias/')) { // link compartilhado de uma notícia
     const n = news.find((x) => x.id === r.slice(9));
