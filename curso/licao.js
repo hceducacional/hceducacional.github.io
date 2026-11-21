@@ -518,17 +518,19 @@
         <aside class="lc-gauge" id="lc-gauge" aria-label="Pontuação do nível"></aside>
         <section class="lc-card lc-main" id="lc-main"></section>
         <aside class="lc-side">
-          <div class="lc-stat lc-w" style="--wc:#ff9f0a">
+          <div class="lc-stat lc-w" style="--wc:#ffb020;--wd:#ff4d1f">
+            <i class="lc-w-deco" aria-hidden="true">${svg('zap')}</i>
             <span class="lc-w-label">${svg('zap')}XP</span>
             <strong id="lc-xp">0</strong><small>Pontos de experiência</small>
             <div class="lc-sparks" id="lc-sparks"></div>
           </div>
-          <div class="lc-stat lc-w" style="--wc:#0a84ff"><span class="lc-w-label">${svg('clock')}Tempo</span><strong id="lc-time">00:00</strong><small>Tempo nesta lição</small></div>
-          <div class="lc-stat lc-w lc-w-ring" id="lc-acc-card" style="--wc:#30d158">
+          <div class="lc-stat lc-w" style="--wc:#38bdf8;--wd:#4f46e5"><i class="lc-w-deco" aria-hidden="true">${svg('clock')}</i><span class="lc-w-label">${svg('clock')}Tempo</span><strong id="lc-time">00:00</strong><small>Tempo nesta lição</small></div>
+          <div class="lc-stat lc-w lc-w-ring" id="lc-acc-card" style="--wc:#34d399;--wd:#0d9488">
+            <i class="lc-w-deco" aria-hidden="true">${svg('target')}</i>
             <div><span class="lc-w-label">${svg('target')}Precisão</span><strong id="lc-acc">100%</strong><small id="lc-acc-txt">Excelente</small></div>
             <svg class="lc-ring2" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="18" pathLength="100"/><circle class="v" id="lc-acc-ring" cx="22" cy="22" r="18" pathLength="100"/></svg>
           </div>
-          <div class="lc-stat lc-w" style="--wc:#bf5af2"><span class="lc-w-label">${svg('level')}Grau de experiência</span><strong id="lc-grade">01</strong><b class="lc-mini"><i id="lc-grade-bar"></i></b><small id="lc-grade-txt"></small></div>
+          <div class="lc-stat lc-w" style="--wc:#c084fc;--wd:#db2777"><i class="lc-w-deco" aria-hidden="true">${svg('level')}</i><span class="lc-w-label">${svg('level')}Grau de experiência</span><strong id="lc-grade">01</strong><b class="lc-mini"><i id="lc-grade-bar"></i></b><small id="lc-grade-txt"></small></div>
         </aside>
       </div>`;
       paintStats();
@@ -544,20 +546,30 @@
       }, 1000);
     }
 
+    /* painel da direita: só reescreve o que mudou (cada tecla mexe aqui, então nada de trabalho à toa) */
+    const statSet = (id, kind, v, prop) => {
+      const el = $q('#' + id); if (!el) return;
+      const memo = (el._hcv ||= {}), k = kind + (prop || ''); // guardado no próprio elemento: se o painel for redesenhado, começa do zero
+      if (memo[k] === v) return;
+      memo[k] = v;
+      if (kind === 'txt') el.textContent = v; else if (kind === 'var') el.style.setProperty(prop, v); else el.style[prop] = v;
+    };
     function paintStats() {
-      const x = $q('#lc-xp'); if (!x) return;
-      x.textContent = st.xp.toLocaleString('pt-BR');
-      $q('#lc-time').textContent = fmt(st.time);
+      if (!$q('#lc-xp')) return;
+      statSet('lc-xp', 'txt', st.xp.toLocaleString('pt-BR'));
+      statSet('lc-time', 'txt', fmt(st.time));
       const a = accuracy();
-      $q('#lc-acc').textContent = Math.round(a) + '%';
+      statSet('lc-acc', 'txt', Math.round(a) + '%');
       // anel de precisão (como os anéis de atividade): verde, amarelo ou vermelho
-      $q('#lc-acc-ring').style.setProperty('--p', a.toFixed(1));
-      $q('#lc-acc-card').style.setProperty('--wc', a >= 88 ? '#30d158' : a >= 70 ? '#ffd60a' : '#ff453a');
-      $q('#lc-acc-txt').textContent = a >= 88 ? 'Excelente' : a >= 70 ? 'Bom' : 'Atenção aos erros';
+      statSet('lc-acc-ring', 'var', a.toFixed(1), '--p');
+      // a cor do card acompanha a precisão: verde (excelente), âmbar (bom) ou vermelho (atenção)
+      statSet('lc-acc-card', 'var', a >= 88 ? '#34d399' : a >= 70 ? '#fbbf24' : '#fb7185', '--wc');
+      statSet('lc-acc-card', 'var', a >= 88 ? '#0d9488' : a >= 70 ? '#ea580c' : '#e11d48', '--wd');
+      statSet('lc-acc-txt', 'txt', a >= 88 ? 'Excelente' : a >= 70 ? 'Bom' : 'Atenção aos erros');
       const g = grade(st.xp);
-      $q('#lc-grade').textContent = String(g.g).padStart(2, '0');
-      $q('#lc-grade-bar').style.width = g.pct + '%';
-      $q('#lc-grade-txt').textContent = `${Math.max(1, Math.round(100 - g.pct))}% para o grau ${g.g + 1}`;
+      statSet('lc-grade', 'txt', String(g.g).padStart(2, '0'));
+      statSet('lc-grade-bar', 'css', g.pct.toFixed(1) + '%', 'width');
+      statSet('lc-grade-txt', 'txt', `${Math.max(1, Math.round(100 - g.pct))}% para o grau ${g.g + 1}`);
     }
 
     /* acerto e erro valem para todos os tipos de nível */
@@ -680,8 +692,9 @@
     function paintGauge() {
       const g = $q('#lc-gauge'); if (!g) return;
       const pts = Math.round(totalPts()), quiet = !gs.ready; // ao abrir/retomar, mostra o estado sem animar
-      $q('#lc-gbar').style.height = `${gPct(pts)}%`;
-      $q('#lc-ghalo').style.height = `${gPct(pts)}%`;
+      // a barra tem a altura toda e sobe deslizando (transform): sem recalcular a página a cada tecla
+      const up = `translateY(${(100 - gPct(pts)).toFixed(2)}%)`;
+      const gb = $q('#lc-gbar'); if (gb._up !== up) { gb._up = up; gb.style.transform = up; $q('#lc-ghalo').style.transform = up; }
       $q('#lc-gpts').textContent = pts.toLocaleString('pt-BR');
       const next = GOALS.find((t) => t > pts);
       $q('#lc-gframe').style.height = `${next ? gPct(next) : 100}%`; // a moldura cresce até a próxima meta
@@ -740,31 +753,31 @@
       return `<span class="lc-stars5 ${rk} ${cls}">${STAR_AT.map((_, i) => `<i class="${i < n ? 'on' : ''}" style="--i:${i}">${svg('star', true)}</i>`).join('')}</span>`;
     };
     function spark() {
-      const box = $q('#lc-sparks'); if (!box) return;
-      for (let i = 0; i < 3; i++) setTimeout(() => {
-        const s = document.createElement('i');
-        s.style.setProperty('--dx', (Math.random() * 60 - 30) + 'px'); s.style.setProperty('--dy', -(110 + Math.random() * 90) + 'px');
-        box.appendChild(s); setTimeout(() => s.remove(), 1600);
-      }, i * 140);
+      // uma faísca por tecla e no máximo 8 no ar (antes eram 3 por tecla: ~50 animando ao digitar rápido)
+      const box = $q('#lc-sparks'); if (!box || box.childElementCount >= 8) return;
+      const s = document.createElement('i');
+      s.style.setProperty('--dx', (Math.random() * 60 - 30) + 'px'); s.style.setProperty('--dy', -(110 + Math.random() * 90) + 'px');
+      box.appendChild(s); setTimeout(() => s.remove(), 1600);
     }
     /* teclado virtual ABNT2 (curso/teclado.js); a preferência de mostrar ou não fica guardada no aparelho */
     let kb = null;
     let kbOpen = false, kbTimer = null;
     /* medidor de velocidade (pílula ao lado do botão do teclado): conta as teclas certas dos
        últimos 3 segundos; enche quando o aluno digita rápido e vai esvaziando quando ele para.
-       Cor de azul (devagar) a vermelho (bem rápido); PPM = (teclas por minuto) ÷ 5. */
+       PPM = (teclas por minuto) ÷ 5.
+       Versão leve: a barra anda só com transform (sem mexer no layout do cartão), as cores e o
+       tamanho da tecla da logo mudam em 4 degraus (data-heat), sem faíscas criadas a cada quadro,
+       e nada é reescrito na página se o valor não mudou. */
     const SPEED_WIN = 3000, SPEED_MAX = 60; // PPM em que a pílula fica cheia
-    const reduceFx = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let presses = [], speedShown = 0, speedTick = null;
+    let presses = [], speedShown = 0, speedTick = null, spdFill = '', spdNum = '';
     // roda só enquanto há algo para mostrar: começa na tecla certa (speedWake) e para sozinho quando a pílula zera
     function speedRun() {
-      clearInterval(speedTick); speedTick = null;
-      const fill = $q('#lc-speed-fill'); if (fill) { fill.style.width = '0%'; fill.classList.add('zero'); fill._sc = '1'; }
-      $q('#lc-speed')?.style.setProperty('--sc', 1);
+      clearInterval(speedTick); speedTick = null; spdFill = ''; spdNum = '';
+      const fill = $q('#lc-speed-fill'); if (fill) { fill.style.transform = 'translateX(-100%)'; fill.classList.add('zero'); }
       const num = $q('#lc-ppm'); if (num) num.textContent = '0';
       speedHeat(0);
     }
-    /* calor do medidor: 0 parado · 1 aquecendo · 2 rápido (chamas pequenas e faíscas) · 3 pegando fogo */
+    /* calor do medidor: 0 parado · 1 aquecendo · 2 rápido · 3 pegando fogo */
     const HEAT_AT = [10, 22, 35], HEAT_TXT = ['Velocidade', 'Aquecendo…', 'Rápido!', 'Pegando fogo!'];
     function speedHeat(h) {
       const box = $q('#lc-speed'); if (!box || box.dataset.heat === String(h)) return;
@@ -773,41 +786,28 @@
       const lbl = $q('#lc-spd-lbl'); if (lbl) lbl.textContent = HEAT_TXT[h];
       if (up && h >= 2) replay(box, 'boost');
     }
-    /* faíscas saindo da ponta da barra */
-    function speedSparks(h, t) {
-      const fx = $q('#lc-spd-fx'); if (!fx || h < 2 || fx.childElementCount > 14) return;
-      const n = h === 3 ? 3 : Math.random() < .6 ? 1 : 0;
-      for (let i = 0; i < n; i++) {
-        const sp = document.createElement('i');
-        const a = (-150 + Math.random() * 120) * Math.PI / 180, d = 16 + Math.random() * (h === 3 ? 34 : 20);
-        sp.style.cssText = `left:${(t * 100).toFixed(1)}%;--dx:${(Math.cos(a) * d).toFixed(1)}px;--dy:${(Math.sin(a) * d).toFixed(1)}px;--s:${(.6 + Math.random() * .8).toFixed(2)};--d:${Math.round(420 + Math.random() * 380)}ms`;
-        sp.addEventListener('animationend', () => sp.remove(), { once: true });
-        fx.appendChild(sp);
-      }
-    }
     function speedWake() {
       if (speedTick) return;
-      $q('#lc-speed-fill')?.classList.remove('zero');
+      const fill0 = $q('#lc-speed-fill'), num0 = $q('#lc-ppm');
+      fill0?.classList.remove('zero');
       speedTick = setInterval(() => {
         if (!view.isConnected || !alive) { clearInterval(speedTick); speedTick = null; return; }
         const now = performance.now();
         while (presses.length && now - presses[0] > SPEED_WIN) presses.shift();
         const target = presses.length ? (presses.length / (SPEED_WIN / 1000)) * 60 / 5 : 0;
-        speedShown += (target - speedShown) * .18; // anda devagar até o valor, sem saltos
+        speedShown += (target - speedShown) * .22; // anda devagar até o valor, sem saltos
         if (speedShown < .4) speedShown = 0;
-        const fill = $q('#lc-speed-fill'), num = $q('#lc-ppm');
+        const fill = fill0?.isConnected ? fill0 : $q('#lc-speed-fill'), num = num0?.isConnected ? num0 : $q('#lc-ppm');
         if (fill && num) {
           const t = Math.min(1, speedShown / SPEED_MAX);
-          fill.style.width = `${(t * 100).toFixed(1)}%`;
-          fill.style.setProperty('--h', Math.round(215 - 215 * Math.min(1, speedShown / HEAT_AT[2]))); // 215 = azul … 0 = vermelho (vermelho quando pega fogo)
-          num.textContent = Math.round(speedShown);
-          const sc = (1 + .3 * Math.min(1, speedShown / HEAT_AT[2])).toFixed(2); // a tecla da logo cresce com a velocidade
-          if (fill._sc !== sc) { fill._sc = sc; $q('#lc-speed')?.style.setProperty('--sc', sc); }
-          const h = speedShown >= HEAT_AT[2] ? 3 : speedShown >= HEAT_AT[1] ? 2 : speedShown >= HEAT_AT[0] ? 1 : 0;
-          speedHeat(h); if (!reduceFx) speedSparks(h, t);
+          const tf = `translateX(${(t * 100 - 100).toFixed(0)}%)`;
+          if (tf !== spdFill) { spdFill = tf; fill.style.transform = tf; }
+          const n = String(Math.round(speedShown));
+          if (n !== spdNum) { spdNum = n; num.textContent = n; }
+          speedHeat(speedShown >= HEAT_AT[2] ? 3 : speedShown >= HEAT_AT[1] ? 2 : speedShown >= HEAT_AT[0] ? 1 : 0);
         }
         if (!speedShown && !presses.length) { clearInterval(speedTick); speedTick = null; fill?.classList.add('zero'); }
-      }, 80);
+      }, 100);
     }
     const KB_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>';
     const kbHTML = () => `
@@ -816,7 +816,7 @@
           <span class="lc-spd-key" aria-hidden="true"><b><img src="assets/icons/logo-hc.webp" alt="" draggable="false"></b></span>
           <span class="lc-spd-body">
             <span class="lc-spd-top"><em id="lc-spd-lbl">${HEAT_TXT[0]}</em><span class="lc-spd-num"><b id="lc-ppm">0</b><small>PPM</small></span></span>
-            <span class="lc-spd-track"><span class="lc-speed-pill"><i id="lc-speed-fill"></i></span><span class="lc-spd-fx" id="lc-spd-fx"></span></span>
+            <span class="lc-spd-track"><span class="lc-speed-pill"><i id="lc-speed-fill" class="zero"></i></span></span>
           </span>
         </span>
         <button type="button" class="lc-kbtn${kbOpen ? ' open' : ''}" id="lc-kbtn" aria-expanded="${kbOpen}" aria-controls="lc-kbpop">${KB_ICO}<span>${kbOpen ? 'Ocultar teclado' : 'Ver teclado virtual'}</span><b aria-hidden="true">⌄</b></button>
