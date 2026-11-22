@@ -479,6 +479,23 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       </article>`;
   }
   const discProg = (d) => { const it = discItems(d.id).filter((c) => c.visivel || !isAdmin()); const all = it.length ? it : discItems(d.id); return { n: all.length, ok: all.filter((c) => contDone(c.id)).length, began: all.some((c) => contProg(c.id)?.savedAt) }; };
+  /* celular: barrinha embaixo da fileira de cards (um ponto por card, o atual vira um traço); tocar num ponto leva ao card */
+  function rowDots(row) {
+    row.nextElementSibling?.classList.contains('pf-rowdots') && row.nextElementSibling.remove();
+    const cards = [...row.children]; if (cards.length < 2) return;
+    const bar = document.createElement('div'); bar.className = 'pf-rowdots'; bar.setAttribute('aria-hidden', 'true');
+    bar.innerHTML = cards.map(() => '<i></i>').join(''); row.after(bar);
+    const dots = [...bar.children]; let cur = -1;
+    const upd = () => {
+      if (!row.isConnected) return row.removeEventListener('scroll', upd);
+      const step = cards[1].offsetLeft - cards[0].offsetLeft || 1;
+      const end = row.scrollLeft + row.clientWidth >= row.scrollWidth - 4;
+      const i = end ? cards.length - 1 : Math.min(cards.length - 1, Math.round(row.scrollLeft / step));
+      if (i !== cur) { dots[cur]?.classList.remove('on'); dots[i].classList.add('on'); cur = i; }
+    };
+    dots.forEach((d, i) => d.addEventListener('click', () => row.scrollTo({ left: cards[i].offsetLeft - cards[0].offsetLeft, behavior: 'smooth' })));
+    row.addEventListener('scroll', upd, { passive: true }); upd();
+  }
   /* seção "Disciplinas", logo abaixo dos módulos: cada card abre a página da disciplina */
   function contsSection() {
     const list = visDiscs(), adm = isAdmin();
@@ -569,7 +586,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     const pads = sec.querySelectorAll('[data-cdir]');
     pads.forEach((b) => b.addEventListener('click', () => row.scrollBy({ left: +b.dataset.cdir * row.clientWidth * .8, behavior: 'smooth' })));
     const upd = () => { if (!pads.length) return; pads[0].disabled = row.scrollLeft < 4; pads[1].disabled = row.scrollLeft + row.clientWidth >= row.scrollWidth - 4; pads[0].parentNode.classList.toggle('none', pads[0].disabled && pads[1].disabled); };
-    row.addEventListener('scroll', upd, { passive: true }); addEventListener('resize', upd, { passive: true }); upd();
+    row.addEventListener('scroll', upd, { passive: true }); addEventListener('resize', upd, { passive: true }); upd(); rowDots(row);
   }
   function refreshConts(view, toEnd) {
     const sec = view.querySelector('.pf-conts'); if (!sec) return;
@@ -1393,7 +1410,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     view.querySelectorAll('[data-editmod]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); editCard(view, 'm' + b.dataset.editmod); }));
     view.querySelectorAll('[data-mdir]').forEach((b) => b.addEventListener('click', () => row.scrollBy({ left: +b.dataset.mdir * row.clientWidth * .8, behavior: 'smooth' })));
     const paddles = () => { const [p, n] = view.querySelectorAll('[data-mdir]'); if (!p) return; p.disabled = row.scrollLeft < 4; n.disabled = row.scrollLeft + row.clientWidth >= row.scrollWidth - 4; p.parentNode.classList.toggle('none', p.disabled && n.disabled); };
-    row.addEventListener('scroll', paddles, { passive: true }); paddles();
+    row.addEventListener('scroll', paddles, { passive: true }); paddles(); rowDots(row);
     view.querySelector('.pf-mods').classList.toggle('has-open', openMod !== null);
     fitStage(view, paddles);
   }

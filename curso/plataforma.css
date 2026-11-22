@@ -194,6 +194,7 @@ html:has(.pf-stage) { scrollbar-color: #3a3a3c transparent; }
 /* módulos: cards grandes numa fileira (passa para o lado), no mesmo estilo dos cards de lição */
 .pf-mod-row { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 2px; padding: 4px 2px 18px; margin: 0 -2px; scrollbar-width: none; }
 .pf-mod-row::-webkit-scrollbar { display: none; }
+.pf-rowdots { display: none; } /* só no celular */
 /* computador: os 5 módulos lado a lado, como os pôsteres de um app de vídeo */
 .pf-modcard { flex: 0 0 calc((100% - 64px) / 5); aspect-ratio: 4 / 5; border-radius: 22px; scroll-snap-align: start; transition: box-shadow .5s var(--ease), transform .5s var(--ease), opacity .4s ease, filter .4s ease; }
 .pf-modcard .pf-lesson-text { padding: 0 16px 12px; }
@@ -364,10 +365,19 @@ html:has(.pf-stage) { scrollbar-color: #3a3a3c transparent; }
   .pf-mods-head .pf-st-title { margin-bottom: 12px; }
   .pf-mod-paddles { display: none; }
   .pf-stage .pf-mod-row { margin: 0 -16px; padding: 4px 16px 18px; scroll-padding: 0 16px; }
-  .pf-modcard { flex-basis: min(62%, 280px); border-radius: 22px; }
-  .pf-modcard .pf-lesson-tag { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .pf-modcard .pf-lesson-text p { display: none; }
-  .pf-modcard .pf-lesson-text h3 { font-size: 21px; }
+  /* cards do tamanho dos da tela inicial ("Mantenha-se conectado"): um por vez, arrasta para o lado */
+  .pf-modcard, .pf-cnew { flex-basis: 100%; border-radius: 26px; }
+  .pf-modcard .pf-lesson-text { padding: 0 20px 16px; }
+  .pf-modcard .pf-lesson-tag { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pf-modcard .pf-lesson-text h3 { font-size: 28px; line-height: 1.08; }
+  .pf-modcard .pf-lesson-text p { font-size: 15px; }
+  .pf-modcard .pf-lesson-bar { gap: 12px; padding: 13px 16px 15px; }
+  .pf-modcard .pf-lesson-av { width: 46px; height: 46px; border-radius: 13px; }
+  .pf-modcard .pf-lesson-who strong { font-size: 15px; } .pf-modcard .pf-lesson-who small { font-size: 13px; }
+  .pf-modcard .pf-lesson-go { height: 34px; padding: 0 18px; font-size: 14.5px; }
+  .pf-rowdots { display: flex; justify-content: center; align-items: center; gap: 8px; height: 8px; margin: -4px 0 6px; }
+  .pf-rowdots i { width: 8px; height: 8px; border-radius: 999px; background: rgba(255, 255, 255, .28); transition: width .45s var(--ease), background .3s; cursor: pointer; }
+  .pf-rowdots i.on { width: 32px; background: rgba(255, 255, 255, .85); }
   .pf-modcard .pf-lesson-who small, .pf-modcard .pf-lesson-who strong { white-space: nowrap; }
   .pf-stage .pf-xp { gap: 12px 14px; padding: 12px; }
   .pf-stage .pf-xp-lvl { width: 58px; height: 58px; border-radius: 16px; }

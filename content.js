@@ -459,12 +459,12 @@ window.HC_CONTENT = {
   "cursoConteudo": [
     {
       "id": "d1",
-      "kind": "disc",
-      "titulo": "Introdução à Informática",
-      "desc": "O que é informática, a história do computador, hardware e software, os tipos de computador e as peças que fazem tudo funcionar.",
-      "ico": "cpu",
-      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/794c9701-c057-4ed8-9681-b85117e06f62.webp",
       "cor": 0,
+      "ico": "cpu",
+      "desc": "O que é informática, a história do computador, hardware e software, os tipos de computador e as peças que fazem tudo funcionar.",
+      "kind": "disc",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/117238e0-ea8d-4155-b6ad-d9fb43970f89.webp",
+      "titulo": "Introdução à Informática",
       "visivel": true
     }
   ],
