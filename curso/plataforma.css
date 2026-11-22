@@ -14,46 +14,98 @@
   color: #fff; background: rgba(0, 0, 0, .45); border: 1px dashed rgba(255, 255, 255, .5); }
 .pf-ph em small { font-size: 10px; opacity: .75; }
 
-/* banner do módulo (como o carrossel da tela de início) */
-.pf-hero { position: relative; isolation: isolate; aspect-ratio: 1597 / 420; border-radius: 28px; overflow: hidden; background: #111;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, .04), 0 18px 40px -24px rgba(0, 0, 0, .35); }
-/* carrossel: o banner do módulo + os banners dinâmicos (saldo e nível); mesma troca da tela de início */
-.pf-track { height: 100%; }
-.pf-slide { position: relative; flex: 0 0 100%; height: 100%; overflow: hidden; isolation: isolate; }
-.pf-car .dots { margin-top: 18px; }
+/* =========================================================
+   PALCO DO TOPO (estilo app de streaming, como o Apple TV)
+   A imagem do banner ocupa a largura toda da área de conteúdo, começando no topo da página
+   (a barra de cima e a lateral ficam por cima dela). As informações do banner ficam embaixo à esquerda
+   e, na parte de baixo da imagem, "Seu curso" e os módulos (os cards passam metade para fora da imagem).
+   A imagem rola com a página. Alturas: --ih (imagem) e --sp (onde começam os cards), calculadas em fitStage().
+   Leve para placas fracas: nada de desfoque por trás (backdrop-filter) nem de camada animada em loop na tela toda.
+   ========================================================= */
+.pf-stage { --up: calc(16px + var(--header-h) + 24px); --side: 40px; --dots-h: 60px;
+  --padL: max(var(--side), calc((100cqw - 1760px) / 2 + var(--side)));
+  --mid: calc((var(--sp, 50cqw) + var(--up)) / 2); /* meio da parte livre da imagem (acima dos cards), para os desenhos dos banners */
+  position: relative; container-type: inline-size; margin: calc(-1 * var(--up)) calc(-1 * var(--side)) 0; padding-top: var(--up); color: #fff;
+  animation: pfStageIn .7s ease both; }
+@keyframes pfStageIn { from { opacity: 0; } }
+.pf-hero { position: absolute; z-index: 0; top: 0; left: 0; right: 0; height: var(--ih, 56.25cqw); overflow: hidden; isolation: isolate; background: #0d0d0f; }
+/* troca dos banners com fade: os slides ficam um sobre o outro e só a opacidade muda (sem deslizar).
+   Quem sai some devagar por baixo de quem entra; os que não aparecem ficam ocultos (não pesam na placa de vídeo) */
+/* fundo preto nesta tela: a imagem termina se dissolvendo no preto, que segue até o fim da página */
+html:has(.pf-stage), body:has(.pf-stage) { background: #0d0d0f; }
+html:has(.pf-stage) { scrollbar-color: #3a3a3c transparent; }
+.pf-hero::after { content: ''; position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; height: min(160px, 18%); pointer-events: none; background: linear-gradient(to bottom, rgba(13, 13, 15, 0), #0d0d0f); }
+.pf-track { position: relative; display: block; height: 100%; transform: none !important; transition: none !important; }
+.pf-slide { position: absolute; inset: 0; overflow: hidden; isolation: isolate; opacity: 0; visibility: hidden; }
+.pf-slide.leaving { z-index: 1; opacity: 0; visibility: visible; transition: opacity 1.1s cubic-bezier(.4, 0, .2, 1); }
+.pf-slide.active { z-index: 2; opacity: 1; visibility: visible; transition: opacity 1.1s cubic-bezier(.4, 0, .2, 1); }
+.pf-slide.leaving .pf-hero-text, .pf-slide.leaving .pfb-body { opacity: 0; transition: opacity .45s ease; }
 .pf-hero-bg { position: absolute; inset: 0; }
-.pf-slide.active .pf-hero-bg, .pf-slide.leaving .pf-hero-bg { animation: pfKen 12s linear both; }
 .pf-hero-bg .pf-ph { background: linear-gradient(120deg, #0b3b2e, #065f46 35%, #1d4ed8 80%, #4338ca); }
-.pf-hero-bg .pf-ph svg { position: absolute; right: 12%; top: 50%; width: 22%; max-width: 220px; transform: translateY(-50%); color: rgba(255, 255, 255, .18); }
-.pf-hero-bg .pf-ph em { left: auto; right: 14px; }
-.pf-hero-img { position: absolute; inset: 0; background-image: var(--img); background-size: cover; background-position: center; }
-@keyframes pfKen { from { transform: scale(1.05); } to { transform: scale(1); } }
+.pf-hero-bg .pf-ph svg { position: absolute; right: 14%; top: var(--mid); width: 18%; max-width: 220px; transform: translateY(-50%); color: rgba(255, 255, 255, .18); }
+.pf-hero-bg .pf-ph em { left: auto; right: var(--padL); top: calc(var(--up) + 4px); }
+.pf-hero-img, .pf-hero-bg > .pf-img { position: absolute; inset: 0 0 auto; height: var(--imgh, 100%); background-image: var(--img); background-size: cover; background-position: center top; }
+/* conteúdo mais alto que a imagem (celular, telas estreitas): a imagem termina num degradê para o fundo escuro do palco */
+.pf-stage.tall .pf-hero-img::after, .pf-stage.tall .pf-hero-bg:has(> .pf-img)::after { content: ''; position: absolute; left: 0; right: 0; top: calc(var(--imgh) * .62); height: calc(var(--imgh) * .38 + 1px); background: linear-gradient(to bottom, rgba(13, 13, 15, 0), #0d0d0f); }
+.pf-hero-bg:has(> .pf-img) { background: #0d0d0f; }
+.pfb-bg:has(> .pf-hero-img) { background: #0d0d0f !important; }
+/* escurecido: à esquerda (texto do banner), embaixo (cards) e um pouco no topo (barra de cima) — tudo num só degradê */
 .pf-slide::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  background: linear-gradient(90deg, rgba(0, 0, 0, .7) 0%, rgba(0, 0, 0, .46) 34%, rgba(0, 0, 0, .16) 52%, rgba(0, 0, 0, 0) 64%); }
-.pf-hero-text { position: absolute; z-index: 2; left: 64px; top: 50%; transform: translateY(-50%); max-width: 46%; color: #fff; }
-.pf-slide.seen .pf-hero-text > * { animation: pfUp .8s var(--ease) both; }
-.pf-slide.seen .pf-hero-text > :nth-child(2) { animation-delay: .1s; } .pf-slide.seen .pf-hero-text > :nth-child(3) { animation-delay: .2s; }
-.pf-slide.seen .pf-hero-text > :nth-child(4) { animation-delay: .3s; } .pf-slide.seen .pf-hero-text > :nth-child(5) { animation-delay: .4s; }
+  background:
+    linear-gradient(to bottom, rgba(0, 0, 0, .32) 0, rgba(0, 0, 0, 0) calc(var(--up) + 60px)),
+    linear-gradient(to top, rgba(0, 0, 0, .78) 0, rgba(0, 0, 0, .55) calc(var(--ih, 100%) - var(--sp, 50%)), rgba(0, 0, 0, 0) calc(var(--ih, 100%) - var(--sp, 50%) + 220px)),
+    linear-gradient(90deg, rgba(0, 0, 0, .62) 0%, rgba(0, 0, 0, .34) 30%, rgba(0, 0, 0, 0) 56%); }
+/* informações do banner: embaixo à esquerda, logo acima dos pontinhos */
+.pf-hero-text { position: absolute; z-index: 2; left: var(--padL); bottom: calc(var(--ih, 0px) - var(--sp, 0px) + var(--dots-h)); max-width: min(46%, 620px); color: #fff; }
+.pf-slide.seen .pf-hero-text > * { animation: pfUp .8s var(--ease) .25s both; }
+.pf-slide.seen .pf-hero-text > :nth-child(2) { animation-delay: .35s; } .pf-slide.seen .pf-hero-text > :nth-child(3) { animation-delay: .45s; }
+.pf-slide.seen .pf-hero-text > :nth-child(4) { animation-delay: .55s; } .pf-slide.seen .pf-hero-text > :nth-child(5) { animation-delay: .65s; }
 @keyframes pfUp { from { opacity: 0; transform: translateY(14px); } }
 .pf-hero-logo { display: block; width: min(250px, 70%); height: auto; margin-bottom: 14px; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .35)); }
-.pf-hero-text h2 { margin: 8px 0 12px; font-size: clamp(26px, 3vw, 48px); line-height: 1.06; font-weight: 700; letter-spacing: -.032em; }
-.pf-hero-text p { margin: 0; max-width: 520px; font-size: clamp(14px, 1.2vw, 19px); line-height: 1.42; color: rgba(255, 255, 255, .88); }
+.pf-hero-text h2 { margin: 8px 0 12px; font-size: clamp(30px, 3.4vw, 56px); line-height: 1.04; font-weight: 700; letter-spacing: -.034em; text-shadow: 0 2px 24px rgba(0, 0, 0, .25); }
+.pf-hero-text p { margin: 0; max-width: 520px; font-size: clamp(15px, 1.2vw, 19px); line-height: 1.42; color: rgba(255, 255, 255, .88); }
 .pf-hero .slide-cta { border: 0; cursor: pointer; font-family: inherit; }
 
-/* "Seu curso": blocos coloridos, como o Acesso rápido */
-.pf-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.pf-stat { display: flex; align-items: center; gap: 14px; height: 88px; padding: 0 20px; border-radius: 18px; color: #fff;
-  background: linear-gradient(135deg, var(--c1), var(--c2)); box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 8px 20px -14px rgba(0, 0, 0, .35);
-  animation: pfUp .7s var(--ease) both; animation-delay: calc(var(--k) * .06s); }
-.pf-stat-ico { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 13px; background: rgba(255, 255, 255, .2); }
-.pf-stat-ico svg { width: 22px; height: 22px; }
+/* conteúdo por cima da imagem: o espaço do texto do banner (com os pontinhos) e a prateleira de cards */
+.pf-stage-in { position: relative; z-index: 1; max-width: 1760px; margin: 0 auto; padding: 0 var(--side); pointer-events: none; }
+.pf-spacer { position: relative; height: calc(var(--sp, 50cqw) - var(--up)); }
+.pf-stage .dots { position: absolute; left: 0; bottom: 24px; justify-content: flex-start; margin: 0; pointer-events: auto; }
+.pf-stage .dot { background: rgba(255, 255, 255, .38); }
+.pf-stage .dot:hover { background: rgba(255, 255, 255, .7); }
+.pf-stage .dot.active { background: rgba(255, 255, 255, .3); }
+.pf-stage .dot-fill { background: #fff; }
+.pf-shelf { pointer-events: auto; }
+.pf-st-title { margin: 0 0 14px; font-size: clamp(19px, 1.45vw, 23px); line-height: 1.15; font-weight: 700; letter-spacing: -.022em; color: #fff; text-shadow: 0 1px 12px rgba(0, 0, 0, .3); }
+.pf-st-title span { margin-left: 8px; font-weight: 600; color: rgba(255, 255, 255, .62); }
+.pf-course { margin-bottom: 22px; }
+.pf-stage .pf-xp { gap: 18px; padding: 14px 22px 14px 14px; }
+.pf-stage .pf-xp-lvl { width: 72px; height: 72px; border-radius: 19px; }
+.pf-stage .pf-xp-lvl b { font-size: 30px; }
+.pf-stage .pf-xp-main { gap: 7px; }
+.pf-course-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 14px; align-items: stretch; }
+.pf-mods-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.pf-mods-head .pf-st-title { margin-bottom: 14px; }
+.pf-mod-paddles { margin: 0 0 10px; }
+.pf-mod-paddles.none { visibility: hidden; }
+.pf-stage .ap-paddle { background: rgba(255, 255, 255, .16); color: #fff; }
+.pf-stage .ap-paddle:hover:not(:disabled) { background: rgba(255, 255, 255, .28); }
+
+/* "Seu curso": placas escuras translúcidas sobre a imagem, com o ícone colorido (sem desfoque por trás: leve) */
+.pf-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.pf-stat { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 16px 10px 12px; border-radius: 18px; color: #fff;
+  background: rgba(16, 16, 18, .58); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1), 0 10px 24px -16px rgba(0, 0, 0, .6);
+  animation: pfUp .7s var(--ease) both; animation-delay: calc(.15s + var(--k) * .06s); }
+.pf-stat-ico { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, var(--c1), var(--c2));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 6px 14px -8px var(--c1); }
+.pf-stat-ico svg { width: 20px; height: 20px; }
 .pf-stat-txt { display: flex; flex-direction: column; min-width: 0; }
-.pf-stat-txt small { font-size: 13px; font-weight: 600; opacity: .85; }
-.pf-stat-txt strong { font-size: 22px; line-height: 1.15; font-weight: 700; letter-spacing: -.02em; }
+.pf-stat-txt small { font-size: 12.5px; font-weight: 600; color: rgba(255, 255, 255, .66); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-stat-txt strong { font-size: 20px; line-height: 1.15; font-weight: 700; letter-spacing: -.02em; }
 
 /* XP geral e nível do aluno */
-.pf-xp { display: flex; align-items: center; gap: 22px; margin-top: 16px; padding: 18px 24px 18px 18px; border-radius: 22px; color: #fff;
-  background: radial-gradient(80% 140% at 0% 0%, rgba(167, 139, 250, .35), transparent 60%), radial-gradient(70% 120% at 100% 100%, rgba(56, 189, 248, .22), transparent 60%), #161617;
+.pf-xp { display: flex; align-items: center; gap: 22px; padding: 18px 24px 18px 18px; border-radius: 22px; color: #fff;
+  background: radial-gradient(80% 140% at 0% 0%, rgba(167, 139, 250, .32), transparent 60%), radial-gradient(70% 120% at 100% 100%, rgba(56, 189, 248, .2), transparent 60%), rgba(16, 16, 18, .62);
+  outline: 1px solid rgba(255, 255, 255, .1); outline-offset: -1px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 14px 30px -18px rgba(0, 0, 0, .5); animation: pfUp .7s var(--ease) .26s both; }
 .pf-xp-lvl { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 84px; height: 84px; border-radius: 22px;
   background: linear-gradient(145deg, #a78bfa, #6d28d9); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 10px 22px -10px rgba(124, 58, 237, .8); }
@@ -142,9 +194,16 @@
 /* módulos: cards grandes numa fileira (passa para o lado), no mesmo estilo dos cards de lição */
 .pf-mod-row { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 2px; padding: 4px 2px 18px; margin: 0 -2px; scrollbar-width: none; }
 .pf-mod-row::-webkit-scrollbar { display: none; }
-.pf-modcard { flex: 0 0 calc((100% - 32px) / 3); aspect-ratio: 4 / 5; scroll-snap-align: start; transition: box-shadow .5s var(--ease), transform .5s var(--ease), opacity .4s ease, filter .4s ease; }
-.pf-modcard .pf-lesson-text h3 { font-size: clamp(26px, 2.3vw, 34px); }
-.pf-mod-paddles { margin-top: -6px; }
+/* computador: os 5 módulos lado a lado, como os pôsteres de um app de vídeo */
+.pf-modcard { flex: 0 0 calc((100% - 64px) / 5); aspect-ratio: 4 / 5; border-radius: 22px; scroll-snap-align: start; transition: box-shadow .5s var(--ease), transform .5s var(--ease), opacity .4s ease, filter .4s ease; }
+.pf-modcard .pf-lesson-text { padding: 0 16px 12px; }
+.pf-modcard .pf-lesson-tag { font-size: 11px; }
+.pf-modcard .pf-lesson-text h3 { margin: 3px 0 4px; font-size: clamp(18px, 1.55vw, 26px); }
+.pf-modcard .pf-lesson-text p { font-size: 13px; }
+.pf-modcard .pf-lesson-bar { gap: 10px; padding: 10px 12px 12px; }
+.pf-modcard .pf-lesson-av { width: 36px; height: 36px; border-radius: 11px; font-size: 14px; }
+.pf-modcard .pf-lesson-who strong { font-size: 13.5px; } .pf-modcard .pf-lesson-who small { font-size: 12px; }
+.pf-modcard .pf-lesson-go { height: 30px; padding: 0 14px; font-size: 13px; }
 /* card aberto: contorno na cor do site; os outros ficam mais apagados */
 .pf-modcard.open { box-shadow: 0 0 0 3px var(--accent), 0 22px 44px -24px rgba(6, 122, 87, .6); transform: translateY(-4px); }
 .pf-modcard.open .pf-lesson-go { background: #fff; color: rgb(var(--tint)); }
@@ -232,6 +291,13 @@
 .pf-ed-btn svg { width: 16px; height: 16px; }
 .pf-ed-btn:hover { background: rgba(0, 0, 0, .8); }
 .pf-ed-btn[hidden] { display: none; }
+.pf-ed-covers.two { display: grid; grid-template-columns: minmax(0, 1fr) 104px; gap: 14px; align-items: end; }
+.pf-ed-covers.two .pf-ed-cover { width: 100%; border-radius: 14px; }
+.pf-ed-covers.two .pf-ed-one[data-k="imageMobile"] .pf-ed-acts { flex-direction: column; align-items: stretch; left: 6px; right: 6px; bottom: 6px; gap: 6px; }
+.pf-ed-covers.two .pf-ed-one[data-k="imageMobile"] .pf-ed-btn { justify-content: center; padding: 0 8px; }
+.pf-ed-lbl { display: block; margin: 0 0 6px; font-size: 13px; font-weight: 700; }
+.pf-ed-covers.two .pf-ed-hint { font-size: 11.5px; line-height: 1.35; }
+.pf-ed-note { margin-top: 4px !important; }
 .pf-ed-hint { display: block; margin: 8px 0 4px; text-align: center; font-size: 12.5px; color: var(--muted); }
 .pf-ed .lk-field input { padding-right: 16px; }
 .pf-ed .lk-field textarea { width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--line); background: #fff; color: var(--ink);
@@ -265,37 +331,58 @@
 
 @media (max-width: 1180px) {
   .pf-lessons { grid-template-columns: 1fr 1fr; }
-  .pf-modcard { flex-basis: calc((100% - 16px) / 2); }
+  .pf-modcard { flex-basis: calc((100% - 48px) / 4); }
   .pf-lessons .pf-lesson:first-child { grid-row: span 1; grid-column: span 2; }
-  .pf-stats { grid-template-columns: repeat(2, 1fr); }
+  .pf-course-grid { grid-template-columns: 1fr; }
+  .pf-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
-/* celular: igual ao banner do topo da tela de início — de ponta a ponta, passando por trás
-   da barra de cima, com a imagem de celular e o texto embaixo */
+@media (max-width: 1100px) { .pf-stage { --up: calc(16px + var(--header-h) + 32px); --side: 32px; } }
+/* celular: a imagem vem de ponta a ponta, passando por trás da barra de cima (e da hora/bateria do iPhone);
+   texto do banner, "Seu curso" e os módulos um embaixo do outro */
 @media (max-width: 860px) {
-  .pf-hero { aspect-ratio: 4 / 5; height: auto; margin: calc(-1 * (var(--tb-top, 10px) + 56px + 20px)) -16px 0; border-radius: 0; box-shadow: 0 18px 40px -26px rgba(0, 0, 0, .5);
-    animation: heroDrop 1.25s cubic-bezier(.22, 1, .36, 1) both; }
-  .pf-hero-img { background-image: var(--img-m, var(--img)); background-position: var(--pos-m, center); }
+  .pf-stage { --up: calc(var(--tb-top, 10px) + 56px + 20px); --side: 16px; --dots-h: 44px; --padL: 20px;
+    --free: calc(var(--sp, 400px) - var(--up) - var(--th, 200px) - var(--dots-h)); --mid: calc(var(--up) + var(--free) / 2); }
+  .pf-hero-img { background-image: var(--img-m, var(--img)); background-position: var(--pos-m, center top); }
   .pf-slide::before { background:
-    linear-gradient(to bottom, rgba(0, 0, 0, .38) 0%, rgba(0, 0, 0, 0) 24%),
-    linear-gradient(to top, rgba(0, 0, 0, .82) 0%, rgba(0, 0, 0, .55) 26%, rgba(0, 0, 0, .12) 50%, rgba(0, 0, 0, 0) 62%); }
-  .pf-hero-text { left: 22px; right: 22px; top: auto; bottom: 26px; transform: none; max-width: none; }
-  .pf-hero-logo { width: 190px; margin-bottom: 10px; }
+    linear-gradient(to bottom, rgba(0, 0, 0, .4) 0, rgba(0, 0, 0, 0) calc(var(--up) + 40px)),
+    linear-gradient(to top, rgba(0, 0, 0, .84) 0, rgba(0, 0, 0, .7) calc(var(--ih, 100%) - var(--sp, 50%)), rgba(0, 0, 0, .35) calc(var(--ih, 100%) - var(--sp, 50%) + var(--th, 200px) * .7), rgba(0, 0, 0, 0) calc(var(--ih, 100%) - var(--sp, 50%) + var(--th, 200px) + 120px)); }
+  .pf-hero-text { left: 20px; right: 20px; max-width: none; }
+  .pf-hero-logo { width: 170px; margin-bottom: 8px; }
   .pf-hero-text .pill { font-size: 13px; }
   .pf-hero-text h2 { margin: 4px 0 8px; font-size: 32px; letter-spacing: -.03em; }
   .pf-hero-text p { font-size: 15px; line-height: 1.4; }
-  .pf-hero .slide-cta { margin-top: 16px; height: 38px; font-size: 14.5px; }
-  .pf-hero-bg .pf-ph svg { top: 30%; right: 10%; width: 30%; }
-  .pf-hero + section .shelf-title { margin-top: 30px; }
+  .pf-hero .slide-cta { margin-top: 14px; height: 38px; font-size: 14.5px; }
+  .pf-hero-bg .pf-ph svg { right: 50%; top: var(--mid); width: 34%; transform: translate(50%, -50%); }
+  .pf-stage .dots { left: 4px; bottom: 16px; }
+  .pf-st-title { font-size: 19px; margin-bottom: 12px; }
+  .pf-st-title span { display: block; margin: 2px 0 0; font-size: 14px; }
+  .pf-course { margin-bottom: 22px; }
+  .pf-mods-head .pf-st-title { margin-bottom: 12px; }
+  .pf-mod-paddles { display: none; }
+  .pf-stage .pf-mod-row { margin: 0 -16px; padding: 4px 16px 18px; scroll-padding: 0 16px; }
+  .pf-modcard { flex-basis: min(62%, 280px); border-radius: 22px; }
+  .pf-modcard .pf-lesson-tag { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pf-modcard .pf-lesson-text p { display: none; }
+  .pf-modcard .pf-lesson-text h3 { font-size: 21px; }
+  .pf-modcard .pf-lesson-who small, .pf-modcard .pf-lesson-who strong { white-space: nowrap; }
+  .pf-stage .pf-xp { gap: 12px 14px; padding: 12px; }
+  .pf-stage .pf-xp-lvl { width: 58px; height: 58px; border-radius: 16px; }
+  .pf-stage .pf-xp-lvl small { font-size: 9.5px; }
+  .pf-stage .pf-xp-lvl b { font-size: 24px; }
+  .pf-stage .pf-xp-total strong { font-size: 22px; }
+  .pf-stage .pf-xp-next { font-size: 13px; }
+  .pf-stage .pf-xp-sub { display: none; }
+  .pf-stage .pf-cash { height: 50px; }
+  .pf-stage + .wrap { margin-top: 4px; }
 }
 @media (max-width: 640px) {
-  .pf-stats { gap: 10px; }
-  .pf-stat { flex-direction: column; align-items: flex-start; justify-content: center; gap: 8px; height: auto; padding: 14px; border-radius: 16px; }
-  .pf-stat-ico { width: 34px; height: 34px; border-radius: 10px; }
+  .pf-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .pf-stat { gap: 10px; min-height: 56px; padding: 8px 12px 8px 8px; border-radius: 16px; }
+  .pf-stat-ico { width: 36px; height: 36px; border-radius: 11px; }
   .pf-stat-ico svg { width: 18px; height: 18px; }
-  .pf-stat-txt small { font-size: 12px; }
-  .pf-stat-txt strong { font-size: 18px; }
+  .pf-stat-txt small { font-size: 11.5px; }
+  .pf-stat-txt strong { font-size: 17px; }
   .pf-sub { font-size: 15px; }
-  .pf-modcard { flex-basis: 82%; }
   /* celular: um card por linha, alto, como os de "Mantenha-se conectado" */
   .pf-lessons { grid-template-columns: 1fr; grid-auto-rows: auto; }
   .pf-lesson, .pf-lesson:first-child { grid-column: auto; grid-row: auto; aspect-ratio: 4 / 5; border-radius: 26px; }
@@ -321,7 +408,8 @@
   .pf-add-lesson { margin: -4px 4px 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pf-hero, .pf-hero-bg, .pf-hero-text > *, .pf-stat, .pf-lesson, .pf-mod-inner.enter > section { animation: none; }
+  .pf-slide.active, .pf-slide.leaving { transition: none; }
+  .pf-stage, .pf-hero-text > *, .pf-stat, .pf-lesson, .pf-mod-inner.enter > section { animation: none; }
   .pf-mod-open, .pf-mod-open.show { transition: none; transform: none; }
   .pf-mod-inner.enter .pf-lesson, .pf-mod-inner.enter .pf-lesson::after, .pf-mod-inner.enter > section > * { animation: none !important; }
 }
@@ -417,17 +505,16 @@
 .pfb-bg-bnivel { background: radial-gradient(60% 90% at 78% 50%, rgba(139, 92, 246, .55), rgba(139, 92, 246, 0) 70%), radial-gradient(40% 70% at 96% 90%, rgba(103, 232, 249, .35), transparent 70%), linear-gradient(115deg, #08061a 0%, #1a0f45 45%, #3b1d8f 78%, #5b2bd1 100%) !important; }
 .pfb-bg .pf-hero-img { z-index: 0; }
 /* desenho padrão: moedas grandes à direita / anéis concêntricos girando */
-.pfb-deco-coin { position: absolute; right: 9%; top: 50%; width: 30%; max-width: 360px; transform: translateY(-50%) rotate(-8deg); opacity: .95; filter: drop-shadow(0 30px 40px rgba(0, 0, 0, .45));
+.pfb-deco-coin { position: absolute; right: 9%; top: var(--mid); width: 30%; max-width: 360px; transform: translateY(-50%) rotate(-8deg); opacity: .95; filter: drop-shadow(0 30px 40px rgba(0, 0, 0, .45));
   animation: pfbBob 6s ease-in-out infinite; }
 .pfb-deco-coin.d2 { right: 34%; top: 22%; width: 11%; opacity: .55; filter: blur(1.5px) drop-shadow(0 12px 16px rgba(0, 0, 0, .4)); animation-duration: 7.5s; animation-delay: -2s; }
 .pfb-deco-coin.d3 { right: 3%; top: 84%; width: 12%; opacity: .7; filter: blur(.6px) drop-shadow(0 12px 16px rgba(0, 0, 0, .4)); animation-duration: 8.5s; animation-delay: -4s; }
 @keyframes pfbBob { 0%, 100% { transform: translateY(-50%) rotate(-8deg); } 50% { transform: translateY(calc(-50% - 14px)) rotate(-4deg); } }
-.pfb-deco-ring { position: absolute; right: 6%; top: 50%; width: 42%; max-width: 520px; transform: translateY(-50%); fill: none; stroke: rgba(255, 255, 255, .16); stroke-width: 1.2; stroke-dasharray: 3 7; animation: pfbSpin 60s linear infinite; }
+.pfb-deco-ring { position: absolute; right: 6%; top: var(--mid); width: 42%; max-width: 520px; transform: translateY(-50%); fill: none; stroke: rgba(255, 255, 255, .16); stroke-width: 1.2; stroke-dasharray: 3 7; animation: pfbSpin 60s linear infinite; }
 .pfb-deco-ring circle:nth-child(2) { stroke: rgba(196, 181, 253, .3); stroke-dasharray: 60 20; stroke-width: 2.5; }
 .pfb-deco-ring circle:nth-child(3) { stroke: rgba(103, 232, 249, .25); stroke-dasharray: 1 0; }
 @keyframes pfbSpin { to { transform: translateY(-50%) rotate(360deg); } }
-.pfb::before { background: linear-gradient(90deg, rgba(0, 0, 0, .74) 0%, rgba(0, 0, 0, .5) 36%, rgba(0, 0, 0, .14) 56%, rgba(0, 0, 0, 0) 68%); }
-.pfb-body { position: absolute; z-index: 2; left: 64px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 30px; max-width: 52%; color: #fff; }
+.pfb-body { position: absolute; z-index: 2; left: var(--padL); bottom: calc(var(--ih, 0px) - var(--sp, 0px) + var(--dots-h)); display: flex; align-items: center; gap: 30px; max-width: min(52%, 720px); color: #fff; }
 .pfb-info { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
 .pfb-info > * { opacity: 0; }
 .pf-slide.seen .pfb-info > * { animation: pfbUp .8s var(--ease) both; }
@@ -504,10 +591,10 @@
 
 /* --- patentes --- */
 .pfb-bg-bpatente { background: radial-gradient(55% 90% at 80% 50%, color-mix(in srgb, var(--rc2) 55%, transparent), transparent 70%), linear-gradient(115deg, #08070c 0%, color-mix(in srgb, var(--rc1) 45%, #08070c) 55%, var(--rc1) 100%) !important; }
-.pfb-deco-rays { position: absolute; right: 8%; top: 50%; width: 46%; aspect-ratio: 1; max-width: 560px; transform: translateY(-50%); border-radius: 50%; opacity: .5;
+.pfb-deco-rays { position: absolute; right: 8%; top: var(--mid); width: 46%; aspect-ratio: 1; max-width: 560px; transform: translateY(-50%); border-radius: 50%; opacity: .5;
   background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .22) 0deg 6deg, transparent 6deg 20deg);
   -webkit-mask-image: radial-gradient(closest-side, #000 20%, transparent); mask-image: radial-gradient(closest-side, #000 20%, transparent); animation: pfbSpin 50s linear infinite; }
-.pfb-deco-trophy { position: absolute; right: 17%; top: 50%; height: 84%; transform: translateY(-50%); animation: pfbBob 6s ease-in-out infinite; }
+.pfb-deco-trophy { position: absolute; right: 17%; top: var(--mid); height: calc((var(--sp, 400px) - var(--up)) * .8); transform: translateY(-50%); animation: pfbBob 6s ease-in-out infinite; }
 .pfb-trophy { position: relative; flex: none; width: clamp(104px, 9.5vw, 150px); aspect-ratio: 1; }
 .pfb-trophy img { position: relative; width: 100%; height: 100%; object-fit: contain; opacity: 0; }
 .pf-slide.seen .pfb-trophy img { animation: pfbTrophy 1s cubic-bezier(.34, 1.4, .64, 1) .2s both; }
@@ -555,19 +642,18 @@
 .pfr-row.lock { opacity: .55; }
 .pfr-row.lock em { color: #86868b; font-weight: 600; }
 
-.pfb-adm { z-index: 3; }
-@media (max-width: 1100px) { .pfb-body { left: 40px; max-width: 62%; gap: 22px; } .pfb-rates span:nth-child(n+2) { display: none; } .pfb-sub2 { display: none; } }
+.pfb-adm { z-index: 3; top: calc(var(--up) + 6px); right: var(--padL); }
+@media (max-width: 1100px) { .pfb-body { max-width: 62%; gap: 22px; } .pfb-rates span:nth-child(n+2) { display: none; } .pfb-sub2 { display: none; } }
 /* celular: informações embaixo, como o texto do banner do módulo */
 @media (max-width: 860px) {
-  .pfb::before { background: linear-gradient(to top, rgba(0, 0, 0, .85) 0%, rgba(0, 0, 0, .55) 34%, rgba(0, 0, 0, .1) 60%, rgba(0, 0, 0, 0) 70%); }
-  .pfb-body { left: 22px; right: 22px; top: auto; bottom: 26px; transform: none; max-width: none; flex-direction: column; align-items: flex-start; gap: 16px; }
+  .pfb-body { left: 20px; right: 20px; max-width: none; flex-direction: column; align-items: flex-start; gap: 14px; }
   .pfb-coin { width: 104px; } .pfb-ring { --d: 124px; } .pfb-trophy { width: 96px; }
-  .pfb-deco-trophy { right: 50%; top: 28%; height: 46%; transform: translate(50%, -50%); animation: none; }
-  .pfb-deco-rays { right: 50%; top: 28%; width: 110%; transform: translate(50%, -50%); }
+  .pfb-deco-trophy { right: 50%; top: var(--mid); height: min(46%, var(--free) * .85); transform: translate(50%, -50%); animation: none; }
+  .pfb-deco-rays { right: 50%; top: var(--mid); width: 110%; transform: translate(50%, -50%); }
   .pfb-rname { font-size: 40px; } .pfb-cta { margin-top: 14px; }
-  .pfb-deco-coin { right: 50%; top: 30%; width: 56%; transform: translate(50%, -50%) rotate(-8deg); animation: none; }
+  .pfb-deco-coin { right: 50%; top: var(--mid); width: min(56%, var(--free) * .8); transform: translate(50%, -50%) rotate(-8deg); animation: none; }
   .pfb-deco-coin.d2, .pfb-deco-coin.d3 { display: none; }
-  .pfb-deco-ring { right: 50%; top: 30%; width: 90%; transform: translate(50%, -50%); animation: none; }
+  .pfb-deco-ring { right: 50%; top: var(--mid); width: min(90%, var(--free)); transform: translate(50%, -50%); animation: none; }
   .pfb-cash-val { font-size: 52px; } .pfb-xp { font-size: 48px; }
   .pfb-rates span:nth-child(n+2) { display: inline-flex; }
 }

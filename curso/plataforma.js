@@ -16,7 +16,7 @@ const HC_CURSO = {
       nome: 'Primeiro comando',
       desc: 'As primeiras teclas da linha de referência e da fileira de cima, uma lição de cada vez.',
       imagem: '',        // imagem do card do módulo (sugestão: 1000 × 1250)
-      banner: '',        // imagem do banner do módulo (sugestão: 1600 × 420; no celular é cortada pelo centro)
+      banner: '',        // imagem do banner do módulo (sugestão: 1920 × 1080; para trocar, use o lápis do banner)
       nivel: 'Nível iniciante',
       titulo: 'Vamos começar.',
       subtitulo: 'Bem-vindo ao primeiro módulo de digitação.',
@@ -411,12 +411,17 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
      sem imagem, cada um tem um fundo próprio desenhado aqui.
      ========================================================= */
   const PF_SLIDE_MS = 9000;
-  const PF_BANNERS = { bsaldo: 'Banner do saldo', bnivel: 'Banner do nível', bpatente: 'Banner das patentes' };
+  const PF_BANNERS = { bmod: 'Banner do módulo', bsaldo: 'Banner do saldo', bnivel: 'Banner do nível', bpatente: 'Banner das patentes' };
   const bannerImg = (id) => edits().find((x) => x.id === id)?.image || '';
+  /* imagem do banner como fundo: a do computador e, se houver, a própria do celular */
+  const bannerSpan = (id) => {
+    const e = edits().find((x) => x.id === id) || {};
+    if (!e.image && !e.imageMobile) return '';
+    return `<span class="pf-hero-img" style="--img:url('${esc(imgUrl(e.image || e.imageMobile))}')${e.imageMobile ? `;--img-m:url('${esc(imgUrl(e.imageMobile))}')` : ''}"></span>`;
+  };
   const nf = (v) => v.toLocaleString('pt-BR');
   const bannerBg = (id, deco) => {
-    const img = bannerImg(id);
-    return `<div class="pf-hero-bg pfb-bg pfb-bg-${id}">${img ? `<span class="pf-hero-img" style="--img:url('${esc(imgUrl(img))}')"></span>` : deco}</div>`;
+    return `<div class="pf-hero-bg pfb-bg pfb-bg-${id}">${bannerSpan(id) || deco}</div>`;
   };
   const admPen = (id) => (isAdmin() ? `<div class="pf-adm pfb-adm"><button class="pf-adm-btn" type="button" data-editbanner="${id}" aria-label="Trocar a imagem de fundo do ${PF_BANNERS[id].toLowerCase()}" title="Trocar imagem de fundo">${svg('pen')}</button></div>` : '');
   function cashBanner() {
@@ -599,40 +604,46 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       });
     }
   }
+  /* carrossel do topo: os banners trocam com um fade (um some enquanto o outro aparece, só opacidade,
+     leve para placas fracas) e as informações do banner que entra surgem junto, toda vez que ele aparece */
   function heroCarousel(view) {
     const box = view.querySelector('.pf-car'), track = box?.querySelector('.pf-track');
-    if (!track || typeof loopTrack !== 'function') return;
+    if (!track) return;
+    const slides = [...track.querySelectorAll('.pf-slide')], n = slides.length;
     const dotsBox = box.querySelector('.dots'), dots = [...dotsBox.querySelectorAll('.dot')], car = box.querySelector('.pf-hero');
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let cur = 0;
-    const loop = loopTrack(track, (i) => {
-      cur = i;
+    let cur = -1;
+    const go = (i) => {
+      i = ((i % n) + n) % n;
+      if (i === cur) return;
+      const prev = slides[cur];
+      if (prev) { prev.classList.remove('active'); prev.classList.add('leaving'); setTimeout(() => prev.classList.remove('leaving'), 1200); }
+      const sl = slides[i]; cur = i;
+      sl.classList.remove('leaving', 'seen'); void sl.offsetWidth; // reinicia as animações das informações
+      sl.classList.add('active', 'seen');
+      slides.forEach((x, k) => { x.toggleAttribute('inert', k !== i); x.setAttribute('aria-hidden', k !== i); });
+      playBanner(sl, reduce);
       dots.forEach((d, k) => { d.classList.remove('active'); if (k === i) { void d.offsetWidth; d.classList.add('active'); } });
-      // cada banner anima as informações só na primeira vez que aparece (ao abrir ou voltar para a página);
-      // depois elas ficam paradas no lugar e saem junto com o banner. Vale para o verdadeiro e a cópia da volta.
-      const b = ['mod', 'saldo', 'nivel', 'patente'][i];
-      track.querySelectorAll(`[data-b="${b}"]:not(.seen)`).forEach((sl) => { sl.classList.add('seen'); playBanner(sl, reduce); });
-    });
-    dotsBox.addEventListener('animationend', (e) => { if (e.target.classList.contains('dot-fill') && box.isConnected) loop.go(cur + 1); });
-    dotsBox.addEventListener('click', (e) => { const d = e.target.closest('.dot'); if (d) loop.go(+d.dataset.i); });
+    };
+    dotsBox.addEventListener('animationend', (e) => { if (e.target.classList.contains('dot-fill') && box.isConnected) go(cur + 1); });
+    dotsBox.addEventListener('click', (e) => { const d = e.target.closest('.dot'); if (d) go(+d.dataset.i); });
     car.addEventListener('mouseenter', () => box.classList.add('paused'));
     car.addEventListener('mouseleave', () => box.classList.remove('paused'));
     let x0 = null;
     car.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
-    car.addEventListener('touchend', (e) => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 40) loop.go(cur + (dx < 0 ? 1 : -1)); });
-    // clones (da volta do carrossel) não têm o clique; o lápis e o botão funcionam só nos verdadeiros
-    // "Ver patentes": funciona também na cópia (o botão é o mesmo para o aluno)
+    car.addEventListener('touchend', (e) => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 40) go(cur + (dx < 0 ? 1 : -1)); });
     track.querySelectorAll('[data-ranks]').forEach((btn) => btn.addEventListener('click', (e) => { e.stopPropagation(); box.classList.add('paused'); ranksSheet(() => box.classList.remove('paused')); }));
-    track.querySelectorAll('.pf-slide:not(.clone) [data-editbanner]').forEach((btn) => btn.addEventListener('click', (e) => { e.stopPropagation(); editCard(view, btn.dataset.editbanner); }));
-    loop.go(0, true);
+    track.querySelectorAll('[data-editbanner]').forEach((btn) => btn.addEventListener('click', (e) => { e.stopPropagation(); editCard(view, btn.dataset.editbanner); }));
+    go(0);
   }
 
   /* fundo do banner do módulo: a imagem própria do módulo ou, se não houver, a do banner
      da Plataforma de Informática da tela de início (com a versão de celular dele) */
   function heroBg(m) {
+    const own = bannerSpan('bmod'); if (own) return own; // imagem própria, trocada pelo lápis do banner
     if (m.banner) return slot(m.banner, '', '');
     const b = [...(typeof banners !== 'undefined' ? banners : []), ...(typeof exclusive !== 'undefined' ? exclusive : [])].find((x) => x.lockInfo && (x.image || x.imageMobile));
-    if (!b) return slot('', 'Banner do módulo', '1600 × 420');
+    if (!b) return slot('', 'Banner do módulo', '1920 × 1080');
     const pos = b.imageMobile && /^\d{1,3}% \d{1,3}%$/.test(b.focusMobile || '') ? `;--pos-m:${b.focusMobile}` : '';
     return `<span class="pf-hero-img" style="--img:url('${esc(imgUrl(b.image || b.imageMobile))}')${b.imageMobile ? `;--img-m:url('${esc(imgUrl(b.imageMobile))}')` : ''}${pos}"></span>`;
   }
@@ -728,6 +739,44 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     return `${a}<small>,${b}</small>`;
   }
 
+  /* palco do topo: decide a altura da imagem (--ih) e onde começam os cards (--sp).
+     A imagem tem a proporção do banner (16:9 no computador, 9:16 no celular) e só cresce além disso
+     quando o texto do banner e os cards não cabem. Os cards dos módulos ficam metade sobre a imagem
+     e metade sobre o fundo do site. Recalcula só quando o tamanho muda (nada fica animando). */
+  let stageRO = null, stageFit = null;
+  function fitStage(view, after) {
+    const stage = view.querySelector('.pf-stage'); if (!stage) return;
+    const shelf = stage.querySelector('.pf-shelf'), spacer = stage.querySelector('.pf-spacer');
+    let last = '';
+    const fit = () => {
+      if (!stage.isConnected) { stageRO?.disconnect(); removeEventListener('resize', fit); return; }
+      const W = stage.clientWidth, mob = innerWidth <= 860, cs = getComputedStyle(stage);
+      const top0 = parseFloat(cs.paddingTop) || 0, dotsH = mob ? 44 : 60; // o palco sobe por trás da barra de cima e devolve essa altura no padding
+      const th = Math.max(0, ...[...stage.querySelectorAll('.pf-slide:not(.clone) .pf-hero-text, .pf-slide:not(.clone) .pfb-body')].map((e) => e.offsetHeight));
+      const card = stage.querySelector('.pf-modcard'), row = stage.querySelector('.pf-mod-row');
+      const hang = card ? card.offsetHeight * .55 + parseFloat(getComputedStyle(row).paddingBottom || 0) : 0; // parte dos cards que fica fora da imagem
+      const onImg = shelf.offsetHeight - hang;
+      const imgh = Math.round(W * (mob ? 16 / 9 : 9 / 16)); // a imagem fica sempre nessa proporção, sem cortar as laterais
+      const ih = Math.max(imgh, Math.round(top0 + 12 + th + dotsH + onImg));
+      const key = `${ih}|${ih - onImg}|${th}|${imgh}`; if (key === last) return; last = key;
+      // quando o conteúdo pede mais altura que a imagem, ela termina num degradê escuro que segue até os cards
+      stage.style.setProperty('--imgh', `${imgh}px`);
+      stage.classList.toggle('tall', ih > imgh + 8);
+      stage.style.setProperty('--ih', `${ih}px`);
+      stage.style.setProperty('--sp', `${Math.round(ih - onImg)}px`);
+      stage.style.setProperty('--th', `${th}px`);
+      spacer.style.height = `${Math.round(ih - onImg - top0)}px`;
+      after?.();
+    };
+    stageRO?.disconnect();
+    stageRO = new ResizeObserver(() => fit());
+    stageRO.observe(shelf);
+    stage.querySelectorAll('.pf-slide:not(.clone) .pf-hero-text, .pf-slide:not(.clone) .pfb-body').forEach((e) => stageRO.observe(e));
+    if (stageFit) removeEventListener('resize', stageFit);
+    stageFit = fit; addEventListener('resize', fit, { passive: true });
+    fit();
+  }
+
   function render(view, sub = '') {
     const ln = /^licao-(\d+)$/.exec(sub);
     mergeExtras();
@@ -742,13 +791,16 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       ['book', 'Lições do módulo', String(n), '#7c3aed', '#a78bfa'],
       ['chart', 'Níveis no curso', String(m.totalNiveis), '#ea580c', '#fbbf24'],
     ];
+    // topo no estilo dos apps de streaming: a imagem do banner ocupa a largura toda (passa por trás da barra de cima),
+    // com as informações do banner por cima e, na parte de baixo da imagem, "Seu curso" e os módulos.
+    // A imagem rola junto com a página; abaixo dela o fundo é o do site.
     view.innerHTML = `
-    <div class="wrap pf">
-      <div class="pf-car">
+    <div class="pf-car pf-stage">
       <section class="pf-hero" aria-roledescription="carrossel">
         <div class="carousel-track pf-track">
           <div class="pf-slide" data-b="mod" aria-roledescription="slide" aria-label="1 de 4">
             <div class="pf-hero-bg">${heroBg(m)}</div>
+            ${admPen('bmod')}
             <div class="pf-hero-text">
               <img class="pf-hero-logo" src="assets/plataforma-informatica.webp" width="900" height="184" alt="Plataforma de Informática" />
               <span class="pill">${esc(m.nivel)} · Módulo ${mod + 1}</span>
@@ -762,51 +814,58 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
           ${rankBanner()}
         </div>
       </section>
-      <div class="dots">${[0, 1, 2, 3].map((i) => `<button class="dot" data-i="${i}" style="--slide-ms:${PF_SLIDE_MS}ms" aria-label="Banner ${i + 1}"><span class="dot-fill"></span></button>`).join('')}</div>
-      </div>
-
-      <section>
-        <h2 class="shelf-title"><span class="ap-grad">Seu curso.</span><span> Onde você está na Plataforma de Informática.</span></h2>
-        <div class="pf-stats">
-          ${stats.map(([ico, label, val, c1, c2], k) => `
-          <div class="pf-stat" style="--c1:${c1};--c2:${c2};--k:${k}">
-            <span class="pf-stat-ico">${svg(ico)}</span>
-            <span class="pf-stat-txt"><small>${label}</small><strong>${esc(val)}</strong></span>
-          </div>`).join('')}
-        </div>
-        ${xpWidget()}
-      </section>
-
-      <section class="pf-mods">
-        <h2 class="shelf-title"><span class="ap-grad">Módulos.</span><span> Escolha um módulo para ver as lições.</span></h2>
-        <div class="pf-mod-row" id="pf-mod-row">
-          ${HC_CURSO.modulos.map((mm, i) => {
-            const ok = canOpen(mm), num = String(i + 1).padStart(2, '0');
-            return `
-          <article class="pf-lesson pf-modcard${ok ? '' : ' soon'}${openMod === i ? ' open' : ''}" style="--i:${i};--tint:${MTINTS[i % MTINTS.length]}" data-modcard="${i}" tabindex="0" role="button" aria-expanded="${openMod === i}" aria-label="Módulo ${i + 1}: ${esc(mm.nome)}">
-            <div class="pf-lesson-img">${slot(mm.imagem, 'Imagem do módulo', '1000 × 1250', i + 2)}</div>
-            <div class="pf-lesson-app">
-              <div class="pf-lesson-text">
-                <span class="pf-lesson-tag">Módulo ${i + 1} · ${esc(mm.nivel.replace(/^Nível\s+/i, ''))}</span>
-                <h3>${esc(mm.nome)}</h3>
-                <p>${esc(mm.desc)}</p>
-              </div>
-              <div class="pf-lesson-bar">
-                <span class="pf-lesson-av">${num}</span>
-                <span class="pf-lesson-who"><strong>${mm.totalNiveis} níveis</strong><small>${ok ? `${mm.licoes.length} lições` : 'Em breve'}</small></span>
-                <span class="pf-lesson-go">${!ok ? 'Em breve' : openMod === i ? 'Fechar' : 'Abrir'}</span>
+      <div class="pf-stage-in">
+        <div class="pf-spacer"><div class="dots">${[0, 1, 2, 3].map((i) => `<button class="dot" data-i="${i}" style="--slide-ms:${PF_SLIDE_MS}ms" aria-label="Banner ${i + 1}"><span class="dot-fill"></span></button>`).join('')}</div></div>
+        <div class="pf-shelf">
+          <section class="pf-course" aria-label="Seu curso">
+            <h2 class="pf-st-title">Seu curso <span>Onde você está na Plataforma de Informática</span></h2>
+            <div class="pf-course-grid">
+              ${xpWidget()}
+              <div class="pf-stats">
+                ${stats.map(([ico, label, val, c1, c2], k) => `
+                <div class="pf-stat" style="--c1:${c1};--c2:${c2};--k:${k}">
+                  <span class="pf-stat-ico">${svg(ico)}</span>
+                  <span class="pf-stat-txt"><small>${label}</small><strong>${esc(val)}</strong></span>
+                </div>`).join('')}
               </div>
             </div>
-            ${isAdmin() ? `<div class="pf-adm"><button class="pf-adm-btn" type="button" data-editmod="${i}" aria-label="Editar o módulo ${i + 1}" title="Editar módulo">${svg('pen')}</button></div>` : ''}
-          </article>`;
-          }).join('')}
+          </section>
+          <section class="pf-mods" aria-label="Módulos">
+            <div class="pf-mods-head">
+              <h2 class="pf-st-title">Módulos <span>Escolha um módulo para ver as lições</span></h2>
+              <div class="ap-paddles pf-mod-paddles">
+                <button class="ap-paddle" data-mdir="-1" aria-label="Módulos anteriores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+                <button class="ap-paddle" data-mdir="1" aria-label="Próximos módulos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+              </div>
+            </div>
+            <div class="pf-mod-row" id="pf-mod-row">
+              ${HC_CURSO.modulos.map((mm, i) => {
+                const ok = canOpen(mm), num = String(i + 1).padStart(2, '0');
+                return `
+              <article class="pf-lesson pf-modcard${ok ? '' : ' soon'}${openMod === i ? ' open' : ''}" style="--i:${i};--tint:${MTINTS[i % MTINTS.length]}" data-modcard="${i}" tabindex="0" role="button" aria-expanded="${openMod === i}" aria-label="Módulo ${i + 1}: ${esc(mm.nome)}">
+                <div class="pf-lesson-img">${slot(mm.imagem, 'Imagem do módulo', '1000 × 1250', i + 2)}</div>
+                <div class="pf-lesson-app">
+                  <div class="pf-lesson-text">
+                    <span class="pf-lesson-tag">Módulo ${i + 1} · ${esc(mm.nivel.replace(/^Nível\s+/i, ''))}</span>
+                    <h3>${esc(mm.nome)}</h3>
+                    <p>${esc(mm.desc)}</p>
+                  </div>
+                  <div class="pf-lesson-bar">
+                    <span class="pf-lesson-av">${num}</span>
+                    <span class="pf-lesson-who"><strong>${mm.totalNiveis} níveis</strong><small>${ok ? `${mm.licoes.length} lições` : 'Em breve'}</small></span>
+                    <span class="pf-lesson-go">${!ok ? 'Em breve' : openMod === i ? 'Fechar' : 'Abrir'}</span>
+                  </div>
+                </div>
+                ${isAdmin() ? `<div class="pf-adm"><button class="pf-adm-btn" type="button" data-editmod="${i}" aria-label="Editar o módulo ${i + 1}" title="Editar módulo">${svg('pen')}</button></div>` : ''}
+              </article>`;
+              }).join('')}
+            </div>
+          </section>
         </div>
-        <div class="ap-paddles pf-mod-paddles">
-          <button class="ap-paddle" data-mdir="-1" aria-label="Módulos anteriores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
-          <button class="ap-paddle" data-mdir="1" aria-label="Próximos módulos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
-        </div>
-        <div class="pf-mod-open${openMod !== null ? ' show' : ''}" id="pf-mod-open"><div class="pf-mod-inner" id="pf-mod-inner">${openMod !== null ? modBody(openMod) : ''}</div></div>
-      </section>
+      </div>
+    </div>
+    <div class="wrap pf">
+      <div class="pf-mod-open${openMod !== null ? ' show' : ''}" id="pf-mod-open"><div class="pf-mod-inner" id="pf-mod-inner">${openMod !== null ? modBody(openMod) : ''}</div></div>
     </div>`;
 
     bindLessons(view, view);
@@ -822,9 +881,10 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     });
     view.querySelectorAll('[data-editmod]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); editCard(view, 'm' + b.dataset.editmod); }));
     view.querySelectorAll('[data-mdir]').forEach((b) => b.addEventListener('click', () => row.scrollBy({ left: +b.dataset.mdir * row.clientWidth * .8, behavior: 'smooth' })));
-    const paddles = () => { const [p, n] = view.querySelectorAll('[data-mdir]'); if (!p) return; p.disabled = row.scrollLeft < 4; n.disabled = row.scrollLeft + row.clientWidth >= row.scrollWidth - 4; };
+    const paddles = () => { const [p, n] = view.querySelectorAll('[data-mdir]'); if (!p) return; p.disabled = row.scrollLeft < 4; n.disabled = row.scrollLeft + row.clientWidth >= row.scrollWidth - 4; p.parentNode.classList.toggle('none', p.disabled && n.disabled); };
     row.addEventListener('scroll', paddles, { passive: true }); paddles();
     view.querySelector('.pf-mods').classList.toggle('has-open', openMod !== null);
+    fitStage(view, paddles);
   }
 
   const openN = (n) => {
@@ -898,7 +958,8 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     const isMod = target[0] === 'm', isBanner = target in PF_BANNERS;
     let cur, title, fields, size, ratio;
     if (isBanner) {
-      cur = { imagem: bannerImg(target) }; title = PF_BANNERS[target]; size = '1600 × 420 (informações à esquerda; no celular a imagem é cortada pelo centro)'; ratio = '1597 / 420'; fields = [];
+      const e = edits().find((x) => x.id === target) || {};
+      cur = { imagem: e.image || '', imagemM: e.imageMobile || '' }; title = PF_BANNERS[target]; fields = [];
     } else if (isMod) {
       const mi = +target.slice(1); cur = HC_CURSO.modulos[mi]; title = `Módulo ${mi + 1}`; size = '1000 × 1250'; ratio = '4 / 5';
       fields = [['nome', 'Nome do módulo'], ['nivel', 'Nível (ex.: Nível iniciante)'], ['desc', 'Descrição no card', 1], ['secao', 'Título ao abrir (ex.: Primeiro comando.)'], ['secaoComplemento', 'Complemento do título'], ['texto', 'Texto de apresentação', 1]];
@@ -909,48 +970,63 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       title = cur.titulo || 'Lição'; size = '1000 × 1000'; ratio = '1 / 1';
       fields = [['tag', 'Etiqueta (ex.: Introdução)'], ['titulo', 'Título da lição'], ['desc', 'Descrição', 1]];
     }
-    let img; // undefined = sem troca; '' = remover; 'idb:…' = nova foto
+    // banners: uma imagem para o computador (16:9) e outra para o celular (9:16); os outros cards têm uma só
+    const covers = isBanner
+      ? [['image', 'imagem', 'Computador', '1920 × 1080 px · área segura: metade direita, de 110 a 600 de altura', '16 / 9'], ['imageMobile', 'imagemM', 'Celular', '1080 × 1920 px · área segura: centro, de 250 a 600 de altura', '9 / 16']]
+      : [['image', 'imagem', '', size, ratio]];
+    const imgs = {}; // undefined = sem troca; '' = remover; 'idb:…' = nova foto
     const wrap = document.createElement('div');
     wrap.className = 'lk au';
     wrap.innerHTML = `<div class="lk-backdrop"></div>
       <form class="lk-card au-card pf-ed" role="dialog" aria-modal="true" aria-labelledby="ed-t" novalidate>
         <h2 id="ed-t">Editar ${isBanner ? 'banner' : isMod ? 'módulo' : 'lição'}</h2>
         <p class="lk-sub">${esc(title)} · as mudanças aparecem para todos os alunos.</p>
-        <div class="pf-ed-cover" style="aspect-ratio:${ratio}"><div class="pf-ed-prev"></div>
-          <div class="pf-ed-acts"><button type="button" class="pf-ed-btn" data-ed="pick">${svg('photo')}Trocar foto</button><button type="button" class="pf-ed-btn" data-ed="clear">Remover</button></div>
+        <div class="pf-ed-covers${isBanner ? ' two' : ''}">${covers.map(([k, , label, sz, r]) => `
+          <div class="pf-ed-one" data-k="${k}">
+            ${label ? `<b class="pf-ed-lbl">${label}</b>` : ''}
+            <div class="pf-ed-cover" style="aspect-ratio:${r}"><div class="pf-ed-prev"></div>
+              <div class="pf-ed-acts"><button type="button" class="pf-ed-btn" data-ed="pick">${svg('photo')}${isBanner ? 'Trocar' : 'Trocar foto'}</button><button type="button" class="pf-ed-btn" data-ed="clear">Remover</button></div>
+            </div>
+            <small class="pf-ed-hint">${isBanner ? sz : `Tamanho sugerido: ${sz}`} (JPG, PNG ou WebP)</small>
+            <input type="file" accept="image/*" hidden>
+          </div>`).join('')}
         </div>
-        <small class="pf-ed-hint">Tamanho sugerido: ${size} (JPG, PNG ou WebP)</small>
-        <input type="file" accept="image/*" hidden>
+        ${isBanner ? '<small class="pf-ed-hint pf-ed-note">O título e os cards ficam por cima da parte de baixo e da esquerda da imagem. Sem imagem do celular, o celular usa a do computador.</small>' : ''}
         ${fields.map(([k, label, area]) => `<label class="au-label" for="ed-${k}">${label}</label><div class="lk-field">${area ? `<textarea id="ed-${k}" rows="3">${esc(cur[k] || '')}</textarea>` : `<input id="ed-${k}" value="${esc(cur[k] || '')}" autocomplete="off">`}</div>`).join('')}
         <p class="lk-msg" role="alert"></p>
         <div class="lk-actions"><button type="button" class="btn-soft lk-cancel">Cancelar</button><button type="submit" class="btn-dark lk-go">Salvar</button></div>
       </form>`;
     document.body.appendChild(wrap);
-    const prev = wrap.querySelector('.pf-ed-prev'), file = wrap.querySelector('input[type=file]'), msg = wrap.querySelector('.lk-msg');
-    const show = () => { const src = img === undefined ? cur.imagem : img; prev.innerHTML = src ? `<img src="${esc(imgUrl(src))}" alt="">` : `<span>${svg('photo')}${isBanner ? 'Fundo padrão (sem imagem)' : 'Sem foto de capa'}</span>`; wrap.querySelector('[data-ed="clear"]').hidden = !src; };
-    show();
+    const msg = wrap.querySelector('.lk-msg');
+    covers.forEach(([k, ck]) => {
+      const box = wrap.querySelector(`.pf-ed-one[data-k="${k}"]`), prev = box.querySelector('.pf-ed-prev'), file = box.querySelector('input[type=file]');
+      const show = () => { const src = imgs[k] === undefined ? cur[ck] : imgs[k]; prev.innerHTML = src ? `<img src="${esc(imgUrl(src))}" alt="">` : `<span>${svg('photo')}${isBanner ? (k === 'imageMobile' ? 'Usa a do computador' : 'Fundo padrão') : 'Sem foto de capa'}</span>`; box.querySelector('[data-ed="clear"]').hidden = !src; };
+      show();
+      box.querySelector('[data-ed="pick"]').addEventListener('click', () => file.click());
+      box.querySelector('[data-ed="clear"]').addEventListener('click', () => { imgs[k] = ''; show(); });
+      file.addEventListener('change', async () => {
+        const f = file.files[0]; file.value = ''; if (!f) return;
+        msg.textContent = '';
+        try { prev.classList.add('busy'); imgs[k] = await storeImage(f, 'curso'); show(); }
+        catch { msg.textContent = 'Não foi possível usar essa imagem. Tente outra.'; }
+        finally { prev.classList.remove('busy'); }
+      });
+    });
     const close = () => { wrap.classList.remove('in'); setTimeout(() => wrap.remove(), 300); };
     wrap.querySelector('.lk-backdrop').addEventListener('click', close);
     wrap.querySelector('.lk-cancel').addEventListener('click', close);
     wrap.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
-    wrap.querySelector('[data-ed="pick"]').addEventListener('click', () => file.click());
-    wrap.querySelector('[data-ed="clear"]').addEventListener('click', () => { img = ''; show(); });
-    file.addEventListener('change', async () => {
-      const f = file.files[0]; file.value = ''; if (!f) return;
-      msg.textContent = '';
-      try { prev.classList.add('busy'); img = await storeImage(f, 'curso'); show(); }
-      catch { msg.textContent = 'Não foi possível usar essa imagem. Tente outra.'; }
-      finally { prev.classList.remove('busy'); }
-    });
     wrap.querySelector('form').addEventListener('submit', (e) => {
       e.preventDefault();
       const vals = Object.fromEntries(fields.map(([k]) => [k, wrap.querySelector('#ed-' + k).value.trim()]));
+      const img = imgs.image, imgSet = Object.fromEntries(Object.entries(imgs).filter(([, v]) => v !== undefined));
       if (target.startsWith('x:')) {
         cursoExtra = extras().map((x) => (x.id === target.slice(2) ? { ...x, ...Object.fromEntries(Object.entries(vals).filter(([, v]) => v)), ...(img !== undefined ? { image: img } : {}) } : x));
         saveCursoExtra();
       } else {
         const prevEd = edits().find((x) => x.id === target) || {};
-        const next = { ...prevEd, id: target, ...vals, ...(img !== undefined ? { image: img } : {}) };
+        const next = { ...prevEd, id: target, ...vals, ...imgSet };
+        if (next.imageMobile === '') delete next.imageMobile;
         cursoEdit = [...edits().filter((x) => x.id !== target), next];
         saveCursoEdit();
       }
