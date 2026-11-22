@@ -29,12 +29,12 @@
     radial-gradient(30% 30% at 30% 12%, rgb(var(--a2) / .3), transparent 70%); }
 /* pontinhos maiores que os das lições, para aparecerem bem (sem máscara: ela criava uma passada extra na tela toda a cada quadro) */
 .ifm-dots { position: absolute; inset: 0; overflow: hidden; }
-/* a malha anda na diagonal sem parar: a camada é uma casa maior que a tela e volta ao
-   início a cada 24 px, então o movimento é contínuo (só transform) */
-.ifm-dots::before { content: ''; position: absolute; inset: -24px; will-change: transform;
+/* a malha desliza na diagonal só na entrada (algumas casas, freando) e depois fica parada:
+   sem animação contínua, a tela não precisa ser redesenhada a cada quadro */
+.ifm-dots::before { content: ''; position: absolute; inset: -96px;
   background: radial-gradient(rgba(255, 255, 255, .13) 1.7px, transparent 2.3px) 0 0 / 24px 24px;
-  animation: ifmDots 1.8s linear infinite; }
-@keyframes ifmDots { from { transform: translate3d(-24px, 0, 0); } to { transform: translate3d(0, -24px, 0); } }
+  animation: ifmDots 2.4s cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes ifmDots { from { transform: translate3d(-72px, 72px, 0); } to { transform: none; } }
 
 /* ---------- faixa branca na diagonal ---------- */
 .ifm-white { position: absolute; inset: 0; z-index: -1; background: #fff; clip-path: polygon(0 0, 47% 0, 58% 100%, 0 100%);

@@ -3,7 +3,7 @@
    É a primeira tela de #informatica. Os três botões entram recolhidos (personagens
    dentro da forma); 1 s depois o do meio se expande e os personagens saem da forma.
    Passar o mouse ou usar ← → escolhe outro botão; Enter (ou clique) entra.
-   O botão do meio leva aos módulos (#informatica/cursos).
+   O botão do meio leva aos módulos (#informatica/cursos) e o da esquerda ao progresso (#informatica/progresso, curso/progresso.js).
    Fundo: o mesmo das lições (degradê escuro + luzes de aurora + malha de pontinhos),
    trocando de cor devagar, com a faixa branca na diagonal por cima.
    ========================================================= */
@@ -114,13 +114,13 @@
     const go = (k) => {
       if (leaving) return;
       const o = OPTS[k];
-      if (o.id !== 'curso') {
+      if (o.id === 'loja') {
         opts[k].classList.remove('nope'); void opts[k].offsetWidth; opts[k].classList.add('nope');
-        return toast(o.id === 'progresso' ? 'A tela de progresso chega em breve.' : 'A loja de itens chega em breve.');
+        return toast('A loja de itens chega em breve.');
       }
       leaving = true; select(k);
       stage.classList.add('leave');
-      setTimeout(() => { if (alive()) location.hash = '#informatica/cursos'; }, reduce ? 0 : 620);
+      setTimeout(() => { if (alive()) location.hash = o.id === 'progresso' ? '#informatica/progresso' : '#informatica/cursos'; }, reduce ? 0 : 620);
     };
 
     opts.forEach((b, k) => {

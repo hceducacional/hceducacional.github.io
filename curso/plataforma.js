@@ -1767,14 +1767,52 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       let local = null; try { local = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
       if (!local || (dados?.savedAt || 0) > (local.savedAt || 0)) { try { localStorage.setItem(key, JSON.stringify(dados)); changed = true; } catch {} }
     });
-    if (!changed || !view.isConnected) return;
+    if (!changed || !view.isConnected) return changed;
+    if (location.hash === '#informatica/progresso') return true; // a tela de progresso se redesenha sozinha
     if (onDiscPage()) return discPage(view, location.hash.slice('#informatica/disciplina-'.length), true);
     if (location.hash === '#informatica/cursos' || (location.hash === '#informatica' && !window.HC_isComputer())) render(view);
+    return true;
+  }
+
+  /* ---------- números da tela de progresso (curso/progresso.js) ----------
+     Tudo é contado na hora a partir do que já está salvo: quando entram lições, aulas ou provas novas,
+     os totais crescem sozinhos (ex.: os níveis do curso vêm do número de níveis de cada lição pronta). */
+  async function progressData() {
+    const lessons = HC_CURSO.modulos.flatMap((m) => m.licoes).map((l, i) => ({ l, n: i + 1 })).filter((x) => x.l.arquivo);
+    await Promise.all(lessons.map((x) => load(x.l.arquivo).catch(() => {})));
+    let estrelas = 0, superstar = 0, megastar = 0, nivTot = 0, nivFeitos = 0, licoesFeitas = 0;
+    lessons.forEach(({ n }) => {
+      const L = window.HC_LICOES?.[`licao-${n}`], p = progress(n), tot = L?.niveis.length || 30;
+      nivTot += tot; nivFeitos += p?.done ? tot : Math.min(p?.lvl || 0, tot);
+      if (p?.done) licoesFeitas++;
+      const pts = Math.min(PTS_MAX, (p?.levelPts || []).reduce((t, x) => t + (x || 0), 0));
+      if (p?.done || pts) { estrelas += STAR_AT.filter((t) => pts >= t).length; if (pts >= MEGA_AT) megastar++; else if (pts >= SUPER_AT) superstar++; }
+    });
+    const all = conts(), aulas = all.filter((c) => c.tipo !== 'prova'), provas = all.filter((c) => c.tipo === 'prova');
+    const tentou = (c) => (contProg(c.id)?.hist || []).length > 0;
+    const x = window.HC_xp.get();
+    return {
+      nome: meName(), perfil: auth.profile, xp: x, patente: window.HC_xp.rankOf(x.xp), saldo: window.HC_cash.get().saldo,
+      estrelas, estrelasMax: lessons.length * 5, superstar, megastar,
+      aulas: { feitas: aulas.filter((c) => contDone(c.id)).length, total: aulas.length },
+      questionarios: { feitos: aulas.filter(tentou).length, tentativas: aulas.reduce((t, c) => t + (contProg(c.id)?.hist || []).length, 0), total: aulas.length },
+      provas: { feitas: provas.filter(tentou).length, aprovadas: provas.filter((c) => contDone(c.id)).length, total: provas.length },
+      niveis: { total: nivTot, feitos: nivFeitos, faltam: nivTot - nivFeitos }, licoes: { feitas: licoesFeitas, total: lessons.length },
+    };
+  }
+  async function progressPage(view) {
+    view.innerHTML = '<div class="wrap"><p class="me-loading">Carregando o seu progresso…</p></div>';
+    try { await Promise.all([load('curso/progresso.css'), load('curso/progresso.js')]); }
+    catch { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir o progresso. Verifique a internet e tente de novo.</p></div>'; return; }
+    const draw = async () => { const d = await progressData(); if (location.hash === '#informatica/progresso' && view.isConnected) window.HC_progresso.render(view, d); };
+    await draw();
+    if (await sync(view)) draw(); // chegou progresso de outro aparelho: atualiza os números
   }
 
   window.HC_platform = { render: (view, sub) => {
     if (!sub && window.HC_menu && window.HC_isComputer()) return window.HC_menu.render(view); // #informatica: tela de seleção (curso/menu.js), só no computador
     if (sub === 'cursos') sub = ''; // #informatica/cursos: módulos e lições
+    if (sub === 'progresso') return progressPage(view); // #informatica/progresso: a tela de progresso do aluno
     render(view, sub); if (!sub) sync(view);
   } };
 })();
