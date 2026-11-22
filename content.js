@@ -444,16 +444,16 @@ window.HC_CONTENT = {
       "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/cf9bfaff-1841-4c3f-92c4-af71060d5dd5.webp"
     },
     {
-      "id": "bnivel",
-      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/f9f337f6-ad36-40e8-b63f-b58ddff50da3.webp"
-    },
-    {
       "id": "bmod",
       "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/b23f30b9-d25b-4d2b-bdee-1cc3cd1263d2.webp"
     },
     {
       "id": "bsaldo",
-      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/c9e58f42-8efb-4614-b43a-04d56560322f.webp"
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/a3dcfb1f-5fe2-435f-9f4c-197aea9a0b6b.webp"
+    },
+    {
+      "id": "bnivel",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/a0f17360-a3a8-479d-850f-001c55309519.webp"
     }
   ],
   "cursoConteudo": [],
