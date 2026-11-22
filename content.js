@@ -450,6 +450,10 @@ window.HC_CONTENT = {
     {
       "id": "bnivel",
       "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/f9f337f6-ad36-40e8-b63f-b58ddff50da3.webp"
+    },
+    {
+      "id": "bmod",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/b23f30b9-d25b-4d2b-bdee-1cc3cd1263d2.webp"
     }
   ],
   "loginBanner": [

@@ -116,15 +116,16 @@ const infoLoadPlatform = () => infoPlatform ||= new Promise((ok, fail) => {
   let left = 2;
   const done = () => { if (--left === 0) ok(); };
   const err = () => { infoPlatform = null; fail(); };
-  const js = document.createElement('script');
-  js.src = `curso/plataforma.js?v=${window.HC_V || ''}`;
-  js.onload = done; js.onerror = err;
+  // a plataforma pode já ter vindo pelo Acervo do professor (app.js): baixar de novo dá erro de HC_CURSO repetido
+  const js = typeof lazy === 'function' ? null : document.createElement('script');
+  if (js) { js.src = `curso/plataforma.js?v=${window.HC_V || ''}`; js.onload = done; js.onerror = err; }
+  else lazy('curso/plataforma.js').then(done, err);
   const menu = document.createElement('script');
   menu.src = `curso/menu.js?v=${window.HC_V || ''}`;
   menu.onload = done; menu.onerror = err;
   const cur = document.createElement('script'); // cursores desenhados da plataforma (só no computador)
   cur.src = `curso/cursores.js?v=${window.HC_V || ''}`;
-  document.head.append(css, css2); document.body.append(js, menu, cur);
+  document.head.append(css, css2); document.body.append(...[js, menu, cur].filter(Boolean));
 });
 
 function renderInformatica(view, route = 'informatica') {

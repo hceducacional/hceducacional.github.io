@@ -83,7 +83,7 @@
   /* ---------- visual escuro, herdado dos cards das lições ---------- */
   const TINT0 = '22, 60, 48';
   /* cor do cartão de cada tipo de nível (a de digitação é a do card da lição) */
-  const KIND_TINT = { hacker: '24, 46, 110', fila: '30, 70, 90', corrida: '70, 32, 120', estrelas: '30, 28, 92' };
+  const KIND_TINT = { hacker: '24, 46, 110', fila: '30, 70, 90', corrida: '70, 32, 120', estrelas: '30, 28, 92', nave: '14, 26, 70', gp: '40, 20, 90' };
   const CARD_TINTS = ['24, 46, 110', '70, 32, 120', '120, 40, 30', '30, 70, 90'];
   /* cenários do cartão do nível: um sorteado a cada vez que a lição começa (nunca o mesmo da vez anterior).
      base = cor escura do fundo; a1, a2, a3 = as três luzes de aurora que flutuam devagar por trás */
@@ -918,7 +918,7 @@
           cash: C ? { from: C.get().saldo, gain: C.ganhoDe(starsOf(p), rankOf(p)), review: false } : null });
       });
       paintProgress(); paintStats(); gaugeLevel(lv);
-      ({ typing: typingInit, hacker: hackerInit, fila: filaInit, corrida: corridaInit, estrelas: estrelasInit })[lv.tipo](lv);
+      ({ typing: typingInit, hacker: hackerInit, fila: filaInit, corrida: corridaInit, estrelas: estrelasInit, nave: naveInit, gp: gpInit })[lv.tipo](lv);
     }
     function goal(n, total) {
       const t = $q('#lc-goal-txt'), b = $q('#lc-goal-bar'); if (!t) return;
@@ -1313,7 +1313,7 @@
           <h4>${esc(o.titulo)}</h4>
           <p>${o.texto} ${C ? 'Use o seu Saldo HC para reviver e continuar daqui, sem voltar ao começo.' : 'Recomece o minijogo para tentar de novo.'}</p>
           ${C ? `<div class="lc-hk-wallet"><img src="assets/moeda/moeda.webp" alt="" draggable="false"><span>Seu saldo</span><b>${fmtC(saldo)}</b></div>
-          <button type="button" class="lc-hk-revive" ${can ? '' : 'disabled'}>Reviver com ${game.maxLives} vidas<span><img src="assets/moeda/moeda.webp" alt="" draggable="false">${fmtC(cost)}</span></button>
+          <button type="button" class="lc-hk-revive" ${can ? '' : 'disabled'}>${o.revTxt || `Reviver com ${game.maxLives} vidas`}<span><img src="assets/moeda/moeda.webp" alt="" draggable="false">${fmtC(cost)}</span></button>
           ${!can ? '<small class="lc-hk-poor">Saldo insuficiente. Ganhe moedas com as estrelas das lições.</small>' : ''}` : ''}
           <button type="button" class="lc-hk-restart">${svg('refresh')}Recomeçar o minijogo</button>
         </div>`);
@@ -1899,14 +1899,507 @@
       }
     }
 
+    /* ---------- MINIJOGO: PATRULHA DAS PALAVRAS (MJ-05) ----------
+       Espaço profundo com estrelas passando; a nave do aluno fica embaixo, no meio.
+       Asteroides com uma palavra descem na direção da nave. O aluno digita a palavra:
+       a primeira letra escolhe o asteroide (o mais perto da nave, se dois começarem igual;
+       a letra seguinte troca para o outro, se for dele). A nave gira para mirar e cada letra
+       certa dispara um laser que empurra o asteroide um pouquinho para trás; na última letra
+       ele explode em pedaços. Backspace solta o asteroide escolhido para trocar de palavra.
+       - Pontos: 10 por letra × o combo (+10% a cada asteroide seguido, até ×2);
+         de vez em quando vem um asteroide dourado que vale 4× os pontos.
+       - O placar tem 8 dígitos (00000068), com os zeros da frente apagados.
+       - Com o progresso descem mais asteroides ao mesmo tempo (de 2 até 5), mais rápido e com palavras mais longas.
+       - Se um asteroide bater na nave, o escudo pisca e o aluno perde uma vida; depois vêm 2,5 s mais devagar.
+       - Palavras: as do campo "palavras" do nível ou o banco do MJ-04, só as que usam as teclas da lição.
+       - Vidas (padrão 3) e reviver com o Saldo HC, iguais aos outros minijogos. */
+    const NAVE_SHIP = `<svg class="lc-nv-svg" viewBox="0 0 64 84" aria-hidden="true"><defs>
+        <linearGradient id="lc-nv-hull" x1="0" x2="1"><stop offset="0" stop-color="#94a3b8"/><stop offset=".45" stop-color="#f8fafc"/><stop offset="1" stop-color="#64748b"/></linearGradient>
+        <linearGradient id="lc-nv-wing" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#1e3a8a"/></linearGradient>
+        <linearGradient id="lc-nv-glass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cffafe"/><stop offset=".5" stop-color="#22d3ee"/><stop offset="1" stop-color="#0e7490"/></linearGradient>
+        <linearGradient id="lc-nv-fire" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="#67e8f9"/><stop offset="1" stop-color="#6366f1" stop-opacity="0"/></linearGradient>
+      </defs>
+      <path class="fire" d="M25 60 Q32 90 39 60Z" fill="url(#lc-nv-fire)"/>
+      <path d="M32 20 L61 52 L60 60 L39 55 L25 55 L4 60 L3 52Z" fill="url(#lc-nv-wing)" stroke="#0c1a3a" stroke-width="1.2" stroke-linejoin="round"/>
+      <rect x="12" y="40" width="3.4" height="13" rx="1.5" fill="#cbd5e1"/><rect x="48.6" y="40" width="3.4" height="13" rx="1.5" fill="#cbd5e1"/>
+      <path d="M32 2 C38 14 40.5 30 40.5 46 L38.5 61 L25.5 61 L23.5 46 C23.5 30 26 14 32 2Z" fill="url(#lc-nv-hull)" stroke="#334155" stroke-width="1.2" stroke-linejoin="round"/>
+      <path d="M32 40 L36 58 L28 58Z" fill="#38bdf8" opacity=".55"/>
+      <ellipse cx="32" cy="25" rx="4.6" ry="9.5" fill="url(#lc-nv-glass)" stroke="#0e7490" stroke-width="1"/>
+      <circle class="tip l" cx="5.5" cy="55" r="2"/><circle class="tip r" cx="58.5" cy="55" r="2"/>
+    </svg>`;
+    const naveDig = (n) => { const s = String(Math.max(0, Math.round(n))).padStart(8, '0').slice(-8), i = s.search(/[1-9]/); return i < 0 ? `<i>${s}</i>` : `<i>${s.slice(0, i)}</i>${s.slice(i)}`; };
+    function naveInit(lv) {
+      game.score = 0; game.meta = lv.meta; game.paused = true; game.run = naveRun;
+      game.maxLives = lv.vidas || 3; game.lives = game.maxLives; game.revives = 0; game.combo = 0;
+      naveReset(lv);
+      $q('#lc-stage').innerHTML = `
+        <div class="lc-term lc-nv" id="lc-nv">
+          <div class="lc-hk-bar">
+            <span class="lc-hk-title lc-nv-title"><i></i>Patrulha das Palavras</span>
+            ${livesHTML()}
+            <span class="lc-fl-combo" id="lc-fl-combo" data-on="0">Combo <b>×0</b></span>
+            <span class="lc-hk-time lc-nv-pts" id="lc-nv-pts" aria-label="Pontos">${naveDig(0)}</span>
+          </div>
+          <div class="lc-nv-world" id="lc-nv-world">
+            <div class="lc-nv-sky" aria-hidden="true"><i class="neb"></i><i class="dots d1"></i><i class="dots d2"></i><i class="dots d3"></i><i class="planet"></i></div>
+            <div class="lc-nv-rocks" id="lc-nv-rocks"></div>
+            <div class="lc-nv-fx" id="lc-nv-fx" aria-hidden="true"></div>
+            <div class="lc-nv-ship" id="lc-nv-ship"><i class="shield"></i><div class="lc-nv-aim" id="lc-nv-aim">${NAVE_SHIP}</div></div>
+          </div>
+          <p class="lc-hk-log" id="lc-hk-log"><span>&gt;</span> <em>Digite a palavra de um asteroide antes que ele bata na nave.</em></p>
+          ${startOverlay('Patrulha das Palavras')}
+        </div>`;
+      goal(0, game.meta); bindStart(); kbTarget(null);
+    }
+    function naveReset(lv) {
+      game.rocks = []; game.lock = null; game.uid = 0; game.pts = 0; game.slowUntil = 0; game.nextIn = 0; game.lastLane = -1; game.gold = 0;
+      game.queue = estFila(lv, game.meta + 12);
+      game.need = game.queue.slice(0, game.meta).reduce((s, w) => s + w.length, 0); // a barra de estrelas conta letras
+      game.ph = 0; game.pe = 0;
+    }
+    const naveProg = () => Math.min(1, game.score / Math.max(1, game.meta));
+    function naveGeo() { // tamanho do espaço e posição da nave (centro)
+      const w = $q('#lc-nv-world'); const W = w?.clientWidth || 600, H = w?.clientHeight || 360;
+      return { W, H, sx: W / 2, sy: H - 46 };
+    }
+    function naveSpawn(g) {
+      if (!game.queue.length) return;
+      const firsts = new Set(game.rocks.map((r) => r.w[0]));
+      let qi = game.queue.slice(0, 5).findIndex((w) => !firsts.has(w[0]));
+      if (qi < 0) qi = 0;
+      const w = game.queue.splice(qi, 1)[0];
+      if (game.queue.length < 4) game.queue.push(...estFila(L.niveis[st.lvl], 8));
+      const lanes = 5, free = Array.from({ length: lanes }, (_, i) => i).filter((i) => i !== game.lastLane);
+      const lane = free[Math.floor(Math.random() * free.length)]; game.lastLane = lane;
+      const pad = Math.min(80, g.W * .14), x0 = pad + ((lane + .2 + Math.random() * .6) / lanes) * (g.W - pad * 2), y0 = -24;
+      const p = naveProg();
+      game.gold++;
+      const gold = game.score > 1 && game.gold >= 6 && Math.random() < .35; if (gold) game.gold = 0;
+      const T = (10.5 - 4.5 * p + .3 * w.length) * (gold ? .9 : 1); // segundos até a nave
+      const r = { id: game.uid++, w, typed: 0, gold, x0, y0, d: 0, v: 0, T, el: document.createElement('div') };
+      r.el.className = `lc-nv-rock${gold ? ' gold' : ''}`;
+      r.el.innerHTML = `<div class="in" style="--rr:${Math.round(Math.random() * 10 - 5)}deg">${gold ? '<small class="x4">4× pontos</small>' : ''}<span class="word">${[...w].map((c) => `<i>${esc(c)}</i>`).join('')}</span></div>`;
+      r.letters = r.el.querySelectorAll('.word i');
+      $q('#lc-nv-rocks')?.appendChild(r.el);
+      game.rocks.push(r);
+      navePlace(r, g);
+      game.nextIn = (2.4 - 1.2 * p) * (game.rocks.length >= 2 ? 1.25 : 1) + Math.random() * .6;
+    }
+    function navePath(r, g) { // reta do ponto de saída até a nave
+      const dx = g.sx - r.x0, dy = g.sy - r.y0, D = Math.hypot(dx, dy) || 1;
+      return { dx, dy, D };
+    }
+    function navePlace(r, g) {
+      const P = navePath(r, g), f = Math.min(1, r.d / P.D);
+      r.x = r.x0 + P.dx * f; r.y = r.y0 + P.dy * f; r.D = P.D;
+      r.el.style.transform = `translate3d(${r.x.toFixed(1)}px, ${r.y.toFixed(1)}px, 0)`;
+    }
+    function naveRun() {
+      cancelAnimationFrame(game.raf);
+      let last = performance.now();
+      const world = $q('#lc-nv-world');
+      world?.classList.add('go');
+      const frame = (t) => {
+        if (!alive || !world?.isConnected) return;
+        game.raf = requestAnimationFrame(frame);
+        const dt = Math.min(.05, (t - last) / 1000); last = t;
+        if (busy || game.paused || document.visibilityState !== 'visible') return;
+        const g = naveGeo(), p = naveProg(), maxOn = 2 + Math.round(p * 3);
+        game.nextIn -= dt;
+        if (game.score + game.rocks.length < game.meta && (!game.rocks.length || (game.nextIn <= 0 && game.rocks.length < maxOn))) naveSpawn(g);
+        const slow = performance.now() < game.slowUntil ? .55 : 1;
+        for (const r of [...game.rocks]) {
+          const D = navePath(r, g).D;
+          r.d += (D / r.T) * dt * slow;
+          navePlace(r, g);
+          const left = D - r.d;
+          if (left < D * .28 && !r.low) { r.low = true; r.el.classList.add('low'); }
+          if (left <= 40) naveCrash(r, g);
+        }
+        if (game.lock && game.rocks.includes(game.lock)) naveAim(game.lock, g);
+      };
+      game.raf = requestAnimationFrame(frame);
+    }
+    function naveAim(r, g) { // a nave gira para o alvo
+      const a = Math.atan2(r.y - g.sy, r.x - g.sx) * 180 / Math.PI + 90;
+      const aim = $q('#lc-nv-aim'); if (aim) aim.style.transform = `rotate(${Math.max(-70, Math.min(70, a)).toFixed(1)}deg)`;
+      return a;
+    }
+    function naveShot(r) { // laser do canhão até o asteroide
+      const fx = $q('#lc-nv-fx'); if (!fx) return;
+      const g = naveGeo(), a = (naveAim(r, g) - 90) * Math.PI / 180;
+      const nx = g.sx + Math.cos(a) * 30, ny = g.sy + Math.sin(a) * 30;
+      const len = Math.max(0, Math.hypot(r.x - nx, r.y - ny) - 6);
+      const b = document.createElement('i'); b.className = `lc-nv-beam${r.gold ? ' gold' : ''}`;
+      b.style.cssText = `left:${nx.toFixed(1)}px;top:${ny.toFixed(1)}px;width:${len.toFixed(1)}px;transform:rotate(${(a * 180 / Math.PI).toFixed(1)}deg)`;
+      fx.appendChild(b); setTimeout(() => b.remove(), 220);
+      const h = document.createElement('i'); h.className = 'lc-nv-zap'; h.style.cssText = `left:${r.x.toFixed(1)}px;top:${r.y.toFixed(1)}px`;
+      fx.appendChild(h); setTimeout(() => h.remove(), 300);
+      replay($q('#lc-nv-ship'), 'kick');
+    }
+    function navePaintPts(bump) {
+      const el = $q('#lc-nv-pts'); if (!el) return;
+      el.innerHTML = naveDig(game.pts);
+      if (bump) replay(el, 'pop');
+    }
+    function naveDrop(r = game.lock) { // solta o asteroide escolhido (Backspace ou quando ele bate)
+      if (!r) return;
+      r.typed = 0; r.el.classList.remove('lock');
+      r.letters.forEach((i) => i.classList.remove('ok'));
+      if (game.lock === r) { game.lock = null; kbTarget(null); const aim = $q('#lc-nv-aim'); if (aim) aim.style.transform = ''; }
+    }
+    function naveBoom(x, y, gold, big) { // explosão com pedaços de rocha
+      const fx = $q('#lc-nv-fx'); if (!fx) return;
+      const n = big ? 12 : 9;
+      fx.insertAdjacentHTML('beforeend', `<span class="lc-nv-boom${gold ? ' gold' : ''}${big ? ' big' : ''}" style="left:${x.toFixed(1)}px;top:${y.toFixed(1)}px"><i class="flash"></i><i class="ring"></i>${Array.from({ length: n }, (_, i) => `<i class="bit" style="--a:${(i * 360 / n + Math.random() * 20).toFixed(0)}deg;--d:${(36 + Math.random() * 40).toFixed(0)}px;--s:${(4 + Math.random() * 6).toFixed(1)}px;--r:${Math.round(Math.random() * 300)}deg"></i>`).join('')}</span>`);
+      const el = fx.lastElementChild; setTimeout(() => el.remove(), 900);
+    }
+    function naveCrash(r, g) {
+      game.rocks = game.rocks.filter((x) => x !== r);
+      naveDrop(r);
+      r.el.remove(); naveBoom(r.x, r.y, false, true);
+      miss(null); game.combo = 0; filaCombo();
+      replay($q('#lc-nv-ship'), 'hit'); replay($q('#lc-nv'), 'hurt');
+      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.slowUntil = performance.now() + 2500;
+      // os outros asteroides são empurrados um pouco para trás (a onda do escudo)
+      game.rocks.forEach((x) => { x.d = Math.max(0, x.d - 60); });
+      if (game.lives <= 0) return naveDown();
+      mjLog(`O asteroide “${r.w}” bateu na nave · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
+    }
+    function naveClear() { game.rocks.forEach((x) => x.el.remove()); game.rocks = []; game.lock = null; const aim = $q('#lc-nv-aim'); if (aim) aim.style.transform = ''; kbTarget(null); }
+    function naveDown() {
+      cancelAnimationFrame(game.raf); $q('#lc-nv-world')?.classList.remove('go');
+      mjDown({
+        term: $q('#lc-nv'), titulo: 'Nave atingida!', texto: `Você destruiu <b>${game.score} de ${game.meta}</b> asteroides.`,
+        onResume: () => { naveClear(); game.nextIn = .6; game.slowUntil = performance.now() + 2500; naveRun(); },
+        onRestart: (term) => {
+          naveClear(); game.score = 0; game.combo = 0; filaCombo();
+          naveReset(L.niveis[st.lvl]); navePaintPts();
+          term.insertAdjacentHTML('beforeend', startOverlay('Patrulha das Palavras')); bindStart();
+          mjLog('Digite a palavra de um asteroide antes que ele bata na nave.');
+        },
+      });
+    }
+    function naveKill(r) {
+      game.rocks = game.rocks.filter((x) => x !== r); game.lock = null; kbTarget(null);
+      game.score++; game.combo++; goal(game.score, game.meta); filaCombo();
+      const mult = 1 + Math.min(10, game.combo - 1) * .1;
+      const got = Math.round(r.w.length * 10 * mult * (r.gold ? 4 : 1));
+      game.pts += got;
+      r.el.remove(); naveBoom(r.x, r.y, r.gold, r.gold || r.w.length >= 7);
+      $q('#lc-nv-fx')?.insertAdjacentHTML('beforeend', `<b class="lc-nv-plus${r.gold ? ' gold' : ''}" style="left:${r.x.toFixed(1)}px;top:${r.y.toFixed(1)}px">+${got}${r.gold ? '<em>4× pontos</em>' : ''}</b>`);
+      { const p = $q('#lc-nv-fx')?.lastElementChild; setTimeout(() => p?.remove(), 1000); }
+      navePaintPts(true);
+      const tag = game.combo >= 3 ? ` · combo ×${game.combo}` : '';
+      mjLog(`Asteroide destruído: “${r.w}”${r.gold ? ' · 4× pontos!' : ''}${tag}`, 'ok');
+      if (game.score >= game.meta) {
+        game.paused = true; cancelAnimationFrame(game.raf);
+        game.rocks.forEach((x) => { x.el.classList.add('fade'); setTimeout(() => x.el.remove(), 600); }); game.rocks = [];
+        const aim = $q('#lc-nv-aim'); if (aim) aim.style.transform = '';
+        $q('#lc-nv-world')?.classList.add('done');
+        mjLog('Setor limpo! A nave seguiu viagem.', 'ok');
+        return setTimeout(complete, 1500);
+      }
+      const aim = $q('#lc-nv-aim'); if (aim) aim.style.transform = '';
+    }
+    function naveKey(k) {
+      if (game.paused) return;
+      let r = game.lock;
+      if (!r) {
+        const cand = game.rocks.filter((x) => x.w[0] === k).sort((a, b) => (b.d / b.D) - (a.d / a.D));
+        if (!cand.length) {
+          miss(k); game.combo = 0; filaCombo(); replay($q('#lc-nv-world'), 'nope');
+          return mjLog(game.rocks.length ? `Nenhum asteroide começa com “${k.toUpperCase()}”` : 'Espere o próximo asteroide aparecer', 'warn');
+        }
+        r = game.lock = cand[0]; r.el.classList.add('lock');
+      }
+      if (r.w[r.typed] !== k) { // dois asteroides com o mesmo começo: a letra seguinte decide qual é
+        const pre = r.w.slice(0, r.typed) + k, alt = game.rocks.find((x) => x !== r && x.w.startsWith(pre));
+        if (alt) {
+          naveDrop(r); r = game.lock = alt; alt.typed = pre.length - 1; alt.el.classList.add('lock');
+          alt.letters.forEach((i, n) => i.classList.toggle('ok', n < alt.typed));
+        }
+      }
+      if (r.w[r.typed] === k) {
+        hit(k);
+        r.letters[r.typed]?.classList.add('ok');
+        r.typed++;
+        naveShot(r);
+        r.d = Math.max(0, r.d - 7); // o tiro empurra o asteroide para trás
+        replay(r.el.querySelector('.in'), 'tap');
+        if (r.typed >= r.w.length) return naveKill(r);
+        kbTarget(r.w[r.typed]);
+      } else {
+        miss(k); game.combo = 0; filaCombo(); replay(r.el.querySelector('.word'), 'shake');
+        mjLog(`Tecla errada: a próxima letra de “${r.w}” é “${r.w[r.typed].toUpperCase()}” · Backspace troca de asteroide`, 'warn');
+      }
+    }
+
+    /* ---------- MINIJOGO: GRANDE PRÊMIO DAS TECLAS (MJ-06) ----------
+       Uma pista neon à noite com 5 faixas; em cada uma corre um robozinho. O do aluno ("Você") fica
+       na faixa da frente e os outros quatro (Byte, Pixel, Chip e Turbo) correm sozinhos.
+       Embaixo fica a frase: cada letra certa faz o robô do aluno avançar; a letra errada fica marcada
+       em vermelho e não avança (é preciso teclar a certa). A frase anda sozinha, sempre com a letra
+       atual à vista. Acentos e maiúsculas não precisam ser exatos (é = e, A = a, ç = c).
+       - Os rivais correm perto do ritmo do campo "ppm" (padrão 20 palavras por minuto): um mais
+         lento, dois parecidos e um mais rápido, com arrancadas e tropeços de vez em quando.
+       - O placar mostra a posição ao vivo (1º a 5º) e as palavras por minuto do aluno.
+       - Na chegada vem o pódio com a colocação, PPM, precisão e tempo. Não tem vidas: o aluno
+         sempre termina a corrida, em qualquer posição.
+       - Frase: a do campo "frase" do nível, uma das "frases" ou do banco abaixo, só as que dá para
+         escrever com as teclas da lição; com poucas teclas vira uma sequência de palavras da lição. */
+    const GP_BANCO = [
+      'A lua não tem luz própria e reflete a luz do sol.',
+      'O beija-flor bate as asas muito rápido para ficar parado no ar.',
+      'Quem treina digitação todo dia fica cada vez mais rápido.',
+      'As abelhas fazem o mel com o néctar das flores do campo.',
+      'O teclado tem letras, números e símbolos para escrever.',
+      'A internet liga pessoas do mundo inteiro em poucos segundos.',
+      'A tartaruga marinha nada milhares de quilômetros pelo oceano.',
+      'O cérebro continua aprendendo coisas novas durante toda a vida.',
+      'O computador guarda fotos, músicas, textos e jogos na memória.',
+      'Uma boa postura na cadeira ajuda a digitar sem cansar as mãos.',
+      'O sol nasce no leste e se põe no oeste todos os dias.',
+      'A girafa é o animal mais alto e dorme poucas horas por noite.',
+    ];
+    const GP_RIVAIS = [['Byte', '167, 139, 250'], ['Pixel', '244, 114, 182'], ['Chip', '251, 191, 36'], ['Turbo', '52, 211, 153']];
+    const gpNorm = (c) => String(c).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    function gpFrase(lv) {
+      const ok = (f) => [...gpNorm(f)].every((c) => L.teclas.includes(c));
+      const pool = [lv.frase, ...(lv.frases || []), ...(lv.frase || lv.frases ? [] : GP_BANCO)].filter(Boolean).filter(ok);
+      if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
+      const sp = L.teclas.includes(' ') ? ' ' : '';
+      let out = '';
+      for (const w of estFila(lv, 30)) { if ((out + sp + w).length > 48) break; out += (out ? sp : '') + w; }
+      return out;
+    }
+    const gpOrd = (n) => `${n}º`;
+    function gpInit(lv) {
+      game.paused = true; game.run = gpRun; game.meta = 0; game.pos5 = 0;
+      game.maxLives = lv.erros || 10; game.lives = game.maxLives; game.revives = 0; // chances: cada tecla errada gasta uma
+      game.text = gpFrase(lv); game.pos = 0; game.need = game.text.length; game.ph = 0; game.pe = 0; game.errs = 0; game.t0 = 0; game.done = false;
+      const base = (lv.ppm || 20) * 5 / 60; // letras por segundo
+      const mult = [.72, .9, 1.02, 1.16].sort(() => Math.random() - .5);
+      game.racers = [
+        ...GP_RIVAIS.map(([nome, cor], i) => ({ nome, cor, me: false, p: 0, v: base * mult[i], f: 1, next: 0, fin: 0 })),
+        { nome: 'Você', cor: '56, 189, 248', me: true, p: 0, fin: 0 },
+      ];
+      game.order = 0; game.cam = 0; game.racers[4].dp = 0;
+      const lane = (r, i) => `
+        <div class="lc-gp-lane" style="--i:${i};--bc:${r.cor}"><i class="dash"></i></div>`;
+      const bot = (r, i) => `
+        <div class="lc-gp-racer${r.me ? ' me' : ''}" data-r="${i}" style="--i:${i};--bc:${r.cor}">
+          <span class="tag"><b>${i + 1}</b>${esc(r.nome)}</span>
+          <span class="bot"><i class="trail"></i><span class="body"><i class="eye"></i><i class="eye"></i></span><span class="legs"><i></i><i></i></span><i class="shadow"></i></span>
+          <span class="flag">🏁</span>
+        </div>`;
+      $q('#lc-stage').innerHTML = `
+        <div class="lc-term lc-gp" id="lc-gp">
+          <div class="lc-hk-bar">
+            <span class="lc-hk-title lc-gp-title"><i></i>Grande Prêmio das Teclas</span>
+            <span class="lc-gp-chances" title="Chances: cada tecla errada gasta uma"><small>Chances</small>${livesHTML()}</span>
+            <span class="lc-gp-pos" id="lc-gp-pos">Posição <b>5º</b><small>/5</small></span>
+            <span class="lc-hk-time lc-gp-ppm" id="lc-gp-ppm"><b>0</b> PPM</span>
+          </div>
+          <div class="lc-gp-world" id="lc-gp-world">
+            <div class="lc-gp-sky" aria-hidden="true"><i class="glow"></i><i class="city far"></i><i class="city"></i><i class="lights"></i></div>
+            <div class="lc-gp-posts" aria-hidden="true"></div>
+            <div class="lc-gp-track" aria-hidden="true">${game.racers.map(lane).join('')}<span class="lc-gp-startl" id="lc-gp-startl"><em>Largada</em></span><span class="lc-gp-finl" id="lc-gp-finl"><em>Chegada</em><i></i></span></div>
+            <div class="lc-gp-racers" id="lc-gp-racers">${game.racers.map(bot).join('')}</div>
+          </div>
+          <div class="lc-gp-type" id="lc-gp-type">
+            <span class="lc-gp-hint" id="lc-gp-hint">Comece a digitar</span>
+            <div class="lc-gp-line"><div class="lc-gp-txt" id="lc-gp-txt">${[...game.text].map((c, i) => `<i data-i="${i}"${c === ' ' ? ' class="sp"' : ''}>${c === ' ' ? '&nbsp;' : esc(c)}</i>`).join('')}</div></div>
+            <div class="lc-gp-bar"><i id="lc-gp-bar"></i><span class="chk"></span></div>
+          </div>
+          ${startOverlay('Grande Prêmio das Teclas')}
+        </div>`;
+      game.chs = [...$q('#lc-gp-txt').children];
+      game.els = [...$q('#lc-gp-racers').children];
+      game.lay = { dash: [...$q('#lc-gp').querySelectorAll('.lc-gp-lane .dash')], city: [...$q('#lc-gp').querySelectorAll('.lc-gp-sky .city')], posts: $q('#lc-gp .lc-gp-posts'), start: $q('#lc-gp-startl'), fin: $q('#lc-gp-finl') };
+      goal(0, game.text.length); bindStart(); gpCaret(); gpPlace();
+    }
+    function gpCaret() {
+      const c = game.chs?.[game.pos]; if (!c) return;
+      game.chs.forEach((x) => x.classList.remove('cur'));
+      c.classList.add('cur');
+      const line = $q('#lc-gp-txt'); if (!line) return;
+      line.style.transform = `translateX(${(-Math.max(0, c.offsetLeft - line.parentElement.clientWidth * .3)).toFixed(0)}px)`;
+      kbTarget(gpNorm(game.text[game.pos]));
+    }
+    /* a pista é bem mais longa que a tela: a câmera segue o robô do aluno (que fica a ~32% da largura),
+       o cenário anda em camadas (faixas, cidade perto e longe) e a chegada só aparece no fim.
+       Quem fica fora da tela vira uma etiqueta presa na borda, com seta. Tudo com transform. */
+    const GP_X0 = 120;
+    const gpLen = (W) => Math.max(W * 2.6, game.text.length * 26); // comprimento da pista em px
+    function gpPlace(dt = 1) {
+      const W = $q('#lc-gp-world')?.clientWidth || 600, len = game.text.length, TL = gpLen(W);
+      const me = game.racers[4];
+      me.dp += (me.p - me.dp) * Math.min(1, dt * 12); // o robô do aluno desliza até a letra digitada
+      const X = (r) => GP_X0 + TL * Math.min(1, (r.me ? r.dp : r.p) / len);
+      const finX = GP_X0 + TL;
+      const want = Math.max(0, Math.min(finX + 150 - W, X(me) - W * .32));
+      game.cam += (want - game.cam) * Math.min(1, dt * 5);
+      const cam = game.cam;
+      game.racers.forEach((r, i) => {
+        const el = game.els[i]; if (!el) return;
+        let x = X(r) - cam, side = '';
+        if (x > W - 14) { x = W - 14; side = 'ahead'; } else if (x < 14) { x = 14; side = 'behind'; }
+        const tx = `translateX(${x.toFixed(1)}px)`;
+        if (el._tx !== tx) { el._tx = tx; el.style.transform = tx; }
+        if (el._side !== side) { el._side = side; el.classList.toggle('ahead', side === 'ahead'); el.classList.toggle('behind', side === 'behind'); }
+        const flip = !side && x < 110; // perto da borda esquerda: a etiqueta vai para a direita do robô
+        if (el._flip !== flip) { el._flip = flip; el.classList.toggle('tagr', flip); }
+      });
+      const L = game.lay; if (L) {
+        const mv = (el, v) => { const t = `translateX(${v.toFixed(1)}px)`; if (el && el._tx !== t) { el._tx = t; el.style.transform = t; } };
+        L.dash.forEach((d, i) => mv(d, -(cam % 36))); // traços das faixas
+        mv(L.city[0], -((cam * .12) % 160)); mv(L.city[1], -((cam * .3) % 117)); // cidade longe e perto
+        mv(L.posts, -(cam % 180)); // postes de luz na beira da pista
+        mv(L.start, GP_X0 - 30 - cam); mv(L.fin, finX - cam);
+      }
+      const ahead = game.racers.filter((r) => !r.me && (r.fin ? (!me.fin || r.fin < me.fin) : r.p > me.p)).length;
+      const pos = ahead + 1;
+      if (pos !== game.pos5) {
+        game.pos5 = pos;
+        const el = $q('#lc-gp-pos'); if (el) { el.querySelector('b').textContent = gpOrd(pos); el.dataset.p = pos; replay(el, 'pop'); }
+      }
+      // número de cada um na etiqueta (colocação ao vivo)
+      const rank = game.racers.map((r, i) => [i, r.fin || 1e9, -r.p]).sort((a, b) => a[1] - b[1] || a[2] - b[2]);
+      rank.forEach(([i], n) => { const b = game.els[i]?.querySelector('.tag b'); if (b && b.textContent !== String(n + 1)) b.textContent = n + 1; });
+    }
+    function gpRun() {
+      cancelAnimationFrame(game.raf);
+      let last = performance.now();
+      if (!game.t0) game.t0 = last;
+      $q('#lc-gp-world')?.classList.add('go');
+      $q('#lc-gp-type')?.classList.add('go');
+      const frame = (t) => {
+        if (!alive || !$q('#lc-gp')) return;
+        game.raf = requestAnimationFrame(frame);
+        const dt = Math.min(.05, (t - last) / 1000); last = t;
+        if (busy || game.paused || document.visibilityState !== 'visible') return;
+        const len = game.text.length;
+        game.racers.forEach((r, i) => {
+          if (r.me || r.fin) return;
+          r.next -= dt;
+          if (r.next <= 0) { // muda o ritmo: arrancada, ritmo normal ou um tropeço
+            const x = Math.random();
+            r.f = x < .12 ? 0 : x < .3 ? 1.35 : .75 + Math.random() * .45;
+            r.next = r.f === 0 ? .45 + Math.random() * .4 : .7 + Math.random() * .9;
+          }
+          const warm = Math.min(1, (t - game.t0) / 1500); // largada suave
+          r.p = Math.min(len, r.p + r.v * r.f * warm * dt);
+          game.els[i].classList.toggle('run', r.f > 0);
+          if (r.p >= len) { r.fin = ++game.order; game.els[i].classList.add('fin'); game.els[i].classList.remove('run'); }
+        });
+        gpPlace(dt);
+        if (!game.lastPpm || t - game.lastPpm > 500) { game.lastPpm = t; gpPpm(t); }
+      };
+      game.raf = requestAnimationFrame(frame);
+    }
+    function gpPpm(t = performance.now()) {
+      const min = Math.max(1 / 60, (t - game.t0) / 60000), v = Math.round(game.pos / 5 / min);
+      const el = $q('#lc-gp-ppm b'); if (el && el.textContent !== String(v)) el.textContent = v;
+      return v;
+    }
+    function gpKey(k) {
+      if (game.paused || game.done) return;
+      const want = game.text[game.pos]; if (want == null) return;
+      const c = game.chs[game.pos], me = game.els[4];
+      $q('#lc-gp-hint')?.classList.add('gone');
+      if (gpNorm(k) === gpNorm(want)) {
+        hit(gpNorm(want));
+        c.classList.add('ok');
+        game.pos++; game.racers[4].p = game.pos;
+        me.classList.add('run'); clearTimeout(game.runT); game.runT = setTimeout(() => me.classList.remove('run'), 450);
+        goal(game.pos, game.text.length);
+        const bar = $q('#lc-gp-bar'); if (bar) bar.style.transform = `scaleX(${(game.pos / game.text.length).toFixed(4)})`;
+        if (game.pos >= game.text.length) return gpFinish();
+        gpCaret();
+      } else {
+        miss(want === ' ' ? null : gpNorm(want)); game.errs++;
+        c.classList.add('bad'); replay(c, 'shake'); replay(me, 'trip');
+        game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+        if (game.lives <= 0) gpDown();
+      }
+    }
+    /* sem chances: reviver com o Saldo HC (volta com todas as chances e continua dali) ou recomeçar a corrida */
+    function gpDown() {
+      const left = game.text.length - game.pos, t = performance.now();
+      $q('#lc-gp-world')?.classList.remove('go');
+      game.els[4]?.classList.remove('run');
+      mjDown({
+        term: $q('#lc-gp'), titulo: 'Sem chances!', revTxt: `Continuar com ${game.maxLives} chances`,
+        texto: `Você errou ${game.maxLives} teclas. Faltavam <b>${left} ${left === 1 ? 'letra' : 'letras'}</b> para a linha de chegada.`,
+        onResume: () => { game.t0 += performance.now() - t; $q('#lc-gp-world')?.classList.add('go'); }, // o tempo parado não conta no PPM
+        onRestart: () => { cancelAnimationFrame(game.raf); gpInit(L.niveis[st.lvl]); },
+      });
+    }
+    function gpFinish() {
+      game.done = true; // a pista ainda anda meio segundo (a câmera chega e os rivais continuam) antes do pódio
+      const me = game.racers[4]; me.fin = ++game.order;
+      const pos = game.pos5, ppm = gpPpm(), acc = Math.round((game.ph / Math.max(1, game.ph + game.pe)) * 100);
+      const secs = Math.round((performance.now() - game.t0) / 1000);
+      game.els[4].classList.add('fin'); game.els[4].classList.remove('run');
+      $q('#lc-gp-world')?.classList.add('done'); kbTarget(null);
+      const medal = pos <= 3 ? ['ouro', 'prata', 'bronze'][pos - 1] : 'outro';
+      const msg = pos === 1 ? 'Você venceu a corrida!' : pos <= 3 ? `Você chegou em ${gpOrd(pos)} lugar!` : `Você completou a corrida em ${gpOrd(pos)}!`;
+      setTimeout(() => {
+        game.paused = true; cancelAnimationFrame(game.raf);
+        $q('#lc-gp')?.insertAdjacentHTML('beforeend', `
+          <div class="lc-gp-end m-${medal}">
+            <div class="in">
+              <span class="medal"><i></i><b>${gpOrd(pos)}</b></span>
+              <h4>${msg}</h4>
+              <div class="stats"><span><b>${ppm}</b>PPM</span><span><b>${acc}%</b>Precisão</span><span><b>${secs}s</b>Tempo</span></div>
+            </div>
+            ${pos === 1 ? Array.from({ length: 18 }, (_, i) => `<i class="conf" style="--x:${(Math.random() * 100).toFixed(0)}%;--d:${(Math.random() * .6).toFixed(2)}s;--c:${['#fde047', '#38bdf8', '#f472b6', '#34d399', '#a78bfa'][i % 5]};--r:${Math.round(Math.random() * 360)}deg"></i>`).join('') : ''}
+          </div>`);
+      }, 900);
+      setTimeout(complete, 3800);
+    }
+
     /* ---------- início dos minijogos de tempo (botão + 3, 2, 1) ---------- */
-    const startOverlay = (name) => `<div class="lc-start" id="lc-start"><span>${svg('play', true)}</span><h4>${name}</h4><button type="button" class="lc-start-btn">Iniciar minijogo</button><small>ou aperte Enter</small></div>`;
+    /* tela de início: cada minijogo com a sua cor, ícone, missão, meta e vidas */
+    const MJ_START = {
+      'Varredura Hacker': { c: '52, 211, 153', c2: '16, 185, 129', un: 'ameaças', txt: 'Tecle a tecla acesa antes que o anel de tempo acabe.',
+        ico: '<path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.4 7.5 9.5 4.4-1.1 7.5-4.9 7.5-9.5V6L12 3Z"/><path d="m9 12 2 2 4-4"/>' },
+      'Fila de Ancoragem': { c: '56, 189, 248', c2: '37, 99, 235', un: 'contêineres', txt: 'Ancore cada contêiner antes que ele bata na doca.',
+        ico: '<rect x="3" y="7" width="18" height="12" rx="1.5"/><path d="M7 7v12M11 7v12M15 7v12M19 7v12M8 4h8"/>' },
+      'Corrida das Teclas': { c: '244, 114, 182', c2: '168, 85, 247', un: 'vírus', txt: 'Elimine os vírus quando eles entrarem na faixa verde.',
+        ico: '<circle cx="12" cy="12" r="5"/><path d="M12 2.5V7M12 17v4.5M2.5 12H7M17 12h4.5M5.3 5.3l3.2 3.2M15.5 15.5l3.2 3.2M5.3 18.7l3.2-3.2M15.5 8.5l3.2-3.2"/>' },
+      'Palavras das Estrelas': { c: '253, 224, 71', c2: '245, 158, 11', un: 'estrelas', txt: 'Digite a palavra de cada estrela antes que o anel acabe.',
+        ico: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3Z"/>' },
+      'Grande Prêmio das Teclas': { c: '96, 165, 250', c2: '168, 85, 247', txt: 'Digite a frase para o seu robô chegar primeiro na linha de chegada.', chip: () => `<span class="chip"><svg viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>Frase de <b>${game.text.length} letras</b></span><span class="chip"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg><b>4</b> rivais</span><span class="chip lives">${HEART}<b>${game.maxLives}</b> chances</span>`,
+        ico: '<path d="M5 21V4"/><path d="M5 4h14v9H5"/><path d="M9 4v9M13 4v9M17 4v9M5 8.5h14"/>' },
+      'Patrulha das Palavras': { c: '34, 211, 238', c2: '99, 102, 241', un: 'asteroides', txt: 'Destrua os asteroides antes que eles batam na nave.',
+        ico: '<path d="M12 2.5c3 2.6 4.3 6.3 4.3 10.2v3.8H7.7v-3.8c0-3.9 1.3-7.6 4.3-10.2Z"/><circle cx="12" cy="9.5" r="1.8"/><path d="M7.7 12.5 4.5 16v3l3.2-1.5M16.3 12.5l3.2 3.5v3l-3.2-1.5M10 19.5l2 2.5 2-2.5"/>' },
+    };
+    const startOverlay = (name) => {
+      const m = MJ_START[name] || MJ_START['Varredura Hacker'];
+      const meta = game.meta ? `<span class="chip"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>Meta <b>${game.meta} ${m.un}</b></span>` : '';
+      const lives = game.maxLives ? `<span class="chip lives">${HEART}<b>${game.maxLives}</b> ${game.maxLives === 1 ? 'vida' : 'vidas'}</span>` : '';
+      return `<div class="lc-start" id="lc-start" style="--sc:${m.c};--sc2:${m.c2}">
+        <div class="lc-start-in">
+          <span class="lc-start-ico"><i></i><i></i><svg viewBox="0 0 24 24" aria-hidden="true">${m.ico}</svg></span>
+          <small class="lc-start-tag">Minijogo</small>
+          <h4>${name}</h4>
+          <p>${m.txt}</p>
+          ${m.chip ? `<div class="lc-start-chips">${m.chip()}</div>` : meta || lives ? `<div class="lc-start-chips">${meta}${lives}</div>` : ''}
+          <button type="button" class="lc-start-btn"><span>${svg('play', true)}</span>Iniciar minijogo</button>
+          <small class="lc-start-key">ou aperte <kbd>Enter</kbd></small>
+        </div>
+      </div>`;
+    };
     function bindStart() { $q('.lc-start-btn')?.addEventListener('click', countdown); }
     async function countdown() {
       const ov = $q('#lc-start'); if (!ov || game.counting) return; game.counting = true;
       const g = game; // "Recomeçar o minijogo" mostra o botão de novo: a contagem precisa poder rodar outra vez
       try {
-        for (const n of [3, 2, 1]) { if (!ov.isConnected) return; ov.innerHTML = `<b class="lc-count">${n}</b>`; await sleep(800); }
+        ov.classList.add('counting');
+        for (const n of [3, 2, 1]) { if (!ov.isConnected) return; ov.innerHTML = `<div class="lc-count"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="trk" cx="50" cy="50" r="44"/><circle class="arc" cx="50" cy="50" r="44" pathLength="100"/></svg><b>${n}</b><small>${n === 3 ? 'Prepare-se' : n === 2 ? 'Mãos no teclado' : 'Já!'}</small></div>`; await sleep(800); }
         if (!ov.isConnected) return;
         ov.remove(); game.paused = false; (game.run || hackerRun)();
       } finally { g.counting = false; }
@@ -1924,6 +2417,8 @@
       if (lv.tipo === 'typing') return typingKey(k);
       if (lv.tipo === 'corrida') return corridaKey(k);
       if (lv.tipo === 'estrelas') return estKey(k);
+      if (lv.tipo === 'nave') return naveKey(k);
+      if (lv.tipo === 'gp') return gpKey(k);
       if (lv.tipo === 'fila') return filaKey(k);
       if (lv.tipo === 'hacker') { if (game.paused) return; return hackerKey(k); }
     }
@@ -1936,9 +2431,13 @@
       if (k === 'escape' && kbOpen) { e.preventDefault(); return kbShow(false); }
       const lv = L.niveis[st.lvl];
       if (k === 'backspace' && lv?.tipo === 'typing' && !game.intro && !busy) { e.preventDefault(); return typingBack(); }
-      if (k === 'enter' && (lv?.tipo === 'hacker' || lv?.tipo === 'fila' || lv?.tipo === 'corrida' || lv?.tipo === 'estrelas') && game.paused) { e.preventDefault(); return countdown(); }
-      if (lv?.tipo === 'estrelas' && !game.intro) { // palavras: todas as letras contam, Backspace troca de estrela
-        if (k === 'backspace') { e.preventDefault(); if (!busy && !game.paused) estDrop(); return; }
+      if (k === 'enter' && (lv?.tipo === 'hacker' || lv?.tipo === 'fila' || lv?.tipo === 'corrida' || lv?.tipo === 'estrelas' || lv?.tipo === 'nave' || lv?.tipo === 'gp') && game.paused) { e.preventDefault(); return countdown(); }
+      if (lv?.tipo === 'gp') { // corrida: qualquer letra, número ou sinal conta (Backspace não volta)
+        if (k === 'backspace' || k.length === 1) { e.preventDefault(); if (k.length === 1) press(k); }
+        return;
+      }
+      if ((lv?.tipo === 'estrelas' || lv?.tipo === 'nave') && !game.intro) { // palavras: todas as letras contam, Backspace troca de estrela/asteroide
+        if (k === 'backspace') { e.preventDefault(); if (!busy && !game.paused) (lv.tipo === 'nave' ? naveDrop : estDrop)(); return; }
         if (k === ' ') { e.preventDefault(); return; }
         if (/^[a-zç]$/.test(k)) { e.preventDefault(); return press(k); }
       }
