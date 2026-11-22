@@ -41,6 +41,20 @@
 
   let run = 0; // cada abertura da tela ganha um número; timers antigos se calam
 
+  /* faixa de boas-vindas no pé da tela: a faixa laranja entra da esquerda, a foto do aluno sobe de trás dela
+     e as mensagens aparecem em seguida (entra depois que o botão do meio se expande) */
+  const HI_TITLE = 'BEM-VINDO', HI_SUB = 'Pronto para se tornar mestre da informática?';
+  function welcome() {
+    const p = typeof auth !== 'undefined' ? (auth.profile || (auth.user ? { email: auth.user.email, name: typeof meName === 'function' ? meName() : '' } : null)) : null;
+    const foto = typeof userAvatar === 'function' ? userAvatar(p || { name: '?' }, 'ifm-hi-av') : '';
+    return `<div class="ifm-hi" role="note" aria-label="${HI_TITLE[0] + HI_TITLE.slice(1).toLowerCase()}! ${HI_SUB}">
+        <i class="ifm-hi-bar" aria-hidden="true"></i>
+        <span class="ifm-hi-ph" aria-hidden="true"><i class="ifm-hi-l ifm-hi-l1"></i><i class="ifm-hi-l ifm-hi-l2"></i><span class="ifm-hi-img">${foto}</span></span>
+        <strong class="ifm-hi-t" aria-hidden="true">${[...HI_TITLE].map((c, d) => `<i style="--d:${d}">${c === ' ' ? '&nbsp;' : c}</i>`).join('')}</strong>
+        <span class="ifm-hi-sub" aria-hidden="true">${HI_SUB.split(' ').map((w, d) => `<i style="--d:${d}">${w}</i>`).join(' ')}</span>
+      </div>`;
+  }
+
   function render(view) {
     const id = ++run;
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -74,6 +88,7 @@
         <span class="ifm-bell">${BELL_SVG}<i>1</i></span>
         <span class="ifm-news-pill">Novos níveis para você explorar</span>
       </button>
+      ${welcome()}
       <p class="ifm-wait" role="status"><em>Aguarde, preparando</em><span class="ifm-spin" aria-hidden="true"></span></p>
       <p class="ifm-enter" aria-live="polite"><span class="ifm-enter-ico">${ENTER_SVG}</span><span>Pressione enter <em><span>${OPTS[START].hint}</span></em></span></p>
     </section>`;
@@ -105,6 +120,7 @@
         b.setAttribute('aria-selected', j === k);
         b.style.setProperty('--push', j === k ? 0 : j < k ? -1 : 1);
       });
+      if (!stage.classList.contains('has-sel')) setTimeout(() => { if (alive()) stage.classList.add('hi'); }, reduce ? 0 : 850); // boas-vindas depois que o botão se expande
       stage.classList.add('has-sel');
       swapHint(OPTS[k].hint);
       if (focus) opts[k].focus({ preventScroll: true });
