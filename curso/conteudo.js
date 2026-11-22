@@ -122,7 +122,7 @@
       <div class="ct-grid">
         <article class="ct-doc">
           <div class="ct-top">
-            <button class="ct-back" type="button">${svg('back')} Conteúdos</button>
+            <button class="ct-back" type="button">${svg('back')} ${esc(meta.backLabel || 'Disciplinas')}</button>
             <span class="ct-top-t">${esc(C.titulo)}</span>
             ${meta.admin && !test ? `<button class="ct-testbtn" type="button" data-test>${svg('flask')} Testar como aluno</button>` : ''}
           </div>
@@ -376,7 +376,7 @@
     root.addEventListener('click', (e) => {
       if (e.target.classList.contains('ct-scrim')) return setSheet(false);
       const t = e.target.closest('button, a'); if (!t || !root.contains(t)) return;
-      if (t.classList.contains('ct-back')) { location.hash = '#informatica/cursos'; return; }
+      if (t.classList.contains('ct-back')) { location.hash = meta.back || '#informatica/cursos'; return; }
       if (t.dataset.part !== undefined) { e.preventDefault(); if (t.closest('.ctq')) setSheet(false); return showPart(+t.dataset.part); }
       if (t.dataset.pstep) {
         if (checking) return;

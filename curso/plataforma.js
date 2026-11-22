@@ -278,15 +278,32 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   /* conteúdos prontos, escritos no código (texto em curso/conteudos/<id>.js). O administrador pode trocar capa e textos
      do card pelo lápis (fica em cursoConteudo com o mesmo id) ou tirá-lo da tela (oculto: true). */
   const CONTS_BASE = [
-    { id: 'texto-01', tipo: 'texto', titulo: 'O teclado e a digitação correta', desc: 'As partes do teclado, onde fica cada dedo, a postura certa e como ganhar velocidade sem perder a precisão.',
+    { id: 'texto-01', disc: 'disc-01', tipo: 'texto', titulo: 'O teclado e a digitação correta', desc: 'As partes do teclado, onde fica cada dedo, a postura certa e como ganhar velocidade sem perder a precisão.',
       meta: '15 min · 15 perguntas', image: '', visivel: true, arquivo: 'curso/conteudos/texto-01.js', fixo: true },
   ];
-  const conts = () => {
-    const s = saved(), ids = new Set(CONTS_BASE.map((b) => b.id));
-    return CONTS_BASE.map((b) => ({ ...b, ...(s.find((x) => x.id === b.id) || {}), arquivo: b.arquivo, fixo: true }))
-      .concat(s.filter((x) => !ids.has(x.id))).filter((c) => !c.oculto);
+  /* disciplinas: os cards da seção abaixo dos módulos. Cada uma abre a sua página (#informatica/disciplina-<id>)
+     com os conteúdos dela (textos, PDFs, questionários e provas). Ficam em cursoConteudo com kind: 'disc';
+     os conteúdos apontam para a disciplina pelo campo disc. */
+  const DTINTS = ['28, 64, 120', '82, 38, 130', '6, 95, 70', '150, 70, 18', '128, 32, 40', '14, 90, 120'];
+  const DISCS_BASE = [
+    { id: 'disc-01', kind: 'disc', titulo: 'Digitação', desc: 'O teclado, a posição dos dedos e a postura certa: textos e questionários para digitar bem.', image: '', cor: 0, visivel: true, fixo: true },
+  ];
+  const isDisc = (x) => x?.kind === 'disc';
+  const discs = () => {
+    const s = saved(), ids = new Set(DISCS_BASE.map((b) => b.id));
+    return DISCS_BASE.map((b) => ({ ...b, ...(s.find((x) => x.id === b.id) || {}), kind: 'disc', fixo: true }))
+      .concat(s.filter((x) => isDisc(x) && !ids.has(x.id))).filter((d) => !d.oculto);
   };
-  const visConts = () => conts().filter((c) => isAdmin() || c.visivel);
+  const visDiscs = () => discs().filter((d) => isAdmin() || d.visivel);
+  const discTint = (d) => DTINTS[(+d?.cor || 0) % DTINTS.length];
+  const conts = () => {
+    const s = saved().filter((x) => !isDisc(x)), ids = new Set(CONTS_BASE.map((b) => b.id));
+    return CONTS_BASE.map((b) => ({ ...b, ...(s.find((x) => x.id === b.id) || {}), arquivo: b.arquivo, fixo: true }))
+      .concat(s.filter((x) => !ids.has(x.id))).filter((c) => !c.oculto)
+      .map((c) => ({ ...c, disc: c.disc || DISCS_BASE[0].id }));
+  };
+  const discItems = (did) => conts().filter((c) => c.disc === did && (isAdmin() || c.visivel));
+  const contDone = (id) => { const h = contProg(id)?.hist; return Array.isArray(h) && h.length > 0; };
   const contProg = (id) => { try { return JSON.parse(localStorage.getItem(`hc:info:${auth?.user?.id || 'anon'}:cont-${id}`) || 'null'); } catch { return null; } };
   /* lições criadas pelo administrador (botão "Nova lição"): ficam no banco, junto do conteúdo do site,
      e entram no fim do módulo até serem configuradas aqui no código */
@@ -324,12 +341,11 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     if (h.length) { const best = Math.max(...h.map((x) => x.nota)); return `Nota ${best.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}${best < 7 ? ' · recuperação' : ''}`; }
     return n ? `${n} ${n === 1 ? 'resposta' : 'respostas'} · ${r} ${r === 1 ? 'parte lida' : 'partes lidas'}` : `${r} ${r === 1 ? 'parte lida' : 'partes lidas'}`;
   };
-  function contsSection() {
-    const list = visConts(), adm = isAdmin();
-    const card = (c, i) => {
-      const t = CT[c.tipo] || CT.texto, ico = CT[c.tipo] ? c.tipo : 'texto';
-      return `
-      <article class="pf-lesson pf-modcard pf-ccard${c.visivel ? '' : ' draft'}" style="--i:${i};--tint:${t.tint}" data-cont="${esc(c.id)}" tabindex="0" role="button" aria-label="${esc(t.nome)}: ${esc(c.titulo)}">
+  /* card de um conteúdo (dentro da página da disciplina) */
+  function contCard(c, i) {
+    const adm = isAdmin(), t = CT[c.tipo] || CT.texto, ico = CT[c.tipo] ? c.tipo : 'texto';
+    return `
+      <article class="pf-lesson pf-modcard pf-ccard${c.visivel ? '' : ' draft'}${contDone(c.id) ? ' done' : ''}" style="--i:${i};--tint:${t.tint}" data-cont="${esc(c.id)}" tabindex="0" role="button" aria-label="${esc(t.nome)}: ${esc(c.titulo)}">
         <div class="pf-lesson-img">${c.image ? `<img class="pf-img" src="${esc(imgUrl(c.image))}" alt="" loading="lazy" />`
           : `<span class="pf-ph" style="--k:${i}">${svg(ico)}${adm ? '<em>Imagem do conteúdo<small>1000 × 1250</small></em>' : ''}</span>`}</div>
         <div class="pf-lesson-app">
@@ -346,45 +362,94 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
         </div>
         ${adm ? `<div class="pf-adm"><button class="pf-adm-btn" type="button" data-editcont="${esc(c.id)}" aria-label="Editar o conteúdo" title="Editar conteúdo">${svg('pen')}</button><button class="pf-adm-btn" type="button" data-delcont="${esc(c.id)}" aria-label="Apagar o conteúdo" title="Apagar conteúdo">${svg('trash')}</button></div>` : ''}
       </article>`;
+  }
+  const discProg = (d) => { const it = discItems(d.id).filter((c) => c.visivel || !isAdmin()); const all = it.length ? it : discItems(d.id); return { n: all.length, ok: all.filter((c) => contDone(c.id)).length, began: all.some((c) => contProg(c.id)?.savedAt) }; };
+  /* seção "Disciplinas", logo abaixo dos módulos: cada card abre a página da disciplina */
+  function contsSection() {
+    const list = visDiscs(), adm = isAdmin();
+    const card = (d, i) => {
+      const p = discProg(d), small = !p.n ? 'Em breve' : p.ok ? `${p.ok} de ${p.n} ${p.n === 1 ? 'concluído' : 'concluídos'}` : p.began ? 'Em andamento' : 'Comece agora';
+      return `
+      <article class="pf-lesson pf-modcard pf-ccard pf-dcard${d.visivel ? '' : ' draft'}" style="--i:${i};--tint:${discTint(d)}" data-disc="${esc(d.id)}" tabindex="0" role="button" aria-label="Disciplina: ${esc(d.titulo)}">
+        <div class="pf-lesson-img">${d.image ? `<img class="pf-img" src="${esc(imgUrl(d.image))}" alt="" loading="lazy" />`
+          : `<span class="pf-ph" style="--k:${i}">${svg('book')}${adm ? '<em>Imagem da disciplina<small>1000 × 1250</small></em>' : ''}</span>`}</div>
+        <div class="pf-lesson-app">
+          <div class="pf-lesson-text">
+            <span class="pf-lesson-tag">Disciplina${adm && !d.visivel ? ' · Rascunho' : ''}</span>
+            <h3>${esc(d.titulo || 'Sem título')}</h3>
+            <p>${esc(d.desc || '')}</p>
+          </div>
+          <div class="pf-lesson-bar">
+            <span class="pf-lesson-av">${svg('book')}</span>
+            <span class="pf-lesson-who"><strong>${p.n} ${p.n === 1 ? 'conteúdo' : 'conteúdos'}</strong><small>${small}</small></span>
+            <span class="pf-lesson-go">${p.began ? 'Continuar' : 'Abrir'}</span>
+          </div>
+        </div>
+        ${adm ? `<div class="pf-adm"><button class="pf-adm-btn" type="button" data-editdisc="${esc(d.id)}" aria-label="Editar a disciplina" title="Editar disciplina">${svg('pen')}</button><button class="pf-adm-btn" type="button" data-deldisc="${esc(d.id)}" aria-label="Apagar a disciplina" title="Apagar disciplina">${svg('trash')}</button></div>` : ''}
+      </article>`;
     };
     const empty = `
       <div class="pf-cempty">
         <div class="pf-cempty-icos">${['texto', 'pdf', 'quiz', 'prova'].map((k, i) => `<span style="--tint:${CT[k].tint};--i:${i}">${svg(k)}</span>`).join('')}</div>
-        <h3>${adm ? 'Crie o primeiro conteúdo' : 'Em breve, novos conteúdos'}</h3>
-        <p>${adm ? 'Textos para ler, PDFs, questionários e provas para os alunos responderem. Eles aparecem aqui, logo abaixo dos módulos.' : 'Textos, PDFs, questionários e provas preparados pelo seu professor vão aparecer aqui.'}</p>
-        ${adm ? `<button class="pf-cnew-btn" type="button" data-newcont>${svg('plus')} Novo conteúdo</button>` : ''}
+        <h3>${adm ? 'Crie a primeira disciplina' : 'Em breve, novas disciplinas'}</h3>
+        <p>${adm ? 'Cada disciplina reúne textos, PDFs, questionários e provas. Ela aparece aqui, logo abaixo dos módulos.' : 'As disciplinas com textos, PDFs, questionários e provas preparados pelo seu professor vão aparecer aqui.'}</p>
+        ${adm ? `<button class="pf-cnew-btn" type="button" data-newdisc>${svg('plus')} Nova disciplina</button>` : ''}
       </div>`;
     return `
-    <section class="pf-conts" aria-label="Conteúdos para aprender">
+    <section class="pf-conts" aria-label="Disciplinas">
       <div class="pf-mods-head">
-        <h2 class="pf-st-title">Conteúdos para aprender <span>Textos, PDFs, questionários e provas</span></h2>
+        <h2 class="pf-st-title">Disciplinas <span>Textos, PDFs, questionários e provas de cada matéria</span></h2>
         ${list.length ? `<div class="ap-paddles pf-mod-paddles">
-          <button class="ap-paddle" data-cdir="-1" aria-label="Conteúdos anteriores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
-          <button class="ap-paddle" data-cdir="1" aria-label="Próximos conteúdos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+          <button class="ap-paddle" data-cdir="-1" aria-label="Disciplinas anteriores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+          <button class="ap-paddle" data-cdir="1" aria-label="Próximas disciplinas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
         </div>` : ''}
       </div>
       ${list.length ? `<div class="pf-mod-row pf-cont-row" id="pf-cont-row">${list.map(card).join('')}
-        ${adm ? `<button class="pf-cnew" type="button" data-newcont><span>${svg('plus')}</span><b>Novo conteúdo</b><small>Texto, PDF, questionário ou prova</small></button>` : ''}
+        ${adm ? `<button class="pf-cnew" type="button" data-newdisc><span>${svg('plus')}</span><b>Nova disciplina</b><small>Para reunir textos, PDFs, questionários e provas</small></button>` : ''}
       </div>` : empty}
     </section>`;
   }
-  function bindConts(view) {
-    const sec = view.querySelector('.pf-conts'); if (!sec) return;
-    sec.querySelectorAll('[data-cont]').forEach((c) => {
-      const act = () => openCont(c.dataset.cont);
-      c.addEventListener('click', act);
-      c.addEventListener('keydown', (e) => { if (e.target !== c) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
+  const onDiscPage = () => /^#informatica\/disciplina-/.test(location.hash);
+  /* depois de criar, editar ou apagar: redesenha a seção (tela do curso) ou a página da disciplina */
+  function refreshAfter(view, toEnd) {
+    if (onDiscPage()) return discPage(view, location.hash.slice('#informatica/disciplina-'.length), true);
+    refreshConts(view, toEnd);
+  }
+  /* cliques dos cards (disciplinas e conteúdos), em qualquer uma das duas telas */
+  function bindCards(root, view) {
+    const press = (sel, fn) => root.querySelectorAll(sel).forEach((c) => {
+      c.addEventListener('click', () => fn(c));
+      c.addEventListener('keydown', (e) => { if (e.target !== c) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(c); } });
     });
-    sec.querySelectorAll('[data-newcont]').forEach((b) => b.addEventListener('click', () => editCont(view, null)));
-    sec.querySelectorAll('[data-editcont]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); editCont(view, b.dataset.editcont); }));
-    sec.querySelectorAll('[data-delcont]').forEach((b) => b.addEventListener('click', (e) => {
+    press('[data-disc]', (c) => { location.hash = `#informatica/disciplina-${c.dataset.disc}`; });
+    press('[data-cont]', (c) => openCont(c.dataset.cont));
+    root.querySelectorAll('[data-newdisc]').forEach((b) => b.addEventListener('click', () => editDisc(view, null)));
+    root.querySelectorAll('[data-editdisc]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); editDisc(view, b.dataset.editdisc); }));
+    root.querySelectorAll('[data-deldisc]').forEach((b) => b.addEventListener('click', (e) => {
       e.stopPropagation();
-      const c = conts().find((x) => x.id === b.dataset.delcont); if (!c) return;
-      confirmDel(`Apagar “${c.titulo || 'conteúdo'}”?`, 'O card sai da Plataforma de Informática para todos os alunos e não dá para desfazer. Para confirmar, digite a senha mestra.', () => {
-        cursoConteudo = c.fixo ? [...saved().filter((x) => x.id !== c.id), { id: c.id, oculto: true }] : saved().filter((x) => x.id !== c.id);
-        saveCursoConteudo(); refreshConts(view); toast('Conteúdo apagado.');
+      const d = discs().find((x) => x.id === b.dataset.deldisc); if (!d) return;
+      const its = conts().filter((c) => c.disc === d.id);
+      confirmDel(`Apagar a disciplina “${d.titulo || 'sem título'}”?`, `A disciplina${its.length ? ` e ${its.length === 1 ? 'o conteúdo dela' : `os ${its.length} conteúdos dela`}` : ''} saem da Plataforma de Informática para todos os alunos e não dá para desfazer. Para confirmar, digite a senha mestra.`, () => {
+        const gone = new Set([d.id, ...its.map((c) => c.id)]);
+        cursoConteudo = [...saved().filter((x) => !gone.has(x.id)), ...[d, ...its].filter((x) => x.fixo).map((x) => ({ id: x.id, ...(isDisc(x) ? { kind: 'disc' } : {}), oculto: true }))];
+        saveCursoConteudo(); toast('Disciplina apagada.');
+        if (onDiscPage()) location.hash = '#informatica/cursos'; else refreshConts(view);
       });
     }));
+    root.querySelectorAll('[data-newcont]').forEach((b) => b.addEventListener('click', () => editCont(view, null, b.dataset.newcont)));
+    root.querySelectorAll('[data-editcont]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); editCont(view, b.dataset.editcont); }));
+    root.querySelectorAll('[data-delcont]').forEach((b) => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const c = conts().find((x) => x.id === b.dataset.delcont); if (!c) return;
+      confirmDel(`Apagar “${c.titulo || 'conteúdo'}”?`, 'O conteúdo sai da disciplina para todos os alunos e não dá para desfazer. Para confirmar, digite a senha mestra.', () => {
+        cursoConteudo = c.fixo ? [...saved().filter((x) => x.id !== c.id), { id: c.id, oculto: true }] : saved().filter((x) => x.id !== c.id);
+        saveCursoConteudo(); refreshAfter(view); toast('Conteúdo apagado.');
+      });
+    }));
+  }
+  function bindConts(view) {
+    const sec = view.querySelector('.pf-conts'); if (!sec) return;
+    bindCards(sec, view);
     const row = sec.querySelector('#pf-cont-row'); if (!row) return;
     const pads = sec.querySelectorAll('[data-cdir]');
     pads.forEach((b) => b.addEventListener('click', () => row.scrollBy({ left: +b.dataset.cdir * row.clientWidth * .8, behavior: 'smooth' })));
@@ -397,6 +462,43 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     const row = view.querySelector('#pf-cont-row');
     if (row && toEnd) requestAnimationFrame(() => row.scrollTo({ left: row.scrollWidth, behavior: 'smooth' }));
   }
+  /* página da disciplina: capa e nome em cima, progresso e, embaixo, os conteúdos dela em grade */
+  function discPage(view, id, keepScroll) {
+    const d = discs().find((x) => x.id === id);
+    if (!d || (!d.visivel && !isAdmin())) { location.hash = '#informatica/cursos'; return toast('Esta disciplina não está disponível.'); }
+    const adm = isAdmin(), items = discItems(d.id), p = discProg(d), y = scrollY;
+    const notas = items.map((c) => contProg(c.id)?.hist).filter((h) => Array.isArray(h) && h.length).map((h) => Math.max(...h.map((x) => x.nota)));
+    const media = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) : '–';
+    view.innerHTML = `
+    <div class="wrap pfd" style="--tint:${discTint(d)}">
+      <button class="pfd-back" type="button">${svg('prev')} Plataforma de Informática</button>
+      <header class="pfd-hero">
+        <div class="pfd-hero-img">${d.image ? `<img src="${esc(imgUrl(d.image))}" alt="">` : `<span class="pfd-hero-ph">${svg('book')}</span>`}</div>
+        <div class="pfd-hero-txt">
+          <span class="pfd-tag">Disciplina${adm && !d.visivel ? ' · Rascunho' : ''}</span>
+          <h1>${esc(d.titulo || 'Sem título')}</h1>
+          ${d.desc ? `<p>${esc(d.desc)}</p>` : ''}
+          <div class="pfd-stats">
+            <span><b>${p.n}</b>${p.n === 1 ? 'conteúdo' : 'conteúdos'}</span>
+            <span><b>${p.ok}</b>${p.ok === 1 ? 'concluído' : 'concluídos'}</span>
+            <span><b>${media}</b>nota média</span>
+          </div>
+          <div class="pfd-bar" role="progressbar" aria-label="Conteúdos concluídos" aria-valuemin="0" aria-valuemax="${p.n}" aria-valuenow="${p.ok}"><i style="--p:${p.n ? p.ok / p.n : 0}"></i></div>
+        </div>
+        ${adm ? `<div class="pf-adm"><button class="pf-adm-btn" type="button" data-editdisc="${esc(d.id)}" aria-label="Editar a disciplina" title="Editar disciplina">${svg('pen')}</button><button class="pf-adm-btn" type="button" data-deldisc="${esc(d.id)}" aria-label="Apagar a disciplina" title="Apagar disciplina">${svg('trash')}</button></div>` : ''}
+      </header>
+      <section class="pfd-list" aria-label="Conteúdos da disciplina">
+        <h2 class="pf-st-title">Conteúdos <span>Textos, PDFs, questionários e provas</span></h2>
+        ${items.length || adm ? `<div class="pfd-grid">${items.map(contCard).join('')}
+          ${adm ? `<button class="pf-cnew" type="button" data-newcont="${esc(d.id)}"><span>${svg('plus')}</span><b>Novo conteúdo</b><small>Texto, PDF, questionário ou prova</small></button>` : ''}
+        </div>` : `<div class="pf-cempty"><div class="pf-cempty-icos">${['texto', 'pdf', 'quiz', 'prova'].map((k, i) => `<span style="--tint:${CT[k].tint};--i:${i}">${svg(k)}</span>`).join('')}</div>
+          <h3>Em breve, novos conteúdos</h3><p>Os textos, PDFs, questionários e provas desta disciplina vão aparecer aqui.</p></div>`}
+      </section>
+    </div>`;
+    view.querySelector('.pfd-back').addEventListener('click', () => { location.hash = '#informatica/cursos'; });
+    bindCards(view.querySelector('.pfd'), view);
+    if (keepScroll) scrollTo(0, y); else scrollTo(0, 0);
+  }
   /* abrir um conteúdo: os prontos (com arquivo) abrem a tela de leitura; os outros ainda serão montados */
   function openCont(id) {
     const c = conts().find((x) => x.id === id); if (!c) return;
@@ -405,25 +507,28 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   }
   async function openContPage(view, id) {
     const c = conts().find((x) => x.id === id);
-    if (!c?.arquivo || (!c.visivel && !isAdmin())) { location.hash = '#informatica/cursos'; return toast('Este conteúdo não está disponível.'); }
+    const d = c && discs().find((x) => x.id === c.disc);
+    if (!c?.arquivo || (!isAdmin() && (!c.visivel || !d?.visivel))) { location.hash = '#informatica/cursos'; return toast('Este conteúdo não está disponível.'); }
     view.innerHTML = '<div class="wrap"><p class="me-loading">Carregando o conteúdo…</p></div>';
     try { await Promise.all([load('curso/conteudo.css'), load('curso/conteudo.js'), load(c.arquivo)]); }
     catch { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir o conteúdo. Verifique a internet e tente de novo.</p></div>'; return; }
     if (location.hash !== `#informatica/conteudo-${id}`) return;
-    window.HC_conteudo.open(view, window.HC_CONTEUDOS[id], { id, image: c.image ? imgUrl(c.image) : '', tint: (CT[c.tipo] || CT.texto).tint, admin: isAdmin() });
+    window.HC_conteudo.open(view, window.HC_CONTEUDOS[id], { id, image: c.image ? imgUrl(c.image) : '', tint: (CT[c.tipo] || CT.texto).tint, admin: isAdmin(),
+      back: d ? `#informatica/disciplina-${d.id}` : '#informatica/cursos', backLabel: d?.titulo || 'Disciplinas' });
   }
   /* administrador: criar (id null) ou editar um card de conteúdo */
-  function editCont(view, id) {
+  function editCont(view, id, discId) {
     if (!isAdmin() || document.querySelector('.lk') || typeof saveCursoConteudo !== 'function') return;
     const old = id ? conts().find((x) => x.id === id) : null; if (id && !old) return;
-    const cur = old ? { ...old } : { tipo: 'texto', titulo: '', desc: '', image: '', visivel: false };
+    const cur = old ? { ...old } : { tipo: 'texto', titulo: '', desc: '', image: '', visivel: false, disc: discId || DISCS_BASE[0].id };
+    const dName = discs().find((x) => x.id === cur.disc)?.titulo || 'Disciplina';
     let img; // undefined = sem troca; '' = remover; 'idb:…' = nova foto
     const wrap = document.createElement('div');
     wrap.className = 'lk au';
     wrap.innerHTML = `<div class="lk-backdrop"></div>
       <form class="lk-card au-card pf-ed" role="dialog" aria-modal="true" aria-labelledby="ec-t" novalidate>
         <h2 id="ec-t">${old ? 'Editar conteúdo' : 'Novo conteúdo'}</h2>
-        <p class="lk-sub">Conteúdos para aprender · aparece abaixo dos módulos.</p>
+        <p class="lk-sub">Disciplina ${esc(dName)} · aparece na página da disciplina.</p>
         <span class="au-label">Tipo</span>
         <div class="pf-ed-types" role="radiogroup" aria-label="Tipo do conteúdo">${Object.entries(CT).map(([k, t]) => `
           <button type="button" role="radio" class="pf-ed-type" data-tipo="${k}" style="--tint:${t.tint}" aria-checked="${cur.tipo === k}">${svg(k)}<span>${t.nome}</span></button>`).join('')}
@@ -481,8 +586,77 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       if (!next.meta) delete next.meta;
       delete next.arquivo; delete next.fixo;
       cursoConteudo = old && saved().some((x) => x.id === old.id) ? saved().map((x) => (x.id === old.id ? next : x)) : [...saved(), next];
-      saveCursoConteudo(); close(); refreshConts(view, !old);
+      saveCursoConteudo(); close(); refreshAfter(view, !old);
       toast(old ? 'Conteúdo salvo.' : 'Conteúdo criado.');
+    });
+    requestAnimationFrame(() => { wrap.classList.add('in'); if (!old) tIn.focus(); });
+  }
+
+  /* administrador: criar (id null) ou editar uma disciplina */
+  function editDisc(view, id) {
+    if (!isAdmin() || document.querySelector('.lk') || typeof saveCursoConteudo !== 'function') return;
+    const old = id ? discs().find((x) => x.id === id) : null; if (id && !old) return;
+    const cur = old ? { ...old } : { kind: 'disc', titulo: '', desc: '', image: '', cor: discs().length % DTINTS.length, visivel: false };
+    let img, cor = +cur.cor || 0; // img: undefined = sem troca; '' = remover; 'idb:…' = nova foto
+    const wrap = document.createElement('div');
+    wrap.className = 'lk au';
+    wrap.innerHTML = `<div class="lk-backdrop"></div>
+      <form class="lk-card au-card pf-ed" role="dialog" aria-modal="true" aria-labelledby="ed-dt" novalidate>
+        <h2 id="ed-dt">${old ? 'Editar disciplina' : 'Nova disciplina'}</h2>
+        <p class="lk-sub">Disciplinas · o card fica abaixo dos módulos e abre a página com os conteúdos dela.</p>
+        <div class="pf-ed-covers"><div class="pf-ed-one">
+          <div class="pf-ed-cover" style="aspect-ratio:4 / 5"><div class="pf-ed-prev"></div>
+            <div class="pf-ed-acts"><button type="button" class="pf-ed-btn" data-ed="pick">${svg('photo')}Trocar foto</button><button type="button" class="pf-ed-btn" data-ed="clear">Remover</button></div>
+          </div>
+          <small class="pf-ed-hint">Tamanho sugerido: 1000 × 1250 (JPG, PNG ou WebP)</small>
+          <input type="file" accept="image/*" hidden>
+        </div></div>
+        <span class="au-label">Cor do card</span>
+        <div class="pf-ed-cores" role="radiogroup" aria-label="Cor do card">${DTINTS.map((t, k) => `<button type="button" role="radio" class="pf-ed-cor" data-cor="${k}" style="--tint:${t}" aria-checked="${k === cor}" aria-label="Cor ${k + 1}"></button>`).join('')}</div>
+        <label class="au-label" for="ed-dtit">Nome da disciplina</label>
+        <div class="lk-field"><input id="ed-dtit" value="${esc(cur.titulo || '')}" autocomplete="off" placeholder="Ex.: Digitação, Windows, Internet"></div>
+        <label class="au-label" for="ed-ddesc">Descrição no card</label>
+        <div class="lk-field"><textarea id="ed-ddesc" rows="3" placeholder="Uma frase sobre o que o aluno vai aprender nela">${esc(cur.desc || '')}</textarea></div>
+        <label class="pf-ed-check"><input type="checkbox" id="ed-dvis"${cur.visivel ? ' checked' : ''}><span><b>Visível para os alunos</b><small>Desligado, só os administradores veem a disciplina (rascunho).</small></span></label>
+        <p class="lk-msg" role="alert"></p>
+        <div class="lk-actions"><button type="button" class="btn-soft lk-cancel">Cancelar</button><button type="submit" class="btn-dark lk-go">${old ? 'Salvar' : 'Criar'}</button></div>
+      </form>`;
+    document.body.appendChild(wrap);
+    const msg = wrap.querySelector('.lk-msg'), prev = wrap.querySelector('.pf-ed-prev'), file = wrap.querySelector('input[type=file]');
+    const show = () => {
+      const src = img === undefined ? cur.image : img;
+      prev.style.setProperty('--tint', DTINTS[cor]);
+      prev.innerHTML = src ? `<img src="${esc(imgUrl(src))}" alt="">` : `<span>${svg('book')}Sem foto de capa</span>`;
+      wrap.querySelector('[data-ed="clear"]').hidden = !src;
+    };
+    show();
+    wrap.querySelectorAll('.pf-ed-cor').forEach((b) => b.addEventListener('click', () => {
+      cor = +b.dataset.cor; wrap.querySelectorAll('.pf-ed-cor').forEach((x) => x.setAttribute('aria-checked', x === b)); show();
+    }));
+    wrap.querySelector('[data-ed="pick"]').addEventListener('click', () => file.click());
+    wrap.querySelector('[data-ed="clear"]').addEventListener('click', () => { img = ''; show(); });
+    file.addEventListener('change', async () => {
+      const f = file.files[0]; file.value = ''; if (!f) return;
+      msg.textContent = '';
+      try { prev.classList.add('busy'); img = await storeImage(f, 'curso'); show(); }
+      catch { msg.textContent = 'Não foi possível usar essa imagem. Tente outra.'; }
+      finally { prev.classList.remove('busy'); }
+    });
+    const close = () => { wrap.classList.remove('in'); setTimeout(() => wrap.remove(), 300); };
+    wrap.querySelector('.lk-backdrop').addEventListener('click', close);
+    wrap.querySelector('.lk-cancel').addEventListener('click', close);
+    wrap.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    const tIn = wrap.querySelector('#ed-dtit');
+    wrap.querySelector('form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const titulo = tIn.value.trim();
+      if (!titulo) { msg.textContent = 'Dê um nome à disciplina.'; return tIn.focus(); }
+      const next = { ...cur, kind: 'disc', id: old?.id || 'd' + Date.now().toString(36), titulo, cor,
+        desc: wrap.querySelector('#ed-ddesc').value.trim(), visivel: wrap.querySelector('#ed-dvis').checked, image: img === undefined ? cur.image || '' : img };
+      delete next.fixo;
+      cursoConteudo = old && saved().some((x) => x.id === old.id) ? saved().map((x) => (x.id === old.id ? next : x)) : [...saved(), next];
+      saveCursoConteudo(); close(); refreshAfter(view, !old);
+      toast(old ? 'Disciplina salva.' : 'Disciplina criada.');
     });
     requestAnimationFrame(() => { wrap.classList.add('in'); if (!old) tIn.focus(); });
   }
@@ -990,10 +1164,11 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   }
 
   function render(view, sub = '') {
-    const ln = /^licao-(\d+)$/.exec(sub), cn = /^conteudo-([\w-]+)$/.exec(sub);
+    const ln = /^licao-(\d+)$/.exec(sub), cn = /^conteudo-([\w-]+)$/.exec(sub), dn = /^disciplina-([\w-]+)$/.exec(sub);
     mergeExtras();
     if (ln) return openLesson(view, +ln[1]);
     if (cn) return openContPage(view, cn[1]);
+    if (dn) return discPage(view, dn[1]);
     const m = HC_CURSO.modulos[mod];
     const first = HC_CURSO.modulos.slice(0, mod).reduce((a, x) => a + x.licoes.length, 0); // nº da 1ª lição do módulo - 1
     const nextM = HC_CURSO.modulos[mod + 1];

@@ -440,20 +440,20 @@ window.HC_CONTENT = {
       "titulo": "Revisão Geral 1"
     },
     {
-      "id": "bpatente",
-      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/cf9bfaff-1841-4c3f-92c4-af71060d5dd5.webp"
-    },
-    {
       "id": "bmod",
-      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/b23f30b9-d25b-4d2b-bdee-1cc3cd1263d2.webp"
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/704e5d77-a1a7-4531-a1c4-2f938ccda1b4.webp"
     },
     {
       "id": "bsaldo",
-      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/a3dcfb1f-5fe2-435f-9f4c-197aea9a0b6b.webp"
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/2542fa5b-30c3-42ed-9edd-a2f5cfcf7144.webp"
     },
     {
       "id": "bnivel",
-      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/a0f17360-a3a8-479d-850f-001c55309519.webp"
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/74edd282-2392-4946-b726-07cf75569d3e.webp"
+    },
+    {
+      "id": "bpatente",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/37336c6d-31c9-4c0f-99d6-b83e89e33176.webp"
     }
   ],
   "cursoConteudo": [],
