@@ -1222,7 +1222,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       file.addEventListener('change', async () => {
         const f = file.files[0]; file.value = ''; if (!f) return;
         msg.textContent = '';
-        try { prev.classList.add('busy'); imgs[k] = await storeImage(f, 'curso'); show(); }
+        try { prev.classList.add('busy'); imgs[k] = await storeImage(f, isBanner ? 'banner' : 'curso'); show(); }
         catch { msg.textContent = 'Não foi possível usar essa imagem. Tente outra.'; }
         finally { prev.classList.remove('busy'); }
       });
