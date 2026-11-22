@@ -32,7 +32,8 @@ window.HC_CONTEUDOS['texto-01'] = {
           '**Menos cansaço:** pescoço erguido, mãos paradas no lugar e movimentos pequenos.',
           '**Mais oportunidades:** digitação é pedida em vagas de escritório, atendimento, recepção e tecnologia.',
         ] },
-        { destaque: { tom: 'saiba', titulo: 'Como este texto está organizado', texto: 'São nove partes curtas. Ao lado (ou no botão “Questionário”, no celular) estão as perguntas sobre cada parte. Você pode ler tudo e depois responder, ou responder conforme avança.' } },
+        { destaque: { tom: 'saiba', titulo: 'Como este texto está organizado', texto: 'São nove partes curtas. Leia uma parte de cada vez e use os botões Anterior e Próxima, no fim da página, para navegar. Ao lado (ou no botão “Perguntas”, no celular) ficam as perguntas da parte que você está lendo.' } },
+        { destaque: { tom: 'atencao', titulo: 'O questionário vale nota', texto: 'A nota vai de 0 a 10. Abaixo de 7 é **recuperação**, e cada nova tentativa custa **1.250 do Saldo HC**. Leia com atenção antes de responder: fica valendo a maior nota.' } },
       ],
     },
     {
@@ -182,7 +183,7 @@ window.HC_CONTEUDOS['texto-01'] = {
           '**Precisão primeiro**, velocidade depois.',
           'Faça **pausas** e cuide das mãos e dos olhos.',
         ] },
-        { destaque: { tom: 'saiba', titulo: 'E agora?', texto: 'Responda o questionário para fixar o conteúdo e ganhar XP. Depois, abra a Lição 01 do Módulo 1 e coloque tudo isso em prática no teclado.' } },
+        { destaque: { tom: 'saiba', titulo: 'E agora?', texto: 'Responda o questionário para fixar o conteúdo e receber a sua nota. Depois, abra a Lição 01 do Módulo 1 e coloque tudo isso em prática no teclado.' } },
       ],
     },
   ],

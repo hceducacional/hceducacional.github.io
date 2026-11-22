@@ -5,11 +5,17 @@
    Dados de cada conteúdo: curso/conteudos/<id>.js (window.HC_CONTEUDOS[id]).
    Progresso do aluno (partes lidas e respostas) fica no aparelho e na conta
    (tabela informatica_progresso, linha "cont-<id>"), como as lições.
-   XP: +20 por pergunta acertada na primeira tentativa e +60 ao terminar a leitura (uma vez só).
+   Os conteúdos não dão XP nem moedas. O questionário vale NOTA de 0 a 10 (acertos ÷ perguntas × 10, com uma casa);
+   abaixo de 7 é recuperação. Cada tentativa nova custa 1.250 do Saldo HC; fica valendo a maior nota.
+   O administrador tem o "Testar como aluno": nada é salvo e o saldo é fictício (para ver a compra e a animação das moedas).
    Baixado só quando o aluno abre um conteúdo.
    ========================================================= */
 (() => {
-  const XP_Q = 20, XP_READ = 60;
+  const PRICE = 1250, PASS = 7, TEST_SALDO = 5000; // preço da nova tentativa, nota mínima, saldo fictício do teste
+  const nota = (ok, n) => Math.round((ok / Math.max(1, n)) * 100) / 10; // 0 a 10, uma casa
+  const fmtN = (v) => v.toLocaleString('pt-BR', { minimumFractionDigits: v % 1 ? 1 : 0, maximumFractionDigits: 1 });
+  const fmtC = (v) => (window.HC_cashFmt ? window.HC_cashFmt(v) : (Math.round(v * 100) / 100).toFixed(2));
+  const COIN = 'assets/moeda/moeda.webp';
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const md = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   const say = (t) => (typeof toast === 'function' ? toast(t) : null);
@@ -23,6 +29,9 @@
     next: '<path d="m9 18 6-6-6-6"/>',
     eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
     redo: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+    lock: '<rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M12 14.5v2.5"/>',
+    shackle: '<path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
+    flask: '<path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7 15h10"/>',
     bulb: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.4 1 1.1 1 1.9V16h5v-.2c0-.8.4-1.5 1-1.9A6 6 0 0 0 12 3Z"/>',
     warn: '<path d="M12 4 2.5 20h19L12 4Z"/><path d="M12 10v4M12 17h.01"/>',
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
@@ -66,11 +75,12 @@
   }
 
   /* ---------- progresso do aluno ---------- */
-  function store(id) {
+  function store(id, test) {
     const row = `cont-${id}`;
+    if (test) { let st = { ans: {}, tried: [], read: [], hist: [], tent: 1, savedAt: 0 }; return { get: () => st, save: () => {}, pull: async () => false, flush: () => {}, reset: () => { st = { ...st, ans: {}, hist: [], tent: 1, fechada: false }; } }; }
     const key = () => `hc:info:${auth?.user?.id || 'anon'}:${row}`;
     const online = () => auth?.user && typeof sb !== 'undefined' && sb;
-    const blank = () => ({ ans: {}, tried: [], read: [], readXp: false, savedAt: 0 });
+    const blank = () => ({ ans: {}, tried: [], read: [], hist: [], tent: 1, savedAt: 0 });
     let st; try { st = { ...blank(), ...JSON.parse(localStorage.getItem(key()) || 'null') }; } catch { st = blank(); }
     let t = 0;
     const push = () => { clearTimeout(t); t = 0; if (online()) sb.from('informatica_progresso').upsert({ user_id: auth.user.id, licao: row, dados: st, updated_at: new Date().toISOString() }).then(({ error }) => { if (error) console.info('Conteúdo salvo só neste aparelho:', error.message); }); };
@@ -85,24 +95,38 @@
     return { get: () => st, save, pull, flush };
   }
 
-  /* ---------- tela ---------- */
+  /* ---------- tela ----------
+     O texto aparece uma parte (seção) por vez, com a trilha de partes no alto e os botões
+     Anterior/Próxima embaixo. O questionário acompanha: mostra só as perguntas da parte aberta,
+     e ao terminar as perguntas da parte ele oferece seguir para a próxima. */
+  const VERIFY_MS = 1300; // "Verificando resposta…" antes de mostrar se acertou
   let cleanup = null;
   function open(view, C, meta = {}) {
     cleanup?.();
-    const id = meta.id, S = store(id), Q = C.perguntas || [], P = C.partes || [];
+    const id = meta.id, test = !!meta.test, S = store(id, test), Q = C.perguntas || [], P = C.partes || [];
+    /* carteira: a de verdade (Saldo HC) ou, no teste do administrador, uma fictícia */
+    let fake = TEST_SALDO;
+    const wallet = test ? { saldo: () => fake, spend: (n) => (fake >= n ? ((fake -= n), true) : false) }
+      : { saldo: () => window.HC_cash?.get().saldo || 0, spend: (n) => !!window.HC_cash?.spend(n, `conteudo:${id}`) };
     const partIdx = Object.fromEntries(P.map((p, i) => [p.id, i]));
-    let cur = 0; // pergunta aberta
     const st = () => S.get();
-    const firstOpen = () => { const i = Q.findIndex((_, k) => st().ans[k] === undefined); return i < 0 ? 0 : i; };
-    cur = firstOpen();
+    const qsOf = (pi) => Q.map((q, i) => (q.parte === P[pi].id ? i : -1)).filter((i) => i >= 0);
+    let part = Math.max(0, Math.min(P.length - 1, +st().part || 0)); // parte aberta (volta onde parou)
+    let cur = -1, showResult = false, checking = null; // pergunta aberta; resultado geral; resposta em verificação {q, k}
 
     view.innerHTML = `
-    <div class="ct" style="--tint:${meta.tint || '28, 64, 120'}">
+    <div class="ct${test ? ' testing' : ''}" style="--tint:${meta.tint || '28, 64, 120'}">
       <div class="ct-readbar" aria-hidden="true"><i></i></div>
+      ${test ? `<div class="ct-testbar"><span class="ct-testbar-ico">${svg('flask')}</span><div><b>Modo de teste</b><small>Nada é salvo e o saldo é fictício (${fmtC(TEST_SALDO)}).</small></div>
+        <button type="button" class="ct-tb-btn" data-fill>Responder tudo</button><button type="button" class="ct-tb-btn dark" data-exittest>Sair do teste</button></div>` : ''}
       <div class="ct-grid">
         <article class="ct-doc">
-          <header class="ct-head">
+          <div class="ct-top">
             <button class="ct-back" type="button">${svg('back')} Conteúdos</button>
+            <span class="ct-top-t">${esc(C.titulo)}</span>
+            ${meta.admin && !test ? `<button class="ct-testbtn" type="button" data-test>${svg('flask')} Testar como aluno</button>` : ''}
+          </div>
+          <header class="ct-head">
             ${meta.image ? `<div class="ct-cover"><img src="${esc(meta.image)}" alt=""></div>` : ''}
             <span class="ct-tag">${esc(C.tag || 'Texto')}</span>
             <h1>${esc(C.titulo)}</h1>
@@ -112,159 +136,300 @@
               <span>${svg('list')} ${P.length} partes</span>
               <span>${svg('quiz')} ${Q.length} perguntas</span>
             </div>
+            <nav class="ct-toc" aria-label="Partes do texto">
+              <div class="ct-toc-top"><b>Nesta leitura</b><small class="ct-toc-n"></small></div>
+              <ol>${P.map((p, i) => `<li><a href="#" data-part="${i}"><span class="ct-toc-num">${i + 1}</span><span class="ct-toc-t">${esc(p.titulo)}</span><span class="ct-toc-ok">${svg('check')}</span></a></li>`).join('')}</ol>
+            </nav>
           </header>
-          <nav class="ct-toc" aria-label="Partes do texto">
-            <div class="ct-toc-top"><b>Nesta leitura</b><small class="ct-toc-n"></small></div>
-            <ol>${P.map((p, i) => `<li><a href="#" data-go="${p.id}"><span class="ct-toc-num">${i + 1}</span><span class="ct-toc-t">${esc(p.titulo)}</span><span class="ct-toc-ok">${svg('check')}</span></a></li>`).join('')}</ol>
+          <nav class="ct-steps" aria-label="Navegar entre as partes">
+            <div class="ct-steps-txt"><b class="ct-steps-n"></b><span class="ct-steps-t"></span></div>
+            <div class="ct-steps-bar">${P.map((p, i) => `<button type="button" class="ct-step" data-part="${i}" aria-label="Parte ${i + 1}: ${esc(p.titulo)}" title="${i + 1}. ${esc(p.titulo)}"><i></i></button>`).join('')}</div>
           </nav>
-          ${P.map((p, i) => `
-          <section class="ct-part" id="ct-${p.id}" data-part="${p.id}">
-            <span class="ct-num">Parte ${i + 1} de ${P.length}</span>
-            <h2>${esc(p.titulo)}</h2>
-            ${p.blocos.map(block).join('')}
-            <div class="ct-part-q">${Q.some((q) => q.parte === p.id) ? `<button type="button" class="ct-part-btn" data-qpart="${p.id}">${svg('quiz')} Responder as perguntas desta parte</button>` : ''}</div>
-            <i class="ct-mark" data-mark="${p.id}"></i>
-          </section>`).join('')}
-          <footer class="ct-foot"><span class="ct-foot-ico">${svg('check')}</span><b>Fim da leitura</b><p>Agora é com você: responda o questionário e depois pratique na Lição 01.</p>
-            <button class="ct-foot-btn" type="button" data-openq>${svg('quiz')} Ir para o questionário</button></footer>
+          <div class="ct-parts">${P.map((p, i) => `
+            <section class="ct-part" id="ct-${p.id}" data-pi="${i}" hidden>
+              <span class="ct-num">Parte ${i + 1} de ${P.length}</span>
+              <h2>${esc(p.titulo)}</h2>
+              ${p.blocos.map(block).join('')}
+              ${i === P.length - 1 ? `<footer class="ct-foot"><span class="ct-foot-ico">${svg('check')}</span><b>Fim da leitura</b><p>Agora é com você: termine o questionário e depois pratique na Lição 01.</p></footer>` : ''}
+              <i class="ct-mark" data-mark="${p.id}"></i>
+            </section>`).join('')}
+          </div>
+          <div class="ct-pager">
+            <button type="button" class="ct-pg prev" data-pstep="-1"><small>${svg('back')} Anterior</small><b></b></button>
+            <button type="button" class="ct-pg next" data-pstep="1"><small>Próxima ${svg('next')}</small><b></b></button>
+          </div>
         </article>
         <aside class="ct-quiz" aria-label="Questionário">
           <div class="ctq">
             <div class="ctq-grab" aria-hidden="true"></div>
             <div class="ctq-head">
-              <div class="ctq-ring"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19"/><circle class="ctq-ring-v" cx="22" cy="22" r="19"/></svg><b class="ctq-ring-n"></b></div>
-              <div class="ctq-ht"><small>Questionário</small><b>Perguntas sobre o texto</b><span class="ctq-sum"></span></div>
+              <div class="ctq-ring" title="Perguntas respondidas no conteúdo todo"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19"/><circle class="ctq-ring-v" cx="22" cy="22" r="19"/></svg><b class="ctq-ring-n"></b></div>
+              <div class="ctq-ht"><small>Questionário</small><b class="ctq-pt"></b><span class="ctq-sum"></span></div>
               <button class="ctq-close" type="button" aria-label="Fechar o questionário">${svg('x')}</button>
             </div>
-            <div class="ctq-dots" role="tablist" aria-label="Perguntas"></div>
+            <div class="ctq-dots" role="tablist" aria-label="Perguntas desta parte"></div>
             <div class="ctq-body" aria-live="polite"></div>
           </div>
         </aside>
       </div>
-      <button class="ct-fab" type="button" data-openq>${svg('quiz')}<span>Questionário</span><b class="ct-fab-n"></b></button>
+      <button class="ct-fab" type="button" data-openq>${svg('quiz')}<span>Perguntas</span><b class="ct-fab-n"></b></button>
       <div class="ct-scrim"></div>
     </div>`;
 
     const root = view.querySelector('.ct'), body = root.querySelector('.ctq-body'), dots = root.querySelector('.ctq-dots');
     const mob = () => matchMedia('(max-width: 1023px)').matches;
     const setSheet = (on) => { root.classList.toggle('q-open', on); document.documentElement.classList.toggle('ct-lock', on && mob()); };
-    const goPart = (pid) => {
-      setSheet(false);
-      const el = root.querySelector(`#ct-${pid}`); if (!el) return;
-      const bar = document.querySelector('.topbar-wrap, .topbar'), off = (bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0) + 18;
-      window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - off, behavior: 'smooth' });
+    const toTop = (el, smooth = true) => {
+      const bar = document.querySelector('.topbar-wrap, .topbar'), off = (bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0) + 16;
+      const y = el.getBoundingClientRect().top + scrollY - off;
+      if (Math.abs(y - scrollY) > 4 && (y < scrollY || el.getBoundingClientRect().top > innerHeight * .5)) window.scrollTo({ top: Math.max(0, y), behavior: smooth ? 'smooth' : 'auto' });
     };
 
-    /* placar, bolinhas, sumário */
+    /* ---- texto: mostra uma parte ---- */
+    const showPart = (i, { scroll = true, syncQ = true } = {}) => {
+      part = Math.max(0, Math.min(P.length - 1, i));
+      root.querySelectorAll('.ct-part').forEach((s) => { s.hidden = +s.dataset.pi !== part; });
+      root.classList.toggle('first', part === 0);
+      const sec = root.querySelector(`.ct-part[data-pi="${part}"]`);
+      sec.classList.remove('enter'); void sec.offsetWidth; sec.classList.add('enter');
+      root.querySelector('.ct-steps-n').textContent = `Parte ${part + 1} de ${P.length}`;
+      root.querySelector('.ct-steps-t').textContent = P[part].titulo;
+      const [pv, nx] = root.querySelectorAll('.ct-pg');
+      pv.hidden = part === 0; pv.querySelector('b').textContent = P[part - 1]?.titulo || '';
+      nx.classList.toggle('last', part === P.length - 1);
+      nx.querySelector('small').innerHTML = part === P.length - 1 ? `Concluir ${svg('check')}` : `Próxima ${svg('next')}`;
+      nx.querySelector('b').textContent = part === P.length - 1 ? 'Ver o resultado do questionário' : P[part + 1].titulo;
+      const s = st(); if (s.part !== part) { s.part = part; S.save(); }
+      const mk = sec.querySelector('[data-mark]'); if (!s.read.includes(mk.dataset.mark)) io.observe(mk);
+      if (syncQ) { showResult = false; const qs = qsOf(part); cur = qs.find((k) => s.ans[k] === undefined) ?? qs[0] ?? -1; }
+      paint(); drawQ();
+      if (scroll) toTop(part === 0 ? root.querySelector('.ct-doc') : root.querySelector('.ct-steps'));
+      onScroll();
+    };
+
+    /* ---- placar, bolinhas da parte, sumário e trilha ---- */
     const paint = () => {
-      const a = st().ans, n = Q.length, done = Object.keys(a).length, ok = Q.filter((q, i) => a[i] === q.certa).length;
+      const a = st().ans, n = Q.length, done = Object.keys(a).length, ok = Q.filter((q, i) => a[i] === q.certa).length, qs = qsOf(part);
       root.querySelector('.ctq-ring-n').textContent = `${done}/${n}`;
       root.querySelector('.ctq-ring-v').style.strokeDasharray = `${(done / n) * 119.4} 200`;
-      root.querySelector('.ctq-sum').textContent = done ? `${ok} ${ok === 1 ? 'acerto' : 'acertos'} até agora` : 'Responda conforme lê';
-      root.querySelector('.ct-fab-n').textContent = `${done}/${n}`;
-      dots.innerHTML = Q.map((q, i) => { const s = a[i] === undefined ? '' : a[i] === q.certa ? ' ok' : ' bad'; return `<button type="button" role="tab" class="ctq-dot${s}${i === cur ? ' cur' : ''}" data-q="${i}" aria-selected="${i === cur}" aria-label="Pergunta ${i + 1}">${i + 1}</button>`; }).join('');
+      root.querySelector('.ctq-pt').textContent = `Parte ${part + 1}: ${P[part].titulo}`;
+      const best = bestNota();
+      root.querySelector('.ctq-sum').textContent = `${qs.length ? `${qs.length} ${qs.length === 1 ? 'pergunta' : 'perguntas'} nesta parte · ` : ''}${best !== null ? `Nota ${fmtN(best)}` : `Tentativa ${st().tent || 1} · nota de 0 a 10`}`;
+      const pend = qs.filter((k) => a[k] === undefined).length;
+      root.querySelector('.ct-fab-n').textContent = qs.length ? (pend ? `${qs.length - pend}/${qs.length}` : '✓') : `${done}/${n}`;
+      dots.hidden = !qs.length || showResult;
+      dots.innerHTML = qs.map((i, j) => { const s = a[i] === undefined ? '' : a[i] === Q[i].certa ? ' ok' : ' bad'; return `<button type="button" role="tab" class="ctq-dot${s}${i === cur ? ' cur' : ''}" data-q="${i}" aria-selected="${i === cur}" aria-label="Pergunta ${j + 1} desta parte">${j + 1}</button>`; }).join('');
       const read = st().read;
-      root.querySelectorAll('.ct-toc a').forEach((x) => x.classList.toggle('read', read.includes(x.dataset.go)));
+      root.querySelectorAll('.ct-toc a').forEach((x) => x.classList.toggle('read', read.includes(P[+x.dataset.part].id)));
       root.querySelector('.ct-toc-n').textContent = `${read.length} de ${P.length} lidas`;
+      root.querySelectorAll('.ct-step').forEach((b, i) => {
+        const pq = qsOf(i), allA = pq.length && pq.every((k) => a[k] !== undefined);
+        b.classList.toggle('cur', i === part); b.classList.toggle('read', read.includes(P[i].id)); b.classList.toggle('qdone', !!allA);
+        b.setAttribute('aria-current', i === part ? 'step' : 'false');
+      });
     };
 
-    /* pergunta atual, ou o resultado quando todas foram respondidas e ele pediu */
-    let showResult = false;
-    const drawQ = (focus) => {
-      const a = st().ans;
+    /* ---- questionário ---- */
+    const drawQ = () => {
+      const a = st().ans, allDone = Object.keys(a).length === Q.length;
       if (showResult) return drawResult();
-      const q = Q[cur], pi = partIdx[q.parte], ans = a[cur], answered = ans !== undefined;
-      const allDone = Object.keys(a).length === Q.length;
+      const qs = qsOf(part);
+      if (cur < 0 || !qs.includes(cur)) return drawNone(allDone);
+      const q = Q[cur], j = qs.indexOf(cur), ans = a[cur], answered = ans !== undefined, chk = checking?.q === cur ? checking.k : null;
+      const secDone = qs.every((k) => a[k] !== undefined), lastQ = j === qs.length - 1;
+      const nextBtn = allDone ? `<button type="button" class="ctq-btn" data-result>Ver resultado</button>`
+        : answered && (lastQ || secDone) && part < P.length - 1 ? `<button type="button" class="ctq-btn" data-pstep="1">Próxima parte ${svg('next')}</button>`
+        : `<button type="button" class="ctq-btn${answered ? '' : ' soft'}" data-step="1"${lastQ ? ' disabled' : ''}>${answered ? 'Próxima' : 'Pular'} ${svg('next')}</button>`;
       body.innerHTML = `
-        <div class="ctq-card" style="--i:0">
-          <span class="ctq-where">Pergunta ${cur + 1} de ${Q.length}${pi !== undefined ? ` · <button type="button" class="ctq-link" data-go="${q.parte}">Parte ${pi + 1}: ${esc(P[pi].titulo)}</button>` : ''}</span>
+        <div class="ctq-card">
+          <span class="ctq-where">Pergunta ${j + 1} de ${qs.length} desta parte</span>
           <h3>${md(q.q)}</h3>
           <div class="ctq-ops">${q.op.map((o, k) => {
-            const s = !answered ? '' : k === q.certa ? ' right' : k === ans ? ' wrong' : ' dim';
-            return `<button type="button" class="ctq-op${s}" data-op="${k}"${answered ? ' disabled' : ''}><span class="ctq-l">${'ABCDEF'[k]}</span><span class="ctq-t">${md(o)}</span>${answered && (k === q.certa || k === ans) ? `<span class="ctq-st">${svg(k === q.certa ? 'check' : 'x')}</span>` : ''}</button>`;
+            const s = chk !== null ? (k === chk ? ' checking' : ' dim') : !answered ? '' : k === q.certa ? ' right' : k === ans ? ' wrong' : ' dim';
+            return `<button type="button" class="ctq-op${s}" data-op="${k}"${answered || chk !== null ? ' disabled' : ''}><span class="ctq-l">${chk === k ? '<i class="ctq-spin"></i>' : 'ABCDEF'[k]}</span><span class="ctq-t">${md(o)}</span>${answered && (k === q.certa || k === ans) ? `<span class="ctq-st">${svg(k === q.certa ? 'check' : 'x')}</span>` : ''}</button>`;
           }).join('')}</div>
+          ${chk !== null ? `<div class="ctq-fb wait"><b><i class="ctq-dots3"><i></i><i></i><i></i></i> Verificando resposta…</b><span class="ctq-wbar"><i style="animation-duration:${VERIFY_MS}ms"></i></span></div>` : ''}
           ${answered ? `<div class="ctq-fb ${ans === q.certa ? 'ok' : 'bad'}">
-            <b>${ans === q.certa ? 'Resposta certa!' : 'Não foi dessa vez.'}${ans === q.certa && st().gain?.[cur] ? ` <em>+${XP_Q} XP</em>` : ''}</b>
+            <b>${ans === q.certa ? 'Resposta certa!' : 'Não foi dessa vez.'}</b>
             <p>${md(q.exp)}</p>
-            <button type="button" class="ctq-link" data-go="${q.parte}">${svg('eye')} Ver no texto</button>
+            <button type="button" class="ctq-link" data-seetext>${svg('eye')} Ver no texto</button>
           </div>` : ''}
           <div class="ctq-nav">
-            <button type="button" class="ctq-btn soft" data-step="-1"${cur === 0 ? ' disabled' : ''}>Anterior</button>
-            ${allDone ? `<button type="button" class="ctq-btn" data-result>Ver resultado</button>`
-              : `<button type="button" class="ctq-btn${answered ? '' : ' soft'}" data-step="1"${cur === Q.length - 1 ? ' disabled' : ''}>${answered ? 'Próxima' : 'Pular'} ${svg('next')}</button>`}
+            <button type="button" class="ctq-btn soft" data-step="-1"${j === 0 ? ' disabled' : ''}>Anterior</button>
+            ${nextBtn}
           </div>
         </div>`;
-      if (focus) body.querySelector('.ctq-op:not([disabled])')?.focus({ preventScroll: true });
     };
-    const drawResult = () => {
-      const a = st().ans, ok = Q.filter((q, i) => a[i] === q.certa).length, pct = Math.round((ok / Q.length) * 100);
-      const msg = pct >= 90 ? ['Excelente!', 'Você dominou o conteúdo. Hora de praticar na Lição 01.'] : pct >= 70 ? ['Muito bem!', 'Você entendeu a maior parte. Revise as perguntas que errou.'] : pct >= 50 ? ['Bom começo', 'Releia as partes marcadas e tente de novo.'] : ['Vale reler', 'Volte ao texto com calma e refaça o questionário.'];
-      const wrong = Q.map((q, i) => (a[i] !== q.certa ? i : -1)).filter((i) => i >= 0);
-      const xp = Object.keys(st().gain || {}).length * XP_Q + (st().readXp ? XP_READ : 0);
+    /* parte sem perguntas (o resumo, por exemplo): mostra o que falta no conteúdo todo */
+    const drawNone = (allDone) => {
+      const a = st().ans;
+      const miss = P.map((p, i) => ({ i, p, n: qsOf(i).filter((k) => a[k] === undefined).length })).filter((x) => x.n);
       body.innerHTML = `
-        <div class="ctq-card ctq-res">
-          <div class="ctq-big" style="--p:${pct}"><b>${ok}</b><small>de ${Q.length}</small></div>
-          <h3>${msg[0]}</h3><p>${msg[1]}</p>
-          <div class="ctq-stats"><span><b>${pct}%</b><small>de acertos</small></span><span><b>+${xp}</b><small>XP neste conteúdo</small></span></div>
-          ${wrong.length ? `<div class="ctq-rev"><small>Para revisar</small>${wrong.map((i) => `<button type="button" class="ctq-revi" data-q="${i}"><span>${i + 1}</span>${md(Q[i].q)}</button>`).join('')}</div>` : ''}
-          <div class="ctq-nav"><button type="button" class="ctq-btn soft" data-q="0">Revisar respostas</button><button type="button" class="ctq-btn" data-redo>${svg('redo')} Refazer</button></div>
-          <small class="ctq-note">O XP vale só na primeira tentativa de cada pergunta.</small>
+        <div class="ctq-card ctq-none">
+          <span class="ctq-none-ico">${svg(allDone ? 'check' : 'list')}</span>
+          <h3>${allDone ? 'Questionário completo!' : 'Esta parte não tem perguntas'}</h3>
+          <p>${allDone ? 'Você respondeu todas as perguntas. Veja como foi.' : miss.length ? 'Ainda faltam perguntas nestas partes:' : ''}</p>
+          ${!allDone ? `<div class="ctq-miss">${miss.map((x) => `<button type="button" class="ctq-missi" data-part="${x.i}"><span>${x.i + 1}</span><b>${esc(x.p.titulo)}</b><small>${x.n} ${x.n === 1 ? 'pergunta' : 'perguntas'}</small>${svg('next')}</button>`).join('')}</div>` : ''}
+          ${allDone ? '<div class="ctq-nav"><button type="button" class="ctq-btn" data-result>Ver resultado</button></div>' : ''}
         </div>`;
     };
-
-    /* responder */
-    const answer = (k) => {
-      const s = st(); if (s.ans[cur] !== undefined) return;
-      s.ans[cur] = k;
-      const first = !s.tried.includes(cur);
-      if (first) s.tried.push(cur);
-      if (first && k === Q[cur].certa) { s.gain = { ...(s.gain || {}), [cur]: 1 }; window.HC_xp?.add(XP_Q); }
-      S.save(); paint(); drawQ();
-      body.querySelector('.ctq-fb')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      if (Object.keys(s.ans).length === Q.length) setTimeout(() => { showResult = true; drawQ(); }, 900);
+    const bestNota = () => { const h = st().hist || []; return h.length ? Math.max(...h.map((x) => x.nota)) : null; };
+    const drawResult = () => {
+      const s0 = st(), a = s0.ans, ok = Q.filter((q, i) => a[i] === q.certa).length, n = nota(ok, Q.length), pass = n >= PASS;
+      const best = bestNota() ?? n, hist = s0.hist || [];
+      const wrong = Q.map((q, i) => (a[i] !== q.certa ? i : -1)).filter((i) => i >= 0);
+      dots.hidden = true;
+      body.innerHTML = `
+        <div class="ctq-card ctq-res ${pass ? 'pass' : 'rec'}">
+          <div class="ctq-big" style="--p:${n * 10}"><b>${fmtN(n)}</b><small>de 10</small></div>
+          <span class="ctq-badge">${pass ? `${svg('check')} Aprovado` : `${svg('warn')} Recuperação`}</span>
+          <h3>${pass ? (n >= 9 ? 'Excelente!' : 'Muito bem!') : 'Ainda não foi desta vez'}</h3>
+          <p>${pass ? 'Você atingiu a nota mínima (7). Hora de praticar na Lição 01.' : `A nota mínima é 7. Releia as partes indicadas e, quando estiver pronto, libere uma nova tentativa com ${fmtC(PRICE)} do Saldo HC.`}</p>
+          <div class="ctq-stats"><span><b>${ok}/${Q.length}</b><small>acertos</small></span><span><b>${hist.length > 1 ? fmtN(best) : `${s0.tent || 1}ª`}</b><small>${hist.length > 1 ? 'maior nota (vale esta)' : 'tentativa'}</small></span></div>
+          ${hist.length > 1 ? `<div class="ctq-hist"><small>Tentativas</small>${hist.map((h, i) => `<span class="${h.nota >= PASS ? 'ok' : 'bad'}"><b>${i + 1}ª</b>${fmtN(h.nota)}</span>`).join('')}</div>` : ''}
+          ${wrong.length ? `<div class="ctq-rev"><small>Para revisar</small>${wrong.map((i) => `<button type="button" class="ctq-revi" data-q="${i}"><span>${partIdx[Q[i].parte] + 1}</span>${md(Q[i].q)}</button>`).join('')}</div>` : ''}
+          <div class="ctq-nav"><button type="button" class="ctq-btn soft" data-q="${qsOf(part)[0] ?? 0}">Revisar</button><button type="button" class="ctq-btn ${pass ? 'soft' : 'buy'}" data-redo>Nova tentativa <span class="ctq-price"><img src="${COIN}" alt="">${fmtC(PRICE)}</span></button></div>
+          <small class="ctq-note">${test ? 'Modo de teste: as moedas gastas aqui são fictícias.' : 'Cada nova tentativa custa ' + fmtC(PRICE) + ' do Saldo HC.'}</small>
+        </div>`;
     };
-    const goQ = (i) => { showResult = false; cur = Math.max(0, Math.min(Q.length - 1, i)); paint(); drawQ(true); };
+    /* fecha a tentativa quando todas as perguntas foram respondidas: guarda a nota */
+    const closeAttempt = () => {
+      const s0 = st(); if (s0.fechada || Object.keys(s0.ans).length < Q.length) return;
+      const ok = Q.filter((q, i) => s0.ans[i] === q.certa).length;
+      s0.hist = [...(s0.hist || []), { nota: nota(ok, Q.length), ok, em: Date.now() }]; s0.fechada = true; S.save();
+    };
+    /* nova tentativa: janela com a carteira; ao pagar, as moedas voam até o cadeado, que se abre */
+    const buyAttempt = () => {
+      if (document.querySelector('.ctb')) return;
+      const saldo = wallet.saldo(), can = saldo >= PRICE, n = bestNota();
+      const w = document.createElement('div');
+      w.className = 'ctb'; w.style.setProperty('--tint', meta.tint || '28, 64, 120');
+      w.innerHTML = `<div class="ctb-back"></div>
+        <div class="ctb-card" role="dialog" aria-modal="true" aria-labelledby="ctb-t">
+          <div class="ctb-lock"><i class="ctb-glow"></i><span class="ctb-ring"></span><svg class="ctb-shk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${I.shackle}</svg><svg class="ctb-body" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${I.lock}</svg></div>
+          <h2 id="ctb-t">Nova tentativa</h2>
+          <p class="ctb-sub">${n !== null ? `Sua nota agora é <b>${fmtN(n)}</b>${n < PASS ? ' (recuperação)' : ''}. ` : ''}Para responder o questionário de novo, libere uma nova chance. Fica valendo a maior nota.</p>
+          <div class="ctb-wallet"><img class="ctb-coin" src="${COIN}" alt=""><span><small>${test ? 'Saldo fictício' : 'Seu Saldo HC'}</small><b class="ctb-saldo">${fmtC(saldo)}</b></span><span class="ctb-price"><small>Custa</small><b>− ${fmtC(PRICE)}</b></span></div>
+          ${can ? '' : `<p class="ctb-miss">Faltam <b>${fmtC(PRICE - saldo)}</b>. Ganhe moedas concluindo as lições do curso.</p>`}
+          <div class="ctb-acts"><button type="button" class="ctq-btn soft" data-ctb="no">Cancelar</button><button type="button" class="ctq-btn buy" data-ctb="yes"${can ? '' : ' disabled'}>Liberar <span class="ctq-price"><img src="${COIN}" alt="">${fmtC(PRICE)}</span></button></div>
+        </div>`;
+      document.body.appendChild(w);
+      const close = () => { w.classList.remove('in'); setTimeout(() => w.remove(), 350); };
+      w.querySelector('.ctb-back').addEventListener('click', () => { if (!w.classList.contains('paying')) close(); });
+      w.querySelector('[data-ctb="no"]').addEventListener('click', close);
+      w.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !w.classList.contains('paying')) close(); });
+      w.querySelector('[data-ctb="yes"]').addEventListener('click', () => {
+        if (w.classList.contains('paying') || !wallet.spend(PRICE)) return;
+        w.classList.add('paying');
+        payAnim(w, saldo, saldo - PRICE).then(() => {
+          const s0 = st(); s0.ans = {}; s0.fechada = false; s0.tent = (s0.tent || 1) + 1; S.save();
+          setTimeout(() => { close(); showResult = false; showPart(0); if (mob()) setSheet(true); say('Nova tentativa liberada. Boa sorte!'); }, 900);
+        });
+      });
+      requestAnimationFrame(() => { w.classList.add('in'); w.querySelector('[data-ctb="yes"]').focus(); });
+    };
+    /* animação: moedas saem da carteira em arco até o cadeado; o saldo desce; o cadeado se abre */
+    const payAnim = (w, from, to) => new Promise((done) => {
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const src = w.querySelector('.ctb-coin').getBoundingClientRect(), lock = w.querySelector('.ctb-lock').getBoundingClientRect(), out = w.querySelector('.ctb-saldo');
+      const N = reduce ? 0 : 12, T = 620, GAP = 75, sx = src.left + src.width / 2, sy = src.top + src.height / 2, tx = lock.left + lock.width / 2, ty = lock.top + lock.height / 2;
+      for (let i = 0; i < N; i++) {
+        const c = document.createElement('img'); c.src = COIN; c.className = 'ctb-fly'; c.alt = '';
+        c.style.left = `${sx - 14}px`; c.style.top = `${sy - 14}px`; document.body.appendChild(c);
+        const dx = tx - sx, dy = ty - sy, side = (i % 2 ? 1 : -1) * (30 + (i % 4) * 18);
+        const an = c.animate([
+          { transform: 'translate(0,0) scale(.6) rotate(0deg)', opacity: 0 },
+          { transform: `translate(${dx * .35 + side}px, ${dy * .35 - 70}px) scale(1.15) rotate(${side * 3}deg)`, opacity: 1, offset: .4 },
+          { transform: `translate(${dx}px, ${dy}px) scale(.45) rotate(${side * 6}deg)`, opacity: .9 },
+        ], { duration: T, delay: i * GAP, easing: 'cubic-bezier(.45,0,.25,1)', fill: 'forwards' });
+        an.onfinish = () => { c.remove(); const L = w.querySelector('.ctb-lock'); L.classList.remove('hit'); void L.offsetWidth; L.classList.add('hit'); };
+      }
+      const total = reduce ? 200 : (N - 1) * GAP + T, t0 = performance.now();
+      const tick = (now) => { const k = Math.min(1, (now - t0) / total), e = 1 - (1 - k) ** 3; out.textContent = fmtC(from + (to - from) * e); if (k < 1) requestAnimationFrame(tick); };
+      requestAnimationFrame(tick);
+      setTimeout(() => { w.classList.add('open'); w.querySelector('#ctb-t').textContent = 'Chance liberada!'; done(); }, total + 120);
+    });
+
+    /* responder: primeiro "Verificando resposta…", depois o resultado */
+    let vt = 0;
+    const answer = (k) => {
+      const s = st(); if (s.ans[cur] !== undefined || checking) return;
+      checking = { q: cur, k }; drawQ();
+      vt = setTimeout(() => {
+        const { q } = checking; checking = null;
+        s.ans[q] = k;
+        if (!s.tried.includes(q)) s.tried.push(q);
+        closeAttempt(); S.save(); paint(); drawQ();
+        body.querySelector('.ctq-fb')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        if (Object.keys(s.ans).length === Q.length) setTimeout(() => { if (!root.isConnected) return; showResult = true; paint(); drawQ(); }, 1400);
+      }, VERIFY_MS);
+    };
+    /* abrir uma pergunta (se for de outra parte, o texto vai junto) */
+    const goQ = (i) => {
+      if (checking) return;
+      showResult = false; cur = Math.max(0, Math.min(Q.length - 1, i));
+      const pi = partIdx[Q[cur].parte];
+      if (pi !== part) return showPart(pi, { syncQ: false });
+      paint(); drawQ();
+    };
 
     root.addEventListener('click', (e) => {
-      const t = e.target.closest('button, a'); if (!t || !root.contains(t)) { if (e.target.classList.contains('ct-scrim')) setSheet(false); return; }
+      if (e.target.classList.contains('ct-scrim')) return setSheet(false);
+      const t = e.target.closest('button, a'); if (!t || !root.contains(t)) return;
       if (t.classList.contains('ct-back')) { location.hash = '#informatica/cursos'; return; }
-      if (t.dataset.go) { e.preventDefault(); return goPart(t.dataset.go); }
+      if (t.dataset.part !== undefined) { e.preventDefault(); if (t.closest('.ctq')) setSheet(false); return showPart(+t.dataset.part); }
+      if (t.dataset.pstep) {
+        if (checking) return;
+        const n = part + +t.dataset.pstep;
+        if (n >= P.length) { showResult = Object.keys(st().ans).length === Q.length; if (!showResult) { const m = Q.findIndex((_, k) => st().ans[k] === undefined); if (m >= 0) goQ(m); } else { paint(); drawQ(); } return setSheet(true); }
+        const inQuiz = !!t.closest('.ctq'); showPart(n); if (inQuiz && mob()) setSheet(true); return;
+      }
       if (t.dataset.op !== undefined) return answer(+t.dataset.op);
-      if (t.dataset.step) return goQ(cur + +t.dataset.step);
+      if (t.dataset.step) { const qs = qsOf(part), j = qs.indexOf(cur) + +t.dataset.step; if (qs[j] !== undefined) goQ(qs[j]); return; }
       if (t.dataset.q !== undefined) return goQ(+t.dataset.q);
-      if (t.hasAttribute('data-result')) { showResult = true; return drawQ(); }
-      if (t.hasAttribute('data-redo')) { st().ans = {}; S.save(); return goQ(0); }
-      if (t.dataset.qpart) { const i = Q.findIndex((q, k) => q.parte === t.dataset.qpart && st().ans[k] === undefined); goQ(i >= 0 ? i : Q.findIndex((q) => q.parte === t.dataset.qpart)); setSheet(true); return; }
-      if (t.hasAttribute('data-openq')) { setSheet(true); return; }
+      if (t.hasAttribute('data-result')) { showResult = true; paint(); return drawQ(); }
+      if (t.hasAttribute('data-redo')) return buyAttempt();
+      if (t.hasAttribute('data-test')) { cleanup?.(); return open(view, C, { ...meta, test: true }); }
+      if (t.hasAttribute('data-exittest')) { cleanup?.(); return open(view, C, { ...meta, test: false }); }
+      if (t.hasAttribute('data-fill')) { // teste: responde as que faltam ao acaso (mais ou menos metade certa), para chegar logo na nota
+        const s0 = st(); Q.forEach((q, i) => { if (s0.ans[i] === undefined) s0.ans[i] = Math.random() < .5 ? q.certa : (q.certa + 1) % q.op.length; });
+        closeAttempt(); showResult = true; paint(); drawQ(); if (mob()) setSheet(true); return;
+      }
+      if (t.hasAttribute('data-seetext')) { setSheet(false); return toTop(root.querySelector(part === 0 ? '.ct-doc' : '.ct-steps')); }
+      if (t.hasAttribute('data-openq')) return setSheet(true);
       if (t.classList.contains('ctq-close')) setSheet(false);
     });
-    const onKey = (e) => { if (e.key === 'Escape' && root.classList.contains('q-open')) setSheet(false); };
+    const onKey = (e) => {
+      if (e.key === 'Escape' && root.classList.contains('q-open')) return setSheet(false);
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '') || e.altKey || e.ctrlKey || e.metaKey) return;
+      if (e.key === 'ArrowRight' && part < P.length - 1) showPart(part + 1);
+      if (e.key === 'ArrowLeft' && part > 0) showPart(part - 1);
+    };
     addEventListener('keydown', onKey);
 
-    /* partes lidas: quando o fim da parte aparece na tela */
+    /* parte lida: quando o fim dela aparece na tela */
     const io = new IntersectionObserver((ents) => ents.forEach((en) => {
       if (!en.isIntersecting) return;
       const s = st(), pid = en.target.dataset.mark; io.unobserve(en.target);
       if (s.read.includes(pid)) return;
       s.read.push(pid);
-      if (!s.readXp && s.read.length >= P.length) { s.readXp = true; window.HC_xp?.add(XP_READ); say(`Leitura concluída! +${XP_READ} XP`); }
       S.save(); paint();
     }), { rootMargin: '0px 0px -10% 0px' });
-    root.querySelectorAll('[data-mark]').forEach((m) => { if (!st().read.includes(m.dataset.mark)) io.observe(m); });
 
-    /* barra fininha de leitura no alto */
+    /* barra fininha no alto: quanto do conteúdo todo já passou (partes anteriores + o quanto rolou desta) */
     const fill = root.querySelector('.ct-readbar i'), doc = root.querySelector('.ct-doc');
     let raf = 0;
-    const onScroll = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; const r = doc.getBoundingClientRect(), tot = r.height - innerHeight * .6; fill.style.transform = `scaleX(${Math.max(0, Math.min(1, -r.top / Math.max(1, tot)))})`; }); };
-    addEventListener('scroll', onScroll, { passive: true }); onScroll();
+    function onScroll() { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; const r = doc.getBoundingClientRect(), f = Math.max(0, Math.min(1, -r.top / Math.max(1, r.height - innerHeight))); fill.style.transform = `scaleX(${(part + f) / P.length})`; }); }
+    addEventListener('scroll', onScroll, { passive: true });
 
-    paint(); drawQ();
+    closeAttempt();
+    showPart(part, { scroll: false });
     window.scrollTo(0, 0);
-    S.pull().then((changed) => { if (changed && root.isConnected) { cur = firstOpen(); paint(); drawQ(); } });
+    S.pull().then((changed) => { if (!changed || !root.isConnected) return; closeAttempt(); showPart(Math.min(P.length - 1, +st().part || 0), { scroll: false }); });
 
     const onHash = () => { if (!root.isConnected || !location.hash.startsWith('#informatica/conteudo-')) cleanup?.(); };
     addEventListener('hashchange', onHash);
-    cleanup = () => { io.disconnect(); removeEventListener('scroll', onScroll); removeEventListener('keydown', onKey); removeEventListener('hashchange', onHash); document.documentElement.classList.remove('ct-lock'); S.flush(); cleanup = null; };
+    cleanup = () => { clearTimeout(vt); io.disconnect(); removeEventListener('scroll', onScroll); removeEventListener('keydown', onKey); removeEventListener('hashchange', onHash); document.documentElement.classList.remove('ct-lock'); S.flush(); cleanup = null; };
   }
 
   window.HC_conteudo = { open };

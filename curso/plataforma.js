@@ -320,8 +320,9 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   /* seção "Conteúdos para aprender", logo abaixo dos módulos: cards no mesmo estilo dos módulos */
   const progTxt = (c) => {
     const p = contProg(c.id); if (!p?.savedAt) return '';
-    const n = Object.keys(p.ans || {}).length, r = (p.read || []).length;
-    return n ? `${n} ${n === 1 ? 'resposta' : 'respostas'} · ${p.readXp ? 'leitura concluída' : `${r} partes lidas`}` : p.readXp ? 'Leitura concluída' : `${r} ${r === 1 ? 'parte lida' : 'partes lidas'}`;
+    const h = Array.isArray(p.hist) ? p.hist : [], n = Object.keys(p.ans || {}).length, r = (p.read || []).length;
+    if (h.length) { const best = Math.max(...h.map((x) => x.nota)); return `Nota ${best.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}${best < 7 ? ' · recuperação' : ''}`; }
+    return n ? `${n} ${n === 1 ? 'resposta' : 'respostas'} · ${r} ${r === 1 ? 'parte lida' : 'partes lidas'}` : `${r} ${r === 1 ? 'parte lida' : 'partes lidas'}`;
   };
   function contsSection() {
     const list = visConts(), adm = isAdmin();
@@ -409,7 +410,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     try { await Promise.all([load('curso/conteudo.css'), load('curso/conteudo.js'), load(c.arquivo)]); }
     catch { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir o conteúdo. Verifique a internet e tente de novo.</p></div>'; return; }
     if (location.hash !== `#informatica/conteudo-${id}`) return;
-    window.HC_conteudo.open(view, window.HC_CONTEUDOS[id], { id, image: c.image ? imgUrl(c.image) : '', tint: (CT[c.tipo] || CT.texto).tint });
+    window.HC_conteudo.open(view, window.HC_CONTEUDOS[id], { id, image: c.image ? imgUrl(c.image) : '', tint: (CT[c.tipo] || CT.texto).tint, admin: isAdmin() });
   }
   /* administrador: criar (id null) ou editar um card de conteúdo */
   function editCont(view, id) {
