@@ -112,8 +112,9 @@ window.HC_xp = (() => {
   addEventListener('pagehide', () => { if (timer) push(); });
   /* PATENTES: dependem só do XP total do aluno (não do nível). Cada uma pede um total de XP.
      O curso inteiro feito uma vez, bem feito, dá por volta de Diamante; Mestre em diante pede refazer
-     lições para buscar pontuações maiores. Troféu provisório igual para todas (tingido pela cor da família). */
-  const TROFEU = 'assets/patentes/trofeu-base.webp';
+     lições para buscar pontuações maiores. Cada patente tem a sua medalha com a logo do HC
+     (assets/patentes/patente-01.webp … patente-25.webp, na ordem da lista abaixo). */
+  const MEDALHA = (i) => `assets/patentes/patente-${String(i + 1).padStart(2, '0')}.webp`;
   const FAM = {
     bronze: { nome: 'Bronze', c1: '#9a4a1f', c2: '#f0975a', tf: 'sepia(.55) hue-rotate(-20deg) saturate(1.15) brightness(.86)' },
     prata: { nome: 'Prata', c1: '#5b6676', c2: '#c9d3df', tf: 'grayscale(1) brightness(1.2) contrast(1.05)' },
@@ -134,7 +135,7 @@ window.HC_xp = (() => {
     ['diamante', 'Diamante I', 88000], ['diamante', 'Diamante II', 99000], ['diamante', 'Diamante III', 111000], ['diamante', 'Diamante IV', 124000], ['diamante', 'Diamante V', 138000],
     ['mestre', 'Mestre', 155000], ['mestreHonra', 'Mestre de Honra', 180000], ['elite', 'Elite', 210000],
     ['eliteHonra', 'Elite de Honra', 250000], ['desafiante', 'Desafiante', 300000],
-  ].map(([fam, nome, xp], i) => ({ ...FAM[fam], i, fam, nome, xp, img: TROFEU, familia: FAM[fam].nome }));
+  ].map(([fam, nome, xp], i) => ({ ...FAM[fam], tf: 'none', i, fam, nome, xp, img: MEDALHA(i), familia: FAM[fam].nome })); // as medalhas já vêm coloridas (sem tingir)
   const rankOf = (xp) => {
     let i = 0;
     while (i + 1 < RANKS.length && xp >= RANKS[i + 1].xp) i++;
@@ -500,30 +501,43 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
             ${admPen('bpatente')}
           </div>`;
   }
-  /* janela com todas as patentes: conquistadas (com o troféu colorido), a atual em destaque e as próximas (apagadas, com o XP que pedem) */
+  /* janela com todas as patentes: em cima a medalha atual grande (com brilho na cor da família), o XP
+     e a barra até a próxima; embaixo as famílias em grade de medalhas: conquistadas (coloridas, com ✓),
+     a atual (com anel e "Atual") e as próximas (apagadas, com cadeado e quanto XP falta) */
   function ranksSheet(onClose) {
     const X = window.HC_xp; if (!X || document.querySelector('.lk')) return;
-    const xp = X.get().xp, cur = X.rankOf(xp), F = X.FAMILIAS;
+    const xp = X.get().xp, cur = X.rankOf(xp), F = X.FAMILIAS, total = X.RANKS.length;
     const fams = [...new Set(X.RANKS.map((r) => r.fam))];
+    const LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+    const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>';
     const wrap = document.createElement('div');
     wrap.className = 'lk pfr';
     wrap.innerHTML = `<div class="lk-backdrop"></div>
       <div class="lk-card pfr-card" role="dialog" aria-modal="true" aria-labelledby="pfr-t" style="--rc1:${cur.c1};--rc2:${cur.c2}">
+        <button type="button" class="pfr-x" aria-label="Fechar">×</button>
         <div class="pfr-head">
-          <img src="${esc(cur.img)}" alt="" style="filter:${cur.tf}">
-          <div><small>Sua patente</small><h2 id="pfr-t">${esc(cur.nome)}</h2><p>${nf(xp)} XP · ${cur.i + 1} de ${X.RANKS.length} patentes${cur.next ? ` · faltam <b>${nf(cur.falta)} XP</b> para ${esc(cur.next.nome)}` : ''}</p></div>
-          <button type="button" class="pfr-x" aria-label="Fechar">×</button>
+          <div class="pfr-hero" aria-hidden="true"><i class="rays"></i><i class="glow"></i><img src="${esc(cur.img)}" alt="" draggable="false"></div>
+          <small>Sua patente · ${cur.i + 1} de ${total}</small>
+          <h2 id="pfr-t">${esc(cur.nome)}</h2>
+          <p><b>${nf(xp)} XP</b>${cur.next ? ` · faltam <b>${nf(cur.falta)} XP</b> para ${esc(cur.next.nome)}` : ' · patente máxima!'}</p>
+          ${cur.next ? `<div class="pfr-prog"><div class="bar"><i style="--p:${(cur.pct / 100).toFixed(4)}"></i></div><img src="${esc(cur.next.img)}" alt="" title="${esc(cur.next.nome)}" draggable="false"></div>` : ''}
+          <div class="pfr-dots" aria-hidden="true">${X.RANKS.map((r) => `<i class="${r.i < cur.i ? 'ok' : r.i === cur.i ? 'cur' : ''}" style="--c:${r.c2}"></i>`).join('')}</div>
         </div>
         <div class="pfr-list">
-          ${fams.map((f) => `
+          ${fams.map((f) => {
+            const rs = X.RANKS.filter((r) => r.fam === f), got = rs.filter((r) => r.i <= cur.i).length;
+            return `
           <section class="pfr-fam" style="--c1:${F[f].c1};--c2:${F[f].c2}">
-            <h3>${esc(F[f].nome)}</h3>
-            ${X.RANKS.filter((r) => r.fam === f).map((r) => {
+            <h3><span>${esc(F[f].nome)}</span><small>${got}/${rs.length}</small></h3>
+            <div class="pfr-grid">
+            ${rs.map((r) => {
               const st = r.i < cur.i ? 'ok' : r.i === cur.i ? 'cur' : 'lock';
-              const tag = st === 'ok' ? 'Conquistada' : st === 'cur' ? 'Atual' : `Faltam ${nf(r.xp - xp)} XP`;
-              return `<div class="pfr-row ${st}"${st === 'cur' ? ' data-cur' : ''}><img src="${esc(r.img)}" alt="" style="filter:${st === 'lock' ? 'grayscale(1) brightness(.75)' : r.tf}"><span class="pfr-name"><b>${esc(r.nome)}</b><small>${nf(r.xp)} XP</small></span><em>${st === 'ok' ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>` : ''}${tag}</em></div>`;
+              const tag = st === 'ok' ? `${CHECK}Conquistada` : st === 'cur' ? 'Atual' : `${LOCK}${nf(r.xp - xp)} XP`;
+              return `<div class="pfr-m ${st}"${st === 'cur' ? ' data-cur' : ''} style="--d:${r.i * 30}ms"><span class="pic"><img src="${esc(r.img)}" alt="" loading="lazy" draggable="false"></span><b>${esc(r.nome)}</b><small>${nf(r.xp)} XP</small><em>${tag}</em></div>`;
             }).join('')}
-          </section>`).join('')}
+            </div>
+          </section>`;
+          }).join('')}
         </div>
       </div>`;
     document.body.appendChild(wrap);
@@ -534,7 +548,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     requestAnimationFrame(() => {
       wrap.classList.add('in'); wrap.querySelector('.pfr-x').focus({ preventScroll: true });
       const list = wrap.querySelector('.pfr-list'), c = wrap.querySelector('[data-cur]');
-      if (c) list.scrollTop = Math.max(0, c.offsetTop - list.offsetTop - list.clientHeight / 2 + c.offsetHeight / 2);
+      if (c) list.scrollTop = Math.max(0, c.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop - list.clientHeight / 2 + c.offsetHeight / 2);
     });
   }
   /* saldo em odômetro (centavos): cada casa é uma fita 0–9 que rola; casas da frente ainda zero ficam recolhidas */
