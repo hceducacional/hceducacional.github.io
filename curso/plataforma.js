@@ -250,6 +250,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   let openMod = (() => { try { const v = sessionStorage.getItem('hc:pf:open'); return v === null ? null : +v; } catch { return null; } })();
   const saveOpen = () => { try { openMod === null ? sessionStorage.removeItem('hc:pf:open') : sessionStorage.setItem('hc:pf:open', String(openMod)); } catch {} };
   const ICO = {
+    check: '<path d="M20 6 9 17l-5-5"/>',
     next: '<path d="M5 12h14M13 6l6 6-6 6"/>',
     prev: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
     keys: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/>',
@@ -382,9 +383,9 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   const pad2 = (n) => String(n).padStart(2, '0');
   const CONTS_BASE = CURSO_DISC.flatMap(([did, , , , aulas], di) => [
     ...aulas.map(([titulo, desc], k) => ({ id: `${did}-a${pad2(k + 1)}`, disc: did, tipo: 'texto', rotulo: `Aula ${pad2(k + 1)}`, ordem: k + 1, seq: true,
-      titulo, desc, meta: '10 perguntas · nota mínima 7', image: '', visivel: true, arquivo: `curso/conteudos/${did}.js`, fixo: true })),
+      titulo, desc, meta: '120 min · 10 perguntas · nota 7', image: '', visivel: true, arquivo: `curso/conteudos/${did}.js`, fixo: true })),
     { id: `${did}-av`, disc: did, tipo: 'prova', rotulo: 'Aula 10 · Avaliação', ordem: 10, seq: true, titulo: 'Avaliação da disciplina',
-      desc: '30 perguntas sobre as Aulas 01 a 09, sem o material: mostre o que você aprendeu.', meta: '30 perguntas · nota mínima 7', image: '', visivel: true, arquivo: `curso/conteudos/${did}.js`, fixo: true },
+      desc: '30 perguntas sobre as Aulas 01 a 09, sem o material: mostre o que você aprendeu.', meta: '5 horas · 30 perguntas · nota 7', image: '', visivel: true, arquivo: `curso/conteudos/${did}.js`, fixo: true },
   ]);
   /* disciplinas: os cards da seção abaixo dos módulos. Cada uma abre a sua página (#informatica/disciplina-<id>)
      com os conteúdos dela (textos, PDFs, questionários e provas). Ficam em cursoConteudo com kind: 'disc';
@@ -448,18 +449,56 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   const progTxt = (c) => {
     const p = contProg(c.id); if (!p?.savedAt) return '';
     const h = Array.isArray(p.hist) ? p.hist : [], n = Object.keys(p.ans || {}).length, r = (p.read || []).length;
+    /* tentativa aberta: quanto tempo ainda resta (aula 120 min, avaliação 5 h) */
+    if (!p.fechada && p.ini) {
+      const left = p.ini + (c.tipo === 'prova' ? 300 : 120) * 60000 - Date.now(), m = Math.ceil(left / 60000);
+      if (left <= 0) return 'Tempo esgotado · abra para ver a nota';
+      return `Resta ${m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}min` : ''}` : `${m} min`} · ${n ? `${n}/${c.tipo === 'prova' ? 30 : 10} respostas` : `${r} ${r === 1 ? 'parte lida' : 'partes lidas'}`}`;
+    }
     if (h.length) { const best = Math.max(...h.map((x) => x.nota)); return `Nota ${best.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}${best < 7 ? ' · recuperação' : ''}`; }
     return n ? `${n} ${n === 1 ? 'resposta' : 'respostas'} · ${r} ${r === 1 ? 'parte lida' : 'partes lidas'}` : `${r} ${r === 1 ? 'parte lida' : 'partes lidas'}`;
   };
+  /* barra de progresso da aula no card: metade pela leitura das partes, metade pelas perguntas respondidas;
+     depois de enviar o questionário fica cheia. Aprovado (nota 7+) mostra o selo com a nota.
+     O total de partes e perguntas vem do arquivo da aula (baixado na página da disciplina) */
+  function cprog(c) {
+    if (lockOf(c)) return '';
+    const best = bestOf(c.id), fmt = (n) => n.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+    if (best !== null && best >= 7) return `<div class="pf-cprog ok"><span class="pf-cprog-trk"><i style="--p:1"></i></span><b class="pf-aprov">${svg('check')} Aprovado · nota ${fmt(best)}</b></div>`;
+    const p = contProg(c.id) || {}, A = window.HC_CONTEUDOS?.[c.id];
+    const nP = A?.partes?.length || (A?.avaliacao ? Math.ceil(A.avaliacao.aulas.length / 3) : 0);
+    const nQ = A?.perguntas?.length || (A?.avaliacao ? A.avaliacao.aulas.length / 3 * 10 : 0) || +(c.meta || '').match(/(\d+) perguntas/)?.[1] || 0;
+    const r = (p.read || []).length, n = Object.keys(p.ans || {}).length;
+    const parts = [...(nP ? [Math.min(1, r / nP)] : []), ...(nQ ? [Math.min(1, n / nQ)] : [])];
+    const pct = Math.round((best !== null ? 1 : parts.length ? parts.reduce((a, b) => a + b, 0) / parts.length : 0) * 100);
+    return `<div class="pf-cprog${best !== null ? ' rec' : ''}" role="progressbar" aria-label="Progresso da aula" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><span class="pf-cprog-trk"><i style="--p:${pct / 100}"></i></span><b>${pct}%</b></div>`;
+  }
   /* card de um conteúdo (dentro da página da disciplina) */
+  /* capa ilustrada e animada da aula (curso/capas.js); sem ela, o ícone do tipo. A imagem enviada pelo administrador vale mais */
+  const capaPh = (c, i, ico, adm) => window.HC_CAPAS?.[c.id] ? `<span class="pf-ph pf-capa" style="--k:${i}">${window.HC_CAPAS[c.id]}</span>`
+    : `<span class="pf-ph" style="--k:${i}">${svg(ico)}${adm ? '<em>Imagem do conteúdo<small>1000 × 1250</small></em>' : ''}</span>`;
+  /* as capas ficam num arquivo à parte, baixado só na página da disciplina; quando chega, troca os ícones pelas capas */
+  function paintCapas(root) {
+    /* arquivos das aulas desta página: dão o total de partes e perguntas para a barra de progresso */
+    const arqs = [...new Set([...root.querySelectorAll('[data-cont]')].map((el) => conts().find((x) => x.id === el.dataset.cont)?.arquivo).filter(Boolean))];
+    Promise.all(arqs.map(load)).then(() => root.querySelectorAll('[data-cont]').forEach((el) => {
+      const c = conts().find((x) => x.id === el.dataset.cont), slot = el.querySelector('.pf-cprog-slot');
+      if (c && slot) slot.innerHTML = cprog(c);
+    }), () => {});
+    Promise.all([load('curso/capas.css'), load('curso/capas.js')]).then(() => {
+      root.querySelectorAll('[data-cont]').forEach((el) => {
+        const c = conts().find((x) => x.id === el.dataset.cont), ph = el.querySelector('.pf-lesson-img > .pf-ph:not(.pf-capa)');
+        if (c && !c.image && ph && window.HC_CAPAS?.[c.id]) { ph.outerHTML = capaPh(c, +getComputedStyle(ph).getPropertyValue('--k') || 0); if (window.HC_CAPAS_TINT?.[c.id]) el.style.setProperty('--tint', HC_CAPAS_TINT[c.id]); }
+      });
+    }, () => {});
+  }
   function contCard(c, i) {
     const adm = isAdmin(), t = CT[c.tipo] || CT.texto, ico = CT[c.tipo] ? c.tipo : 'texto', lk = lockOf(c), ok = contDone(c.id);
     const nome = c.seq ? (c.tipo === 'prova' ? 'Avaliação' : 'Aula') : t.nome;
     const go = lk ? svg('lock') : ok ? 'Revisar' : contProg(c.id)?.savedAt ? 'Continuar' : 'Abrir';
     return `
-      <article class="pf-lesson pf-modcard pf-ccard${c.visivel ? '' : ' draft'}${ok ? ' done' : ''}${lk ? ' locked' : ''}" style="--i:${i};--tint:${t.tint}" data-cont="${esc(c.id)}" tabindex="0" role="button" aria-label="${esc(c.rotulo || t.nome)}: ${esc(c.titulo)}${lk ? ' (trancada)' : ''}">
-        <div class="pf-lesson-img">${c.image ? `<img class="pf-img" src="${esc(imgUrl(c.image))}" alt="" loading="lazy" />`
-          : `<span class="pf-ph" style="--k:${i}">${svg(ico)}${adm ? '<em>Imagem do conteúdo<small>1000 × 1250</small></em>' : ''}</span>`}
+      <article class="pf-lesson pf-modcard pf-ccard${c.visivel ? '' : ' draft'}${ok ? ' done' : ''}${lk ? ' locked' : ''}" style="--i:${i};--tint:${(!c.image && window.HC_CAPAS_TINT?.[c.id]) || t.tint}" data-cont="${esc(c.id)}" tabindex="0" role="button" aria-label="${esc(c.rotulo || t.nome)}: ${esc(c.titulo)}${lk ? ' (trancada)' : ''}">
+        <div class="pf-lesson-img">${c.image ? `<img class="pf-img" src="${esc(imgUrl(c.image))}" alt="" loading="lazy" />` : capaPh(c, i, ico, adm)}
           ${c.seq ? `<span class="pf-cnum">${c.tipo === 'prova' ? svg('prova') : pad2(c.ordem)}</span>` : ''}
           ${lk ? `<span class="pf-clock">${svg('lock')}<small>Passe na ${esc(lk.rotulo?.split(' · ')[0] || 'aula anterior')} com nota 7</small></span>` : ''}
           ${ok ? `<span class="pf-cok">${svg('shield')}</span>` : ''}</div>
@@ -468,6 +507,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
             <span class="pf-lesson-tag">${esc(c.rotulo || t.nome)}${adm && !c.visivel ? ' · Rascunho' : ''}</span>
             <h3>${esc(c.titulo || 'Sem título')}</h3>
             <p>${esc(c.desc || '')}</p>
+            ${c.seq ? `<div class="pf-cprog-slot">${cprog(c)}</div>` : ''}
           </div>
           <div class="pf-lesson-bar">
             <span class="pf-lesson-av">${svg(ico)}</span>
@@ -496,6 +536,10 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     dots.forEach((d, i) => d.addEventListener('click', () => row.scrollTo({ left: cards[i].offsetLeft - cards[0].offsetLeft, behavior: 'smooth' })));
     row.addEventListener('scroll', upd, { passive: true }); upd();
   }
+  /* barra da disciplina no card: sobe a cada aula aprovada (nota 7+); com todas aprovadas, vira o selo de concluída */
+  const discBar = (p) => p.ok >= p.n
+    ? `<div class="pf-cprog ok"><span class="pf-cprog-trk"><i style="--p:1"></i></span><b class="pf-aprov">${svg('check')} Concluída</b></div>`
+    : `<div class="pf-cprog" role="progressbar" aria-label="Aulas aprovadas" aria-valuemin="0" aria-valuemax="${p.n}" aria-valuenow="${p.ok}"><span class="pf-cprog-trk"><i style="--p:${p.ok / p.n}"></i></span><b>${p.ok}/${p.n}</b></div>`;
   /* seção "Disciplinas", logo abaixo dos módulos: cada card abre a página da disciplina */
   function contsSection() {
     const list = visDiscs(), adm = isAdmin();
@@ -510,6 +554,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
             <span class="pf-lesson-tag">Disciplina${adm && !d.visivel ? ' · Rascunho' : ''}</span>
             <h3>${esc(d.titulo || 'Sem título')}</h3>
             <p>${esc(d.desc || '')}</p>
+            ${p.n ? discBar(p) : ''}
           </div>
           <div class="pf-lesson-bar">
             <span class="pf-lesson-av">${svg(d.ico || 'book')}</span>
@@ -628,7 +673,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       </section>
     </div>`;
     view.querySelector('.pfd-back').addEventListener('click', () => { location.hash = '#informatica/cursos'; });
-    bindCards(view.querySelector('.pfd'), view);
+    bindCards(view.querySelector('.pfd'), view); paintCapas(view);
     if (keepScroll) scrollTo(0, y); else scrollTo(0, 0);
     sync(view); // notas feitas em outro aparelho destrancam as aulas aqui também
   }
@@ -646,7 +691,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     if (!c?.arquivo || (!isAdmin() && (!c.visivel || !d?.visivel))) { location.hash = '#informatica/cursos'; return toast('Este conteúdo não está disponível.'); }
     if (lockOf(c)) { location.hash = `#informatica/disciplina-${c.disc}`; return toast('Esta aula ainda está trancada. Passe na anterior com nota 7 ou mais.'); }
     view.innerHTML = '<div class="wrap"><p class="me-loading">Carregando o conteúdo…</p></div>';
-    try { await Promise.all([load('curso/conteudo.css'), load('curso/figuras.js'), load('curso/conteudo.js'), load(c.arquivo)]); }
+    try { await Promise.all([load('curso/conteudo.css'), load('curso/figuras.js'), load('curso/conteudo.js'), load(c.arquivo), load('curso/capas.css'), load('curso/capas.js').catch(() => {})]); }
     catch { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir o conteúdo. Verifique a internet e tente de novo.</p></div>'; return; }
     if (location.hash !== `#informatica/conteudo-${id}`) return;
     const nx = nextOf(c);

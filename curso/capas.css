@@ -1,0 +1,92 @@
+/* Capas ilustradas das aulas (desenhos em curso/capas.js).
+   Paradas por padrão; as animações só existem com o mouse em cima do card (ou com o foco do teclado). */
+.pf-ccard .pf-lesson-img .pf-ph svg.cv { position: absolute; top: 21%; left: 4%; width: 92%; height: 40%; max-width: none; transform: none; color: inherit; overflow: visible;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .22)); }
+.pf-capa { background: rgb(var(--tint)); }
+/* fundo de cada capa: degradê nas cores da aula, uma luz no canto e um desenho leve que some para baixo */
+.cvb { position: absolute; inset: 0; overflow: hidden;
+  background: radial-gradient(90% 70% at 85% 5%, color-mix(in srgb, var(--a) 85%, #fff), transparent 62%),
+    radial-gradient(80% 70% at 0% 100%, rgba(0, 0, 0, .35), transparent 70%),
+    linear-gradient(160deg, var(--a) 0%, var(--b) 78%); }
+.cvb::before { content: ""; position: absolute; right: -22%; top: -26%; width: 78%; aspect-ratio: 1; border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, .22); box-shadow: 0 0 0 26px rgba(255, 255, 255, .06), 0 0 0 54px rgba(255, 255, 255, .04); transition: transform 1.2s var(--ease, ease); }
+.cvb::after { content: ""; position: absolute; inset: 0; opacity: .22;
+  -webkit-mask-image: linear-gradient(to bottom, #000 25%, transparent 80%); mask-image: linear-gradient(to bottom, #000 25%, transparent 80%); }
+.cvb-dots::after { background: radial-gradient(circle, #fff 1.6px, transparent 2.2px) 0 0 / 18px 18px; }
+.cvb-grid::after { background: linear-gradient(#fff 1px, transparent 1px) 0 0 / 22px 22px, linear-gradient(90deg, #fff 1px, transparent 1px) 0 0 / 22px 22px; }
+.cvb-stripes::after { background: repeating-linear-gradient(0deg, #fff 0 1.5px, transparent 1.5px 13px); }
+.cvb-diag::after { background: repeating-linear-gradient(45deg, #fff 0 1.5px, transparent 1.5px 14px); }
+.cvb-rings::after { background: repeating-radial-gradient(circle at 50% 42%, #fff 0 1.5px, transparent 1.5px 20px); }
+.cvb-rays::after { background: repeating-conic-gradient(from 0deg at 50% 40%, #fff 0 3deg, transparent 3deg 15deg); opacity: .16; }
+.cvb-waves::after { background: radial-gradient(circle at 50% 0, transparent 8px, #fff 9px, transparent 10.5px) 0 0 / 22px 13px; }
+.cvb-circuit::after { background: linear-gradient(90deg, #fff 1.5px, transparent 1.5px) 0 0 / 34px 34px, linear-gradient(#fff 1.5px, transparent 1.5px) 17px 0 / 34px 34px,
+  radial-gradient(circle, #fff 3px, transparent 3.5px) 0 0 / 34px 34px; opacity: .17; }
+.cvb-confetti::after { opacity: .5; background:
+  radial-gradient(circle, #fcd34d 2px, transparent 2.6px) 0 0 / 46px 38px, radial-gradient(circle, #f9a8d4 2px, transparent 2.6px) 23px 19px / 46px 38px,
+  radial-gradient(circle, #67e8f9 1.6px, transparent 2.2px) 11px 27px / 46px 38px; }
+.pf-ccard:is(:hover, :focus-visible) .cvb::before { transform: scale(1.12) translate(-4%, 4%); }
+.cv * { transform-box: fill-box; transform-origin: center; }
+.cv .cv-spin { transform-box: view-box; transform-origin: var(--o); }
+.cv [transform] { transform-box: view-box; transform-origin: 0 0; } /* peças com transform no próprio desenho (pás da ventoinha, anel): giram em volta do ponto dado, não do próprio centro */
+.cv .cv-type, .cv .cv-trace { transform-origin: left center; }
+.cv .cv-bar { transform-origin: center bottom; }
+.cv .cv-cursor { transform-origin: left top; }
+
+@media (hover: hover) {
+  .pf-ccard:is(:hover, :focus-visible) .cv-glow { animation: cvGlow 2.4s ease-in-out infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-d { animation: cvIn 2.1s var(--d, 0s) ease-in-out infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-dash { animation: cvDash .9s linear infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-pulse { animation: cvPulse 1.4s ease-in-out infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-bar { animation: cvBar 2.1s var(--d, 0s) cubic-bezier(.3, 1.4, .5, 1) infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-line { animation: cvLine 2.4s ease-in-out infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-dot { animation: cvPop 2.4s var(--d, 0s) ease-out infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-bead { animation: cvBead 1.6s var(--d, 0s) ease-in-out infinite alternate; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-spin { animation: cvSpin 3s linear infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-fast { animation-duration: .7s; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-blink { animation: cvBlink 1s var(--d, 0s) steps(2, jump-none) infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-type { animation: cvType 2.2s var(--d, 0s) ease-out infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-caret { animation: cvBlink .8s steps(2, jump-none) infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-float { animation: cvFloat 2s ease-in-out infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-screen { animation: cvScreen 1.6s ease-in-out infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-hop { animation: cvHop 1.8s var(--d, 0s) cubic-bezier(.3, 0, .3, 1) infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-trace { stroke-dasharray: 10 6; animation: cvDash .7s var(--d, 0s) linear infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-key { animation: cvKey 1.8s var(--d, 0s) ease-in-out infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-paper { animation: cvPaper 2.2s ease-in-out infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-ring { animation: cvRing 2.6s cubic-bezier(.5, 0, .3, 1) infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-spark { animation: cvSpark 1.6s var(--d, 0s) ease-in-out infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-cursor { animation: cvCursor 2.4s cubic-bezier(.5, 0, .2, 1) infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-click { animation: cvClick 2.4s ease-in-out infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-ripple { animation: cvRipple 2.4s var(--d, 0s) ease-out infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-wheel { animation: cvWheel .8s ease-in-out infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-press { animation: cvPress 2.2s var(--d, 0s) ease-in-out infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-check { animation: cvCheck 2.8s var(--d, 0s) ease-out infinite; }
+  .pf-ccard:is(:hover, :focus-visible) .cv-medal { animation: cvMedal 2.8s ease-in-out infinite; }
+}
+
+/* todas começam e terminam na posição parada, para o desenho não "pular" quando o mouse chega */
+@keyframes cvGlow { 50% { opacity: .55; transform: scale(1.06); } }
+@keyframes cvIn { 0%, 100% { transform: none; opacity: 1; } 45% { transform: translateX(42px) scale(.6); opacity: 0; } 46% { transform: translateX(-16px); opacity: 0; } }
+@keyframes cvDash { to { stroke-dashoffset: -16; } }
+@keyframes cvPulse { 50% { transform: scale(1.12); } }
+@keyframes cvBar { 0%, 100% { transform: none; } 30% { transform: scaleY(.3); } }
+@keyframes cvLine { 0% { stroke-dasharray: 0 400; } 70%, 100% { stroke-dasharray: 400 0; } }
+@keyframes cvPop { 0%, 100% { transform: none; } 12% { transform: scale(1.6); } 24% { transform: none; } }
+@keyframes cvBead { to { transform: translateX(var(--x, 18px)); } }
+@keyframes cvSpin { to { transform: rotate(360deg); } }
+@keyframes cvBlink { 50% { opacity: .25; } }
+@keyframes cvType { 0% { transform: scaleX(0); } 45%, 100% { transform: none; } }
+@keyframes cvFloat { 50% { transform: translateY(-7px) rotate(-4deg); } }
+@keyframes cvScreen { 50% { opacity: .95; } }
+@keyframes cvHop { 0%, 40%, 100% { transform: none; } 20% { transform: translateY(-12px); } }
+@keyframes cvKey { 0%, 100% { opacity: .8; } 8% { opacity: 1; fill: #fcd34d; transform: translateY(2px); } 20% { opacity: .8; transform: none; } }
+@keyframes cvPaper { 0%, 100% { transform: none; } 50%, 70% { transform: translateY(14px); } }
+@keyframes cvRing { 0% { stroke-dashoffset: 100; } 60%, 100% { stroke-dashoffset: 0; } }
+@keyframes cvSpark { 0%, 100% { transform: none; } 50% { transform: scale(.4) rotate(45deg); opacity: .5; } }
+@keyframes cvCursor { 0%, 100% { transform: none; } 30% { transform: translate(30px, 26px); } 55%, 70% { transform: none; } 62% { transform: scale(.85); } }
+@keyframes cvClick { 0%, 55%, 75%, 100% { opacity: 1; } 62% { opacity: .35; } }
+@keyframes cvRipple { 0%, 58% { transform: scale(.3); opacity: 0; } 62% { opacity: 1; } 90%, 100% { transform: scale(2.6); opacity: 0; } }
+@keyframes cvWheel { 50% { transform: translateY(4px); } }
+@keyframes cvPress { 0%, 30%, 100% { transform: none; } 12% { transform: translateY(6px); } }
+@keyframes cvCheck { 0% { stroke-dashoffset: 1; } 25%, 100% { stroke-dashoffset: 0; } }
+@keyframes cvMedal { 0%, 100% { transform: none; } 50% { transform: rotate(-8deg) scale(1.05); } }
+@media (prefers-reduced-motion: reduce) { .cv, .cv * { animation: none !important; } }

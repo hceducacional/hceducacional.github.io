@@ -58,7 +58,39 @@
 .ct-step:hover i { background: #d2d2d7; }
 .ct-step.read i { background: rgba(var(--tint), .45); }
 .ct-step.cur i { height: 10px; margin-top: -5px; background: var(--tc); }
-.ct-step.qdone::after { content: ''; position: absolute; right: 2px; top: 1px; width: 7px; height: 7px; border-radius: 50%; background: #16a34a; box-shadow: 0 0 0 2px #fff; }
+/* parte com todas as perguntas respondidas: trilha verde e selo redondo com visto no fim do trecho */
+.ct-step.qdone i { background: linear-gradient(90deg, #22c55e, #16a34a); }
+.ct-step.qdone.cur i { background: linear-gradient(90deg, var(--tc), #16a34a); }
+.ct-step.qdone::after { content: ''; position: absolute; right: -3px; top: 50%; width: 18px; height: 18px; margin-top: -9px; border-radius: 50%;
+  background: #16a34a url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 11px no-repeat; box-shadow: 0 0 0 2.5px #fff, 0 3px 8px rgba(22, 163, 74, .45); animation: ctOk .5s cubic-bezier(.34, 1.56, .64, 1) both; }
+@keyframes ctOk { from { transform: scale(.2) rotate(-40deg); opacity: 0; } }
+/* partes ainda fechadas: trilha tracejada e cadeado */
+.ct-step.locked { cursor: not-allowed; }
+.ct-step.locked i { background: repeating-linear-gradient(90deg, #e5e5ea 0 6px, transparent 6px 10px); }
+.ct-step.locked::after { content: ''; position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4.5' y='10.5' width='15' height='10' rx='2.5'/%3E%3Cpath d='M8 10.5V7.5a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E") center / 11px no-repeat; }
+.ct-toc a.locked { opacity: .5; cursor: not-allowed; }
+.ct-toc a.locked .ct-toc-ok { opacity: 1; transform: none; color: #8e8e93; }
+.ct-toc a.locked .ct-toc-ok svg { display: none; }
+.ct-toc a.locked .ct-toc-ok::before { content: ''; display: block; width: 16px; height: 16px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4.5' y='10.5' width='15' height='10' rx='2.5'/%3E%3Cpath d='M8 10.5V7.5a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E") center / 16px no-repeat; }
+.ct-pg.next.locked { background: #e5e5ea; color: #6e6e73; cursor: not-allowed; }
+.ct-pg.next.locked small { color: #6e6e73; }
+.ct-pg.next.locked:hover { filter: none; background: #dcdce1; }
+/* aviso "Responda para continuar": cartão escuro que sobe de baixo, com atalho para as perguntas */
+.ct-gate { position: fixed; z-index: 80; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 28px); display: flex; align-items: center; gap: 12px; width: min(460px, calc(100vw - 32px));
+  padding: 12px 12px 12px 14px; border-radius: 20px; background: rgba(28, 28, 30, .94); color: #fff; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 18px 50px -14px rgba(0, 0, 0, .6), inset 0 0 0 1px rgba(255, 255, 255, .1);
+  transform: translate(-50%, 140%); opacity: 0; pointer-events: none; transition: transform .5s cubic-bezier(.34, 1.4, .64, 1), opacity .3s; }
+.ct-gate.in { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+.ct-gate-ico { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px; background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #1c1917; }
+.ct-gate.in .ct-gate-ico { animation: ctShake .6s .25s ease; }
+.ct-gate-ico svg { width: 20px; height: 20px; stroke-width: 2.4; }
+.ct-gate-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ct-gate-t b { font-size: 15px; font-weight: 700; }
+.ct-gate-t small { font-size: 13px; line-height: 1.3; opacity: .72; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.ct-gate-go { flex: none; height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: #fff; color: #1c1917; font: 700 14px/1 inherit; font-family: inherit; cursor: pointer; transition: transform .2s; }
+.ct-gate-go:active { transform: scale(.95); }
+@keyframes ctShake { 20%, 60% { transform: rotate(-12deg); } 40%, 80% { transform: rotate(12deg); } }
+@media (max-width: 860px) { .ct-gate { bottom: calc(env(safe-area-inset-bottom) + 96px); } }
 /* partes: uma por vez */
 .ct-part { position: relative; padding-top: 30px; }
 .ct-part[hidden] { display: none; }
@@ -573,3 +605,130 @@
 @media (prefers-reduced-motion: reduce) { .ct-fig *, .ct-i * { animation: none !important; } }
 .ct-fig text.tg { font-size: 13px; }
 @media (max-width: 640px) { .ct-fig text.tg { font-size: 16.5px; font-weight: 700; } .ct-fig text { font-size: 15px; } .ct-fig text.sm { font-size: 13px; } }
+
+/* ---------- tempo limite da tentativa ---------- */
+.ct-meta span.ct-meta-lim { background: rgba(var(--tint), .1); color: var(--tc); }
+.ct-clock { position: relative; display: flex; align-items: center; gap: 8px; margin: 0 24px 14px; padding: 10px 14px 13px; border-radius: 14px; overflow: hidden;
+  background: rgba(255, 255, 255, .07); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); font-size: 13px; color: rgba(255, 255, 255, .7); transition: background .4s, color .4s; }
+.ct-clock[hidden] { display: none; }
+.ct-clock svg { flex: none; width: 17px; height: 17px; color: #fff; }
+.ct-clock span { flex: 1; font-weight: 600; }
+.ct-clock b { font-size: 17px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.ct-clock-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, .08); }
+.ct-clock-bar i { display: block; height: 100%; background: linear-gradient(90deg, #34d399, #22c55e); transform-origin: 0 50%; transition: transform 1s linear; }
+.ct-clock.warn { background: rgba(251, 191, 36, .14); box-shadow: inset 0 0 0 1px rgba(251, 191, 36, .35); color: #fde68a; }
+.ct-clock.warn svg, .ct-clock.warn b { color: #fcd34d; }
+.ct-clock.warn .ct-clock-bar i { background: #fbbf24; }
+.ct-clock.end { background: rgba(239, 68, 68, .18); box-shadow: inset 0 0 0 1px rgba(239, 68, 68, .5); color: #fecaca; animation: ctClk 1s ease-in-out infinite; }
+.ct-clock.end svg, .ct-clock.end b { color: #f87171; }
+.ct-clock.end .ct-clock-bar i { background: #ef4444; }
+@keyframes ctClk { 50% { background: rgba(239, 68, 68, .3); } }
+.ct-fab > span { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.1; }
+.ct-fab-clk { font-size: 11.5px; font-weight: 700; opacity: .75; font-variant-numeric: tabular-nums; }
+.ct-fab-clk:empty { display: none; }
+.ct-fab.warn .ct-fab-clk { color: #fcd34d; opacity: 1; }
+.ctq-tout { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 10px 0 0; font-size: 13.5px; color: #fca5a5; }
+.ctq-tout svg { width: 16px; height: 16px; flex: none; }
+@media (max-width: 1023px) { .ct-clock { margin: 0 16px 12px; } }
+
+/* ---------- pré-tela da aula: perguntas, tempo, regras, "Ler material" e "Iniciar questionário" ---------- */
+.cti { max-width: 880px; margin: 0 auto; padding: 36px clamp(22px, 5vw, 56px) 40px; border-radius: 32px; background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 24px 50px -36px rgba(0, 0, 0, .3); animation: ctUp .6s var(--soft) both; }
+.cti-hero { display: flex; align-items: center; gap: clamp(18px, 3vw, 32px); }
+.cti-cover { flex: none; width: clamp(96px, 16vw, 150px); aspect-ratio: 4 / 5; border-radius: 22px; overflow: hidden; background: linear-gradient(150deg, rgba(var(--tint), .7), rgb(var(--tint)));
+  box-shadow: 0 18px 34px -18px rgba(var(--tint), .9); }
+.cti-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cti-ico { display: grid; place-items: center; color: rgba(255, 255, 255, .9); }
+.cti-ico svg { width: 42%; height: auto; }
+.cti-txt { min-width: 0; }
+.cti-txt h1 { margin: 6px 0 10px; font-size: clamp(30px, 4vw, 46px); line-height: 1.05; font-weight: 800; letter-spacing: -.035em; }
+.cti-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 28px; }
+.cti-stats > div { display: flex; flex-direction: column; gap: 2px; padding: 16px; border-radius: 20px; background: #f5f5f7; }
+.cti-stats span { display: grid; place-items: center; width: 36px; height: 36px; margin-bottom: 8px; border-radius: 11px; background: rgba(var(--tint), .12); color: var(--tc); }
+.cti-stats span svg { width: 19px; height: 19px; }
+.cti-stats b { font-size: 24px; font-weight: 800; letter-spacing: -.03em; color: var(--ink); }
+.cti-stats small { font-size: 13px; font-weight: 600; color: var(--muted); }
+.cti-st { display: flex; align-items: center; gap: 14px; margin-top: 16px; padding: 14px 16px; border-radius: 18px; }
+.cti-st > svg { flex: none; width: 38px; height: 38px; padding: 9px; border-radius: 12px; color: #fff; }
+.cti-st div { display: flex; flex-direction: column; gap: 2px; }
+.cti-st b { font-size: 15.5px; } .cti-st small { font-size: 13.5px; line-height: 1.35; opacity: .8; }
+.cti-st.ok { background: #ecfdf3; color: #14532d; } .cti-st.ok > svg { background: #16a34a; }
+.cti-st.rec { background: #fff7ed; color: #7c2d12; } .cti-st.rec > svg { background: #f59e0b; }
+.cti-st.run { background: rgba(var(--tint), .08); color: var(--ink); } .cti-st.run > svg { background: var(--tc); }
+.cti-rules { display: grid; gap: 12px; margin: 26px 0 0; padding: 0; list-style: none; }
+.cti-rules li { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; line-height: 1.45; color: var(--ink-2, #424245); }
+.cti-rules li > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--tc); }
+.cti-acts { display: flex; gap: 12px; margin-top: 30px; }
+.cti-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 58px; padding: 10px 22px; border: 0; border-radius: 18px; cursor: pointer;
+  background: var(--tc); color: #fff; font: 700 16.5px/1.15 inherit; font-family: inherit; box-shadow: 0 14px 28px -16px rgba(var(--tint), .9); transition: transform .2s, filter .2s; }
+.cti-btn:hover { filter: brightness(1.1); } .cti-btn:active { transform: scale(.98); }
+.cti-btn svg { width: 19px; height: 19px; flex: none; }
+.cti-btn.soft { flex-wrap: wrap; background: #f0f0f4; color: var(--ink); box-shadow: none; }
+.cti-btn.soft svg { color: var(--tc); }
+.cti-btn.soft small { flex-basis: 100%; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.cti-wrap .ct-testbar { max-width: 880px; margin-left: auto; margin-right: auto; }
+@media (max-width: 860px) {
+  .cti { padding: 22px 18px 24px; border-radius: 26px; }
+  .cti-hero { align-items: flex-start; }
+  .cti-cover { width: 92px; border-radius: 16px; }
+  .cti-txt .ct-sub { font-size: 15px; }
+  .cti-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 20px; }
+  .cti-stats > div { padding: 12px 14px; border-radius: 16px; }
+  .cti-stats span { width: 30px; height: 30px; margin-bottom: 4px; } .cti-stats b { font-size: 20px; }
+  .cti-rules li { font-size: 14.5px; }
+  .cti-acts { flex-direction: column-reverse; }
+}
+
+/* ---------- leitura do material: só o texto, sem perguntas e sem relógio ---------- */
+.ct.reading .ct-grid { grid-template-columns: minmax(0, 1fr); max-width: 980px; margin: 0 auto; }
+.ct.reading .ct-quiz, .ct.reading .ct-fab, .ct.reading .ct-scrim, .ct.reading .ct-foot p { display: none; }
+.ct-readmode { position: sticky; z-index: 5; top: calc(var(--header-h, 64px) + 24px); display: flex; align-items: center; gap: 12px; max-width: 980px; margin: 0 auto 16px; padding: 10px 10px 10px 14px;
+  border-radius: 18px; background: var(--tc); color: #fff; box-shadow: 0 14px 30px -18px rgba(var(--tint), .9); }
+.ct-readmode-ico { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: rgba(255, 255, 255, .18); }
+.ct-readmode-ico svg { width: 18px; height: 18px; }
+.ct-readmode > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ct-readmode b { font-size: 15px; } .ct-readmode small { font-size: 12.5px; opacity: .85; }
+.ct-readmode .ct-tb-btn.dark { color: var(--tc); }
+@media (max-width: 860px) { .ct-readmode { top: calc(var(--tb-top, 10px) + 64px); margin: 0 -8px 12px; } .ct-readmode small { display: none; } }
+
+.cti-capa { position: relative; }
+.cti-capa svg.cv { position: absolute; top: 14%; left: 3%; width: 94%; height: 72%; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .25)); }
+.ct.testing .ct-readmode { position: relative; top: 0; } /* no teste, a faixa roxa já fica presa no alto */
+.ct.reading .ct-meta-lim { display: none; }
+
+/* ---------- pré-tela colorida: nas cores da aula (as mesmas da capa) ---------- */
+.cti { background: linear-gradient(180deg, color-mix(in srgb, var(--a) 14%, #fff) 0%, #fff 42%); box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 30px 60px -40px rgba(var(--tint), .7); }
+.cti-hero { position: relative; isolation: isolate; overflow: hidden; padding: clamp(18px, 3vw, 28px); border-radius: 28px; color: #fff;
+  box-shadow: 0 22px 44px -26px rgba(var(--tint), .95); }
+/* fundo do topo: degradê escuro na cor da aula, liso, para o texto ler bem; o desenho fica só na capa ao lado */
+.cti-hero { background: radial-gradient(70% 120% at 0% 0%, color-mix(in srgb, var(--a) 35%, transparent), transparent 60%),
+  linear-gradient(135deg, color-mix(in srgb, var(--b) 78%, #000) 0%, color-mix(in srgb, var(--b) 45%, #000) 100%); }
+.cti-hero .ct-tag { color: rgba(255, 255, 255, .85); }
+.cti-hero .ct-sub { color: rgba(255, 255, 255, .9); }
+.cti-hero h1 { color: #fff; text-shadow: 0 2px 16px rgba(0, 0, 0, .18); }
+.cti-hero .cti-cover { box-shadow: 0 16px 30px -14px rgba(0, 0, 0, .55), 0 0 0 3px rgba(255, 255, 255, .55); }
+.cti-wrap .ct-top .ct-back { color: rgb(var(--tint)); }
+/* quatro quadros, cada um com a sua cor */
+.cti-stats > div { position: relative; overflow: hidden; background: var(--sb); box-shadow: inset 0 0 0 1px var(--sl); }
+.cti-stats > div::after { content: ""; position: absolute; right: -18px; bottom: -18px; width: 70px; height: 70px; border-radius: 50%; background: var(--sc); opacity: .12; }
+.cti-stats span { background: var(--sc); color: #fff; box-shadow: 0 8px 16px -8px var(--sc); }
+.cti-stats b { color: var(--sd); }
+.cti-stats small { color: color-mix(in srgb, var(--sd) 70%, #fff); }
+.cti-stats .c1 { --sc: #7c3aed; --sb: #f3edff; --sl: #e4d8ff; --sd: #4c1d95; }
+.cti-stats .c2 { --sc: #f59e0b; --sb: #fff7e6; --sl: #fde9b8; --sd: #78350f; }
+.cti-stats .c3 { --sc: #16a34a; --sb: #eafbf0; --sl: #c9f0d6; --sd: #14532d; }
+.cti-stats .c4 { --sc: #0ea5e9; --sb: #e8f6fe; --sl: #c6e9fb; --sd: #0c4a6e; }
+/* regras: cada ícone num círculo colorido */
+.cti-rules { padding: 18px; border-radius: 22px; background: color-mix(in srgb, var(--a) 7%, #fff); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--a) 18%, #fff); }
+.cti-rules li > svg { width: 30px; height: 30px; margin-top: -4px; padding: 6px; border-radius: 50%; color: #fff; background: var(--ic); }
+.cti-rules li:nth-child(1) { --ic: #f59e0b; } .cti-rules li:nth-child(2) { --ic: #7c3aed; } .cti-rules li:nth-child(3) { --ic: #ef4444; }
+.cti-rules li:nth-child(4) { --ic: #eab308; } .cti-rules li:nth-child(5) { --ic: #0ea5e9; }
+.cti-rules li b { color: var(--ink); }
+/* situação e botões */
+.cti-st.run { background: linear-gradient(120deg, color-mix(in srgb, var(--a) 22%, #fff), color-mix(in srgb, var(--a) 8%, #fff)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--a) 30%, #fff); }
+.cti-st.run > svg { background: linear-gradient(135deg, var(--a), var(--b)); }
+.cti-st.ok { box-shadow: inset 0 0 0 1px #bbf0cd; } .cti-st.rec { box-shadow: inset 0 0 0 1px #fed7aa; }
+.cti-btn { background: linear-gradient(120deg, var(--a), var(--b)); box-shadow: 0 16px 30px -16px rgba(var(--tint), .95); text-shadow: 0 1px 2px rgba(0, 0, 0, .15); }
+.cti-btn.soft { background: color-mix(in srgb, var(--a) 14%, #fff); color: var(--ink); text-shadow: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--a) 30%, #fff); }
+.cti-btn.soft svg { color: rgb(var(--tint)); }
+@media (max-width: 860px) { .cti-hero { border-radius: 22px; } .cti-rules { padding: 14px; } }

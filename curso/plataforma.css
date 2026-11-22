@@ -762,7 +762,11 @@ html:has(.pf-stage) { scrollbar-color: #3a3a3c transparent; }
 .pf-ccard .pf-lesson-av svg { width: 19px; height: 19px; }
 .pf-ccard.draft .pf-lesson-img { opacity: .55; }
 /* capa da disciplina: ocupa o card inteiro (4:5, como a imagem de 1000 × 1250), sem cortar nada; a faixa de baixo fica por cima */
-.pf-dcard .pf-lesson-img:has(img) { inset: 0; }
+/* cards das disciplinas mais altos: a capa (4:5) fica inteira no alto e o texto, a barra e a faixa ganham espaço embaixo */
+.pf-modcard.pf-dcard, .pf-conts .pf-cnew, #pf-mod-row > .pf-modcard { aspect-ratio: 4 / 5.8; } /* módulos de digitação na mesma altura */
+:is(.pf-dcard, #pf-mod-row > .pf-modcard) .pf-lesson-img:has(img) { inset: 0 0 auto 0; aspect-ratio: 4 / 5; }
+:is(.pf-dcard, #pf-mod-row > .pf-modcard) .pf-lesson-img:has(img)::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 48%; pointer-events: none;
+  background: linear-gradient(to bottom, transparent, rgba(var(--tint), .75) 55%, rgb(var(--tint))); }
 .pf-ccard.draft .pf-lesson-tag { opacity: 1; color: #fde68a; }
 /* card "Novo conteúdo" (só administrador), no fim da fileira */
 .pf-cnew { flex: 0 0 calc((100% - 64px) / 5); aspect-ratio: 4 / 5; scroll-snap-align: start; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
@@ -843,6 +847,7 @@ html:has(.pfd), body:has(.pfd) { background: #0d0d0f; }
 .pfd-list { margin-top: 34px; }
 .pfd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
 .pfd-grid .pf-modcard, .pfd-grid .pf-cnew { flex: none; width: auto; }
+.pfd-grid .pf-modcard, .pfd-grid .pf-cnew { aspect-ratio: 4 / 5.4; } /* um pouco mais altos: cabe a barra de progresso sem cobrir a capa */
 /* editor da disciplina: escolha da cor */
 .pf-ed-cores { display: flex; flex-wrap: wrap; gap: 10px; margin: 2px 0 14px; }
 .pf-ed-cor { width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer; background: rgb(var(--tint)); box-shadow: 0 0 0 1px rgba(0, 0, 0, .12); transition: transform .2s, box-shadow .2s; }
@@ -855,9 +860,8 @@ html:has(.pfd), body:has(.pfd) { background: #0d0d0f; }
   .pfd-hero-img { width: min(62%, 280px); } /* mesmo tamanho do card da disciplina no celular */
   .pfd-hero h1 { font-size: 34px; }
   .pfd-stats { margin-top: 16px; } .pfd-stats span { padding: 8px 12px; } .pfd-stats b { font-size: 17px; }
-  .pfd-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .pfd-grid { grid-template-columns: 1fr; gap: 16px; } /* um card por linha, grande, como os da tela inicial */
 }
-@media (max-width: 420px) { .pfd-grid { grid-template-columns: 1fr 1fr; gap: 10px; } }
 
 /* computador: módulos e disciplinas em cards grandes, como os do celular ("Mantenha-se conectado");
    o que não cabe na fileira continua para o lado, com as setas de navegação em cima à direita */
@@ -879,16 +883,26 @@ html:has(.pfd), body:has(.pfd) { background: #0d0d0f; }
 }
 
 /* aulas das disciplinas: número grande no canto, cadeado enquanto a anterior não foi aprovada, selo de aprovada */
-.pf-cnum { position: absolute; left: 16px; top: 14px; display: grid; place-items: center; min-width: 46px; height: 46px; padding: 0 10px; border-radius: 14px;
-  background: rgba(255, 255, 255, .16); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  color: #fff; font-size: 20px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.pf-cnum { position: absolute; left: 14px; top: 14px; z-index: 1; display: grid; place-items: center; min-width: 48px; height: 48px; padding: 0 10px; border-radius: 15px;
+  background: #fff; box-shadow: 0 8px 18px -8px rgba(0, 0, 0, .55), 0 0 0 3px rgba(255, 255, 255, .28);
+  color: rgb(var(--tint)); font-size: 22px; font-weight: 900; letter-spacing: -.03em; font-variant-numeric: tabular-nums; } /* número da aula: branco sólido, na cor da aula */
 .pf-cnum svg { width: 22px; height: 22px; }
-.pf-ccard .pf-lesson-img .pf-cnum svg { position: static; transform: none; width: 22px; color: #fff; }
+.pf-ccard .pf-lesson-img .pf-cnum svg { position: static; transform: none; width: 22px; color: rgb(var(--tint)); }
 .pf-cok { position: absolute; right: 16px; top: 14px; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: #16a34a; color: #fff;
   box-shadow: 0 6px 16px -6px rgba(0, 0, 0, .5); animation: pfOk .6s cubic-bezier(.34, 1.56, .64, 1) both; }
 .pf-ccard .pf-lesson-img .pf-cok svg { position: static; transform: none; width: 20px; color: #fff; }
 @keyframes pfOk { from { transform: scale(.3); opacity: 0; } }
 
+/* barra de progresso da aula, logo acima da faixa de baixo; aprovado vira verde com o selo e a nota */
+.pf-cprog { display: flex; align-items: center; gap: 10px; min-height: 24px; margin-top: 12px; }
+.pf-cprog-trk { flex: 1; height: 6px; border-radius: 99px; overflow: hidden; background: rgba(0, 0, 0, .22); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
+.pf-cprog-trk i { display: block; height: 100%; border-radius: inherit; background: #fff; transform-origin: 0 50%; transform: scaleX(var(--p)); animation: pfdBar 1s var(--ease) .2s both; }
+.pf-cprog > b { flex: none; min-width: 36px; text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; opacity: .92; }
+.pf-cprog.rec .pf-cprog-trk i { background: #fcd34d; } /* enviou mas não passou: recuperação */
+.pf-cprog.ok .pf-cprog-trk i { background: #4ade80; }
+.pf-cprog > b.pf-aprov { display: inline-flex; align-items: center; gap: 5px; min-width: 0; padding: 4px 10px 4px 7px; border-radius: 99px; background: #16a34a; color: #fff; font-size: 12.5px; opacity: 1;
+  box-shadow: 0 4px 12px -4px rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(255, 255, 255, .25); white-space: nowrap; }
+.pf-aprov svg { width: 14px; height: 14px; stroke-width: 3; }
 .pf-clock { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 0 18%; text-align: center;
   background: rgba(10, 10, 14, .5); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); color: #fff; }
 .pf-ccard .pf-lesson-img .pf-clock svg { position: static; transform: none; width: 44px; height: 44px; padding: 12px; border-radius: 50%; background: rgba(255, 255, 255, .16); color: #fff; box-sizing: content-box; }
@@ -899,7 +913,8 @@ html:has(.pfd), body:has(.pfd) { background: #0d0d0f; }
 .pf-ccard.locked .pf-lesson-go svg { width: 16px; height: 16px; }
 .pf-ccard.locked:hover .pf-lesson-img { transform: none; }
 .pf-ccard.locked:hover .pf-lesson-go { background: rgba(255, 255, 255, .26); color: #fff; }
-.pf-ccard:has(.pf-adm) .pf-cnum { top: 62px; } /* administrador: abaixo da etiqueta "Imagem do conteúdo" */
+.pf-ccard:has(.pf-adm):has(.pf-ph em) .pf-cnum { top: 62px; } /* administrador sem capa: abaixo da etiqueta "Imagem do conteúdo" */
 .pf-ccard:has(.pf-adm) .pf-cok { left: 16px; right: auto; top: 116px; }
+.pf-ccard:has(.pf-adm):not(:has(.pf-ph em)) .pf-cok { top: 72px; }
 .pf-clock { justify-content: flex-start; padding-top: 16%; }
 @media (max-width: 860px) { .pf-clock { padding: 12% 10% 0; gap: 6px; } .pf-ccard .pf-lesson-img .pf-clock svg { width: 28px; height: 28px; padding: 9px; } .pf-clock small { font-size: 11.5px; } }
