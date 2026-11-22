@@ -15,7 +15,7 @@
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   /* arquivos das lições prontas (se a plataforma já estiver carregada, a lista vem dela) */
-  const LICOES_ARQ = ['curso/licao-01.js'];
+  const LICOES_ARQ = ['curso/licao-01.js', 'curso/licao-02.js'];
 
   /* prévias desenhadas em HTML (leves, sem imagem) */
   const PREV = {

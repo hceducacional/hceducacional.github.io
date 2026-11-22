@@ -22,6 +22,7 @@
   const keyLabel = (k) => (k === ' ' ? 'Espaço' : k.toUpperCase());
   const keyGlyph = (k) => (k === ' ' ? '␣' : k.toUpperCase());
   const finger = { f: 'Indicador esquerdo', j: 'Indicador direito', ' ': 'Polegar' };
+  const isLeft = (c) => 'qwertasdfgzxcvb'.includes(c); // lado do teclado (cor da letra na sombra das palavras)
   const ICO = {
     back: '<path d="M15 18l-6-6 6-6"/>',
     star: '<path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>',
@@ -397,6 +398,8 @@
     const bgWatch = new MutationObserver(() => { if (!shell.isConnected) { bgWatch.disconnect(); dropBg(); } });
     bgWatch.observe(view, { childList: true });
     const $q = (s) => view.querySelector(s);
+    // na sombra das palavras, as teclas já aprendidas além de F e J aparecem como elas mesmas (ex.: U, R e K na Lição 02)
+    const sombraNovas = () => L.teclas.filter((k) => !'fj '.includes(k));
 
     const accuracy = () => { const t = st.hits + st.errors; return t ? Math.max(0, (st.hits / t) * 100) : 100; };
     function paintProgress() {
@@ -429,10 +432,10 @@
       }
       body.innerHTML = `
       <div class="lc-wel">
-        <article class="lc-hero" style="--tint:74, 30, 8">
+        <article class="lc-hero" style="--tint:${window.HC_CAPAS_DG_TINT?.[meta.capa || 'dg-1'] || '74, 30, 8'}">
           <div class="lc-hero-img lc-hero-cover" aria-hidden="true">
-            ${window.HC_CAPAS_DG_FUNDO?.('dg-1') || '' /* o mesmo fundo desenhado do card da lição (curso/capas-teclas.js) */}
-            <div class="pf-lc"><div class="pf-lc-keys">${L.teclas.map((k, i) => `<kbd style="--i:${i}">${k === ' ' ? 'Espaço' : esc(k.toUpperCase())}</kbd>`).join('')}</div>
+            ${window.HC_CAPAS_DG_FUNDO?.(meta.capa || 'dg-1') || '' /* o mesmo fundo desenhado do card da lição (curso/capas-teclas.js) */}
+            <div class="pf-lc"><div class="pf-lc-keys">${(L.novas || L.teclas).map((k, i) => `<kbd style="--i:${i}">${k === ' ' ? 'Espaço' : esc(k.toUpperCase())}</kbd>`).join('')}</div>
             <div class="pf-lc-segs${doneN ? ' has' : ''}">${L.niveis.map((lv, i) => `<i class="${lv.tipo === 'typing' ? 'd' : 'm'}${i < doneN ? ' on' : ''}${resume && i === doneN ? ' cur' : ''}" style="--i:${i}"></i>`).join('')}</div></div>
           </div>
           <div class="lc-hero-app">
@@ -1072,8 +1075,8 @@
           <p class="lc-apr-tag">${esc(a.tag || 'Novo desafio')}</p>
           <h3>${esc(a.titulo)}</h3>
           <p>${esc(a.texto)}</p>
-          ${a.exemplo ? `<div class="lc-apr-ex" aria-hidden="true">${[...a.exemplo.sombra].map((c, i) => c === ' ' ? '<i class="sp"></i>' : `<span class="${a.exemplo.texto[i] === 'f' ? 'l' : 'r'}" style="--d:${i * 70}ms"><small>${esc(c)}</small>${a.exemplo.texto[i]}</span>`).join('')}</div>
-          <p class="lc-apr-key"><span class="l">Mão esquerda → <kbd>F</kbd></span><span class="r">Mão direita → <kbd>J</kbd></span></p>` : ''}
+          ${a.exemplo ? `<div class="lc-apr-ex" aria-hidden="true">${[...a.exemplo.sombra].map((c, i) => c === ' ' ? '<i class="sp"></i>' : `<span class="${isLeft(a.exemplo.texto[i]) ? 'l' : 'r'}" style="--d:${i * 70}ms"><small>${esc(c)}</small>${a.exemplo.texto[i]}</span>`).join('')}</div>
+          <p class="lc-apr-key"><span class="l">Mão esquerda → <kbd>F</kbd></span><span class="r">Mão direita → <kbd>J</kbd></span>${sombraNovas().length ? `<span>${sombraNovas().map((k) => `<kbd>${esc(keyLabel(k))}</kbd>`).join('')} como são</span>` : ''}</p>` : ''}
           <p class="lc-new-go">Pressione <kbd>Enter</kbd> para começar</p>
         </div>`;
       kbTarget('enter');
@@ -1985,7 +1988,7 @@
       game.pos = 0; game.text = lv.texto;
       const g = lv.sombra || ''; // a frase de verdade por trás do ritmo (uma letra por tecla)
       // folha de papel com várias linhas: cada palavra (com o espaço depois dela) fica inteira na mesma linha
-      const ch = (c, i) => `<span class="lc-ch${c === ' ' ? ' sp' : g ? (c === 'f' ? ' l' : ' r') : ''}" data-i="${i}"${g && c !== ' ' ? ` data-g="${esc(g[i])}"` : ''}>${c === ' ' ? '&nbsp;' : esc(c)}</span>`;
+      const ch = (c, i) => `<span class="lc-ch${c === ' ' ? ' sp' : g ? (isLeft(c) ? ' l' : ' r') : ''}" data-i="${i}"${g && c !== ' ' ? ` data-g="${esc(g[i])}"` : ''}>${c === ' ' ? '&nbsp;' : esc(c)}</span>`;
       const words = [...lv.texto.matchAll(/\S+\s*|\s+/g)].map((m) => `<span class="lc-wd">${[...m[0]].map((c, j) => ch(c, m.index + j)).join('')}</span>`).join('');
       $q('#lc-main').classList.add('is-typing');
       $q('#lc-stage').innerHTML = `
@@ -1994,7 +1997,7 @@
           <span class="lc-start-tip" id="lc-start-tip">Comece a digitar</span>
           <div class="lc-paper-foot"><b class="lc-pbar"><i id="lc-pbar"></i></b><span class="lc-pcount" id="lc-pcount">0 / ${lv.texto.length}</span></div>
         </div>
-        <p class="lc-home">${g ? 'Letra da <b class="l">mão esquerda</b> → <kbd>F</kbd> · letra da <b class="r">mão direita</b> → <kbd>J</kbd> · entre as palavras, <kbd>Espaço</kbd>' : 'Volte os dedos para a posição inicial <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd> – <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>Ç</kbd> depois de cada tecla'}</p>`;
+        <p class="lc-home">${g ? `Letra da <b class="l">mão esquerda</b> → <kbd>F</kbd> · letra da <b class="r">mão direita</b> → <kbd>J</kbd>${sombraNovas().length ? ` · ${sombraNovas().map((k) => `<kbd>${esc(keyLabel(k))}</kbd>`).join('')} como são` : ''} · entre as palavras, <kbd>Espaço</kbd>` : 'Volte os dedos para a posição inicial <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd> – <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>Ç</kbd> depois de cada tecla'}</p>`;
       game.chs = [...view.querySelectorAll('#lc-line-text .lc-ch')];
       game.chs[0]?.classList.add('cur');
       typeMeasure();

@@ -25,8 +25,8 @@ const HC_CURSO = {
       texto: 'Nesta etapa, você encontrará atividades elaboradas especialmente para introduzir os conceitos iniciais do teclado. É essencial compreender o funcionamento de cada tecla; por isso, cada seção é projetada com atenção para facilitar a aprendizagem e a memorização dos diferentes grupos de teclas a seguir.',
       totalNiveis: 170,
       licoes: [
-        { tag: 'Introdução', titulo: 'Conhecendo J, F e Espaço', desc: 'Os primeiros toques: os indicadores nas teclas F e J e os polegares na barra de espaço.', imagem: '', arquivo: 'curso/licao-01.js', teclas: 'F J Espaço' },
-        { tag: 'Introdução', titulo: 'Teclas U, R e K', desc: 'Os indicadores sobem para U e R, e o dedo médio direito chega ao K.', imagem: '', capa: 'dg-2', teclas: 'U R K' },
+        { tag: 'Introdução', titulo: 'Conhecendo J, F e Espaço', desc: 'Os primeiros toques: os indicadores nas teclas F e J e os polegares na barra de espaço.', imagem: '', arquivo: 'curso/licao-01.js', capa: 'dg-1', teclas: 'F J Espaço' },
+        { tag: 'Introdução', titulo: 'Teclas U, R e K', desc: 'Os indicadores sobem para U e R, e o dedo médio direito chega ao K.', imagem: '', arquivo: 'curso/licao-02.js', capa: 'dg-2', teclas: 'U R K' },
         { tag: 'Introdução', titulo: 'Teclas D, E e I', desc: 'O dedo médio esquerdo no D e no E, e o médio direito no I.', imagem: '', capa: 'dg-3', teclas: 'D E I' },
         { tag: 'Introdução', titulo: 'Teclas C, G e N', desc: 'O médio esquerdo desce ao C, e os indicadores alcançam o G e o N.', imagem: '', capa: 'dg-4', teclas: 'C G N' },
         { tag: 'Revisão', titulo: 'Revisão Geral 1', desc: 'Uma revisão completa de todas as teclas aprendidas no módulo.', imagem: '', capa: 'dg-5' },
@@ -868,7 +868,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     for (const m of HC_CURSO.modulos) {
       if (n - 1 < c + m.licoes.length) {
         const i = n - 1 - c, l = m.licoes[i];
-        return { tag: l.tag || '', desc: l.desc || '', imagem: l.imagem ? imgUrl(l.imagem) : '', tint: TINTS[i % TINTS.length], k: i, stars: (p) => cardStars(p) };
+        return { tag: l.tag || '', desc: l.desc || '', imagem: l.imagem ? imgUrl(l.imagem) : '', tint: TINTS[i % TINTS.length], capa: l.capa || '', k: i, stars: (p) => cardStars(p) };
       }
       c += m.licoes.length;
     }
@@ -1219,7 +1219,9 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
 
   /* cor de fundo dos cards (degradê embaixo), como nos cards de "Mantenha-se conectado" */
   const TINTS = ['22, 60, 48', '24, 46, 110', '70, 32, 120', '120, 40, 30', '30, 70, 90'];
-  const HC_NIVEIS = { 1: '30 níveis' }; // quantos níveis cada lição tem (mostrado antes de começar)
+  /* cor do card das lições prontas, a mesma da capa (curso/capas-teclas.js, que chega depois) */
+  const DG_TINT = { 'dg-1': '74, 30, 8', 'dg-2': '22, 52, 120', 'dg-3': '76, 29, 149', 'dg-4': '127, 29, 29', 'dg-5': '6, 78, 59' };
+  const HC_NIVEIS = { 1: '30 níveis', 2: '30 níveis' }; // quantos níveis cada lição tem (mostrado antes de começar)
 
   const MTINTS = ['22, 60, 48', '36, 40, 110', '86, 30, 110', '120, 50, 24', '24, 80, 96'];
 
@@ -1290,8 +1292,8 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
             const state = !l.arquivo ? 'Em breve' : p?.done ? 'Concluída' : p ? `Nível ${Math.min(p.lvl + 1, p.total)} de ${p.total}` : `${HC_NIVEIS[n] || ''}`;
             const go = !l.arquivo ? 'Em breve' : !window.HC_isComputer() ? 'Ver' : p?.done ? 'Refazer' : p && p.lvl > 0 ? 'Continuar' : 'Acessar';
             return `
-          <li class="pf-lesson${l.arquivo ? '' : ' soon'}" style="--i:${k};--tint:${l.arquivo ? '74, 30, 8' : TINTS[i % TINTS.length]}" data-lesson="${n}" tabindex="0" aria-label="Lição ${num}: ${esc(l.titulo)}">
-            ${l.arquivo ? `<div class="pf-lesson-img pf-lcover" data-cover="${esc(l.arquivo)}" data-n="${n}" aria-hidden="true"></div>` : l.capa ? `<div class="pf-lesson-img pf-dgcover" data-capa="${esc(l.capa)}" aria-hidden="true"></div>` : `<div class="pf-lesson-img">${slot(l.imagem, 'Imagem da lição', '1000 × 1000', i)}</div>`}
+          <li class="pf-lesson${l.arquivo ? '' : ' soon'}" style="--i:${k};--tint:${l.arquivo ? (DG_TINT[l.capa] || DG_TINT['dg-1']) : TINTS[i % TINTS.length]}" data-lesson="${n}" tabindex="0" aria-label="Lição ${num}: ${esc(l.titulo)}">
+            ${l.arquivo ? `<div class="pf-lesson-img pf-lcover" data-cover="${esc(l.arquivo)}" data-n="${n}" data-capa="${esc(l.capa || 'dg-1')}" aria-hidden="true"></div>` : l.capa ? `<div class="pf-lesson-img pf-dgcover" data-capa="${esc(l.capa)}" aria-hidden="true"></div>` : `<div class="pf-lesson-img">${slot(l.imagem, 'Imagem da lição', '1000 × 1000', i)}</div>`}
             <div class="pf-lesson-app">
               <div class="pf-lesson-text">
                 <span class="pf-lesson-tag">${esc(l.tag)}</span>
@@ -1533,14 +1535,14 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
         box.innerHTML = HC_CAPAS_DG[id];
         const t = window.HC_CAPAS_DG_TINT?.[id]; if (t) box.closest('.pf-lesson')?.style.setProperty('--tint', t);
       });
-      root.querySelectorAll('.pf-lcover[data-cover]').forEach((box) => { if (!box.querySelector('.cvb')) box.insertAdjacentHTML('afterbegin', HC_CAPAS_DG_FUNDO('dg-1')); });
+      root.querySelectorAll('.pf-lcover[data-cover]').forEach((box) => { if (!box.querySelector('.cvb')) box.insertAdjacentHTML('afterbegin', HC_CAPAS_DG_FUNDO(box.dataset.capa)); });
     }).catch(() => {});
     root.querySelectorAll('.pf-lcover[data-cover]').forEach((box) => {
       const n = +box.dataset.n;
       load(box.dataset.cover).then(() => {
         const L = window.HC_LICOES?.[`licao-${n}`]; if (!L || !box.isConnected) return;
         const p = progress(n), done = p?.done ? L.niveis.length : p?.lvl || 0;
-        box.innerHTML = (window.HC_CAPAS_DG_FUNDO?.('dg-1') || '') + `<div class="pf-lc"><div class="pf-lc-keys">${L.teclas.map((k, i) => `<kbd style="--i:${i}">${k === ' ' ? 'Espaço' : esc(k.toUpperCase())}</kbd>`).join('')}</div>
+        box.innerHTML = (window.HC_CAPAS_DG_FUNDO?.(box.dataset.capa) || '') + `<div class="pf-lc"><div class="pf-lc-keys">${(L.novas || L.teclas).map((k, i) => `<kbd style="--i:${i}">${k === ' ' ? 'Espaço' : esc(k.toUpperCase())}</kbd>`).join('')}</div>
           <div class="pf-lc-segs${done ? ' has' : ''}">${L.niveis.map((lv, i) => `<i class="${lv.tipo === 'typing' ? 'd' : 'm'}${i < done ? ' on' : ''}${p && !p.done && i === done ? ' cur' : ''}" style="--i:${i}"></i>`).join('')}</div></div>`;
       }).catch(() => {});
     });
