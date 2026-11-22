@@ -11,34 +11,30 @@
   position: fixed; inset: 0 0 0 var(--sb-collapsed); z-index: 1; overflow: hidden; isolation: isolate; background: #0b0d14;
   font-family: inherit; user-select: none; -webkit-user-select: none; }
 
-/* ---------- fundo: degradê escuro + luzes de aurora + malha de pontinhos ---------- */
+/* ---------- fundo: degradê escuro + luzes de aurora + malha de pontinhos ----------
+   Desempenho (placas de vídeo fracas): cada camada de tela cheia custa caro a cada quadro, então o fundo
+   tem só duas camadas vivas: o céu (aurora parada, pintada junto, e o escurecido de baixo no próprio
+   degradê) e a malha de pontinhos andando (sem máscara). O céu que não está na tela fica oculto. */
 .ifm-bg { position: absolute; inset: 0; z-index: -2; opacity: 0; transition: opacity .8s ease; }
 .ifm.in .ifm-bg, .ifm.still .ifm-bg { opacity: 1; }
-.ifm-sky { position: absolute; inset: 0; opacity: 0; transition: opacity 2.6s ease; overflow: hidden;
-  background: linear-gradient(160deg, rgb(var(--b)) 0%, color-mix(in srgb, rgb(var(--b)) 42%, #05060a) 100%); }
-.ifm-sky.on { opacity: 1; }
-.ifm-sky::before { content: ''; position: absolute; inset: -25%; will-change: transform;
+.ifm-sky { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity 2.6s ease, visibility 0s linear 2.6s; overflow: hidden;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, .35) 100%), linear-gradient(160deg, rgb(var(--b)) 0%, color-mix(in srgb, rgb(var(--b)) 42%, #05060a) 100%); }
+.ifm-sky.on { opacity: 1; visibility: visible; transition: opacity 2.6s ease, visibility 0s; }
+/* luzes de aurora: paradas (antes giravam devagar numa camada 1,5× maior que a tela, o que pesava a cada quadro) */
+.ifm-sky::before { content: ''; position: absolute; inset: -25%;
   background:
     radial-gradient(32% 36% at 80% 24%, rgb(var(--a1) / .6), transparent 70%),
     radial-gradient(30% 34% at 96% 70%, rgb(var(--a2) / .52), transparent 70%),
     radial-gradient(36% 32% at 62% 92%, rgb(var(--a3) / .42), transparent 70%),
-    radial-gradient(30% 30% at 30% 12%, rgb(var(--a2) / .3), transparent 70%);
-  animation: ifmAurora 26s ease-in-out infinite alternate; }
-@keyframes ifmAurora {
-  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
-  50% { transform: translate3d(3%, -3%, 0) rotate(6deg) scale(1.06); }
-  100% { transform: translate3d(-4%, 3%, 0) rotate(-5deg) scale(1.02); }
-}
-/* pontinhos maiores que os das lições, para aparecerem bem */
-.ifm-dots { position: absolute; inset: 0; overflow: hidden;
-  -webkit-mask: radial-gradient(120% 90% at 75% 45%, #000 40%, rgba(0, 0, 0, .45) 100%); mask: radial-gradient(120% 90% at 75% 45%, #000 40%, rgba(0, 0, 0, .45) 100%); }
+    radial-gradient(30% 30% at 30% 12%, rgb(var(--a2) / .3), transparent 70%); }
+/* pontinhos maiores que os das lições, para aparecerem bem (sem máscara: ela criava uma passada extra na tela toda a cada quadro) */
+.ifm-dots { position: absolute; inset: 0; overflow: hidden; }
 /* a malha anda na diagonal sem parar: a camada é uma casa maior que a tela e volta ao
    início a cada 24 px, então o movimento é contínuo (só transform) */
 .ifm-dots::before { content: ''; position: absolute; inset: -24px; will-change: transform;
-  background: radial-gradient(rgba(255, 255, 255, .15) 1.7px, transparent 2.3px) 0 0 / 24px 24px;
+  background: radial-gradient(rgba(255, 255, 255, .13) 1.7px, transparent 2.3px) 0 0 / 24px 24px;
   animation: ifmDots 1.8s linear infinite; }
 @keyframes ifmDots { from { transform: translate3d(-24px, 0, 0); } to { transform: translate3d(0, -24px, 0); } }
-.ifm-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, .35) 100%); }
 
 /* ---------- faixa branca na diagonal ---------- */
 .ifm-white { position: absolute; inset: 0; z-index: -1; background: #fff; clip-path: polygon(0 0, 47% 0, 58% 100%, 0 100%);
@@ -46,6 +42,8 @@
 .ifm-white::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0, 0, 0, 0) 80%, rgba(0, 0, 0, .05)); }
 .ifm.in .ifm-white { animation: ifmWhite .9s var(--soft) .05s both; }
 .ifm.still .ifm-white { transform: none; }
+/* depois que entra, a faixa deixa de ser camada animada (o recorte diagonal virava uma máscara recalculada a cada quadro) */
+.ifm.settled .ifm-white { animation: none; transform: none; will-change: auto; }
 @keyframes ifmWhite { from { transform: translate3d(-62%, 0, 0); } to { transform: none; } }
 
 /* ---------- os três botões ---------- */
@@ -122,7 +120,9 @@
 .ifm-deco { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .ifm-dc { --t: calc(.4s + var(--n) * .17s); position: absolute; left: calc(var(--x) * 100%); top: calc(var(--y) * 100%); width: calc(var(--w) * 100%);
   margin-left: calc(var(--w) * -50%); translate: 0 -50%; opacity: 0; scale: .3; rotate: var(--r0); transition: opacity .18s ease, scale .25s ease; }
-.ifm-dc img { position: relative; z-index: 1; display: block; width: 100%; height: auto; filter: drop-shadow(0 calc(var(--s) * .03) calc(var(--s) * .04) rgba(0, 0, 0, .28)); }
+/* a sombra já vem dentro da imagem (com 16% de margem em volta): um drop-shadow num ícone que flutua
+   era recalculado (desfocado) pela placa de vídeo a cada quadro */
+.ifm-dc img { position: relative; z-index: 1; display: block; width: 132%; max-width: none; height: auto; margin: -16%; }
 /* estouro de luz */
 .ifm-dc::before { content: ''; position: absolute; left: 50%; top: 50%; width: 150%; aspect-ratio: 1; margin: -75% 0 0 -75%; border-radius: 50%; opacity: 0;
   background: radial-gradient(closest-side, #fff 0%, rgba(255, 255, 255, .85) 22%, color-mix(in srgb, var(--g1) 55%, transparent) 48%, transparent 72%); }
@@ -131,18 +131,20 @@
   background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .95) 0deg 3deg, transparent 3deg 30deg);
   -webkit-mask: radial-gradient(closest-side, transparent 18%, #000 30%, transparent 70%); mask: radial-gradient(closest-side, transparent 18%, #000 30%, transparent 70%); }
 /* entrada sem mola: o ícone para exatamente no lugar, sem passar do tamanho e voltar (isso parecia uma "descidinha" no fim) */
-.ifm-opt.sel .ifm-dc { animation: ifmDcIn .7s var(--soft) var(--t) both; }
-.ifm-opt.sel .ifm-dc::before { animation: ifmDcFlash .6s ease-out var(--t) both; }
-.ifm-opt.sel .ifm-dc::after { animation: ifmDcRays .7s ease-out var(--t) both; }
-.ifm-opt.sel .ifm-dc img { animation: ifmDcPop .5s ease-out var(--t) both, ifmDcBob calc(4.4s + var(--n) * .6s) ease-in-out calc(var(--t) + .75s) infinite; }
-@keyframes ifmDcIn { 0% { opacity: 0; scale: .2; rotate: calc(var(--r0) - 35deg); } 30% { opacity: 1; } 100% { opacity: 1; scale: 1; rotate: var(--r0); } }
+/* o estado final fica no próprio estilo e as animações só valem enquanto acontecem (fill "backwards"): o flash, os raios
+   e o brilho somem de verdade quando terminam, em vez de ficarem como camadas invisíveis recompostas a cada quadro */
+.ifm-opt.sel .ifm-dc { opacity: 1; scale: 1; animation: ifmDcIn .7s var(--soft) var(--t) backwards; }
+.ifm-opt.sel .ifm-dc::before { animation: ifmDcFlash .6s ease-out var(--t) backwards; }
+.ifm-opt.sel .ifm-dc::after { animation: ifmDcRays .7s ease-out var(--t) backwards; }
+.ifm-opt.sel .ifm-dc img { animation: ifmDcPop .5s ease-out var(--t) backwards, ifmDcBob calc(4.4s + var(--n) * .6s) ease-in-out calc(var(--t) + .75s) infinite; }
+/* --sp: quanto o ícone gira na entrada e na flutuação (o raio, alto e inclinado, não gira: girando parecia "descer") */
+@keyframes ifmDcIn { 0% { opacity: 0; scale: .2; rotate: calc(var(--r0) - 35deg * var(--sp, 1)); } 30% { opacity: 1; } 100% { opacity: 1; scale: 1; rotate: var(--r0); } }
 @keyframes ifmDcFlash { 0% { opacity: 1; transform: scale(.15); } 40% { opacity: .95; } 100% { opacity: 0; transform: scale(1.25); } }
 @keyframes ifmDcRays { 0% { opacity: 0; transform: scale(.3) rotate(0deg); } 25% { opacity: .9; } 100% { opacity: 0; transform: scale(1.15) rotate(50deg); } }
 /* o ícone nasce "aceso" (branco) e volta à cor */
-@keyframes ifmDcPop { 0% { filter: brightness(3) drop-shadow(0 0 0 transparent); } 100% { filter: brightness(1) drop-shadow(0 calc(var(--s) * .03) calc(var(--s) * .04) rgba(0, 0, 0, .28)); } }
+@keyframes ifmDcPop { 0% { filter: brightness(3); } 100% { filter: brightness(1); } }
 /* flutuação: começa e termina na posição de pouso (sem salto na hora em que começa) e só sobe */
-@keyframes ifmDcBob { 0%, 100% { transform: none; } 50% { transform: translateY(-6%) rotate(3deg); } }
-.ifm.still .ifm-opt.sel .ifm-dc { opacity: 1; scale: 1; }
+@keyframes ifmDcBob { 0%, 100% { transform: none; } 50% { transform: translateY(-5%) rotate(calc(3deg * var(--sp, 1))); } }
 
 /* nome / logo embaixo */
 .ifm-name { position: relative; z-index: 3; display: flex; justify-content: center; margin-top: calc(var(--s) * .05);

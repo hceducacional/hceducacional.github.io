@@ -12,7 +12,7 @@
   /* para trocar os personagens, substitua os arquivos em assets/menu-info (PNG/WebP sem fundo).
      progresso e loja têm duas poses: "base" com o botão recolhido e "alt" (…-sel.webp) quando ele se expande.
      deco: ícones 3D que surgem em volta do personagem, um a um, quando o botão se expande:
-     [arquivo, x, y (centro, em frações do lado da forma), largura (fração do lado), giro em graus] */
+     [arquivo, x, y (centro, em frações do lado da forma), largura (fração do lado), giro em graus, giro da animação (1 = normal, 0 = sem girar)] */
   const OPTS = [
     { id: 'progresso', label: 'progresso', hint: 'para ver o seu progresso', g1: '#ffd65c', g2: '#ff8a3d', t1: '#fbbf24', t2: '#fb7a3c',
       art: [['progresso.webp', 'solo base'], ['progresso-sel.webp', 'solo alt']],
@@ -21,7 +21,7 @@
       art: [['aluno-celular.webp', 'l'], ['aluno-notebook.webp', 'r'], ['aluna-cabelo.webp', 'c']] },
     { id: 'loja', label: 'loja de itens', hint: 'para abrir a loja de itens', g1: '#2fd6ec', g2: '#1d56d6', t1: '#18b4d4', t2: '#2563eb',
       art: [['perfil.webp', 'solo base'], ['perfil-sel.webp', 'solo alt']],
-      deco: [['ico-moeda.webp', -.04, .1, .36, -10], ['ico-coracoes.webp', .98, -.04, .58, 4], ['ico-raio.webp', .06, .74, .34, 0], ['ico-botoes.webp', .9, .7, .66, -6]] },
+      deco: [['ico-moeda.webp', -.04, .1, .36, -10], ['ico-coracoes.webp', .98, -.04, .58, 4], ['ico-raio.webp', .06, .74, .34, 0, 0], ['ico-botoes.webp', .9, .7, .66, -6]] },
   ];
   /* as mesmas cores dos cenários das lições: b = fundo escuro; a1, a2, a3 = luzes de aurora */
   const SCENES = [
@@ -62,7 +62,7 @@
               <span class="ifm-shape"><i class="ifm-shine"></i></span>
               <span class="ifm-ring"></span>
               <span class="ifm-art"><span class="ifm-cut"><span class="ifm-float">${o.art.map(([src, c]) => `<img class="${c}" src="${IMG}${src}?v=${window.HC_V || ''}" alt="" draggable="false" decoding="async">`).join('')}</span></span></span>
-              ${o.deco ? `<span class="ifm-deco" aria-hidden="true">${o.deco.map(([src, x, y, w, r], n) => `<i class="ifm-dc" style="--x:${x};--y:${y};--w:${w};--r0:${r}deg;--n:${n}"><img src="${IMG}${src}?v=${window.HC_V || ''}" alt="" draggable="false" decoding="async"></i>`).join('')}</span>` : ''}
+              ${o.deco ? `<span class="ifm-deco" aria-hidden="true">${o.deco.map(([src, x, y, w, r, sp = 1], n) => `<i class="ifm-dc" style="--x:${x};--y:${y};--w:${w};--r0:${r}deg;--sp:${sp};--n:${n}"><img src="${IMG}${src}?v=${window.HC_V || ''}" alt="" draggable="false" decoding="async"></i>`).join('')}</span>` : ''}
             </span>
             <span class="ifm-name">${o.logo
               ? '<img class="ifm-logo" src="assets/plataforma-informatica.webp" width="900" height="184" alt="" draggable="false">'
@@ -171,6 +171,7 @@
     wait.then(() => {
       if (!alive()) return;
       stage.classList.add('in');
+      setTimeout(() => { if (alive()) stage.classList.add('settled'); }, 1100); // a faixa branca já entrou: libera a camada
       const inMs = 350 + (opts.length - 1) * 110 + 800; // última entrada terminando
       setTimeout(() => { if (alive()) ready = true; }, inMs - 300);
       auto = setTimeout(() => { if (alive() && sel < 0) select(START); }, inMs + 1000);
