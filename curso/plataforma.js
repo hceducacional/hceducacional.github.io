@@ -1370,7 +1370,15 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       const hang = card ? card.offsetHeight * .55 + parseFloat(getComputedStyle(row).paddingBottom || 0) : 0; // parte dos cards que fica fora da imagem
       const onImg = shelf.offsetHeight - hang;
       const imgh = Math.round(W * (mob ? 16 / 9 : 9 / 16)); // a imagem fica sempre nessa proporção, sem cortar as laterais
-      const ih = Math.max(imgh, Math.round(top0 + 12 + th + dotsH + onImg));
+      /* computador: a fileira de módulos começa perto do pé da janela (só a pontinha aparece) e o texto do banner
+         desce junto, longe da barra de cima; no celular fica como estava */
+      let fold = 0;
+      if (!mob && row) {
+        const rowTop = row.getBoundingClientRect().top - shelf.getBoundingClientRect().top;
+        const stageTop = stage.getBoundingClientRect().top + scrollY;
+        fold = Math.round(innerHeight - 130 - rowTop - stageTop + onImg);
+      }
+      const ih = Math.max(imgh, Math.round(top0 + 12 + th + dotsH + onImg), fold);
       const key = `${ih}|${ih - onImg}|${th}|${imgh}`; if (key === last) return; last = key;
       // quando o conteúdo pede mais altura que a imagem, ela termina num degradê escuro que segue até os cards
       stage.style.setProperty('--imgh', `${imgh}px`);
@@ -1543,13 +1551,14 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       b.addEventListener('click', () => openN(+b.dataset.lesson));
       b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openN(+b.dataset.lesson); } });
     });
-    const pagesEl = root.querySelector('#pf-lpages');
+    const pagesEl = root.querySelector('#pf-lpages > .pf-lessons'); // a fileira de lições (passa para o lado)
     if (pagesEl) {
       const pads = root.querySelectorAll('[data-ldir]');
       /* setas só aparecem quando as lições não cabem na fileira */
       const upd = () => { if (!pads.length || !pagesEl.isConnected) return; pads[0].disabled = pagesEl.scrollLeft < 4; pads[1].disabled = pagesEl.scrollLeft + pagesEl.clientWidth >= pagesEl.scrollWidth - 4; pads[0].parentNode.classList.toggle('none', pads[0].disabled && pads[1].disabled); };
       pads.forEach((b) => b.addEventListener('click', () => pagesEl.scrollBy({ left: +b.dataset.ldir * pagesEl.clientWidth * .8, behavior: 'smooth' })));
       pagesEl.addEventListener('scroll', upd, { passive: true }); addEventListener('resize', upd, { passive: true }); upd(); setTimeout(upd, 1200);
+      rowDots(pagesEl); // celular: barrinhas embaixo, como nas disciplinas
     }
     root.querySelectorAll('[data-addlesson]').forEach((b) => b.addEventListener('click', () => addLesson(view, +b.dataset.addlesson)));
     root.querySelectorAll('[data-editlesson]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); editCard(view, b.dataset.editlesson); }));
