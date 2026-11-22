@@ -431,6 +431,7 @@
       <div class="lc-wel">
         <article class="lc-hero" style="--tint:74, 30, 8">
           <div class="lc-hero-img lc-hero-cover" aria-hidden="true">
+            ${window.HC_CAPAS_DG_FUNDO?.('dg-1') || '' /* o mesmo fundo desenhado do card da lição (curso/capas-teclas.js) */}
             <div class="pf-lc"><div class="pf-lc-keys">${L.teclas.map((k, i) => `<kbd style="--i:${i}">${k === ' ' ? 'Espaço' : esc(k.toUpperCase())}</kbd>`).join('')}</div>
             <div class="pf-lc-segs${doneN ? ' has' : ''}">${L.niveis.map((lv, i) => `<i class="${lv.tipo === 'typing' ? 'd' : 'm'}${i < doneN ? ' on' : ''}${resume && i === doneN ? ' cur' : ''}" style="--i:${i}"></i>`).join('')}</div></div>
           </div>

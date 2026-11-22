@@ -24,7 +24,7 @@
 .cvb-confetti::after { opacity: .5; background:
   radial-gradient(circle, #fcd34d 2px, transparent 2.6px) 0 0 / 46px 38px, radial-gradient(circle, #f9a8d4 2px, transparent 2.6px) 23px 19px / 46px 38px,
   radial-gradient(circle, #67e8f9 1.6px, transparent 2.2px) 11px 27px / 46px 38px; }
-.pf-ccard:is(:hover, :focus-visible) .cvb::before { transform: scale(1.12) translate(-4%, 4%); }
+:is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cvb::before { transform: scale(1.12) translate(-4%, 4%); }
 .cv * { transform-box: fill-box; transform-origin: center; }
 .cv .cv-spin { transform-box: view-box; transform-origin: var(--o); }
 .cv [transform] { transform-box: view-box; transform-origin: 0 0; } /* peças com transform no próprio desenho (pás da ventoinha, anel): giram em volta do ponto dado, não do próprio centro */
@@ -33,34 +33,34 @@
 .cv .cv-cursor { transform-origin: left top; }
 
 @media (hover: hover) {
-  .pf-ccard:is(:hover, :focus-visible) .cv-glow { animation: cvGlow 2.4s ease-in-out infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-d { animation: cvIn 2.1s var(--d, 0s) ease-in-out infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-dash { animation: cvDash .9s linear infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-pulse { animation: cvPulse 1.4s ease-in-out infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-bar { animation: cvBar 2.1s var(--d, 0s) cubic-bezier(.3, 1.4, .5, 1) infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-line { animation: cvLine 2.4s ease-in-out infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-dot { animation: cvPop 2.4s var(--d, 0s) ease-out infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-bead { animation: cvBead 1.6s var(--d, 0s) ease-in-out infinite alternate; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-spin { animation: cvSpin 3s linear infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-fast { animation-duration: .7s; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-blink { animation: cvBlink 1s var(--d, 0s) steps(2, jump-none) infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-type { animation: cvType 2.2s var(--d, 0s) ease-out infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-caret { animation: cvBlink .8s steps(2, jump-none) infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-float { animation: cvFloat 2s ease-in-out infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-screen { animation: cvScreen 1.6s ease-in-out infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-hop { animation: cvHop 1.8s var(--d, 0s) cubic-bezier(.3, 0, .3, 1) infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-trace { stroke-dasharray: 10 6; animation: cvDash .7s var(--d, 0s) linear infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-key { animation: cvKey 1.8s var(--d, 0s) ease-in-out infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-paper { animation: cvPaper 2.2s ease-in-out infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-ring { animation: cvRing 2.6s cubic-bezier(.5, 0, .3, 1) infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-spark { animation: cvSpark 1.6s var(--d, 0s) ease-in-out infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-cursor { animation: cvCursor 2.4s cubic-bezier(.5, 0, .2, 1) infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-click { animation: cvClick 2.4s ease-in-out infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-ripple { animation: cvRipple 2.4s var(--d, 0s) ease-out infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-wheel { animation: cvWheel .8s ease-in-out infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-press { animation: cvPress 2.2s var(--d, 0s) ease-in-out infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-check { animation: cvCheck 2.8s var(--d, 0s) ease-out infinite; }
-  .pf-ccard:is(:hover, :focus-visible) .cv-medal { animation: cvMedal 2.8s ease-in-out infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-glow { animation: cvGlow 2.4s ease-in-out infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-d { animation: cvIn 2.1s var(--d, 0s) ease-in-out infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-dash { animation: cvDash .9s linear infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-pulse { animation: cvPulse 1.4s ease-in-out infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-bar { animation: cvBar 2.1s var(--d, 0s) cubic-bezier(.3, 1.4, .5, 1) infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-line { animation: cvLine 2.4s ease-in-out infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-dot { animation: cvPop 2.4s var(--d, 0s) ease-out infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-bead { animation: cvBead 1.6s var(--d, 0s) ease-in-out infinite alternate; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-spin { animation: cvSpin 3s linear infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-fast { animation-duration: .7s; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-blink { animation: cvBlink 1s var(--d, 0s) steps(2, jump-none) infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-type { animation: cvType 2.2s var(--d, 0s) ease-out infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-caret { animation: cvBlink .8s steps(2, jump-none) infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-float { animation: cvFloat 2s ease-in-out infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-screen { animation: cvScreen 1.6s ease-in-out infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-hop { animation: cvHop 1.8s var(--d, 0s) cubic-bezier(.3, 0, .3, 1) infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-trace { stroke-dasharray: 10 6; animation: cvDash .7s var(--d, 0s) linear infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-key { animation: cvKey 1.8s var(--d, 0s) ease-in-out infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-paper { animation: cvPaper 2.2s ease-in-out infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-ring { animation: cvRing 2.6s cubic-bezier(.5, 0, .3, 1) infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-spark { animation: cvSpark 1.6s var(--d, 0s) ease-in-out infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-cursor { animation: cvCursor 2.4s cubic-bezier(.5, 0, .2, 1) infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-click { animation: cvClick 2.4s ease-in-out infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-ripple { animation: cvRipple 2.4s var(--d, 0s) ease-out infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-wheel { animation: cvWheel .8s ease-in-out infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-press { animation: cvPress 2.2s var(--d, 0s) ease-in-out infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-check { animation: cvCheck 2.8s var(--d, 0s) ease-out infinite; }
+  :is(.pf-ccard, .pf-lesson):is(:hover, :focus-visible) .cv-medal { animation: cvMedal 2.8s ease-in-out infinite; }
 }
 
 /* todas começam e terminam na posição parada, para o desenho não "pular" quando o mouse chega */
@@ -90,3 +90,22 @@
 @keyframes cvCheck { 0% { stroke-dashoffset: 1; } 25%, 100% { stroke-dashoffset: 0; } }
 @keyframes cvMedal { 0%, 100% { transform: none; } 50% { transform: rotate(-8deg) scale(1.05); } }
 @media (prefers-reduced-motion: reduce) { .cv, .cv * { animation: none !important; } }
+
+/* ---------- Lições de digitação (Módulo 1): desenhos em curso/capas-teclas.js ---------- */
+.pf-dgcover { background: rgb(var(--tint)); }
+.pf-dgcover svg.cv { position: absolute; top: 6%; left: 6%; width: 88%; height: 41%; overflow: visible; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .25)); }
+@media (min-width: 641px) { .pf-lessons .pf-dgcover svg.cv { top: 12%; height: 44%; } } /* cards altos (como os das disciplinas): o teclado no meio da parte de cima */
+.pf-lesson .cvb::after { -webkit-mask-image: linear-gradient(to bottom, #000 20%, transparent 70%); mask-image: linear-gradient(to bottom, #000 20%, transparent 70%); }
+:is(.pf-dgcover, .pf-lcover) .cvb { z-index: 0; }
+.pf-lcover .pf-lc { position: relative; z-index: 1; }
+.cv .cv-fg { transform-box: view-box; transform-origin: 0 0; }
+@media (hover: hover) {
+  .pf-lesson:is(:hover, :focus-visible) .cvb::before { transform: scale(1.12) translate(-4%, 4%); }
+  .pf-lesson:is(:hover, :focus-visible) .cv-kp { animation: cvKp 2.1s var(--d, 0s) ease-in-out infinite; }
+  .pf-lesson:is(:hover, :focus-visible) .cv-kl { animation: cvKl 2.1s var(--d, 0s) ease-in-out infinite; }
+  .pf-lesson:is(:hover, :focus-visible) .cv-fg { animation: cvFg 2.1s var(--d, 0s) cubic-bezier(.4, 0, .2, 1) infinite; }
+}
+/* o dedo chega na tecla (12%), ela afunda e acende junto, e o dedo volta para o descanso */
+@keyframes cvKp { 0%, 8%, 30%, 100% { transform: none; } 14% { transform: translateY(4px); } }
+@keyframes cvKl { 0%, 8%, 34%, 100% { fill: url(#cvk); } 14%, 22% { fill: #fcd34d; } }
+@keyframes cvFg { 0%, 100% { transform: none; opacity: .9; } 12%, 24% { transform: translate(var(--fx), var(--fy)); opacity: 1; } 40% { transform: none; } }

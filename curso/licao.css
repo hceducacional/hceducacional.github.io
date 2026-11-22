@@ -2158,7 +2158,10 @@ body.lc-bg-on .lc-shell { border-color: rgba(255, 255, 255, .12); box-shadow: 0 
 /* capa da lição na tela de abertura: a mesma identificação do card do módulo (teclas + uma barrinha por nível) */
 .lc-hero-cover { display: grid; place-items: center; padding-bottom: 14%; animation: none;
   background: radial-gradient(90% 70% at 50% 30%, rgba(255, 255, 255, .18), transparent 70%), linear-gradient(160deg, #f59e0b, #b45309 55%, #7c2d12); }
-.lc-hero-cover .pf-lc { display: grid; justify-items: center; gap: 22px; transform: scale(1.35); }
+.lc-hero-cover .cvb { z-index: 0; }
+.lc-hero-cover .cvb::before { animation: lcHcRing 9s ease-in-out infinite alternate; }
+@keyframes lcHcRing { to { transform: scale(1.12) translate(-4%, 4%); } }
+.lc-hero-cover .pf-lc { position: relative; z-index: 1; display: grid; justify-items: center; gap: 22px; transform: scale(1.35); }
 .lc-hero-cover .pf-lc-keys { display: flex; gap: 10px; }
 .lc-hero-cover kbd { display: grid; place-items: center; min-width: 52px; height: 52px; padding: 0 14px; border-radius: 14px; background: linear-gradient(180deg, #fff, #e5e7eb); color: #111;
   font: 800 20px/1 Inter, system-ui, sans-serif; box-shadow: inset 0 -5px 0 rgba(0, 0, 0, .15), 0 12px 22px -10px rgba(0, 0, 0, .7); animation: lcHcKey 2.4s ease-in-out infinite; animation-delay: calc(var(--i) * .3s); }
@@ -2172,7 +2175,7 @@ body.lc-bg-on .lc-shell { border-color: rgba(255, 255, 255, .12); box-shadow: 0 
 .lc-hero-cover .pf-lc-segs i.cur { opacity: 1; animation: lcHcCur 1s ease-in-out infinite; }
 @keyframes lcHcCur { 50% { opacity: .35; } }
 @media (max-width: 640px) { .lc-hero-cover .pf-lc { transform: scale(1.05); } }
-@media (prefers-reduced-motion: reduce) { .lc-hero-cover kbd, .lc-hero-cover .pf-lc-segs i { animation: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .lc-hero-cover kbd, .lc-hero-cover .pf-lc-segs i, .lc-hero-cover .cvb::before { animation: none; opacity: 1; } }
 
 /* =========================================================
    MJ-04 · Palavras das Estrelas

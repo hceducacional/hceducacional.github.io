@@ -25,11 +25,11 @@ const HC_CURSO = {
       texto: 'Nesta etapa, você encontrará atividades elaboradas especialmente para introduzir os conceitos iniciais do teclado. É essencial compreender o funcionamento de cada tecla; por isso, cada seção é projetada com atenção para facilitar a aprendizagem e a memorização dos diferentes grupos de teclas a seguir.',
       totalNiveis: 170,
       licoes: [
-        { tag: 'Introdução', titulo: 'Conhecendo J, F e Espaço', desc: 'Os primeiros toques: os indicadores nas teclas F e J e os polegares na barra de espaço.', imagem: '', arquivo: 'curso/licao-01.js' },
-        { tag: 'Introdução', titulo: 'Teclas U, R e K', desc: 'Os indicadores sobem para U e R, e o dedo médio direito chega ao K.', imagem: '' },
-        { tag: 'Introdução', titulo: 'Teclas D, E e I', desc: 'O dedo médio esquerdo no D e no E, e o médio direito no I.', imagem: '' },
-        { tag: 'Introdução', titulo: 'Teclas C, G e N', desc: 'O médio esquerdo desce ao C, e os indicadores alcançam o G e o N.', imagem: '' },
-        { tag: 'Revisão', titulo: 'Revisão Geral 1', desc: 'Uma revisão completa de todas as teclas aprendidas no módulo.', imagem: '' },
+        { tag: 'Introdução', titulo: 'Conhecendo J, F e Espaço', desc: 'Os primeiros toques: os indicadores nas teclas F e J e os polegares na barra de espaço.', imagem: '', arquivo: 'curso/licao-01.js', teclas: 'F J Espaço' },
+        { tag: 'Introdução', titulo: 'Teclas U, R e K', desc: 'Os indicadores sobem para U e R, e o dedo médio direito chega ao K.', imagem: '', capa: 'dg-2', teclas: 'U R K' },
+        { tag: 'Introdução', titulo: 'Teclas D, E e I', desc: 'O dedo médio esquerdo no D e no E, e o médio direito no I.', imagem: '', capa: 'dg-3', teclas: 'D E I' },
+        { tag: 'Introdução', titulo: 'Teclas C, G e N', desc: 'O médio esquerdo desce ao C, e os indicadores alcançam o G e o N.', imagem: '', capa: 'dg-4', teclas: 'C G N' },
+        { tag: 'Revisão', titulo: 'Revisão Geral 1', desc: 'Uma revisão completa de todas as teclas aprendidas no módulo.', imagem: '', capa: 'dg-5' },
       ],
     },
     // próximos módulos: aparecem como "Em breve" até receberem as lições
@@ -437,7 +437,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       .concat(extras().filter((x) => x.mod === i).map((x) => ({ ...x, imagem: x.image ?? x.imagem ?? '', extra: true })));
   });
   const canOpen = (m) => m.licoes.some((l) => l.arquivo) || isAdmin(); // o administrador abre até módulo vazio, para criar lições
-  const PER_PAGE = 5; // lições por página; da 6ª em diante continuam para o lado
+  const PER_PAGE = 1000; // todas as lições numa fileira só (no computador passa para o lado com as setas)
   const svg = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg>`;
 
   /* imagem, ou espaço reservado (com etiqueta para o administrador) */
@@ -856,7 +856,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     const l = lessonAt(n);
     if (!l?.arquivo) { introEnd(); location.hash = '#informatica/cursos'; return toast('Esta lição será montada em breve.'); }
     view.innerHTML = '<div class="wrap"><p class="me-loading">Carregando a lição…</p></div>';
-    try { await Promise.all([load('curso/licao.css'), load('curso/teclado.js'), load('curso/licao.js'), load(l.arquivo)]); }
+    try { await Promise.all([load('curso/licao.css'), load('curso/teclado.js'), load('curso/licao.js'), load(l.arquivo), load('curso/capas.css'), load('curso/capas-teclas.js').catch(() => {})]); }
     catch { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir a lição. Verifique a internet e tente de novo.</p></div>'; return introEnd(); }
     if (location.hash !== `#informatica/licao-${n}`) return introEnd();
     window.HC_licao.open(view, window.HC_LICOES[`licao-${n}`], lessonMeta(n));
@@ -1224,16 +1224,64 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   const MTINTS = ['22, 60, 48', '36, 40, 110', '86, 30, 110', '120, 50, 24', '24, 80, 96'];
 
   /* módulo expandido: as lições do módulo e o próximo passo */
+  /* barrinha de progresso da lição, embaixo do texto (como nas aulas e disciplinas): níveis feitos; no fim, o selo "Concluída" */
+  const lprog = (p) => p?.done
+    ? `<div class="pf-cprog ok"><span class="pf-cprog-trk"><i style="--p:1"></i></span><b class="pf-aprov">${svg('check')} Concluída</b></div>`
+    : `<div class="pf-cprog" role="progressbar" aria-label="Níveis feitos" aria-valuemin="0" aria-valuemax="${p?.total || 0}" aria-valuenow="${p?.lvl || 0}"><span class="pf-cprog-trk"><i style="--p:${p ? p.lvl / p.total : 0}"></i></span><b>${p ? `${p.lvl}/${p.total}` : '0%'}</b></div>`;
   function modBody(mi) {
     const m = HC_CURSO.modulos[mi]; if (!m) return '';
     const first = HC_CURSO.modulos.slice(0, mi).reduce((a, x) => a + x.licoes.length, 0); // nº da 1ª lição do módulo - 1
     const nextM = HC_CURSO.modulos[mi + 1];
     const pages = []; for (let k = 0; k < m.licoes.length; k += PER_PAGE) pages.push(m.licoes.slice(k, k + PER_PAGE));
+    /* cabeçalho do módulo: o que é (prática de digitação), as teclas que entram em cada lição, o progresso e como funciona */
+    const nums = m.licoes.map((_, i) => first + i + 1), feitas = nums.filter((n) => progress(n)?.done).length;
+    const grupos = m.licoes.map((l, i) => ({ l, n: nums[i] })).filter((g) => g.l.teclas);
+    const kbd = (k) => `<kbd${k.length > 1 ? ' class="w"' : ''}>${esc(k)}</kbd>`;
+    const passos = [
+      ['hand', 'Dedos na posição', 'Indicadores no F e no J, polegares no Espaço.'],
+      ['type', 'Digite o que aparecer', 'Níveis curtos, do mais fácil ao mais difícil.'],
+      ['star', 'Ganhe estrelas e XP', 'Quanto mais preciso, mais estrelas você leva.'],
+    ];
+    const PI = {
+      hand: '<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12"/><path d="M11 11.5v-2a1.5 1.5 0 0 1 3 0V12"/><path d="M14 10.5a1.5 1.5 0 0 1 3 0V12"/><path d="M17 11.5a1.5 1.5 0 0 1 3 0V16a6 6 0 0 1-6 6h-2a6 6 0 0 1-5-2.7L4.3 15a1.6 1.6 0 0 1 2.6-1.9L8 14.5"/>',
+      type: '<path d="M4 7V5h16v2M9 19h6M12 5v14"/>',
+      star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+    };
     return `
       <section>
-        <h2 class="shelf-title"><span class="ap-grad">${esc(m.secao || m.nome + '.')}</span><span> ${esc(m.secaoComplemento || '')}</span></h2>
-        ${m.texto ? `<p class="shelf-sub pf-sub">${esc(m.texto)}</p>` : ''}
+        <header class="pf-mh">
+          <div class="pf-mh-main">
+            <span class="pf-mh-eyebrow">${svg('keys')}<span>Prática de digitação</span><i></i><span>Módulo ${mi + 1}</span>${m.nivel ? `<i class="pf-mh-lv"></i><span class="pf-mh-lv">${esc(m.nivel)}</span>` : ''}</span>
+            <h2 class="pf-mh-title"><span class="ap-grad">${esc(m.secao || m.nome + '.')}</span> ${m.secaoComplemento ? `<span class="pf-mh-sub">${esc(m.secaoComplemento)}</span>` : ''}</h2>
+            ${m.texto ? `<p class="pf-mh-text">${esc(m.texto)}</p>` : ''}
+            <ol class="pf-mh-steps" aria-label="Como funciona">${passos.map(([ic, t, d], i) => `
+              <li><span class="pf-mh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${PI[ic]}</svg><b>${i + 1}</b></span><span><strong>${t}</strong><small>${d}</small></span></li>`).join('')}
+            </ol>
+          </div>
+          <aside class="pf-mh-panel" aria-label="Resumo do módulo">
+            <span class="pf-mh-label">Teclas que você vai praticar</span>
+            ${grupos.length ? `<ol class="pf-mh-keys">${grupos.map((g) => `
+              <li class="${progress(g.n)?.done ? 'ok' : ''}"><span class="pf-mh-kk">${g.l.teclas.split(' ').map(kbd).join('')}</span><small>Lição ${String(g.n).padStart(2, '0')}${progress(g.n)?.done ? ' ✓' : ''}</small></li>`).join('')}
+            </ol>` : ''}
+            <div class="pf-mh-prog">
+              <div class="pf-mh-prog-top"><strong>${feitas} de ${m.licoes.length}</strong><span>lições concluídas</span></div>
+              <div class="pf-mh-bar"><i style="--w:${m.licoes.length ? feitas / m.licoes.length : 0}"></i></div>
+            </div>
+            <div class="pf-mh-stats">
+              <span><b>${m.licoes.length}</b>lições</span>
+              <span><b>${m.totalNiveis}</b>níveis</span>
+              <span><b>${svg('keys')}</b>no computador</span>
+            </div>
+          </aside>
+        </header>
         ${window.HC_isComputer() ? '' : `<div class="pf-pc-note"><span>${svg('keys')}</span><p><b>As lições são feitas no computador.</b> Por aqui você acompanha o seu progresso; para praticar, use os computadores da instituição nos dias de aula.</p></div>`}
+        <div class="pf-lhead">
+          <h3>Lições do módulo <span>${m.licoes.length}</span></h3>
+          ${pages.length ? `<div class="ap-paddles pf-lpaddles">
+            <button class="ap-paddle" type="button" data-ldir="-1" aria-label="Lições anteriores" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+            <button class="ap-paddle" type="button" data-ldir="1" aria-label="Próximas lições"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+          </div>` : ''}
+        </div>
         <div class="pf-lpages" id="pf-lpages">${pages.map((pg, pi) => `
         <ol class="pf-lessons" aria-label="Lições ${pi * PER_PAGE + 1} a ${pi * PER_PAGE + pg.length}">
           ${pg.map((l, k) => {
@@ -1243,12 +1291,13 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
             const go = !l.arquivo ? 'Em breve' : !window.HC_isComputer() ? 'Ver' : p?.done ? 'Refazer' : p && p.lvl > 0 ? 'Continuar' : 'Acessar';
             return `
           <li class="pf-lesson${l.arquivo ? '' : ' soon'}" style="--i:${k};--tint:${l.arquivo ? '74, 30, 8' : TINTS[i % TINTS.length]}" data-lesson="${n}" tabindex="0" aria-label="Lição ${num}: ${esc(l.titulo)}">
-            ${l.arquivo ? `<div class="pf-lesson-img pf-lcover" data-cover="${esc(l.arquivo)}" data-n="${n}" aria-hidden="true"></div>` : `<div class="pf-lesson-img">${slot(l.imagem, 'Imagem da lição', '1000 × 1000', i)}</div>`}
+            ${l.arquivo ? `<div class="pf-lesson-img pf-lcover" data-cover="${esc(l.arquivo)}" data-n="${n}" aria-hidden="true"></div>` : l.capa ? `<div class="pf-lesson-img pf-dgcover" data-capa="${esc(l.capa)}" aria-hidden="true"></div>` : `<div class="pf-lesson-img">${slot(l.imagem, 'Imagem da lição', '1000 × 1000', i)}</div>`}
             <div class="pf-lesson-app">
               <div class="pf-lesson-text">
                 <span class="pf-lesson-tag">${esc(l.tag)}</span>
                 <h3>${esc(l.titulo)}</h3>
                 ${l.desc ? `<p>${esc(l.desc)}</p>` : ''}
+                ${l.arquivo ? lprog(p) : ''}
               </div>
               <div class="pf-lesson-bar">
                 <span class="pf-lesson-av">${num}</span>
@@ -1258,14 +1307,9 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
               </div>
             </div>
             ${isAdmin() ? `<div class="pf-adm"><button class="pf-adm-btn" type="button" data-editlesson="${l.extra ? 'x:' + esc(l.id) : `l${mi}-${i}`}" aria-label="Editar a capa da lição" title="Editar capa">${svg('pen')}</button>${l.extra ? `<button class="pf-adm-btn pf-lesson-del" type="button" data-dellesson="${esc(l.id)}" aria-label="Apagar este card" title="Apagar card">×</button>` : ''}</div>` : ''}
-            ${p ? `<b class="pf-lesson-prog" style="--w:${((p.done ? p.total : p.lvl) / p.total) * 100}%"></b>` : ''}
           </li>`;
           }).join('')}
         </ol>`).join('')}</div>
-        ${pages.length > 1 ? `<div class="ap-paddles pf-lpaddles">
-          <button class="ap-paddle" type="button" data-ldir="-1" aria-label="Lições anteriores" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
-          <button class="ap-paddle" type="button" data-ldir="1" aria-label="Próximas lições"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
-        </div>` : ''}
       </section>
       <section style="--n:${pages[0]?.length || 0}">
         <div class="pf-step-head">
@@ -1474,12 +1518,21 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
      As barrinhas dos níveis que o aluno já fez ficam acesas; a do nível atual pulsa.
      Os dados da lição (arquivo pequeno) são baixados só para desenhar a capa. */
   function lessonCovers(root) {
+    /* capas ilustradas das lições de digitação (curso/capas-teclas.js): valem por cima da foto enviada pelo lápis */
+    Promise.all([load('curso/capas.css'), load('curso/capas-teclas.js')]).then(() => {
+      root.querySelectorAll('.pf-dgcover[data-capa]').forEach((box) => {
+        const id = box.dataset.capa; if (!window.HC_CAPAS_DG?.[id]) return;
+        box.innerHTML = HC_CAPAS_DG[id];
+        const t = window.HC_CAPAS_DG_TINT?.[id]; if (t) box.closest('.pf-lesson')?.style.setProperty('--tint', t);
+      });
+      root.querySelectorAll('.pf-lcover[data-cover]').forEach((box) => { if (!box.querySelector('.cvb')) box.insertAdjacentHTML('afterbegin', HC_CAPAS_DG_FUNDO('dg-1')); });
+    }).catch(() => {});
     root.querySelectorAll('.pf-lcover[data-cover]').forEach((box) => {
       const n = +box.dataset.n;
       load(box.dataset.cover).then(() => {
         const L = window.HC_LICOES?.[`licao-${n}`]; if (!L || !box.isConnected) return;
         const p = progress(n), done = p?.done ? L.niveis.length : p?.lvl || 0;
-        box.innerHTML = `<div class="pf-lc"><div class="pf-lc-keys">${L.teclas.map((k, i) => `<kbd style="--i:${i}">${k === ' ' ? 'Espaço' : esc(k.toUpperCase())}</kbd>`).join('')}</div>
+        box.innerHTML = (window.HC_CAPAS_DG_FUNDO?.('dg-1') || '') + `<div class="pf-lc"><div class="pf-lc-keys">${L.teclas.map((k, i) => `<kbd style="--i:${i}">${k === ' ' ? 'Espaço' : esc(k.toUpperCase())}</kbd>`).join('')}</div>
           <div class="pf-lc-segs${done ? ' has' : ''}">${L.niveis.map((lv, i) => `<i class="${lv.tipo === 'typing' ? 'd' : 'm'}${i < done ? ' on' : ''}${p && !p.done && i === done ? ' cur' : ''}" style="--i:${i}"></i>`).join('')}</div></div>`;
       }).catch(() => {});
     });
@@ -1493,9 +1546,10 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     const pagesEl = root.querySelector('#pf-lpages');
     if (pagesEl) {
       const pads = root.querySelectorAll('[data-ldir]');
-      const upd = () => { if (!pads.length) return; pads[0].disabled = pagesEl.scrollLeft < 4; pads[1].disabled = pagesEl.scrollLeft + pagesEl.clientWidth >= pagesEl.scrollWidth - 4; };
-      pads.forEach((b) => b.addEventListener('click', () => pagesEl.scrollBy({ left: +b.dataset.ldir * pagesEl.clientWidth, behavior: 'smooth' })));
-      pagesEl.addEventListener('scroll', upd, { passive: true }); upd();
+      /* setas só aparecem quando as lições não cabem na fileira */
+      const upd = () => { if (!pads.length || !pagesEl.isConnected) return; pads[0].disabled = pagesEl.scrollLeft < 4; pads[1].disabled = pagesEl.scrollLeft + pagesEl.clientWidth >= pagesEl.scrollWidth - 4; pads[0].parentNode.classList.toggle('none', pads[0].disabled && pads[1].disabled); };
+      pads.forEach((b) => b.addEventListener('click', () => pagesEl.scrollBy({ left: +b.dataset.ldir * pagesEl.clientWidth * .8, behavior: 'smooth' })));
+      pagesEl.addEventListener('scroll', upd, { passive: true }); addEventListener('resize', upd, { passive: true }); upd(); setTimeout(upd, 1200);
     }
     root.querySelectorAll('[data-addlesson]').forEach((b) => b.addEventListener('click', () => addLesson(view, +b.dataset.addlesson)));
     root.querySelectorAll('[data-editlesson]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); editCard(view, b.dataset.editlesson); }));
