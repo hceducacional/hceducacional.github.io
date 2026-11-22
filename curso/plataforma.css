@@ -863,3 +863,29 @@ html:has(.pfd), body:has(.pfd) { background: #0d0d0f; }
   .pf-cnew span { width: 64px; height: 64px; } .pf-cnew b { font-size: 19px; } .pf-cnew small { font-size: 14px; }
   .pfd-grid { grid-template-columns: repeat(auto-fill, minmax(clamp(300px, 24vw, 400px), 1fr)); gap: 18px; }
 }
+
+/* aulas das disciplinas: número grande no canto, cadeado enquanto a anterior não foi aprovada, selo de aprovada */
+.pf-cnum { position: absolute; left: 16px; top: 14px; display: grid; place-items: center; min-width: 46px; height: 46px; padding: 0 10px; border-radius: 14px;
+  background: rgba(255, 255, 255, .16); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  color: #fff; font-size: 20px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.pf-cnum svg { width: 22px; height: 22px; }
+.pf-ccard .pf-lesson-img .pf-cnum svg { position: static; transform: none; width: 22px; color: #fff; }
+.pf-cok { position: absolute; right: 16px; top: 14px; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: #16a34a; color: #fff;
+  box-shadow: 0 6px 16px -6px rgba(0, 0, 0, .5); animation: pfOk .6s cubic-bezier(.34, 1.56, .64, 1) both; }
+.pf-ccard .pf-lesson-img .pf-cok svg { position: static; transform: none; width: 20px; color: #fff; }
+@keyframes pfOk { from { transform: scale(.3); opacity: 0; } }
+
+.pf-clock { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 0 18%; text-align: center;
+  background: rgba(10, 10, 14, .5); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); color: #fff; }
+.pf-ccard .pf-lesson-img .pf-clock svg { position: static; transform: none; width: 44px; height: 44px; padding: 12px; border-radius: 50%; background: rgba(255, 255, 255, .16); color: #fff; box-sizing: content-box; }
+.pf-clock small { font-size: 13px; font-weight: 600; line-height: 1.35; opacity: .9; }
+.pf-ccard.locked { cursor: not-allowed; }
+.pf-ccard.locked .pf-lesson-app { filter: saturate(.35); opacity: .78; }
+.pf-ccard.locked .pf-lesson-go { width: 34px; padding: 0; }
+.pf-ccard.locked .pf-lesson-go svg { width: 16px; height: 16px; }
+.pf-ccard.locked:hover .pf-lesson-img { transform: none; }
+.pf-ccard.locked:hover .pf-lesson-go { background: rgba(255, 255, 255, .26); color: #fff; }
+.pf-ccard:has(.pf-adm) .pf-cnum { top: 62px; } /* administrador: abaixo da etiqueta "Imagem do conteúdo" */
+.pf-ccard:has(.pf-adm) .pf-cok { left: 16px; right: auto; top: 116px; }
+.pf-clock { justify-content: flex-start; padding-top: 16%; }
+@media (max-width: 860px) { .pf-clock { padding: 12% 10% 0; gap: 6px; } .pf-ccard .pf-lesson-img .pf-clock svg { width: 28px; height: 28px; padding: 9px; } .pf-clock small { font-size: 11.5px; } }

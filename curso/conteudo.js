@@ -17,7 +17,13 @@
   const fmtC = (v) => (window.HC_cashFmt ? window.HC_cashFmt(v) : (Math.round(v * 100) / 100).toFixed(2));
   const COIN = 'assets/moeda/moeda.webp';
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const md = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  /* texto: **negrito**, [[icone]] (ícone animado no meio da frase, curso/figuras.js) e {{Ctrl}} (tecla desenhada) */
+  const kbd = (k) => `<kbd class="ct-kbd">${k}</kbd>`;
+  /* "Ctrl+Shift+Esc", "Win++" (a própria tecla +), "Home / End" (duas opções) */
+  const keys = (k) => k.split(' / ').map((c) => c.split(/\+(?=.)/).map((x) => kbd(x.trim())).join('<i class="ct-plus">+</i>')).join('<i class="ct-plus">/</i>');
+  const md = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[\[([\w-]+)\]\]/g, (m, n) => (window.HC_ICO ? window.HC_ICO(n) : ''))
+    .replace(/\{\{(.+?)\}\}/g, (m, k) => keys(k));
   const say = (t) => (typeof toast === 'function' ? toast(t) : null);
   const I = {
     back: '<path d="m15 18-6-6 6-6"/>',
@@ -71,6 +77,20 @@
     if (b.destaque) { const [ico, lbl] = TOM[b.destaque.tom] || TOM.saiba; return `<aside class="ct-note ${b.destaque.tom || 'saiba'}"><span class="ct-note-ico">${svg(ico)}</span><div><b>${esc(b.destaque.titulo || lbl)}</b><p>${md(b.destaque.texto)}</p></div></aside>`; }
     if (b.teclado) return keyboard(b.teclado);
     if (b.tabela) return `<div class="ct-table"><table><thead><tr>${b.tabela.cab.map((c) => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${b.tabela.linhas.map((r) => `<tr>${r.map((c) => `<td>${md(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    /* ilustração animada (curso/figuras.js), com legenda opcional */
+    if (b.fig) { const f = window.HC_FIGS?.[b.fig]; return f ? `<figure class="ct-fig" data-fig="${esc(b.fig)}">${f()}${b.legenda ? `<figcaption>${md(b.legenda)}</figcaption>` : ''}</figure>` : ''; }
+    /* cartões com ícone: [{ ico, t, d }] */
+    if (b.cards) return `<div class="ct-cards">${b.cards.map((c, i) => `<div class="ct-card" style="--i:${i}"><span class="ct-card-ico">${window.HC_ICO ? window.HC_ICO(c.ico, true) : ''}</span><b>${md(c.t)}</b>${c.d ? `<p>${md(c.d)}</p>` : ''}</div>`).join('')}</div>`;
+    /* atalhos: [['Ctrl+C', 'Copiar'], …] */
+    if (b.atalhos) return `<div class="ct-keys">${b.atalhos.map(([k, d], i) => `<div class="ct-keyrow" style="--i:${i}"><span class="ct-keycombo">${keys(esc(k))}</span><span>${md(d)}</span></div>`).join('')}</div>`;
+    /* linha do tempo: [['1946', 'texto'], …] */
+    if (b.linha) return `<ol class="ct-time">${b.linha.map(([y, t], i) => `<li style="--i:${i}"><span class="ct-time-y">${esc(y)}</span><div>${md(t)}</div></li>`).join('')}</ol>`;
+    /* comparação lado a lado: { a: { t, ico, itens }, b: { t, ico, itens } } */
+    if (b.compara) return `<div class="ct-vs">${['a', 'b'].map((k) => { const x = b.compara[k]; return `<div class="ct-vs-col ${k}"><div class="ct-vs-h">${x.ico && window.HC_ICO ? window.HC_ICO(x.ico, true) : ''}<b>${md(x.t)}</b></div><ul>${x.itens.map((it) => `<li>${md(it)}</li>`).join('')}</ul></div>`; }).join('<span class="ct-vs-x">×</span>')}</div>`;
+    /* fluxo em etapas com setas animadas: [{ ico, t, d }] */
+    if (b.fluxo) return `<div class="ct-flow">${b.fluxo.map((x, i) => `${i ? '<span class="ct-flow-arr" aria-hidden="true"><i></i></span>' : ''}<div class="ct-flow-step" style="--i:${i}"><span class="ct-flow-ico">${window.HC_ICO ? window.HC_ICO(x.ico, true) : ''}</span><b>${md(x.t)}</b>${x.d ? `<small>${md(x.d)}</small>` : ''}</div>`).join('')}</div>`;
+    /* exemplo: uma "tela" com o resultado (texto livre) */
+    if (b.exemplo) return `<div class="ct-ex"><span class="ct-ex-t">${esc(b.exemplo.titulo || 'Exemplo')}</span><div class="ct-ex-b">${b.exemplo.linhas.map((l) => `<p>${md(l)}</p>`).join('')}</div></div>`;
     return '';
   }
 
@@ -100,10 +120,29 @@
      Anterior/Próxima embaixo. O questionário acompanha: mostra só as perguntas da parte aberta,
      e ao terminar as perguntas da parte ele oferece seguir para a próxima. */
   const VERIFY_MS = 1300; // "Verificando resposta…" antes de mostrar se acertou
+  /* avaliação da disciplina: { avaliacao: { aulas: [ids] } } vira 30 perguntas tiradas dos questionários das aulas,
+     em 3 blocos de 10 (Aulas 01–03, 04–06, 07–09). A 1ª aula de cada bloco dá 4 perguntas e as outras duas, 3. */
+  const two = (n) => String(n).padStart(2, '0');
+  function buildExam(C) {
+    const ids = C.avaliacao.aulas || [], P = [], Q = [];
+    for (let b = 0; b * 3 < ids.length; b++) P.push({ id: `b${b + 1}`, titulo: `Aulas ${two(b * 3 + 1)} a ${two(Math.min(ids.length, b * 3 + 3))}`, blocos: [] });
+    ids.forEach((aid, i) => {
+      const A = window.HC_CONTEUDOS?.[aid]; if (!A?.perguntas?.length) return;
+      const picks = i % 3 === 0 ? [0, 3, 6, 9] : i % 3 === 1 ? [1, 4, 8] : [2, 5, 7];
+      picks.forEach((k) => { const q = A.perguntas[k % A.perguntas.length]; Q.push({ ...q, parte: P[Math.floor(i / 3)].id, de: `Aula ${two(i + 1)}: ${A.titulo}` }); });
+    });
+    return { ...C, partes: P, perguntas: Q, prova: true };
+  }
+  /* alternativas embaralhadas, sempre na mesma ordem para a mesma pergunta (a resposta certa não fica sempre na mesma letra) */
+  const seeded = (str) => { let h = 2166136261; for (const ch of str) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); h = h || 1; return () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return (h >>> 0) / 4294967296; }; };
+  const mix = (q, key) => { const r = seeded(key), ix = q.op.map((_, k) => k); for (let k = ix.length - 1; k > 0; k--) { const j = Math.floor(r() * (k + 1)); [ix[k], ix[j]] = [ix[j], ix[k]]; } return { ...q, op: ix.map((k) => q.op[k]), certa: ix.indexOf(q.certa) }; };
   let cleanup = null;
-  function open(view, C, meta = {}) {
+  function open(view, C0, meta = {}) {
     cleanup?.();
-    const id = meta.id, test = !!meta.test, S = store(id, test), Q = C.perguntas || [], P = C.partes || [];
+    const C = C0.avaliacao ? buildExam(C0) : C0, exam = !!C.prova, nx = meta.next;
+    const id = meta.id, test = !!meta.test, S = store(id, test), P = C.partes || [];
+    const Q = (C.perguntas || []).map((q, i) => (C.embaralhar === false ? q : mix(q, `${id}:${q.q}`)));
+    const PART = exam ? 'Bloco' : 'Parte', tagTxt = meta.rotulo ? `${meta.rotulo}${meta.disciplina ? ` · ${meta.disciplina}` : ''}` : (C.tag || 'Texto');
     /* carteira: a de verdade (Saldo HC) ou, no teste do administrador, uma fictícia */
     let fake = TEST_SALDO;
     const wallet = test ? { saldo: () => fake, spend: (n) => (fake >= n ? ((fake -= n), true) : false) }
@@ -115,7 +154,7 @@
     let cur = -1, showResult = false, checking = null; // pergunta aberta; resultado geral; resposta em verificação {q, k}
 
     view.innerHTML = `
-    <div class="ct${test ? ' testing' : ''}" style="--tint:${meta.tint || '28, 64, 120'}">
+    <div class="ct${test ? ' testing' : ''}${exam ? ' exam' : ''}" style="--tint:${meta.tint || '28, 64, 120'}">
       <div class="ct-readbar" aria-hidden="true"><i></i></div>
       ${test ? `<div class="ct-testbar"><span class="ct-testbar-ico">${svg('flask')}</span><div><b>Modo de teste</b><small>Nada é salvo e o saldo é fictício (${fmtC(TEST_SALDO)}).</small></div>
         <button type="button" class="ct-tb-btn" data-fill>Responder tudo</button><button type="button" class="ct-tb-btn dark" data-exittest>Sair do teste</button></div>` : ''}
@@ -128,14 +167,14 @@
           </div>
           <header class="ct-head">
             ${meta.image ? `<div class="ct-cover"><img src="${esc(meta.image)}" alt=""></div>` : ''}
-            <span class="ct-tag">${esc(C.tag || 'Texto')}</span>
+            <span class="ct-tag">${esc(tagTxt)}</span>
             <h1>${esc(C.titulo)}</h1>
             <p class="ct-sub">${esc(C.subtitulo || '')}</p>
             <div class="ct-meta">
-              <span>${svg('clock')} ${C.leitura || 10} min de leitura</span>
-              <span>${svg('list')} ${P.length} partes</span>
-              <span>${svg('quiz')} ${Q.length} perguntas</span>
+              ${exam ? `<span>${svg('quiz')} ${Q.length} perguntas</span><span>${svg('list')} ${P.length} blocos</span><span>${svg('check')} nota mínima 7</span>`
+                : `<span>${svg('clock')} ${C.leitura || 10} min de leitura</span><span>${svg('list')} ${P.length} partes</span><span>${svg('quiz')} ${Q.length} perguntas</span>`}
             </div>
+            ${exam ? `<div class="ct-examinfo">${svg('info')}<p>Sem o material: responda com o que aprendeu nas aulas. Cada pergunta mostra de qual aula ela veio. Com <b>nota 7 ou mais</b>, você conclui a disciplina.</p></div>` : ''}
             <nav class="ct-toc" aria-label="Partes do texto">
               <div class="ct-toc-top"><b>Nesta leitura</b><small class="ct-toc-n"></small></div>
               <ol>${P.map((p, i) => `<li><a href="#" data-part="${i}"><span class="ct-toc-num">${i + 1}</span><span class="ct-toc-t">${esc(p.titulo)}</span><span class="ct-toc-ok">${svg('check')}</span></a></li>`).join('')}</ol>
@@ -147,10 +186,10 @@
           </nav>
           <div class="ct-parts">${P.map((p, i) => `
             <section class="ct-part" id="ct-${p.id}" data-pi="${i}" hidden>
-              <span class="ct-num">Parte ${i + 1} de ${P.length}</span>
+              <span class="ct-num">${PART} ${i + 1} de ${P.length}</span>
               <h2>${esc(p.titulo)}</h2>
               ${p.blocos.map(block).join('')}
-              ${i === P.length - 1 ? `<footer class="ct-foot"><span class="ct-foot-ico">${svg('check')}</span><b>Fim da leitura</b><p>Agora é com você: termine o questionário e depois pratique na Lição 01.</p></footer>` : ''}
+              ${i === P.length - 1 ? `<footer class="ct-foot"><span class="ct-foot-ico">${svg('check')}</span><b>Fim da leitura</b><p>${nx ? `Agora é com você: termine o questionário. Com nota 7 ou mais, a ${esc(nx.nome)} é liberada.` : 'Agora é com você: termine o questionário para receber a sua nota.'}</p></footer>` : ''}
               <i class="ct-mark" data-mark="${p.id}"></i>
             </section>`).join('')}
           </div>
@@ -164,7 +203,7 @@
             <div class="ctq-grab" aria-hidden="true"></div>
             <div class="ctq-head">
               <div class="ctq-ring" title="Perguntas respondidas no conteúdo todo"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19"/><circle class="ctq-ring-v" cx="22" cy="22" r="19"/></svg><b class="ctq-ring-n"></b></div>
-              <div class="ctq-ht"><small>Questionário</small><b class="ctq-pt"></b><span class="ctq-sum"></span></div>
+              <div class="ctq-ht"><small>${exam ? 'Avaliação' : 'Questionário'}</small><b class="ctq-pt"></b><span class="ctq-sum"></span></div>
               <button class="ctq-close" type="button" aria-label="Fechar o questionário">${svg('x')}</button>
             </div>
             <div class="ctq-dots" role="tablist" aria-label="Perguntas desta parte"></div>
@@ -178,7 +217,7 @@
 
     const root = view.querySelector('.ct'), body = root.querySelector('.ctq-body'), dots = root.querySelector('.ctq-dots');
     const mob = () => matchMedia('(max-width: 1023px)').matches;
-    const setSheet = (on) => { root.classList.toggle('q-open', on); document.documentElement.classList.toggle('ct-lock', on && mob()); };
+    const setSheet = (on) => { if (exam) return; root.classList.toggle('q-open', on); document.documentElement.classList.toggle('ct-lock', on && mob()); };
     const toTop = (el, smooth = true) => {
       const bar = document.querySelector('.topbar-wrap, .topbar'), off = (bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0) + 16;
       const y = el.getBoundingClientRect().top + scrollY - off;
@@ -192,18 +231,19 @@
       root.classList.toggle('first', part === 0);
       const sec = root.querySelector(`.ct-part[data-pi="${part}"]`);
       sec.classList.remove('enter'); void sec.offsetWidth; sec.classList.add('enter');
-      root.querySelector('.ct-steps-n').textContent = `Parte ${part + 1} de ${P.length}`;
+      root.querySelector('.ct-steps-n').textContent = `${PART} ${part + 1} de ${P.length}`;
       root.querySelector('.ct-steps-t').textContent = P[part].titulo;
-      const [pv, nx] = root.querySelectorAll('.ct-pg');
+      const [pv, nxb] = root.querySelectorAll('.ct-pg');
       pv.hidden = part === 0; pv.querySelector('b').textContent = P[part - 1]?.titulo || '';
-      nx.classList.toggle('last', part === P.length - 1);
-      nx.querySelector('small').innerHTML = part === P.length - 1 ? `Concluir ${svg('check')}` : `Próxima ${svg('next')}`;
-      nx.querySelector('b').textContent = part === P.length - 1 ? 'Ver o resultado do questionário' : P[part + 1].titulo;
+      const nb = nxb; // botão "Próxima" do rodapé do texto
+      nb.classList.toggle('last', part === P.length - 1);
+      nb.querySelector('small').innerHTML = part === P.length - 1 ? `Concluir ${svg('check')}` : `Próxima ${svg('next')}`;
+      nb.querySelector('b').textContent = part === P.length - 1 ? 'Ver o resultado do questionário' : P[part + 1].titulo;
       const s = st(); if (s.part !== part) { s.part = part; S.save(); }
       const mk = sec.querySelector('[data-mark]'); if (!s.read.includes(mk.dataset.mark)) io.observe(mk);
       if (syncQ) { showResult = false; const qs = qsOf(part); cur = qs.find((k) => s.ans[k] === undefined) ?? qs[0] ?? -1; }
       paint(); drawQ();
-      if (scroll) toTop(part === 0 ? root.querySelector('.ct-doc') : root.querySelector('.ct-steps'));
+      if (scroll) toTop(exam ? root.querySelector('.ct-quiz') : part === 0 ? root.querySelector('.ct-doc') : root.querySelector('.ct-steps'));
       onScroll();
     };
 
@@ -212,9 +252,9 @@
       const a = st().ans, n = Q.length, done = Object.keys(a).length, ok = Q.filter((q, i) => a[i] === q.certa).length, qs = qsOf(part);
       root.querySelector('.ctq-ring-n').textContent = `${done}/${n}`;
       root.querySelector('.ctq-ring-v').style.strokeDasharray = `${(done / n) * 119.4} 200`;
-      root.querySelector('.ctq-pt').textContent = `Parte ${part + 1}: ${P[part].titulo}`;
+      root.querySelector('.ctq-pt').textContent = `${PART} ${part + 1}: ${P[part].titulo}`;
       const best = bestNota();
-      root.querySelector('.ctq-sum').textContent = `${qs.length ? `${qs.length} ${qs.length === 1 ? 'pergunta' : 'perguntas'} nesta parte · ` : ''}${best !== null ? `Nota ${fmtN(best)}` : `Tentativa ${st().tent || 1} · nota de 0 a 10`}`;
+      root.querySelector('.ctq-sum').textContent = `${qs.length ? `${qs.length} ${qs.length === 1 ? 'pergunta' : 'perguntas'} ${exam ? 'neste bloco' : 'nesta parte'} · ` : ''}${best !== null ? `Nota ${fmtN(best)}` : `Tentativa ${st().tent || 1} · nota de 0 a 10`}`;
       const pend = qs.filter((k) => a[k] === undefined).length;
       root.querySelector('.ct-fab-n').textContent = qs.length ? (pend ? `${qs.length - pend}/${qs.length}` : '✓') : `${done}/${n}`;
       dots.hidden = !qs.length || showResult;
@@ -238,11 +278,11 @@
       const q = Q[cur], j = qs.indexOf(cur), ans = a[cur], answered = ans !== undefined, chk = checking?.q === cur ? checking.k : null;
       const secDone = qs.every((k) => a[k] !== undefined), lastQ = j === qs.length - 1;
       const nextBtn = allDone ? `<button type="button" class="ctq-btn" data-result>Ver resultado</button>`
-        : answered && (lastQ || secDone) && part < P.length - 1 ? `<button type="button" class="ctq-btn" data-pstep="1">Próxima parte ${svg('next')}</button>`
+        : answered && (lastQ || secDone) && part < P.length - 1 ? `<button type="button" class="ctq-btn" data-pstep="1">${exam ? 'Próximo bloco' : 'Próxima parte'} ${svg('next')}</button>`
         : `<button type="button" class="ctq-btn${answered ? '' : ' soft'}" data-step="1"${lastQ ? ' disabled' : ''}>${answered ? 'Próxima' : 'Pular'} ${svg('next')}</button>`;
       body.innerHTML = `
         <div class="ctq-card">
-          <span class="ctq-where">Pergunta ${j + 1} de ${qs.length} desta parte</span>
+          <span class="ctq-where">Pergunta ${j + 1} de ${qs.length} ${exam ? 'deste bloco' : 'desta parte'}${q.de ? `<em class="ctq-de">${esc(q.de)}</em>` : ''}</span>
           <h3>${md(q.q)}</h3>
           <div class="ctq-ops">${q.op.map((o, k) => {
             const s = chk !== null ? (k === chk ? ' checking' : ' dim') : !answered ? '' : k === q.certa ? ' right' : k === ans ? ' wrong' : ' dim';
@@ -252,7 +292,7 @@
           ${answered ? `<div class="ctq-fb ${ans === q.certa ? 'ok' : 'bad'}">
             <b>${ans === q.certa ? 'Resposta certa!' : 'Não foi dessa vez.'}</b>
             <p>${md(q.exp)}</p>
-            <button type="button" class="ctq-link" data-seetext>${svg('eye')} Ver no texto</button>
+            ${exam ? '' : `<button type="button" class="ctq-link" data-seetext>${svg('eye')} Ver no texto</button>`}
           </div>` : ''}
           <div class="ctq-nav">
             <button type="button" class="ctq-btn soft" data-step="-1"${j === 0 ? ' disabled' : ''}>Anterior</button>
@@ -267,7 +307,7 @@
       body.innerHTML = `
         <div class="ctq-card ctq-none">
           <span class="ctq-none-ico">${svg(allDone ? 'check' : 'list')}</span>
-          <h3>${allDone ? 'Questionário completo!' : 'Esta parte não tem perguntas'}</h3>
+          <h3>${allDone ? 'Questionário completo!' : `Est${exam ? 'e bloco' : 'a parte'} não tem perguntas`}</h3>
           <p>${allDone ? 'Você respondeu todas as perguntas. Veja como foi.' : miss.length ? 'Ainda faltam perguntas nestas partes:' : ''}</p>
           ${!allDone ? `<div class="ctq-miss">${miss.map((x) => `<button type="button" class="ctq-missi" data-part="${x.i}"><span>${x.i + 1}</span><b>${esc(x.p.titulo)}</b><small>${x.n} ${x.n === 1 ? 'pergunta' : 'perguntas'}</small>${svg('next')}</button>`).join('')}</div>` : ''}
           ${allDone ? '<div class="ctq-nav"><button type="button" class="ctq-btn" data-result>Ver resultado</button></div>' : ''}
@@ -284,7 +324,10 @@
           <div class="ctq-big" style="--p:${n * 10}"><b>${fmtN(n)}</b><small>de 10</small></div>
           <span class="ctq-badge">${pass ? `${svg('check')} Aprovado` : `${svg('warn')} Recuperação`}</span>
           <h3>${pass ? (n >= 9 ? 'Excelente!' : 'Muito bem!') : 'Ainda não foi desta vez'}</h3>
-          <p>${pass ? 'Você atingiu a nota mínima (7). Hora de praticar na Lição 01.' : `A nota mínima é 7. Releia as partes indicadas e, quando estiver pronto, libere uma nova tentativa com ${fmtC(PRICE)} do Saldo HC.`}</p>
+          <p>${pass ? (exam ? 'Você atingiu a nota mínima (7) e concluiu a disciplina. Parabéns!' : nx ? `Você atingiu a nota mínima (7). A ${esc(nx.nome)} foi liberada.` : 'Você atingiu a nota mínima (7).')
+            : `A nota mínima é 7. ${exam ? 'Revise as aulas das perguntas indicadas' : 'Releia as partes indicadas'} e, quando estiver pronto, libere uma nova tentativa com ${fmtC(PRICE)} do Saldo HC.`}</p>
+          ${pass && nx && !test ? `<button type="button" class="ctq-btn ctq-nextaula" data-nextaula>${esc(nx.nome)}: ${esc(nx.titulo)} ${svg('next')}</button>` : ''}
+          ${pass && exam ? `<button type="button" class="ctq-btn ctq-nextaula" data-back>Voltar para a disciplina ${svg('next')}</button>` : ''}
           <div class="ctq-stats"><span><b>${ok}/${Q.length}</b><small>acertos</small></span><span><b>${hist.length > 1 ? fmtN(best) : `${s0.tent || 1}ª`}</b><small>${hist.length > 1 ? 'maior nota (vale esta)' : 'tentativa'}</small></span></div>
           ${hist.length > 1 ? `<div class="ctq-hist"><small>Tentativas</small>${hist.map((h, i) => `<span class="${h.nota >= PASS ? 'ok' : 'bad'}"><b>${i + 1}ª</b>${fmtN(h.nota)}</span>`).join('')}</div>` : ''}
           ${wrong.length ? `<div class="ctq-rev"><small>Para revisar</small>${wrong.map((i) => `<button type="button" class="ctq-revi" data-q="${i}"><span>${partIdx[Q[i].parte] + 1}</span>${md(Q[i].q)}</button>`).join('')}</div>` : ''}
@@ -376,7 +419,8 @@
     root.addEventListener('click', (e) => {
       if (e.target.classList.contains('ct-scrim')) return setSheet(false);
       const t = e.target.closest('button, a'); if (!t || !root.contains(t)) return;
-      if (t.classList.contains('ct-back')) { location.hash = meta.back || '#informatica/cursos'; return; }
+      if (t.classList.contains('ct-back') || t.hasAttribute('data-back')) { location.hash = meta.back || '#informatica/cursos'; return; }
+      if (t.hasAttribute('data-nextaula') && nx) { location.hash = nx.hash; return; }
       if (t.dataset.part !== undefined) { e.preventDefault(); if (t.closest('.ctq')) setSheet(false); return showPart(+t.dataset.part); }
       if (t.dataset.pstep) {
         if (checking) return;
@@ -389,8 +433,8 @@
       if (t.dataset.q !== undefined) return goQ(+t.dataset.q);
       if (t.hasAttribute('data-result')) { showResult = true; paint(); return drawQ(); }
       if (t.hasAttribute('data-redo')) return buyAttempt();
-      if (t.hasAttribute('data-test')) { cleanup?.(); return open(view, C, { ...meta, test: true }); }
-      if (t.hasAttribute('data-exittest')) { cleanup?.(); return open(view, C, { ...meta, test: false }); }
+      if (t.hasAttribute('data-test')) { cleanup?.(); return open(view, C0, { ...meta, test: true }); }
+      if (t.hasAttribute('data-exittest')) { cleanup?.(); return open(view, C0, { ...meta, test: false }); }
       if (t.hasAttribute('data-fill')) { // teste: responde as que faltam ao acaso (mais ou menos metade certa), para chegar logo na nota
         const s0 = st(); Q.forEach((q, i) => { if (s0.ans[i] === undefined) s0.ans[i] = Math.random() < .5 ? q.certa : (q.certa + 1) % q.op.length; });
         closeAttempt(); showResult = true; paint(); drawQ(); if (mob()) setSheet(true); return;

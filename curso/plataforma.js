@@ -265,6 +265,15 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     prova: '<path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1Z"/><path d="M8 5H6.5A1.5 1.5 0 0 0 5 6.5v13A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-13A1.5 1.5 0 0 0 17.5 5H16"/><path d="m9 13 2 2 4-4"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
+    lock: '<rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3M12 14.5v2.5"/>',
+    cpu: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+    win: '<rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/>',
+    doc: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5M8.5 12l1.5 5 2-4 2 4 1.5-5"/>',
+    sheet: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+    chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.8A8 8 0 1 1 21 12Z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/>',
+    shield: '<path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.2 7.5 9.5 4.3-1.3 7.5-4.9 7.5-9.5V6L12 3Z"/><path d="m9 12 2 2 4-4"/>',
+    zap: '<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/>',
   };
   /* "Conteúdos para aprender": cards criados pelo administrador (chave cursoConteudo no banco).
      Cada um é um texto, um PDF, um questionário ou uma prova; só os marcados como visíveis aparecem para os alunos. */
@@ -277,34 +286,135 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   const saved = () => (typeof cursoConteudo !== 'undefined' && Array.isArray(cursoConteudo) ? cursoConteudo : []);
   /* conteúdos prontos, escritos no código (texto em curso/conteudos/<id>.js). O administrador pode trocar capa e textos
      do card pelo lápis (fica em cursoConteudo com o mesmo id) ou tirá-lo da tela (oculto: true). */
-  const CONTS_BASE = [
-    { id: 'texto-01', disc: 'disc-01', tipo: 'texto', titulo: 'O teclado e a digitação correta', desc: 'As partes do teclado, onde fica cada dedo, a postura certa e como ganhar velocidade sem perder a precisão.',
-      meta: '15 min · 15 perguntas', image: '', visivel: true, arquivo: 'curso/conteudos/texto-01.js', fixo: true },
+  /* disciplinas do curso "Informática do zero" (material em PDF): cada uma tem as Aulas 01 a 09 (texto + questionário
+     de 10 perguntas) e a Aula 10, a avaliação, com 30 perguntas tiradas das aulas. O texto de cada disciplina fica em
+     curso/conteudos/<disciplina>.js. As aulas abrem em ordem: a próxima só é liberada com nota 7 ou mais na anterior. */
+  const CURSO_DISC = [
+    ['d1', 'Introdução à Informática', 'O que é informática, a história do computador, hardware e software, os tipos de computador e as peças que fazem tudo funcionar.', 'cpu', [
+      ['O que é Informática?', 'O que significa a palavra, onde a informática está no seu dia a dia e por que aprender abre portas.'],
+      ['Breve história da informática', 'Do ábaco aos smartphones: as máquinas e as pessoas que criaram o computador que usamos hoje.'],
+      ['Hardware e software', 'A parte que você toca e a parte que dá as ordens: como as duas trabalham juntas.'],
+      ['Tipos de computadores', 'Computador de mesa, notebook, tablet, celular, servidor: para que serve cada um.'],
+      ['Componentes básicos do computador', 'Processador, memória RAM, armazenamento, placa-mãe e fonte: o que existe dentro do gabinete.'],
+      ['Dispositivos de entrada e saída', 'Teclado, mouse, monitor, impressora e outros: como a informação entra e sai do computador.'],
+      ['Ligando, desligando e cuidando do computador', 'O jeito certo de ligar, desligar, reiniciar e manter o computador limpo e funcionando bem.'],
+      ['Usando o mouse', 'Clique, clique duplo, botão direito, arrastar e a rodinha: os movimentos que você vai usar todos os dias.'],
+      ['Conhecendo o teclado', 'Letras, números, Enter, Backspace, Shift, acentos e as teclas especiais de um teclado ABNT2.'],
+    ]],
+    ['d2', 'Sistema Operacional Windows', 'Área de trabalho, menu Iniciar, janelas, pastas e arquivos, atalhos e personalização: o Windows sem mistério.', 'win', [
+      ['O que é um sistema operacional?', 'O programa que comanda o computador: o que ele faz e quais são os mais usados.'],
+      ['Conhecendo a área de trabalho', 'Ícones, papel de parede, barra de tarefas e área de notificação: a primeira tela do Windows.'],
+      ['Menu Iniciar e barra de tarefas', 'Como encontrar e abrir programas, fixar atalhos e usar a pesquisa do Windows.'],
+      ['Trabalhando com janelas', 'Abrir, minimizar, maximizar, fechar, redimensionar e alternar entre as janelas.'],
+      ['Arquivos e pastas', 'O que é um arquivo, o que é uma pasta, nomes, extensões e tipos de arquivo.'],
+      ['Explorador de Arquivos', 'Navegar pelas pastas, criar pastas novas e organizar os seus arquivos.'],
+      ['Copiar, mover, renomear e excluir', 'As operações com arquivos, a Lixeira e como usar um pendrive.'],
+      ['Atalhos de teclado no Windows', 'As combinações de teclas que fazem tudo mais rápido no Windows.'],
+      ['Personalizando o sistema', 'Papel de parede, tema escuro, tamanho do texto, som e outras configurações.'],
+    ]],
+    ['d3', 'Editor de Textos: Word', 'Do primeiro documento à impressão: digitar, formatar, inserir imagens e tabelas, salvar e usar os atalhos do Word.', 'doc', [
+      ['O que é um editor de texto?', 'Para que serve um editor de texto e quais são os mais usados, como o Word e o Google Docs.'],
+      ['Conhecendo a tela do Word', 'Faixa de Opções, guias, régua, barra de status e zoom: onde fica cada coisa.'],
+      ['Digitando e editando o texto', 'Cursor, seleção, copiar, colar, desfazer e localizar: como escrever e corrigir.'],
+      ['Formatando a fonte', 'Tipo de letra, tamanho, negrito, itálico, sublinhado e cor do texto.'],
+      ['Formatando parágrafos', 'Alinhamento, espaçamento entre linhas, recuos, listas com marcadores e numeradas.'],
+      ['Estilos e organização do documento', 'Títulos, estilos prontos, quebra de página, cabeçalho, rodapé e número de página.'],
+      ['Inserindo imagens, tabelas e formas', 'Como deixar o documento mais visual com figuras, tabelas e formas.'],
+      ['Salvando, exportando e imprimindo', 'Salvar, Salvar como, gerar PDF e imprimir o documento do jeito certo.'],
+      ['Revisão e atalhos úteis no Word', 'Corretor ortográfico, contar palavras e os atalhos que mais ajudam no dia a dia.'],
+    ]],
+    ['d4', 'Planilhas Eletrônicas: Excel', 'Células, fórmulas, funções e gráficos: organize números e faça contas automáticas com o Excel.', 'sheet', [
+      ['O que é uma planilha?', 'Para que servem as planilhas e quais são os programas mais usados.'],
+      ['Primeiros passos no Excel', 'Pasta de trabalho, planilhas, linhas, colunas, células e a barra de fórmulas.'],
+      ['Digitando e formatando dados', 'Texto, números, datas e moedas: como digitar, ajustar colunas e formatar.'],
+      ['Fórmulas básicas', 'Somar, subtrair, multiplicar e dividir: toda fórmula começa com o sinal de igual.'],
+      ['Funções essenciais', 'SOMA, MÉDIA, MÁXIMO, MÍNIMO e CONT.NÚM: as funções que resolvem quase tudo.'],
+      ['Referências e preenchimento automático', 'A alça de preenchimento, sequências automáticas e o cifrão nas referências.'],
+      ['Organizando os dados', 'Classificar, filtrar, congelar painéis e formatar como tabela.'],
+      ['Criando gráficos simples', 'Colunas, pizza e linhas: transforme números em gráficos fáceis de entender.'],
+      ['Salvando e imprimindo planilhas', 'Salvar, área de impressão, orientação da página e exportar em PDF.'],
+    ]],
+    ['d5', 'Internet e Navegadores', 'Como a internet funciona, os navegadores, pesquisas no Google, e-mail e os cuidados para navegar com segurança.', 'globe', [
+      ['O que é a Internet?', 'A rede que liga o mundo: o que é, de onde veio e o que dá para fazer nela.'],
+      ['Como a internet chega até você', 'Provedor, Wi-Fi, dados móveis, endereços de sites e o que é uma URL.'],
+      ['Principais navegadores', 'Chrome, Edge, Firefox e Safari: o que é um navegador e as partes da tela.'],
+      ['Navegando com abas, favoritos e histórico', 'Abas, favoritos, histórico, downloads e navegação anônima.'],
+      ['Pesquisas no Google', 'Como pesquisar bem: palavras-chave, resultados e as pesquisas de imagens e mapas.'],
+      ['Pesquisa avançada e informação confiável', 'Aspas, sinal de menos, filtros e como saber se uma informação é verdadeira.'],
+      ['Criando uma conta de e-mail', 'O que é um e-mail, como é um endereço e como criar uma conta no Gmail.'],
+      ['Usando o e-mail no dia a dia', 'Escrever, responder, encaminhar, anexar arquivos e organizar a caixa de entrada.'],
+      ['Cuidados de segurança na internet', 'Golpes comuns, downloads, Wi-Fi público e como proteger os seus dados.'],
+    ]],
+    ['d6', 'Redes Sociais e Comunicação Digital', 'WhatsApp, Facebook e Instagram com responsabilidade: publicar, conversar e proteger a sua privacidade.', 'chat', [
+      ['O que são redes sociais?', 'Como as redes sociais funcionam, as mais usadas e para que cada uma serve.'],
+      ['Comunicação digital e boas maneiras', 'Netiqueta: como escrever, responder e se comportar bem no mundo digital.'],
+      ['WhatsApp: primeiros passos', 'Instalar, criar o perfil, conversar, mandar áudio, foto e fazer chamadas.'],
+      ['WhatsApp: grupos, status e WhatsApp Web', 'Participar de grupos, usar o status e abrir o WhatsApp no computador.'],
+      ['Facebook', 'Perfil, feed, amigos, páginas, grupos e o Marketplace.'],
+      ['Instagram', 'Perfil, feed, stories, reels, seguir, curtir e comentar.'],
+      ['Publicações responsáveis', 'O que postar, o que evitar e o que é a sua pegada digital.'],
+      ['Configurações de privacidade', 'Quem vê o que você publica: perfil privado, bloqueio e denúncia.'],
+      ['Bem-estar e cidadania digital', 'Cyberbullying, notícias falsas, tempo de tela e respeito na internet.'],
+    ]],
+    ['d7', 'Segurança Digital', 'Antivírus, atualizações, senhas fortes, golpes e sites seguros: proteja o seu computador e os seus dados.', 'shield', [
+      ['Por que se preocupar com segurança?', 'Os riscos do mundo digital e o que os criminosos procuram.'],
+      ['Vírus e outras ameaças', 'Vírus, cavalo de Troia, ransomware, spyware: o que são e como chegam até você.'],
+      ['A importância do antivírus', 'Como o antivírus funciona, o Windows Defender e a verificação de arquivos.'],
+      ['Atualizações e proteção de dados', 'Por que atualizar o sistema e os aplicativos e como proteger os seus dados pessoais.'],
+      ['Senhas fortes', 'Como criar senhas difíceis de adivinhar e fáceis de lembrar, e o gerenciador de senhas.'],
+      ['Verificação em duas etapas', 'Uma segunda tranca para as suas contas: códigos, aplicativos e como ativar.'],
+      ['Golpes e engenharia social', 'Phishing, golpe do falso parente, Pix, boletos falsos: como reconhecer e não cair.'],
+      ['Como identificar sites seguros', 'O cadeado, o https, o endereço certo e os sinais de um site falso.'],
+      ['Boas práticas e cópias de segurança', 'Backup, nuvem, Wi-Fi público e uma rotina de cuidados para o dia a dia.'],
+    ]],
+    ['d8', 'Atalhos, Produtividade e Acessibilidade', 'Os atalhos que poupam tempo, dicas para usar o computador mais rápido, recursos de acessibilidade e o glossário.', 'zap', [
+      ['Por que usar atalhos de teclado?', 'As teclas Ctrl, Alt, Shift e Windows e como ler uma combinação de teclas.'],
+      ['Atalhos de edição', 'Copiar, recortar, colar, desfazer, refazer, selecionar tudo, salvar e imprimir.'],
+      ['Atalhos do Windows', 'Área de trabalho, Explorador, alternar janelas, bloquear o computador e mais.'],
+      ['Atalhos do navegador', 'Abas, endereço, atualizar, localizar na página e zoom.'],
+      ['Ganhando velocidade no computador', 'Organização de pastas, nomes de arquivos, área de transferência e captura de tela.'],
+      ['Organizando o seu tempo e a sua rotina digital', 'Notificações, foco, área de trabalho limpa e ferramentas que ajudam a produzir.'],
+      ['Ferramentas de acessibilidade', 'Lupa, narrador, legendas, contraste e ditado: o computador para todas as pessoas.'],
+      ['Glossário de informática', 'As palavras mais usadas no mundo da informática, explicadas de um jeito simples.'],
+      ['Checklist de habilidades', 'Revisão final: tudo o que você aprendeu no curso e o que praticar a seguir.'],
+    ]],
   ];
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const CONTS_BASE = CURSO_DISC.flatMap(([did, , , , aulas], di) => [
+    ...aulas.map(([titulo, desc], k) => ({ id: `${did}-a${pad2(k + 1)}`, disc: did, tipo: 'texto', rotulo: `Aula ${pad2(k + 1)}`, ordem: k + 1, seq: true,
+      titulo, desc, meta: '10 perguntas · nota mínima 7', image: '', visivel: true, arquivo: `curso/conteudos/${did}.js`, fixo: true })),
+    { id: `${did}-av`, disc: did, tipo: 'prova', rotulo: 'Aula 10 · Avaliação', ordem: 10, seq: true, titulo: 'Avaliação da disciplina',
+      desc: '30 perguntas sobre as Aulas 01 a 09, sem o material: mostre o que você aprendeu.', meta: '30 perguntas · nota mínima 7', image: '', visivel: true, arquivo: `curso/conteudos/${did}.js`, fixo: true },
+  ]);
   /* disciplinas: os cards da seção abaixo dos módulos. Cada uma abre a sua página (#informatica/disciplina-<id>)
      com os conteúdos dela (textos, PDFs, questionários e provas). Ficam em cursoConteudo com kind: 'disc';
      os conteúdos apontam para a disciplina pelo campo disc. */
-  const DTINTS = ['28, 64, 120', '82, 38, 130', '6, 95, 70', '150, 70, 18', '128, 32, 40', '14, 90, 120'];
-  const DISCS_BASE = [
-    { id: 'disc-01', kind: 'disc', titulo: 'Digitação', desc: 'O teclado, a posição dos dedos e a postura certa: textos e questionários para digitar bem.', image: '', cor: 0, visivel: true, fixo: true },
-  ];
+  const DTINTS = ['28, 64, 120', '82, 38, 130', '6, 95, 70', '150, 70, 18', '128, 32, 40', '14, 90, 120', '150, 40, 100', '60, 60, 140'];
+  const DISCS_BASE = CURSO_DISC.map(([id, titulo, desc, ico], i) => ({ id, kind: 'disc', titulo, desc, ico, image: '', cor: i % DTINTS.length, visivel: true, fixo: true }));
+  const LEGACY = new Set(['disc-01', 'texto-01']); // a disciplina de teste (Digitação) e o texto dela saíram do curso
   const isDisc = (x) => x?.kind === 'disc';
   const discs = () => {
-    const s = saved(), ids = new Set(DISCS_BASE.map((b) => b.id));
+    const s = saved().filter((x) => !LEGACY.has(x.id)), ids = new Set(DISCS_BASE.map((b) => b.id));
     return DISCS_BASE.map((b) => ({ ...b, ...(s.find((x) => x.id === b.id) || {}), kind: 'disc', fixo: true }))
       .concat(s.filter((x) => isDisc(x) && !ids.has(x.id))).filter((d) => !d.oculto);
   };
   const visDiscs = () => discs().filter((d) => isAdmin() || d.visivel);
   const discTint = (d) => DTINTS[(+d?.cor || 0) % DTINTS.length];
   const conts = () => {
-    const s = saved().filter((x) => !isDisc(x)), ids = new Set(CONTS_BASE.map((b) => b.id));
-    return CONTS_BASE.map((b) => ({ ...b, ...(s.find((x) => x.id === b.id) || {}), arquivo: b.arquivo, fixo: true }))
+    const s = saved().filter((x) => !isDisc(x) && !LEGACY.has(x.id)), ids = new Set(CONTS_BASE.map((b) => b.id));
+    return CONTS_BASE.map((b) => ({ ...b, ...(s.find((x) => x.id === b.id) || {}), arquivo: b.arquivo, rotulo: b.rotulo, ordem: b.ordem, seq: true, disc: b.disc, fixo: true }))
       .concat(s.filter((x) => !ids.has(x.id))).filter((c) => !c.oculto)
       .map((c) => ({ ...c, disc: c.disc || DISCS_BASE[0].id }));
   };
   const discItems = (did) => conts().filter((c) => c.disc === did && (isAdmin() || c.visivel));
-  const contDone = (id) => { const h = contProg(id)?.hist; return Array.isArray(h) && h.length > 0; };
+  const bestOf = (id) => { const h = contProg(id)?.hist; return Array.isArray(h) && h.length ? Math.max(...h.map((x) => +x.nota || 0)) : null; };
+  const contDone = (id) => (bestOf(id) ?? -1) >= 7; // concluído = aprovado (nota 7 ou mais)
   const contProg = (id) => { try { return JSON.parse(localStorage.getItem(`hc:info:${auth?.user?.id || 'anon'}:cont-${id}`) || 'null'); } catch { return null; } };
+  /* aulas em ordem: a aula fica trancada até o aluno passar (nota 7+) na anterior da mesma disciplina.
+     O administrador abre todas. Devolve a aula que falta passar, ou null. */
+  const prevOf = (c) => (c?.seq ? conts().filter((x) => x.disc === c.disc && x.seq && x.ordem < c.ordem).sort((a, b) => b.ordem - a.ordem)[0] || null : null);
+  const lockOf = (c) => { if (isAdmin()) return null; const p = prevOf(c); return p && !contDone(p.id) ? p : null; };
+  const nextOf = (c) => (c?.seq ? conts().filter((x) => x.disc === c.disc && x.seq && x.ordem > c.ordem).sort((a, b) => a.ordem - b.ordem)[0] || null : null);
   /* lições criadas pelo administrador (botão "Nova lição"): ficam no banco, junto do conteúdo do site,
      e entram no fim do módulo até serem configuradas aqui no código */
   /* capas e textos trocados pelo administrador (botão de lápis): ficam no banco (chave cursoEdit) e
@@ -343,21 +453,26 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   };
   /* card de um conteúdo (dentro da página da disciplina) */
   function contCard(c, i) {
-    const adm = isAdmin(), t = CT[c.tipo] || CT.texto, ico = CT[c.tipo] ? c.tipo : 'texto';
+    const adm = isAdmin(), t = CT[c.tipo] || CT.texto, ico = CT[c.tipo] ? c.tipo : 'texto', lk = lockOf(c), ok = contDone(c.id);
+    const nome = c.seq ? (c.tipo === 'prova' ? 'Avaliação' : 'Aula') : t.nome;
+    const go = lk ? svg('lock') : ok ? 'Revisar' : contProg(c.id)?.savedAt ? 'Continuar' : 'Abrir';
     return `
-      <article class="pf-lesson pf-modcard pf-ccard${c.visivel ? '' : ' draft'}${contDone(c.id) ? ' done' : ''}" style="--i:${i};--tint:${t.tint}" data-cont="${esc(c.id)}" tabindex="0" role="button" aria-label="${esc(t.nome)}: ${esc(c.titulo)}">
+      <article class="pf-lesson pf-modcard pf-ccard${c.visivel ? '' : ' draft'}${ok ? ' done' : ''}${lk ? ' locked' : ''}" style="--i:${i};--tint:${t.tint}" data-cont="${esc(c.id)}" tabindex="0" role="button" aria-label="${esc(c.rotulo || t.nome)}: ${esc(c.titulo)}${lk ? ' (trancada)' : ''}">
         <div class="pf-lesson-img">${c.image ? `<img class="pf-img" src="${esc(imgUrl(c.image))}" alt="" loading="lazy" />`
-          : `<span class="pf-ph" style="--k:${i}">${svg(ico)}${adm ? '<em>Imagem do conteúdo<small>1000 × 1250</small></em>' : ''}</span>`}</div>
+          : `<span class="pf-ph" style="--k:${i}">${svg(ico)}${adm ? '<em>Imagem do conteúdo<small>1000 × 1250</small></em>' : ''}</span>`}
+          ${c.seq ? `<span class="pf-cnum">${c.tipo === 'prova' ? svg('prova') : pad2(c.ordem)}</span>` : ''}
+          ${lk ? `<span class="pf-clock">${svg('lock')}<small>Passe na ${esc(lk.rotulo?.split(' · ')[0] || 'aula anterior')} com nota 7</small></span>` : ''}
+          ${ok ? `<span class="pf-cok">${svg('shield')}</span>` : ''}</div>
         <div class="pf-lesson-app">
           <div class="pf-lesson-text">
-            <span class="pf-lesson-tag">${esc(t.nome)}${adm && !c.visivel ? ' · Rascunho' : ''}</span>
+            <span class="pf-lesson-tag">${esc(c.rotulo || t.nome)}${adm && !c.visivel ? ' · Rascunho' : ''}</span>
             <h3>${esc(c.titulo || 'Sem título')}</h3>
             <p>${esc(c.desc || '')}</p>
           </div>
           <div class="pf-lesson-bar">
             <span class="pf-lesson-av">${svg(ico)}</span>
-            <span class="pf-lesson-who"><strong>${esc(t.nome)}</strong><small>${esc(progTxt(c) || c.meta || t.sub)}</small></span>
-            <span class="pf-lesson-go">${contProg(c.id)?.savedAt ? 'Continuar' : 'Abrir'}</span>
+            <span class="pf-lesson-who"><strong>${esc(nome)}</strong><small>${esc(progTxt(c) || c.meta || t.sub)}</small></span>
+            <span class="pf-lesson-go">${go}</span>
           </div>
         </div>
         ${adm ? `<div class="pf-adm"><button class="pf-adm-btn" type="button" data-editcont="${esc(c.id)}" aria-label="Editar o conteúdo" title="Editar conteúdo">${svg('pen')}</button><button class="pf-adm-btn" type="button" data-delcont="${esc(c.id)}" aria-label="Apagar o conteúdo" title="Apagar conteúdo">${svg('trash')}</button></div>` : ''}
@@ -372,7 +487,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       return `
       <article class="pf-lesson pf-modcard pf-ccard pf-dcard${d.visivel ? '' : ' draft'}" style="--i:${i};--tint:${discTint(d)}" data-disc="${esc(d.id)}" tabindex="0" role="button" aria-label="Disciplina: ${esc(d.titulo)}">
         <div class="pf-lesson-img">${d.image ? `<img class="pf-img" src="${esc(imgUrl(d.image))}" alt="" loading="lazy" />`
-          : `<span class="pf-ph" style="--k:${i}">${svg('book')}${adm ? '<em>Imagem da disciplina<small>1000 × 1250</small></em>' : ''}</span>`}</div>
+          : `<span class="pf-ph" style="--k:${i}">${svg(d.ico || 'book')}${adm ? '<em>Imagem da disciplina<small>1000 × 1250</small></em>' : ''}</span>`}</div>
         <div class="pf-lesson-app">
           <div class="pf-lesson-text">
             <span class="pf-lesson-tag">Disciplina${adm && !d.visivel ? ' · Rascunho' : ''}</span>
@@ -380,8 +495,8 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
             <p>${esc(d.desc || '')}</p>
           </div>
           <div class="pf-lesson-bar">
-            <span class="pf-lesson-av">${svg('book')}</span>
-            <span class="pf-lesson-who"><strong>${p.n} ${p.n === 1 ? 'conteúdo' : 'conteúdos'}</strong><small>${small}</small></span>
+            <span class="pf-lesson-av">${svg(d.ico || 'book')}</span>
+            <span class="pf-lesson-who"><strong>${p.n} ${p.n === 1 ? 'aula' : 'aulas'}</strong><small>${small}</small></span>
             <span class="pf-lesson-go">${p.began ? 'Continuar' : 'Abrir'}</span>
           </div>
         </div>
@@ -398,7 +513,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     return `
     <section class="pf-conts" aria-label="Disciplinas">
       <div class="pf-mods-head">
-        <h2 class="pf-st-title">Disciplinas <span>Textos, PDFs, questionários e provas de cada matéria</span></h2>
+        <h2 class="pf-st-title">Disciplinas <span>Informática do zero: aulas, questionários e avaliações</span></h2>
         ${list.length ? `<div class="ap-paddles pf-mod-paddles">
           <button class="ap-paddle" data-cdir="-1" aria-label="Disciplinas anteriores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
           <button class="ap-paddle" data-cdir="1" aria-label="Próximas disciplinas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
@@ -473,22 +588,22 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     <div class="wrap pfd" style="--tint:${discTint(d)}">
       <button class="pfd-back" type="button">${svg('prev')} Plataforma de Informática</button>
       <header class="pfd-hero">
-        <div class="pfd-hero-img">${d.image ? `<img src="${esc(imgUrl(d.image))}" alt="">` : `<span class="pfd-hero-ph">${svg('book')}</span>`}</div>
+        <div class="pfd-hero-img">${d.image ? `<img src="${esc(imgUrl(d.image))}" alt="">` : `<span class="pfd-hero-ph">${svg(d.ico || 'book')}</span>`}</div>
         <div class="pfd-hero-txt">
           <span class="pfd-tag">Disciplina${adm && !d.visivel ? ' · Rascunho' : ''}</span>
           <h1>${esc(d.titulo || 'Sem título')}</h1>
           ${d.desc ? `<p>${esc(d.desc)}</p>` : ''}
           <div class="pfd-stats">
-            <span><b>${p.n}</b>${p.n === 1 ? 'conteúdo' : 'conteúdos'}</span>
-            <span><b>${p.ok}</b>${p.ok === 1 ? 'concluído' : 'concluídos'}</span>
+            <span><b>${p.n}</b>${p.n === 1 ? 'aula' : 'aulas'}</span>
+            <span><b>${p.ok}</b>${p.ok === 1 ? 'aprovada' : 'aprovadas'}</span>
             <span><b>${media}</b>nota média</span>
           </div>
-          <div class="pfd-bar" role="progressbar" aria-label="Conteúdos concluídos" aria-valuemin="0" aria-valuemax="${p.n}" aria-valuenow="${p.ok}"><i style="--p:${p.n ? p.ok / p.n : 0}"></i></div>
+          <div class="pfd-bar" role="progressbar" aria-label="Aulas aprovadas" aria-valuemin="0" aria-valuemax="${p.n}" aria-valuenow="${p.ok}"><i style="--p:${p.n ? p.ok / p.n : 0}"></i></div>
         </div>
         ${adm ? `<div class="pf-adm"><button class="pf-adm-btn" type="button" data-editdisc="${esc(d.id)}" aria-label="Editar a disciplina" title="Editar disciplina">${svg('pen')}</button><button class="pf-adm-btn" type="button" data-deldisc="${esc(d.id)}" aria-label="Apagar a disciplina" title="Apagar disciplina">${svg('trash')}</button></div>` : ''}
       </header>
       <section class="pfd-list" aria-label="Conteúdos da disciplina">
-        <h2 class="pf-st-title">Conteúdos <span>Textos, PDFs, questionários e provas</span></h2>
+        <h2 class="pf-st-title">Aulas <span>Uma de cada vez: passe com nota 7 ou mais para liberar a próxima</span></h2>
         ${items.length || adm ? `<div class="pfd-grid">${items.map(contCard).join('')}
           ${adm ? `<button class="pf-cnew" type="button" data-newcont="${esc(d.id)}"><span>${svg('plus')}</span><b>Novo conteúdo</b><small>Texto, PDF, questionário ou prova</small></button>` : ''}
         </div>` : `<div class="pf-cempty"><div class="pf-cempty-icos">${['texto', 'pdf', 'quiz', 'prova'].map((k, i) => `<span style="--tint:${CT[k].tint};--i:${i}">${svg(k)}</span>`).join('')}</div>
@@ -498,10 +613,13 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     view.querySelector('.pfd-back').addEventListener('click', () => { location.hash = '#informatica/cursos'; });
     bindCards(view.querySelector('.pfd'), view);
     if (keepScroll) scrollTo(0, y); else scrollTo(0, 0);
+    sync(view); // notas feitas em outro aparelho destrancam as aulas aqui também
   }
   /* abrir um conteúdo: os prontos (com arquivo) abrem a tela de leitura; os outros ainda serão montados */
   function openCont(id) {
     const c = conts().find((x) => x.id === id); if (!c) return;
+    const lk = lockOf(c);
+    if (lk) return toast(`Esta aula ainda está trancada. Passe na ${lk.rotulo?.split(' · ')[0] || 'aula anterior'} com nota 7 ou mais para liberar.`);
     if (c.arquivo) { location.hash = `#informatica/conteudo-${c.id}`; return; }
     toast(`${(CT[c.tipo] || CT.texto).nome} “${c.titulo || 'Sem título'}”: o conteúdo será liberado em breve.`);
   }
@@ -509,12 +627,15 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     const c = conts().find((x) => x.id === id);
     const d = c && discs().find((x) => x.id === c.disc);
     if (!c?.arquivo || (!isAdmin() && (!c.visivel || !d?.visivel))) { location.hash = '#informatica/cursos'; return toast('Este conteúdo não está disponível.'); }
+    if (lockOf(c)) { location.hash = `#informatica/disciplina-${c.disc}`; return toast('Esta aula ainda está trancada. Passe na anterior com nota 7 ou mais.'); }
     view.innerHTML = '<div class="wrap"><p class="me-loading">Carregando o conteúdo…</p></div>';
-    try { await Promise.all([load('curso/conteudo.css'), load('curso/conteudo.js'), load(c.arquivo)]); }
+    try { await Promise.all([load('curso/conteudo.css'), load('curso/figuras.js'), load('curso/conteudo.js'), load(c.arquivo)]); }
     catch { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir o conteúdo. Verifique a internet e tente de novo.</p></div>'; return; }
     if (location.hash !== `#informatica/conteudo-${id}`) return;
-    window.HC_conteudo.open(view, window.HC_CONTEUDOS[id], { id, image: c.image ? imgUrl(c.image) : '', tint: (CT[c.tipo] || CT.texto).tint, admin: isAdmin(),
-      back: d ? `#informatica/disciplina-${d.id}` : '#informatica/cursos', backLabel: d?.titulo || 'Disciplinas' });
+    const nx = nextOf(c);
+    window.HC_conteudo.open(view, window.HC_CONTEUDOS[id], { id, image: c.image ? imgUrl(c.image) : '', tint: c.seq && d ? discTint(d) : (CT[c.tipo] || CT.texto).tint, admin: isAdmin(),
+      back: d ? `#informatica/disciplina-${d.id}` : '#informatica/cursos', backLabel: d?.titulo || 'Disciplinas',
+      rotulo: c.rotulo || '', disciplina: d?.titulo || '', next: nx ? { hash: `#informatica/conteudo-${nx.id}`, nome: nx.rotulo?.split(' · ')[0] || 'próxima aula', titulo: nx.titulo } : null });
   }
   /* administrador: criar (id null) ou editar um card de conteúdo */
   function editCont(view, id, discId) {
@@ -1519,7 +1640,9 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       let local = null; try { local = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
       if (!local || (dados?.savedAt || 0) > (local.savedAt || 0)) { try { localStorage.setItem(key, JSON.stringify(dados)); changed = true; } catch {} }
     });
-    if (changed && view.isConnected && (location.hash === '#informatica/cursos' || (location.hash === '#informatica' && !window.HC_isComputer()))) render(view);
+    if (!changed || !view.isConnected) return;
+    if (onDiscPage()) return discPage(view, location.hash.slice('#informatica/disciplina-'.length), true);
+    if (location.hash === '#informatica/cursos' || (location.hash === '#informatica' && !window.HC_isComputer())) render(view);
   }
 
   window.HC_platform = { render: (view, sub) => {
