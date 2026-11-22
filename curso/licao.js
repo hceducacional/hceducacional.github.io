@@ -83,7 +83,7 @@
   /* ---------- visual escuro, herdado dos cards das lições ---------- */
   const TINT0 = '22, 60, 48';
   /* cor do cartão de cada tipo de nível (a de digitação é a do card da lição) */
-  const KIND_TINT = { hacker: '24, 46, 110', fila: '30, 70, 90', corrida: '70, 32, 120', estrelas: '30, 28, 92', nave: '14, 26, 70', gp: '40, 20, 90' };
+  const KIND_TINT = { hacker: '24, 46, 110', fila: '30, 70, 90', corrida: '70, 32, 120', estrelas: '30, 28, 92', nave: '14, 26, 70', gp: '40, 20, 90', baloes: '90, 40, 110', duelo: '20, 60, 90' };
   const CARD_TINTS = ['24, 46, 110', '70, 32, 120', '120, 40, 30', '30, 70, 90'];
   /* cenários do cartão do nível: um sorteado a cada vez que a lição começa (nunca o mesmo da vez anterior).
      base = cor escura do fundo; a1, a2, a3 = as três luzes de aurora que flutuam devagar por trás */
@@ -918,7 +918,7 @@
           cash: C ? { from: C.get().saldo, gain: C.ganhoDe(starsOf(p), rankOf(p)), review: false } : null });
       });
       paintProgress(); paintStats(); gaugeLevel(lv);
-      ({ typing: typingInit, hacker: hackerInit, fila: filaInit, corrida: corridaInit, estrelas: estrelasInit, nave: naveInit, gp: gpInit })[lv.tipo](lv);
+      ({ typing: typingInit, hacker: hackerInit, fila: filaInit, corrida: corridaInit, estrelas: estrelasInit, nave: naveInit, gp: gpInit, baloes: balaoInit, duelo: dueloInit })[lv.tipo](lv);
     }
     function goal(n, total) {
       const t = $q('#lc-goal-txt'), b = $q('#lc-goal-bar'); if (!t) return;
@@ -1076,9 +1076,275 @@
         </div>`;
       kbTarget('enter');
     }
+    /* ---------- NÍVEL DE DIGITAÇÃO: TECLAS DO FUNDO (DG-05) ----------
+       O texto vira uma fila de teclas que vem do fundo, como num teclado visto em perspectiva:
+       a tecla da frente é a que precisa ser digitada e as próximas esperam atrás, em fileiras que
+       vão ficando menores. Cada tecla aparece na posição dela no teclado ABNT2 e com a cor do dedo
+       que a digita (as mesmas do teclado virtual); o espaço é a barra larga no meio.
+       Acertou: a tecla afunda e some, e a fila anda uma fileira para a frente. Errou: a tecla da
+       frente treme em vermelho (não avança). As fileiras andam com transform (--k animado). */
+    const KF_ROWS = 5;
+    let KF_POS = null;
+    function kfMapa() { // posição (em larguras de tecla, a partir do centro) e dedo de cada tecla
+      if (KF_POS) return KF_POS;
+      const M = window.HC_tecladoMapa; KF_POS = {};
+      if (!M) return KF_POS;
+      M.ROWS.forEach((row) => {
+        let acc = 0;
+        row.forEach(([id, , , w = 1]) => { if (!(id in KF_POS)) KF_POS[id] = { x: acc + w / 2 - 7.5, w: id === ' ' ? 6 : w, f: id.length === 1 && id !== ' ' ? M.FINGER_OF[id] : '' }; acc += w; });
+      });
+      return KF_POS;
+    }
+    function kfInit(lv) {
+      game.intro = null; game.t0 = 0; game.pos = 0; game.max = 0; game.text = lv.texto; game.est = 'kf'; game.kf = {};
+      $q('#lc-main').classList.add('is-typing');
+      $q('#lc-stage').innerHTML = `
+        <div class="lc-paper lc-kfp" id="lc-line">
+          <div class="lc-kf" id="lc-kf" aria-hidden="true">
+            ${Array.from({ length: KF_ROWS }, (_, k) => `<i class="lane" style="--k:${k}"></i>`).join('')}
+          </div>
+          <span class="lc-start-tip lc-kf-tip" id="lc-start-tip">Comece a digitar</span>
+          <div class="lc-paper-foot"><b class="lc-pbar"><i id="lc-pbar"></i></b><span class="lc-pcount" id="lc-pcount">0 / ${lv.texto.length}</span></div>
+        </div>
+        <p class="lc-home">A tecla da frente é a da vez; as próximas vêm logo atrás, cada uma no lugar dela no teclado e na cor do dedo que a digita.</p>`;
+      kfSize(); kfPaint(true);
+      kbTarget(game.text[0] ?? null);
+      if (!game.onResize) {
+        const mine = game, fn = () => { if (game !== mine || !$q('#lc-kf')) return removeEventListener('resize', fn); kfSize(); };
+        game.onResize = fn; addEventListener('resize', fn);
+      }
+    }
+    function kfSize() { const s = $q('#lc-kf'); if (s) s.style.setProperty('--u', `${Math.min(58, Math.max(30, s.clientWidth / 15.2)).toFixed(1)}px`); }
+    function kfPaint(first) { // mostra as teclas de pos até pos+4, cada uma na sua fileira
+      const box = $q('#lc-kf'); if (!box) return;
+      const P = kfMapa(), idOf = window.HC_tecladoIdOf || ((c) => c);
+      for (let i = game.pos; i < Math.min(game.text.length, game.pos + KF_ROWS); i++) {
+        let el = game.kf[i];
+        if (!el) {
+          const c = game.text[i], id = idOf(c) ?? c, p = P[id] || { x: 0, w: 1, f: '' };
+          el = game.kf[i] = document.createElement('span');
+          el.className = `lc-kf-key${c === ' ' ? ' sp' : ''}${first ? '' : ' new'}`;
+          if (p.f) el.dataset.f = p.f;
+          el.style.cssText = `--x:${p.x};--w:${p.w};--k:${KF_ROWS}`;
+          el.innerHTML = c === ' ' ? '<small>espaço</small>' : `<b>${esc(c)}</b>`;
+          box.appendChild(el);
+          void el.offsetWidth; // entra vindo de trás da última fileira
+        }
+        el.style.setProperty('--k', i - game.pos);
+        el.classList.toggle('cur', i === game.pos);
+      }
+    }
+    /* ---------- estilos de digitação com cena própria (DG-05 em diante) ----------
+       Todos usam a mesma regra do DG-01: a tecla certa avança e conta pontos; a errada não avança.
+       Cada estilo só diz o que acontece na tela: ok(i) (letra i acertada), bad(i) (erro na letra i)
+       e after() (depois de avançar). game.est guarda o nome do estilo. */
+    const DG_STYLE = {
+      kf: {
+        ok: (i) => { const el = game.kf[i]; if (el) { el.classList.remove('cur', 'bad'); el.classList.add('done'); delete game.kf[i]; setTimeout(() => el.remove(), 320); } },
+        bad: (i) => { const el = game.kf[i]; if (el) { el.classList.add('had'); replay(el, 'bad'); } },
+        after: () => kfPaint(),
+      },
+    };
+    function dgKey(k) {
+      const S = DG_STYLE[game.est], want = game.text[game.pos];
+      if (!S || want == null) return;
+      if (k === want) {
+        if (!game.t0) game.t0 = performance.now();
+        hit(k);
+        S.ok(game.pos);
+        game.pos++;
+        if (game.pos === 1) $q('#lc-start-tip')?.classList.add('gone');
+        const bar = $q('#lc-pbar'), cnt = $q('#lc-pcount');
+        if (bar) bar.style.width = `${(game.pos / game.text.length) * 100}%`;
+        if (cnt) cnt.textContent = `${game.pos} / ${game.text.length}`;
+        S.after?.();
+        kbTarget(game.text[game.pos] ?? null);
+        if (game.pos >= game.text.length) setTimeout(complete, S.fim || 300);
+      } else {
+        miss(k); S.bad(game.pos);
+      }
+    }
+    /* moldura comum dos estilos com cena: folha clara, dica "Comece a digitar", barra e contador */
+    function dgShell(est, cls, inner, home) {
+      game.intro = null; game.t0 = 0; game.pos = 0; game.max = 0; game.est = est;
+      $q('#lc-main').classList.add('is-typing');
+      $q('#lc-stage').innerHTML = `
+        <div class="lc-paper lc-dgs ${cls}" id="lc-line">
+          ${inner}
+          <span class="lc-start-tip" id="lc-start-tip">Comece a digitar</span>
+          <div class="lc-paper-foot"><b class="lc-pbar"><i id="lc-pbar"></i></b><span class="lc-pcount" id="lc-pcount">0 / ${game.text.length}</span></div>
+        </div>
+        <p class="lc-home">${home}</p>`;
+      kbTarget(game.text[0] ?? null);
+    }
+    const dgCh = (c, i) => `<i data-i="${i}"${c === ' ' ? ' class="sp"' : ''}>${c === ' ' ? '␣' : esc(c)}</i>`;
+
+    /* ---------- DG-06 · CARTÕES DE PALAVRAS ----------
+       Uma palavra por vez num cartão grande no meio (com o espaço depois dela como uma teclinha "␣").
+       Os cartões feitos vão para a esquerda com um ✓; os próximos esperam à direita, menores. */
+    function cdInit(lv) {
+      game.text = lv.texto;
+      const toks = [...lv.texto.matchAll(/\S+\s*|\s+/g)];
+      game.cardOf = [];
+      toks.forEach((m, ci) => { for (let j = 0; j < m[0].length; j++) game.cardOf[m.index + j] = ci; });
+      dgShell('cd', 'lc-cdp', `<div class="lc-cd" id="lc-cd" aria-hidden="true">${toks.map((m, ci) => `<div class="lc-cd-card" data-c="${ci}"><span class="w">${[...m[0]].map((c, j) => dgCh(c, m.index + j)).join('')}</span><b class="chk">✓</b></div>`).join('')}</div>`,
+        'Uma palavra de cada vez: termine a palavra e aperte <kbd>Espaço</kbd> para o próximo cartão.');
+      game.chs = [...$q('#lc-cd').querySelectorAll('i[data-i]')];
+      game.cardsEl = [...$q('#lc-cd').children];
+      game.chs[0]?.classList.add('cur');
+      game.curCard = -1; cdLayout();
+      if (!game.onResize) { const mine = game, fn = () => { if (game !== mine || !$q('#lc-cd')) return removeEventListener('resize', fn); game.curCard = -1; cdLayout(); }; game.onResize = fn; addEventListener('resize', fn); }
+    }
+    function cdLayout() {
+      const box = $q('#lc-cd'); if (!box) return;
+      const cur = game.cardOf[Math.min(game.pos, game.text.length - 1)] ?? 0;
+      if (cur === game.curCard) return;
+      game.curCard = cur;
+      const W = box.clientWidth;
+      game.cardsEl.forEach((el, ci) => {
+        const rel = ci - cur, a = Math.abs(rel);
+        const x = rel === 0 ? 0 : Math.sign(rel) * (W * .31 + (a - 1) * W * .17);
+        el.style.transform = `translate(-50%, -50%) translateX(${x.toFixed(0)}px) scale(${rel === 0 ? 1 : .62})`;
+        el.style.opacity = a > 2 ? '0' : rel === 0 ? '1' : rel < 0 ? '.45' : String(.75 - (a - 1) * .3);
+        el.style.zIndex = String(10 - a);
+        el.classList.toggle('on', rel === 0); el.classList.toggle('past', rel < 0);
+      });
+    }
+    DG_STYLE.cd = {
+      ok: (i) => { const c = game.chs[i]; c?.classList.remove('cur', 'bad'); c?.classList.add('ok'); },
+      bad: (i) => { const c = game.chs[i]; if (c) { c.classList.add('had'); replay(c, 'bad'); } replay(game.cardsEl[game.cardOf[i]], 'nope'); },
+      after: () => { game.chs[game.pos]?.classList.add('cur'); const before = game.curCard; cdLayout(); if (game.curCard !== before) replay(game.cardsEl[game.curCard], 'pop'); if (game.pos >= game.text.length) game.cardsEl.at(-1)?.classList.add('past'); },
+    };
+
+    /* ---------- DG-07 · QUADRO REVELADO ----------
+       Um quadro desenhado (praia ao pôr do sol, cidade à noite ou montanhas) coberto de peças;
+       cada letra certa vira peças (em ordem sorteada) e, no fim do texto, a imagem aparece inteira
+       com um brilho. O texto fica numa linha embaixo, que anda sozinha (a letra da vez fica fixa). */
+    const QD_TEMAS = ['praia', 'cidade', 'montanha'];
+    function qdCena(t) {
+      const R = (a, b) => a + Math.random() * (b - a);
+      if (t === 'cidade') {
+        let b = '', x = 0;
+        while (x < 400) { const w = R(22, 40), h = R(40, 105); b += `<rect x="${x.toFixed(0)}" y="${(118 - h).toFixed(0)}" width="${w.toFixed(0)}" height="${h.toFixed(0)}" fill="#1e1b4b"/>`;
+          for (let yy = 124 - h; yy < 112; yy += 9) for (let xx = x + 4; xx < x + w - 5; xx += 7) if (Math.random() < .45) b += `<rect x="${xx.toFixed(0)}" y="${yy.toFixed(0)}" width="3" height="4" fill="${Math.random() < .7 ? '#fde68a' : '#93c5fd'}"/>`;
+          x += w + R(1, 5); }
+        return `<defs><linearGradient id="qdc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b1026"/><stop offset=".7" stop-color="#3b1d6e"/><stop offset="1" stop-color="#7c3aed"/></linearGradient></defs>
+          <rect width="400" height="150" fill="url(#qdc)"/>${Array.from({ length: 40 }, () => `<circle cx="${R(0, 400).toFixed(0)}" cy="${R(0, 60).toFixed(0)}" r="${R(.4, 1.2).toFixed(1)}" fill="#fff"/>`).join('')}
+          <circle cx="320" cy="34" r="16" fill="#fef3c7"/><circle cx="314" cy="30" r="15" fill="#0b1026" opacity=".0"/>${b}
+          <rect y="118" width="400" height="32" fill="#1e1b4b"/><rect y="122" width="400" height="28" fill="#312e81" opacity=".7"/>
+          ${Array.from({ length: 22 }, () => `<rect x="${R(0, 400).toFixed(0)}" y="${R(124, 148).toFixed(0)}" width="${R(6, 20).toFixed(0)}" height="1.5" fill="#fde68a" opacity=".55"/>`).join('')}`;
+      }
+      if (t === 'montanha') {
+        return `<defs><linearGradient id="qdm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7dd3fc"/><stop offset=".6" stop-color="#fde2e4"/><stop offset="1" stop-color="#fed7aa"/></linearGradient></defs>
+          <rect width="400" height="150" fill="url(#qdm)"/><circle cx="90" cy="46" r="18" fill="#fff7ed"/>
+          <path d="M0 110 70 40l40 40 50-60 70 80 50-50 60 60 60-40v80H0Z" fill="#a5b4fc"/>
+          <path d="M70 40 84 54 74 52 64 58ZM160 20l18 22-12-3-10 8-6-7ZM280 50l14 14-10-2-9 6Z" fill="#fff"/>
+          <path d="M0 120 60 80l50 30 60-40 60 50 60-36 60 30 50-20v56H0Z" fill="#6366f1"/>
+          <rect y="124" width="400" height="26" fill="#38bdf8"/><path d="M0 124h400" stroke="#e0f2fe" stroke-width="1.5" opacity=".7"/>
+          ${Array.from({ length: 16 }, (_, i) => { const x = i < 8 ? R(0, 120) : R(280, 400), h = R(14, 26); return `<path d="M${x.toFixed(0)} ${(124 - h).toFixed(0)}l${(h * .35).toFixed(0)} ${h.toFixed(0)}h-${(h * .7).toFixed(0)}Z" fill="#166534"/>`; }).join('')}
+          <path d="M200 30q4-4 8 0q4-4 8 0M230 42q3-3 6 0q3-3 6 0" stroke="#334155" stroke-width="1.4" fill="none"/>`;
+      }
+      return `<defs><linearGradient id="qdp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6d28d9"/><stop offset=".45" stop-color="#f472b6"/><stop offset=".75" stop-color="#fdba74"/></linearGradient>
+          <linearGradient id="qdps" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0ea5e9"/><stop offset="1" stop-color="#0369a1"/></linearGradient></defs>
+        <rect width="400" height="150" fill="url(#qdp)"/><circle cx="230" cy="88" r="30" fill="#fde68a"/>
+        <rect y="88" width="400" height="40" fill="url(#qdps)"/>${Array.from({ length: 9 }, (_, i) => `<rect x="${(200 + R(-30, 30)).toFixed(0)}" y="${92 + i * 4}" width="${(40 - i * 3).toFixed(0)}" height="1.6" fill="#fde68a" opacity=".7"/>`).join('')}
+        <path d="M0 128q100-14 200-4t200-6v32H0Z" fill="#fcd34d"/><path d="M0 136q120-10 240-2t160-4v20H0Z" fill="#f59e0b" opacity=".5"/>
+        <path d="M70 130q-4-34 10-62" stroke="#78350f" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <path d="M80 68q-24-6-40 8 18-4 40-8Zm0 0q20-14 44-6-22 0-44 6Zm0 0q-8-20-28-26 12 12 28 26Zm0 0q14-18 34-18-18 8-34 18Zm0 0q-2 18 10 30-2-14-10-30Z" fill="#15803d"/>
+        <path d="M300 102h40l-6 8h-28Z" fill="#7c2d12"/><path d="M318 102V78l16 22Z" fill="#fff"/>`;
+    }
+    function qdInit(lv) {
+      game.text = lv.texto;
+      const tema = QD_TEMAS.includes(lv.quadro) ? lv.quadro : QD_TEMAS[Math.floor(Math.random() * QD_TEMAS.length)];
+      const N = game.text.length, cols = Math.max(6, Math.round(Math.sqrt(N * 2.67))), rows = Math.max(3, Math.ceil(N / cols)), T = cols * rows;
+      game.qT = T; game.qShown = 0;
+      game.qOrder = Array.from({ length: T }, (_, i) => i).sort(() => Math.random() - .5);
+      dgShell('qd', 'lc-qdp', `
+        <div class="lc-qd t-${tema}" id="lc-qd" style="--cols:${cols};--rows:${rows}" aria-hidden="true">
+          <svg class="scene" viewBox="0 0 400 150" preserveAspectRatio="xMidYMid slice">${qdCena(tema)}</svg>
+          <div class="tiles">${Array.from({ length: T }, (_, i) => `<i style="--d:${(Math.random() * 80).toFixed(0)}ms;--h:${(i * 37) % 360}"></i>`).join('')}</div>
+          <span class="badge">Quadro completo!</span><i class="shine"></i>
+        </div>
+        <div class="lc-qd-line"><div class="lc-qd-txt" id="lc-qd-txt">${[...game.text].map(dgCh).join('')}</div></div>`,
+        'Cada letra certa revela um pedaço do quadro. Termine o texto para ver a imagem inteira!');
+      game.chs = [...$q('#lc-qd-txt').children]; game.tiles = [...$q('#lc-qd .tiles').children];
+      qdCaret();
+    }
+    function qdCaret() {
+      const c = game.chs[game.pos]; game.chs.forEach((x) => x.classList.remove('cur')); if (!c) return;
+      c.classList.add('cur');
+      const line = $q('#lc-qd-txt'); if (line) line.style.transform = `translateX(${(-Math.max(0, c.offsetLeft - line.parentElement.clientWidth * .3)).toFixed(0)}px)`;
+    }
+    DG_STYLE.qd = {
+      fim: 1400,
+      ok: (i) => {
+        const c = game.chs[i]; c?.classList.remove('bad'); c?.classList.add('ok');
+        const want = Math.floor(((i + 1) / game.text.length) * game.qT);
+        while (game.qShown < want) game.tiles[game.qOrder[game.qShown++]]?.classList.add('off');
+        if (i + 1 >= game.text.length) setTimeout(() => $q('#lc-qd')?.classList.add('full'), 250);
+      },
+      bad: (i) => { const c = game.chs[i]; if (c) { c.classList.add('had'); replay(c, 'bad'); } },
+      after: () => qdCaret(),
+    };
+
+    /* ---------- DG-08 · TRILHA DAS PEDRAS ----------
+       Um rio com pedras em zigue-zague, cada uma com uma letra (o espaço é uma folha de vitória-régia).
+       A cada letra certa o robozinho pula para a pedra dela; a câmera acompanha. Errou: a pedra treme
+       em vermelho e o robô se desequilibra. No fim ele pula para a outra margem, onde está a bandeira. */
+    const TR_GAP = 60;
+    function trInit(lv) {
+      game.text = lv.texto;
+      game.trP = [...game.text].map((c, i) => ({ x: 110 + i * TR_GAP, y: Math.sin(i * .9) * 22 + (i % 3 === 0 ? 6 : 0) }));
+      const endX = 110 + game.text.length * TR_GAP + 40;
+      dgShell('tr', 'lc-trp', `
+        <div class="lc-tr" id="lc-tr" aria-hidden="true">
+          <div class="water"><i class="w1"></i><i class="w2"></i></div>
+          <div class="track" id="lc-tr-track">
+            <span class="bank a"></span><span class="bank b" style="left:${endX}px"><i class="flag"></i></span>
+            ${game.trP.map((p, i) => `<span class="stone${game.text[i] === ' ' ? ' lily' : ''}" data-i="${i}" style="left:${p.x}px;--y:${p.y.toFixed(1)}px">${game.text[i] === ' ' ? '' : `<b>${esc(game.text[i])}</b>`}</span>`).join('')}
+            <span class="lc-tr-bot" id="lc-tr-bot"><span class="rb"><span class="body"><i class="eye"></i><i class="eye"></i></span><span class="legs"><i></i><i></i></span></span></span>
+          </div>
+        </div>`, 'Cada letra certa é um pulo para a próxima pedra. As folhas são os espaços entre as palavras.');
+      game.chs = [...$q('#lc-tr-track').querySelectorAll('.stone')];
+      game.trEnd = endX;
+      game.trBot = { x: 52, y: 0 };
+      trPlace(true); trCur();
+    }
+    function trPlace(instant) {
+      const bot = $q('#lc-tr-bot'), track = $q('#lc-tr-track'), box = $q('#lc-tr'); if (!bot || !track || !box) return;
+      bot.style.transform = `translate(${game.trBot.x}px, ${game.trBot.y}px)`;
+      track.style.transition = instant ? 'none' : '';
+      track.style.transform = `translateX(${(-Math.max(0, game.trBot.x - box.clientWidth * .3)).toFixed(0)}px)`;
+    }
+    function trCur() { game.chs.forEach((s, i) => s.classList.toggle('cur', i === game.pos)); }
+    function trHop(x, y) {
+      const bot = $q('#lc-tr-bot'); if (!bot) return;
+      bot.getAnimations().forEach((a) => a.finish());
+      const from = `translate(${game.trBot.x}px, ${game.trBot.y}px)`, to = `translate(${x}px, ${y}px)`;
+      const mid = `translate(${(game.trBot.x + x) / 2}px, ${Math.min(game.trBot.y, y) - 34}px)`;
+      game.trBot = { x, y };
+      bot.animate([{ transform: from }, { transform: mid, offset: .5 }, { transform: to }], { duration: 210, easing: 'ease-out' });
+      trPlace();
+    }
+    DG_STYLE.tr = {
+      fim: 1000,
+      ok: (i) => {
+        const s = game.chs[i]; s?.classList.remove('bad'); s?.classList.add('ok');
+        const p = game.trP[i]; trHop(p.x, p.y);
+        s && replay(s, 'land');
+        if (i + 1 >= game.text.length) setTimeout(() => { trHop(game.trEnd + 30, 0); $q('#lc-tr-bot')?.classList.add('win'); }, 320);
+      },
+      bad: (i) => { const s = game.chs[i]; if (s) { s.classList.add('had'); replay(s, 'bad'); } replay($q('#lc-tr-bot'), 'nope'); },
+      after: () => trCur(),
+    };
+
     function typingInit(lv) {
       if (lv.nova && !game.introDone) return introInit(lv);
       if (lv.apresenta && !game.introDone) return apresentaInit(lv);
+      if (lv.esteira) return kfInit(lv);
+      if (lv.cartoes) return cdInit(lv);
+      if (lv.quadro) return qdInit(lv);
+      if (lv.trilha) return trInit(lv);
       game.intro = null; game.t0 = 0;
       game.pos = 0; game.text = lv.texto;
       const g = lv.sombra || ''; // a frase de verdade por trás do ritmo (uma letra por tecla)
@@ -1145,6 +1411,7 @@
       kbTarget(game.text[game.pos] ?? null);
     }
     function typingKey(k) {
+      if (game.est) return dgKey(k);
       const want = game.text[game.pos];
       if (k === want) {
         if (!game.t0) game.t0 = performance.now();
@@ -1162,6 +1429,7 @@
     }
     /* Backspace: volta uma letra para o aluno apagar e corrigir */
     function typingBack() {
+      if (game.est) return; // nos estilos com cena não há o que apagar
       if (!game.chs || game.pos <= 0 || game.pos >= game.text.length) return;
       game.chs[game.pos]?.classList.remove('cur', 'bad');
       game.pos--;
@@ -1336,13 +1604,14 @@
     async function mjTransfer(ov, from, to, cost, fmtC) {
       const COIN = '<img src="assets/moeda/moeda.webp" alt="" draggable="false">';
       ov.classList.add('xfer');
+      const many = game.maxLives > 5; // muitas vidas (ex.: as 10 chances do MJ-06): um coração só e o "×10" contando
       ov.innerHTML = `
         <div class="lc-hk-xfer">
           <p class="lc-hk-xfer-tag">Transferência do Saldo HC</p>
           <div class="lc-hk-xfer-row">
             <div class="lc-hk-xfer-box from">${COIN}<small>Seu saldo</small><b id="lc-xf-saldo">${fmtC(from)}</b><em>−${fmtC(cost)}</em></div>
             <div class="lc-hk-xfer-pipe" aria-hidden="true"><i class="flow"></i>${Array.from({ length: 9 }, (_, i) => `<span style="--d:${i * 120}ms">${COIN}</span>`).join('')}</div>
-            <div class="lc-hk-xfer-box to"><span class="lc-hk-xfer-hearts">${Array.from({ length: game.maxLives }, () => `<b>${HEART}</b>`).join('')}</span><small>Sistema</small><b id="lc-xf-st">Recarregando…</b></div>
+            <div class="lc-hk-xfer-box to"><span class="lc-hk-xfer-hearts${many ? ' many' : ''}">${many ? `<b>${HEART}</b><span class="n" id="lc-xf-n">×0</span>` : Array.from({ length: game.maxLives }, () => `<b>${HEART}</b>`).join('')}</span><small>Sistema</small><b id="lc-xf-st">Recarregando…</b></div>
           </div>
           <b class="lc-hk-xfer-bar"><i></i></b>
           <p class="lc-hk-xfer-txt" id="lc-xf-txt">Transferindo ${fmtC(cost)} HC para o sistema…</p>
@@ -1353,7 +1622,11 @@
           if (!ov.isConnected) return done();
           const k = Math.min(1, (t - t0) / DUR), e = 1 - (1 - k) ** 2;
           num.textContent = fmtC(from - (from - to) * e);
-          hearts.forEach((h, i) => { if (k >= (i + 1) / hearts.length * .92 && !h.classList.contains('on')) h.classList.add('on'); });
+          if (many) {
+            const n = Math.min(game.maxLives, Math.floor(k / .92 * game.maxLives)), el = ov.querySelector('#lc-xf-n');
+            if (el && el.textContent !== `×${n}`) { el.textContent = `×${n}`; replay(el, 'tick'); }
+            if (n > 0) hearts[0]?.classList.add('on');
+          } else hearts.forEach((h, i) => { if (k >= (i + 1) / hearts.length * .92 && !h.classList.contains('on')) h.classList.add('on'); });
           if (k < 1) requestAnimationFrame(step); else done();
         };
         requestAnimationFrame(step);
@@ -1361,7 +1634,7 @@
       if (!ov.isConnected) return;
       game.lives = game.maxLives; mjLives(-1);
       ov.classList.add('done');
-      ov.querySelector('#lc-xf-st').textContent = `${game.maxLives} vidas`;
+      ov.querySelector('#lc-xf-st').textContent = `${game.maxLives} ${game.mj?.unid || 'vidas'}`;
       ov.querySelector('#lc-xf-txt').textContent = 'Sistema restaurado!';
       mjLog(`Sistema restaurado · −${fmtC(cost)} HC`, 'ok');
       await sleep(900);
@@ -1369,7 +1642,7 @@
     }
     async function mjResume(ov) {
       ov.classList.remove('xfer', 'done');
-      for (const n of [3, 2, 1]) { if (!ov.isConnected) return; ov.innerHTML = `<b class="lc-count">${n}</b>`; await sleep(700); }
+      for (const n of [3, 2, 1]) { if (!ov.isConnected) return; ov.innerHTML = countHTML(n, 700); await sleep(700); }
       if (!ov.isConnected) return;
       ov.remove(); game.mj?.onResume(); game.paused = false;
     }
@@ -2331,7 +2604,7 @@
       $q('#lc-gp-world')?.classList.remove('go');
       game.els[4]?.classList.remove('run');
       mjDown({
-        term: $q('#lc-gp'), titulo: 'Sem chances!', revTxt: `Continuar com ${game.maxLives} chances`,
+        term: $q('#lc-gp'), titulo: 'Sem chances!', unid: 'chances', revTxt: `Continuar com ${game.maxLives} chances`,
         texto: `Você errou ${game.maxLives} teclas. Faltavam <b>${left} ${left === 1 ? 'letra' : 'letras'}</b> para a linha de chegada.`,
         onResume: () => { game.t0 += performance.now() - t; $q('#lc-gp-world')?.classList.add('go'); }, // o tempo parado não conta no PPM
         onRestart: () => { cancelAnimationFrame(game.raf); gpInit(L.niveis[st.lvl]); },
@@ -2361,6 +2634,454 @@
       setTimeout(complete, 3800);
     }
 
+    /* ---------- MINIJOGO: TRAVESSIA DOS BALÕES (MJ-07) ----------
+       Céu de entardecer com montanhas e um mar de nuvens embaixo. Uma fila de balões, cada um com
+       uma tecla, atravessa o céu; o robozinho começa numa ilha flutuante. Ao teclar a letra do balão
+       que brilha, o robô pula e se pendura nele, e o balão começa a descer. Antes de ele chegar ao mar
+       de nuvens, o aluno tecla a letra do próximo balão e o robô pula para ele.
+       - Se o balão descer demais, ele estoura e o robô cai: perde uma vida e reaparece numa ilha antes
+         do próximo balão (na ilha não tem pressa). Tecla errada zera o combo, mas não tira vida.
+       - Os balões descem mais rápido com o progresso (de 4,6 s até 2,2 s da altura até o mar);
+         depois de uma queda, 2,5 s mais devagar.
+       - Notas pelo quanto o balão ainda estava alto: Perfeito, Ótimo ou Bom, e combo.
+       - A câmera segue o robô e o cenário anda em camadas (montanhas, nuvens).
+       - Vidas (padrão 3) e reviver com o Saldo HC, iguais aos outros minijogos. */
+    const BL_COR = ['#f43f5e', '#f59e0b', '#a855f7', '#3b82f6', '#10b981', '#ec4899'];
+    const BL_GAP = 118, BL_X0 = 150, BL_DY = [0, 14, -6, 10, -12, 6];
+    const BL_ROPE = '<svg class="rope" viewBox="0 0 30 44" aria-hidden="true"><path d="M11 0 3 33M19 0l8 33"/><rect x="2" y="33" width="26" height="9" rx="2.5"/><path d="M4 37.5h22"/></svg>';
+    const BL_BALAO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5c3.9 0 6.5 3 6.5 6.6 0 4.2-3.7 7.7-6.5 8.4-2.8-.7-6.5-4.2-6.5-8.4 0-3.6 2.6-6.6 6.5-6.6Z"/><path d="M11 17.6 10 19.5h4l-1-1.9M12 19.5v3"/></svg>';
+    function blLetras(n) {
+      const ks = L.teclas.filter((k) => k !== ' ');
+      const out = [];
+      for (let i = 0; i < n; i++) {
+        let k; do { k = ks[Math.floor(Math.random() * ks.length)]; } while (ks.length > 1 && out.length >= 2 && out[i - 1] === k && out[i - 2] === k);
+        out.push(k);
+      }
+      return out;
+    }
+    function balaoInit(lv) {
+      game.score = 0; game.meta = lv.meta; game.paused = true; game.run = balaoRun;
+      game.maxLives = lv.vidas || 3; game.lives = game.maxLives; game.revives = 0; game.combo = 0;
+      $q('#lc-stage').innerHTML = `
+        <div class="lc-term lc-bl" id="lc-bl">
+          <div class="lc-hk-bar">
+            <span class="lc-hk-title lc-bl-title"><i></i>Travessia dos Balões</span>
+            ${livesHTML()}
+            <span class="lc-fl-combo" id="lc-fl-combo" data-on="0">Combo <b>×0</b></span>
+            <span class="lc-hk-time lc-bl-left" id="lc-bl-left" title="Balões que faltam">${BL_BALAO}<b>${game.meta}</b></span>
+          </div>
+          <div class="lc-bl-world" id="lc-bl-world">
+            <div class="lc-bl-sky" aria-hidden="true"><i class="sun"></i><i class="mt far"></i><i class="mt"></i><i class="cl"></i></div>
+            <div class="lc-bl-layer" id="lc-bl-layer"></div>
+            <div class="lc-bl-sea" aria-hidden="true"><i></i><i></i></div>
+            <b class="lc-run-rate lc-bl-rate" id="lc-bl-rate"></b>
+          </div>
+          <p class="lc-hk-log" id="lc-hk-log"><span>&gt;</span> <em>Tecle a letra do balão que brilha para o robô pular nele.</em></p>
+          ${startOverlay('Travessia dos Balões')}
+        </div>`;
+      blReset();
+      goal(0, game.meta); bindStart();
+    }
+    function blReset() {
+      const layer = $q('#lc-bl-layer'); if (layer) layer.innerHTML = '';
+      game.cam = 0; game.cur = 0; game.ride = -1; game.jump = null; game.fall = null; game.slowUntil = 0; game.lock = false;
+      game.bal = blLetras(game.meta).map((k, i) => ({ k, i, x: BL_X0 + i * BL_GAP, y: 0, dy: BL_DY[i % BL_DY.length], st: 'idle', el: null }));
+      game.isl = []; game.bot = { x: 0, y: 0, el: null, rot: 0 };
+      const g = blGeo();
+      blIsland(BL_X0 - BL_GAP * .95, true);
+      game.bot.el = document.createElement('div');
+      game.bot.el.className = 'lc-bl-bot stand';
+      game.bot.el.innerHTML = '<span class="rb"><i class="arm l"></i><i class="arm r"></i><span class="body"><i class="eye"></i><i class="eye"></i></span><span class="legs"><i></i><i></i></span></span>';
+      layer?.appendChild(game.bot.el);
+      blStand(game.isl[0], g);
+      game.bal.forEach((b) => { b.y = g.yTop + b.dy; });
+      game.cam = Math.max(0, game.bot.x - g.W * .26);
+      blNext(); blPaint(g, 1);
+    }
+    function blGeo() {
+      const w = $q('#lc-bl-world'); const W = w?.clientWidth || 700, H = w?.clientHeight || 360;
+      return { W, H, yTop: Math.max(140, H * .2 + 104), yFall: H - 84, yIsl: H * .64 };
+    }
+    function blIsland(x, first) {
+      const el = document.createElement('div');
+      el.className = `lc-bl-isl${first ? ' first' : ''}`;
+      el.innerHTML = '<i class="grass"></i><i class="rock"></i>';
+      $q('#lc-bl-layer')?.prepend(el);
+      const isl = { x, el }; game.isl.push(isl); return isl;
+    }
+    function blStand(isl, g) { game.bot.x = isl.x; game.bot.y = g.yIsl - 60; game.bot.rot = 0; game.bot.on = isl; game.bot.el.classList.add('stand'); }
+    function blNext() { // destaca o próximo balão e mostra a tecla no teclado da tela
+      game.bal.forEach((b) => b.el?.classList.toggle('next', b.i === game.cur));
+      const b = game.bal[game.cur]; kbTarget(b ? b.k : null);
+    }
+    function blMake(b) {
+      if (b.el) return;
+      b.el = document.createElement('div');
+      b.el.className = 'lc-bl-b';
+      b.el.style.setProperty('--bc', BL_COR[b.i % BL_COR.length]);
+      b.el.style.setProperty('--bd', `${(b.i % 5) * -.6}s`);
+      b.el.innerHTML = `<span class="bal"><b>${esc(b.k)}</b></span>${BL_ROPE}`;
+      $q('#lc-bl-layer')?.appendChild(b.el);
+      if (b.i === game.cur) b.el.classList.add('next');
+    }
+    const blFall = () => { // segundos para o balão ir da altura até o mar de nuvens
+      const p = Math.min(1, game.score / Math.max(1, game.meta)), t = 4.6 - 2.4 * p;
+      return performance.now() < game.slowUntil ? t * 1.5 : t;
+    };
+    function blPaint(g, dt) {
+      const bot = game.bot;
+      // câmera: o robô fica a ~26% da largura
+      const want = Math.max(0, bot.x - g.W * .26);
+      game.cam += (want - game.cam) * Math.min(1, dt * 4);
+      const cam = game.cam, mv = (el, x, y, extra = '') => { if (!el) return; const t = `translate3d(${(x - cam).toFixed(1)}px, ${y.toFixed(1)}px, 0)${extra}`; if (el._tx !== t) { el._tx = t; el.style.transform = t; } };
+      game.bal.forEach((b) => {
+        const vis = b.x - cam > -120 && b.x - cam < g.W + 120;
+        if (vis && !b.el && b.st !== 'gone') blMake(b);
+        if (b.el) {
+          mv(b.el, b.x, b.y);
+          if (!vis && b.x - cam < -120) { b.el.remove(); b.el = null; b.st = 'gone'; }
+        }
+      });
+      game.isl.forEach((s) => mv(s.el, s.x, g.yIsl));
+      mv(bot.el, bot.x, bot.y, bot.rot ? ` rotate(${bot.rot.toFixed(1)}deg)` : '');
+      // cenário em camadas
+      const sky = $q('#lc-bl-world .lc-bl-sky');
+      if (sky && !game.lay) game.lay = [...sky.querySelectorAll('.mt, .cl')];
+      if (game.lay) [[0, .06, 420], [1, .16, 300], [2, .32, 260]].forEach(([i, f, per]) => { const el = game.lay[i]; const t = `translateX(${(-((cam * f) % per)).toFixed(1)}px)`; if (el && el._tx !== t) { el._tx = t; el.style.transform = t; } });
+    }
+    function balaoRun() {
+      cancelAnimationFrame(game.raf);
+      let last = performance.now();
+      $q('#lc-bl-world')?.classList.add('go');
+      blNext();
+      const frame = (t) => {
+        if (!alive || !$q('#lc-bl')) return;
+        game.raf = requestAnimationFrame(frame);
+        const dt = Math.min(.05, (t - last) / 1000); last = t;
+        if (busy || game.paused || document.visibilityState !== 'visible') return;
+        const g = blGeo(), bot = game.bot;
+        // o balão em que o robô está desce
+        const rb = game.bal[game.ride];
+        if (rb && rb.st === 'ride' && !game.jump) {
+          rb.y += ((g.yFall - g.yTop) / blFall()) * dt;
+          const low = rb.y > g.yFall - (g.yFall - g.yTop) * .3;
+          if (low !== !!rb.low) { rb.low = low; rb.el?.classList.toggle('low', low); bot.el.classList.toggle('scared', low); }
+          if (rb.y >= g.yFall) blDrop(rb);
+        }
+        // balões vazios sobem e somem
+        game.bal.forEach((b) => { if (b.st === 'left') b.y -= 70 * dt; });
+        // pulo: arco do ponto de saída até o balão (que pode estar descendo)
+        const j = game.jump;
+        if (j) {
+          j.k = Math.min(1, j.k + dt / j.dur);
+          const tb = j.to, tx = tb ? tb.x : j.tx, ty = tb ? tb.y : j.ty, e = j.k < .5 ? 2 * j.k * j.k : 1 - (-2 * j.k + 2) ** 2 / 2;
+          bot.x = j.x0 + (tx - j.x0) * e; bot.y = j.y0 + (ty - j.y0) * e - Math.sin(Math.PI * j.k) * 58;
+          if (j.k >= 1) { game.jump = null; j.done(); }
+        } else if (rb && rb.st === 'ride') { bot.x = rb.x; bot.y = rb.y; }
+        // queda
+        const f = game.fall;
+        if (f) {
+          f.vy += 900 * dt; bot.y += f.vy * dt; bot.x += 30 * dt; bot.rot += 220 * dt;
+          if (bot.y > g.H + 30 && !f.splash) { f.splash = true; blSplash(bot.x, g.H - 30); }
+        }
+        blPaint(g, dt);
+      };
+      game.raf = requestAnimationFrame(frame);
+    }
+    function blRate(txt, cls, x, y) {
+      const r = $q('#lc-bl-rate'); if (!r) return;
+      r.textContent = txt; r.className = `lc-run-rate lc-bl-rate ${cls}`;
+      r.style.left = `${(x - game.cam).toFixed(0)}px`; r.style.top = `${Math.max(14, y - 150).toFixed(0)}px`;
+      replay(r, 'show');
+    }
+    function blKey(k) {
+      if (game.paused || game.lock || game.fall || k === ' ') return;
+      const b = game.bal[game.cur]; if (!b) return;
+      if (k !== b.k) {
+        miss(k); game.combo = 0; filaCombo();
+        replay(game.bot.el, 'nope'); b.el && replay(b.el, 'shake');
+        return mjLog(`Tecla errada: o balão que brilha é o “${keyGlyph(b.k)}”`, 'warn');
+      }
+      hit(k);
+      if (game.jump?.to) { const j = game.jump; game.jump = null; game.bot.x = j.to.x; game.bot.y = j.to.y; j.done(); } // teclou rápido: termina o pulo anterior na hora
+      const g = blGeo(), prev = game.bal[game.ride];
+      // nota: quanto mais alto o balão de onde o robô saiu, melhor
+      let txt = '', cls = 'good';
+      if (prev && prev.st === 'ride') {
+        const f = (prev.y - g.yTop) / (g.yFall - g.yTop);
+        [txt, cls] = f < .35 ? ['Perfeito!', 'perfect'] : f < .7 ? ['Ótimo!', 'great'] : ['Bom', 'good'];
+        prev.st = 'left'; prev.el?.classList.remove('low'); prev.el?.classList.add('left');
+        setTimeout(() => { prev.el?.remove(); prev.el = null; prev.st = 'gone'; }, 900);
+      }
+      game.combo++; filaCombo();
+      game.bot.el.classList.remove('stand', 'scared');
+      game.bot.on = null;
+      b.st = 'grab';
+      game.jump = { x0: game.bot.x, y0: game.bot.y, to: b, k: 0, dur: .3, done: () => blGrab(b, txt, cls) };
+      game.cur++; blNext();
+      game.score++; goal(game.score, game.meta);
+      const left = $q('#lc-bl-left b'); if (left) left.textContent = Math.max(0, game.meta - game.score);
+    }
+    function blGrab(b, txt, cls) {
+      b.st = 'ride'; game.ride = b.i;
+      b.el?.classList.add('ride'); b.el && replay(b.el, 'grab');
+      if (txt) blRate(game.combo >= 3 ? `${txt} ×${game.combo}` : txt, cls, b.x, b.y);
+      mjLog(`Pegou o balão “${keyGlyph(b.k)}”${game.combo >= 3 ? ` · combo ×${game.combo}` : ''}`, 'ok');
+      if (game.score >= game.meta) blWin(b);
+    }
+    function blWin(b) { // último balão: o robô pula para a ilha final com a bandeira
+      const g = blGeo(), isl = blIsland(b.x + BL_GAP * 1.1);
+      isl.el.classList.add('end'); isl.el.insertAdjacentHTML('beforeend', '<i class="flag"></i>');
+      game.lock = true; b.st = 'hold';
+      setTimeout(() => {
+        b.st = 'left'; b.el?.classList.add('left');
+        game.jump = { x0: game.bot.x, y0: game.bot.y, tx: isl.x, ty: g.yIsl - 60, k: 0, dur: .45, done: () => {
+          blStand(isl, g); game.bot.el.classList.add('win');
+          game.paused = true; $q('#lc-bl-world')?.classList.add('done');
+          mjLog('Travessia completa!', 'ok'); setTimeout(complete, 1500);
+        } };
+      }, 350);
+    }
+    function blSplash(x, y) {
+      const layer = $q('#lc-bl-layer'); if (!layer) return;
+      const el = document.createElement('span'); el.className = 'lc-bl-splash';
+      el.style.transform = `translate3d(${(x - game.cam).toFixed(0)}px, ${y.toFixed(0)}px, 0)`;
+      el.innerHTML = Array.from({ length: 10 }, (_, i) => `<i style="--a:${-170 + i * 16}deg;--d:${30 + Math.random() * 30}px"></i>`).join('');
+      layer.appendChild(el); setTimeout(() => el.remove(), 800);
+    }
+    /* o balão desceu demais: estoura, o robô cai e perde uma vida */
+    function blDrop(b) {
+      b.st = 'pop'; b.el?.classList.add('pop'); setTimeout(() => { b.el?.remove(); b.el = null; b.st = 'gone'; }, 450);
+      game.ride = -1; game.fall = { vy: -160 }; game.bot.el.classList.remove('scared'); game.bot.el.classList.add('falling');
+      miss(null); game.combo = 0; filaCombo(); replay($q('#lc-bl'), 'hurt');
+      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.slowUntil = performance.now() + 2500;
+      if (game.lives <= 0) return setTimeout(blDown, 700);
+      mjLog(`O balão “${keyGlyph(b.k)}” estourou · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
+      setTimeout(blRespawn, 900);
+    }
+    function blRespawn() { // reaparece numa ilha antes do próximo balão (na ilha não tem pressa)
+      if (!$q('#lc-bl')) return;
+      const g = blGeo(), nb = game.bal[game.cur]; if (!nb) return;
+      const isl = blIsland(nb.x - BL_GAP * .8);
+      game.fall = null; game.bot.el.classList.remove('falling'); blStand(isl, g);
+      replay(game.bot.el, 'spawn'); replay(isl.el, 'spawn');
+      game.slowUntil = performance.now() + 2500;
+    }
+    function blDown() {
+      cancelAnimationFrame(game.raf); $q('#lc-bl-world')?.classList.remove('go');
+      mjDown({
+        term: $q('#lc-bl'), titulo: 'O robô caiu!', texto: `Você atravessou <b>${game.score} de ${game.meta}</b> balões.`,
+        onResume: () => { blRespawn(); balaoRun(); },
+        onRestart: (term) => {
+          game.score = 0; game.combo = 0; filaCombo(); game.lay = null;
+          blReset(); const left = $q('#lc-bl-left b'); if (left) left.textContent = game.meta;
+          term.insertAdjacentHTML('beforeend', startOverlay('Travessia dos Balões')); bindStart();
+          mjLog('Tecle a letra do balão que brilha para o robô pular nele.');
+        },
+      });
+    }
+
+    /* ---------- MINIJOGO: DUELO NO PENHASCO (MJ-08) ----------
+       Noite com aurora sobre as nuvens e uma plataforma flutuante. O robozinho fica na ponta da
+       esquerda; monstrinhos caem do céu na outra ponta e andam na direção dele. Em cima aparece uma
+       palavra em letras: cada letra certa faz o robô arremessar um orbe de energia que empurra o
+       monstro para trás. Empurrado além da beirada, o monstro cai do penhasco.
+       - Se o monstro chegar até o robô, ele dá uma cabeçada: o robô perde uma vida e o monstro volta
+         para o meio da plataforma (2,5 s mais devagar). Tecla errada faz o monstro dar um passo à
+         frente e zera o combo, mas não tira vida.
+       - Três tipos: comum (verde), ligeiro (rosa, anda mais rápido) e pesadão (roxo, maior, recua
+         menos a cada orbe); com o progresso os monstros andam mais rápido e os pesadões aparecem mais.
+       - A barra em cima do monstro mostra quanto falta para ele cair; o combo deixa o orbe mais forte.
+       - Palavras: as do campo "palavras" do nível ou o banco do MJ-04, só com as teclas da lição.
+       - Vidas (padrão 3) e reviver com o Saldo HC, iguais aos outros minijogos. */
+    const DU_TIPOS = {
+      comum: { cor: '74, 222, 128', v: 1, push: 1, nome: 'comum' },
+      ligeiro: { cor: '244, 114, 182', v: 1.45, push: 1.05, nome: 'ligeiro' },
+      pesado: { cor: '167, 139, 250', v: .85, push: .62, nome: 'pesadão', big: true },
+    };
+    const DU_MONSTRO = '<i class="horn l"></i><i class="horn r"></i><span class="mb"><i class="brow"></i><i class="eye"><b></b></i><i class="mouth"></i></span><span class="feet"><i></i><i></i></span>';
+    function dueloInit(lv) {
+      game.score = 0; game.meta = lv.meta; game.paused = true; game.run = dueloRun;
+      game.maxLives = lv.vidas || 3; game.lives = game.maxLives; game.revives = 0; game.combo = 0;
+      game.need = game.meta * 10; game.ph = 0; game.pe = 0; // a barra de estrelas: ~10 letras por monstro (completa a cada monstro derrubado)
+      $q('#lc-stage').innerHTML = `
+        <div class="lc-term lc-du" id="lc-du">
+          <div class="lc-hk-bar">
+            <span class="lc-hk-title lc-du-title"><i></i>Duelo no Penhasco</span>
+            ${livesHTML()}
+            <span class="lc-fl-combo" id="lc-fl-combo" data-on="0">Combo <b>×0</b></span>
+            <span class="lc-hk-time lc-du-cnt" id="lc-du-cnt" title="Monstros derrubados"><i class="mini"></i><b>0</b><small>/${game.meta}</small></span>
+          </div>
+          <div class="lc-du-world" id="lc-du-world">
+            <div class="lc-du-sky" aria-hidden="true"><i class="stars"></i><i class="aur a1"></i><i class="aur a2"></i><i class="moon"></i><i class="isl i1"></i><i class="isl i2"></i><i class="clouds"></i></div>
+            <div class="lc-du-word" id="lc-du-word"></div>
+            <div class="lc-du-plat" id="lc-du-plat" aria-hidden="true"><i class="top"></i><i class="rock"></i><i class="edge"></i></div>
+            <div class="lc-du-hero" id="lc-du-hero"><span class="rb"><i class="arm"></i><span class="body"><i class="eye"></i><i class="eye"></i></span><span class="legs"><i></i><i></i></span></span></div>
+            <div class="lc-du-mon" id="lc-du-mon"><span class="hp"><i></i></span><span class="mm">${DU_MONSTRO}</span></div>
+            <div class="lc-du-fx" id="lc-du-fx"></div>
+          </div>
+          <p class="lc-hk-log" id="lc-hk-log"><span>&gt;</span> <em>Digite a palavra de cima: cada letra arremessa um orbe no monstro.</em></p>
+          ${startOverlay('Duelo no Penhasco')}
+        </div>`;
+      duReset(lv);
+      goal(0, game.meta); bindStart();
+    }
+    function duReset(lv) {
+      game.words = estFila(lv, 40); game.wi = 0; game.pos = 0; game.slowUntil = 0; game.mon = null;
+      duWord(); duSpawn(true); duPaint(duGeo());
+    }
+    function duGeo() {
+      const w = $q('#lc-du-world'); const W = w?.clientWidth || 760, H = w?.clientHeight || 380;
+      return { W, H, py: H * .7, heroX: W * .14, edge: W * .78, spawn: W * .62, reach: W * .085 };
+    }
+    function duWord() { // a palavra em cima, em letras
+      if (game.wi >= game.words.length - 3) game.words.push(...estFila(L.niveis[st.lvl], 20));
+      const w = game.words[game.wi], box = $q('#lc-du-word'); game.pos = 0;
+      if (box) {
+        box.innerHTML = [...w].map((c, i) => `<i style="--i:${i}">${esc(c)}</i>`).join('');
+        game.tiles = [...box.children]; replay(box, 'in');
+      }
+      duCur();
+    }
+    function duCur() {
+      game.tiles?.forEach((t, i) => t.classList.toggle('cur', i === game.pos));
+      kbTarget(game.words[game.wi]?.[game.pos] ?? null);
+    }
+    function duTipo() {
+      const p = Math.min(1, game.score / Math.max(1, game.meta)), r = Math.random();
+      if (game.score === 0) return 'comum';
+      return r < .12 + .25 * p ? 'pesado' : r < .42 + .1 * p ? 'ligeiro' : 'comum';
+    }
+    function duSpawn(first) { // um monstro novo cai do céu na ponta da direita
+      const g = duGeo(), t = duTipo(), T = DU_TIPOS[t], el = $q('#lc-du-mon');
+      game.mon = { t, T, x: g.spawn, y: -90, vy: 0, kv: 0, rot: 0, st: first ? 'wait' : 'drop' };
+      if (first) game.mon.y = g.py;
+      if (el) {
+        el.className = `lc-du-mon t-${t}${T.big ? ' big' : ''}`; el.style.setProperty('--mc', T.cor);
+        el.style.opacity = '1';
+      }
+    }
+    const duSpeed = (g) => { // px/s que o monstro anda
+      const p = Math.min(1, game.score / Math.max(1, game.meta));
+      return g.W * (.022 + .026 * p) * game.mon.T.v * (performance.now() < game.slowUntil ? .55 : 1);
+    };
+    function duPaint(g) {
+      const m = game.mon, el = $q('#lc-du-mon'), hero = $q('#lc-du-hero'), plat = $q('#lc-du-plat');
+      if (plat) { plat.style.left = `${(g.W * .03).toFixed(0)}px`; plat.style.width = `${(g.edge - g.W * .03 + 6).toFixed(0)}px`; plat.style.top = `${g.py.toFixed(0)}px`; }
+      if (hero) { const t = `translate3d(${g.heroX.toFixed(1)}px, ${g.py.toFixed(1)}px, 0)`; if (hero._tx !== t) { hero._tx = t; hero.style.transform = t; } }
+      if (m && el) {
+        const t = `translate3d(${m.x.toFixed(1)}px, ${m.y.toFixed(1)}px, 0)${m.rot ? ` rotate(${m.rot.toFixed(0)}deg)` : ''}`;
+        if (el._tx !== t) { el._tx = t; el.style.transform = t; }
+        const f = Math.max(0, Math.min(1, (m.x - g.heroX - g.reach) / (g.edge - g.heroX - g.reach)));
+        const hp = el.querySelector('.hp i'); const ht = `scaleX(${f.toFixed(3)})`; if (hp && hp._t !== ht) { hp._t = ht; hp.style.transform = ht; }
+      }
+    }
+    function dueloRun() {
+      cancelAnimationFrame(game.raf);
+      let last = performance.now();
+      $q('#lc-du-world')?.classList.add('go');
+      if (game.mon?.st === 'wait') game.mon.st = 'walk';
+      duCur();
+      const frame = (t) => {
+        if (!alive || !$q('#lc-du')) return;
+        game.raf = requestAnimationFrame(frame);
+        const dt = Math.min(.05, (t - last) / 1000); last = t;
+        if (busy || game.paused || document.visibilityState !== 'visible') return;
+        const g = duGeo(), m = game.mon;
+        if (m) {
+          if (m.st === 'drop') { // cai do céu e quica na plataforma
+            m.vy += 1500 * dt; m.y += m.vy * dt;
+            if (m.y >= g.py) { m.y = g.py; m.st = 'walk'; m.vy = 0; replay($q('#lc-du-mon'), 'land'); }
+          } else if (m.st === 'walk') {
+            m.x += (m.kv - duSpeed(g)) * dt;
+            m.kv *= Math.exp(-7 * dt);
+            if (m.x >= g.edge) { m.st = 'fall'; m.vy = -260; $q('#lc-du-mon')?.classList.add('falling'); duFall(); }
+            else if (m.x <= g.heroX + g.reach) duBump(g);
+          } else if (m.st === 'fall') {
+            m.vy += 1400 * dt; m.y += m.vy * dt; m.x += 70 * dt; m.rot += 260 * dt;
+          }
+        }
+        duPaint(g);
+      };
+      game.raf = requestAnimationFrame(frame);
+    }
+    function duThrow() { // o robô arremessa um orbe; no impacto o monstro recua
+      const g = duGeo(), fx = $q('#lc-du-fx'), m = game.mon;
+      replay($q('#lc-du-hero'), 'throw');
+      if (!fx || !m) return;
+      const x0 = g.heroX + 16, y0 = g.py - 46, tx = m.x - (m.T.big ? 30 : 22), ty = m.y - (m.T.big ? 46 : 36);
+      const o = document.createElement('i'); o.className = 'lc-du-orb'; o.style.left = `${x0}px`; o.style.top = `${y0}px`;
+      fx.appendChild(o);
+      const a = o.animate([
+        { transform: 'translate(-50%,-50%) scale(.5)' },
+        { offset: .5, transform: `translate(calc(-50% + ${(tx - x0) / 2}px), calc(-50% + ${(ty - y0) / 2 - 34}px)) scale(1)` },
+        { transform: `translate(calc(-50% + ${tx - x0}px), calc(-50% + ${ty - y0}px)) scale(.9)` },
+      ], { duration: 200, easing: 'linear', fill: 'forwards' });
+      a.onfinish = () => {
+        o.remove();
+        if (game.mon !== m || m.st !== 'walk' && m.st !== 'drop') return;
+        const push = g.W * .021 * m.T.push * (1 + Math.min(10, game.combo) * .03);
+        m.kv += push * 7; // recuo (vai somando e perdendo força)
+        replay($q('#lc-du-mon'), 'hit');
+        fx.insertAdjacentHTML('beforeend', `<span class="lc-du-pow" style="left:${tx}px;top:${ty}px">${Array.from({ length: 6 }, (_, i) => `<i style="--a:${i * 60 + Math.random() * 30}deg"></i>`).join('')}</span>`);
+        const p = fx.lastElementChild; setTimeout(() => p.remove(), 450);
+      };
+    }
+    function duKey(k) {
+      if (game.paused || k === ' ') return;
+      const w = game.words[game.wi], want = w?.[game.pos]; if (want == null) return;
+      const tile = game.tiles?.[game.pos];
+      if (k === want) {
+        hit(k); tile?.classList.add('ok');
+        game.combo++; filaCombo();
+        duThrow();
+        game.pos++;
+        if (game.pos >= w.length) { game.wi++; return duWord(); } // a próxima palavra entra na hora
+        duCur();
+      } else {
+        miss(k); game.combo = 0; filaCombo(); tile && replay(tile, 'shake');
+        const m = game.mon; if (m?.st === 'walk') { m.x -= duGeo().W * .012; replay($q('#lc-du-mon'), 'laugh'); }
+        mjLog(`Tecla errada: a próxima letra é “${keyGlyph(want)}” · o monstro avançou`, 'warn');
+      }
+    }
+    function duFall() { // derrubou: conta, enche a barra e chama o próximo
+      game.score++; goal(game.score, game.meta);
+      const c = $q('#lc-du-cnt b'); if (c) { c.textContent = game.score; replay($q('#lc-du-cnt'), 'pop'); }
+      game.ph = Math.max(game.ph, Math.ceil(game.need * game.score / game.meta) - 1); score(true);
+      mjLog(`Monstro ${game.mon.T.nome} derrubado do penhasco!${game.combo >= 3 ? ` · combo ×${game.combo}` : ''}`, 'ok');
+      replay($q('#lc-du-hero'), 'cheer');
+      if (game.score >= game.meta) {
+        setTimeout(() => { game.paused = true; cancelAnimationFrame(game.raf); $q('#lc-du-world')?.classList.add('done'); kbTarget(null); mjLog('O penhasco é seu! Todos os monstros caíram.', 'ok'); setTimeout(complete, 1300); }, 900);
+        return;
+      }
+      setTimeout(() => { if ($q('#lc-du') && game.mon?.st === 'fall') duSpawn(); }, 1000);
+    }
+    function duBump(g) { // o monstro chegou ao robô: cabeçada
+      const m = game.mon;
+      m.x = g.heroX + g.reach + 2; m.kv = g.W * .55; // é jogado de volta para o meio
+      replay($q('#lc-du-mon'), 'bump'); replay($q('#lc-du-hero'), 'hurt'); replay($q('#lc-du'), 'hurt');
+      miss(null); game.combo = 0; filaCombo();
+      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.slowUntil = performance.now() + 2500;
+      if (game.lives <= 0) return duDown();
+      mjLog(`O monstro chegou no robô! · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
+    }
+    function duDown() {
+      cancelAnimationFrame(game.raf); $q('#lc-du-world')?.classList.remove('go');
+      mjDown({
+        term: $q('#lc-du'), titulo: 'O robô foi derrubado!', texto: `Você derrubou <b>${game.score} de ${game.meta}</b> monstros.`,
+        onResume: () => { const g = duGeo(); if (game.mon) { game.mon.x = g.spawn; game.mon.kv = 0; } game.slowUntil = performance.now() + 2500; dueloRun(); },
+        onRestart: (term) => {
+          game.score = 0; game.combo = 0; filaCombo(); game.ph = 0; game.pe = 0;
+          const c = $q('#lc-du-cnt b'); if (c) c.textContent = 0;
+          duReset(L.niveis[st.lvl]);
+          term.insertAdjacentHTML('beforeend', startOverlay('Duelo no Penhasco')); bindStart();
+          mjLog('Digite a palavra de cima: cada letra arremessa um orbe no monstro.');
+        },
+      });
+    }
+
     /* ---------- início dos minijogos de tempo (botão + 3, 2, 1) ---------- */
     /* tela de início: cada minijogo com a sua cor, ícone, missão, meta e vidas */
     const MJ_START = {
@@ -2374,11 +3095,17 @@
         ico: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3Z"/>' },
       'Grande Prêmio das Teclas': { c: '96, 165, 250', c2: '168, 85, 247', txt: 'Digite a frase para o seu robô chegar primeiro na linha de chegada.', chip: () => `<span class="chip"><svg viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>Frase de <b>${game.text.length} letras</b></span><span class="chip"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg><b>4</b> rivais</span><span class="chip lives">${HEART}<b>${game.maxLives}</b> chances</span>`,
         ico: '<path d="M5 21V4"/><path d="M5 4h14v9H5"/><path d="M9 4v9M13 4v9M17 4v9M5 8.5h14"/>' },
+      'Travessia dos Balões': { c: '251, 146, 60', c2: '236, 72, 153', un: 'balões', txt: 'Tecle a letra do próximo balão antes que o seu balão caia nas nuvens.',
+        ico: '<path d="M12 2.5c3.9 0 6.5 3 6.5 6.6 0 4.2-3.7 7.7-6.5 8.4-2.8-.7-6.5-4.2-6.5-8.4 0-3.6 2.6-6.6 6.5-6.6Z"/><path d="M11 17.6 10 19.5h4l-1-1.9M12 19.5v2.5"/><path d="M9.5 7.5c.4-1.2 1.3-2 2.5-2.3"/>' },
+      'Duelo no Penhasco': { c: '45, 212, 191', c2: '99, 102, 241', un: 'monstros', txt: 'Digite a palavra de cima para empurrar os monstros para fora da plataforma.',
+        ico: '<path d="M6 20c0-5 2.7-9 6-9s6 4 6 9"/><path d="M8.5 12 6.5 7.5M15.5 12l2-4.5"/><circle cx="12" cy="15.5" r="1.6"/><path d="M3 20h18"/>' },
       'Patrulha das Palavras': { c: '34, 211, 238', c2: '99, 102, 241', un: 'asteroides', txt: 'Destrua os asteroides antes que eles batam na nave.',
         ico: '<path d="M12 2.5c3 2.6 4.3 6.3 4.3 10.2v3.8H7.7v-3.8c0-3.9 1.3-7.6 4.3-10.2Z"/><circle cx="12" cy="9.5" r="1.8"/><path d="M7.7 12.5 4.5 16v3l3.2-1.5M16.3 12.5l3.2 3.5v3l-3.2-1.5M10 19.5l2 2.5 2-2.5"/>' },
     };
+    /* contagem 3, 2, 1 (início e volta depois de reviver): número dentro de um anel que se desenha */
+    const countHTML = (n, ms) => `<div class="lc-count" style="--cd:${ms}ms${game.sc ? `;--sc:${game.sc}` : ''}"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="trk" cx="50" cy="50" r="44"/><circle class="arc" cx="50" cy="50" r="44" pathLength="100"/></svg><b>${n}</b><small>${n === 3 ? 'Prepare-se' : n === 2 ? 'Mãos no teclado' : 'Já!'}</small></div>`;
     const startOverlay = (name) => {
-      const m = MJ_START[name] || MJ_START['Varredura Hacker'];
+      const m = MJ_START[name] || MJ_START['Varredura Hacker']; game.sc = m.c; // a contagem depois de reviver usa a mesma cor
       const meta = game.meta ? `<span class="chip"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>Meta <b>${game.meta} ${m.un}</b></span>` : '';
       const lives = game.maxLives ? `<span class="chip lives">${HEART}<b>${game.maxLives}</b> ${game.maxLives === 1 ? 'vida' : 'vidas'}</span>` : '';
       return `<div class="lc-start" id="lc-start" style="--sc:${m.c};--sc2:${m.c2}">
@@ -2399,7 +3126,7 @@
       const g = game; // "Recomeçar o minijogo" mostra o botão de novo: a contagem precisa poder rodar outra vez
       try {
         ov.classList.add('counting');
-        for (const n of [3, 2, 1]) { if (!ov.isConnected) return; ov.innerHTML = `<div class="lc-count"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="trk" cx="50" cy="50" r="44"/><circle class="arc" cx="50" cy="50" r="44" pathLength="100"/></svg><b>${n}</b><small>${n === 3 ? 'Prepare-se' : n === 2 ? 'Mãos no teclado' : 'Já!'}</small></div>`; await sleep(800); }
+        for (const n of [3, 2, 1]) { if (!ov.isConnected) return; ov.innerHTML = countHTML(n, 800); await sleep(800); }
         if (!ov.isConnected) return;
         ov.remove(); game.paused = false; (game.run || hackerRun)();
       } finally { g.counting = false; }
@@ -2419,6 +3146,8 @@
       if (lv.tipo === 'estrelas') return estKey(k);
       if (lv.tipo === 'nave') return naveKey(k);
       if (lv.tipo === 'gp') return gpKey(k);
+      if (lv.tipo === 'baloes') return blKey(k);
+      if (lv.tipo === 'duelo') return duKey(k);
       if (lv.tipo === 'fila') return filaKey(k);
       if (lv.tipo === 'hacker') { if (game.paused) return; return hackerKey(k); }
     }
@@ -2431,7 +3160,7 @@
       if (k === 'escape' && kbOpen) { e.preventDefault(); return kbShow(false); }
       const lv = L.niveis[st.lvl];
       if (k === 'backspace' && lv?.tipo === 'typing' && !game.intro && !busy) { e.preventDefault(); return typingBack(); }
-      if (k === 'enter' && (lv?.tipo === 'hacker' || lv?.tipo === 'fila' || lv?.tipo === 'corrida' || lv?.tipo === 'estrelas' || lv?.tipo === 'nave' || lv?.tipo === 'gp') && game.paused) { e.preventDefault(); return countdown(); }
+      if (k === 'enter' && (lv?.tipo === 'hacker' || lv?.tipo === 'fila' || lv?.tipo === 'corrida' || lv?.tipo === 'estrelas' || lv?.tipo === 'nave' || lv?.tipo === 'gp' || lv?.tipo === 'baloes' || lv?.tipo === 'duelo') && game.paused) { e.preventDefault(); return countdown(); }
       if (lv?.tipo === 'gp') { // corrida: qualquer letra, número ou sinal conta (Backspace não volta)
         if (k === 'backspace' || k.length === 1) { e.preventDefault(); if (k.length === 1) press(k); }
         return;
@@ -2445,6 +3174,7 @@
       if (game.intro && k.length === 1) { e.preventDefault(); return press(k); }
       if (L.teclas.includes(k)) { e.preventDefault(); return press(k); }
       // outra letra durante a digitação conta como erro (como no treino original)
+      if (lv?.tipo === 'typing' && game.est && k.length === 1 && !busy && !game.intro) return dgKey(k); // estilos com cena: o erro aparece na cena
       if (lv?.tipo === 'typing' && k.length === 1 && /\S/.test(k) && !busy) { miss(k); game.chs?.[game.pos]?.classList.add('had'); shake(`.lc-ch[data-i="${game.pos}"]`); }
     }
     document.addEventListener('keydown', onKey);

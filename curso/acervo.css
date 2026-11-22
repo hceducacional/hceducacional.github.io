@@ -307,3 +307,62 @@
 .av-pv-gp p s { text-decoration: none; color: rgba(110, 231, 183, .6); }
 .av-pv-gp p i { font-style: normal; color: #fff; background: rgba(96, 165, 250, .3); box-shadow: inset 0 -2px 0 #60a5fa; border-radius: 3px; }
 @media (prefers-reduced-motion: reduce) { .av-pv-gp .ln b { animation: none; } }
+
+/* MJ-07 · Travessia dos Balões */
+.av-pv-bl { position: relative; height: 130px; border-radius: 14px; overflow: hidden; background: linear-gradient(180deg, #4c1d95, #9d3c8c 55%, #ea6f5a 82%, #fbbf77); }
+.av-pv-bl .b { position: absolute; width: 30px; height: 34px; margin-left: -15px; display: grid; place-items: center; border-radius: 50% 50% 46% 46% / 55% 55% 45% 45%;
+  background: radial-gradient(circle at 33% 27%, rgba(255, 255, 255, .85) 0 6%, transparent 22%), var(--bc); animation: avBlBob 2.4s ease-in-out infinite alternate; }
+.av-pv-bl .b:nth-child(2n) { animation-delay: -1.2s; }
+.av-pv-bl .b::after { content: ''; position: absolute; left: 50%; top: 100%; width: 1px; height: 16px; background: rgba(255, 255, 255, .6); }
+.av-pv-bl .b b { font: 800 15px/1 system-ui, sans-serif; color: #fff; }
+.av-pv-bl .b.nx { box-shadow: 0 0 0 2px #fff, 0 0 14px 3px var(--bc); }
+.av-pv-bl .bot { position: absolute; left: 18%; top: calc(30% + 52px); width: 18px; height: 16px; margin-left: -9px; border-radius: 6px 6px 4px 4px; background: linear-gradient(#dbeafe, #60a5fa); animation: avBlBob 2.4s ease-in-out infinite alternate; }
+.av-pv-bl .sea { position: absolute; left: 0; right: 0; bottom: -6px; height: 22px; background: radial-gradient(20px 12px at 20px 100%, #fff1f2 70%, transparent 72%) 0 0 / 40px 100% repeat-x, linear-gradient(transparent 50%, #fff1f2 50%); }
+@keyframes avBlBob { to { transform: translateY(-5px); } }
+@media (prefers-reduced-motion: reduce) { .av-pv-bl .b, .av-pv-bl .bot { animation: none; } }
+
+/* MJ-08 · Duelo no Penhasco */
+.av-pv-du { position: relative; height: 130px; border-radius: 14px; overflow: hidden; background: linear-gradient(180deg, #050b1f, #0b1d3f 50%, #1f6f73); }
+.av-pv-du p { position: absolute; left: 50%; top: 10px; translate: -50% 0; display: flex; gap: 3px; margin: 0; }
+.av-pv-du p i { display: grid; place-items: center; width: 17px; height: 20px; border-radius: 5px; font: 700 12px/1 ui-monospace, Menlo, monospace; font-style: normal; color: #e2e8f0; background: rgba(255, 255, 255, .12); }
+.av-pv-du p i.ok { opacity: .35; } .av-pv-du p i.cur { color: #0b1d3f; background: #fff; box-shadow: 0 0 0 2px #2dd4bf; }
+.av-pv-du .plat { position: absolute; left: 6%; width: 70%; top: 82px; height: 9px; border-radius: 6px; background: linear-gradient(#5eead4, #0f766e); box-shadow: 0 0 12px rgba(45, 212, 191, .5); }
+.av-pv-du .hero { position: absolute; left: 16%; top: 62px; width: 18px; height: 20px; border-radius: 6px 6px 4px 4px; background: linear-gradient(#dbeafe, #60a5fa); }
+.av-pv-du .mon { position: absolute; left: 58%; top: 54px; width: 28px; height: 28px; border-radius: 50% 50% 44% 44%; background: radial-gradient(circle at 36% 30%, #bbf7d0, #4ade80 60%, #15803d); animation: avDuMon 1.4s ease-in-out infinite; }
+.av-pv-du .mon b { position: absolute; left: 7px; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: #fff; box-shadow: inset 3px 2px 0 1px #0f172a; }
+.av-pv-du .orb { position: absolute; left: 24%; top: 60px; width: 9px; height: 9px; border-radius: 50%; background: radial-gradient(#fff, #2dd4bf); box-shadow: 0 0 8px #2dd4bf; animation: avDuOrb 1.4s ease-in infinite; }
+@keyframes avDuOrb { 0% { transform: translate(0, 0); opacity: 1; } 45% { transform: translate(70px, -10px); opacity: 1; } 50%, 100% { transform: translate(84px, 0); opacity: 0; } }
+@keyframes avDuMon { 0%, 45% { transform: translateX(0); } 55% { transform: translateX(10px) rotate(8deg); } 100% { transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) { .av-pv-du .mon, .av-pv-du .orb { animation: none; } }
+
+/* DG-05 · Teclas do fundo */
+.av-pv-kf { position: relative; height: 130px; border-radius: 14px; overflow: hidden; background: #fffdf9; --u: 26px; }
+.av-pv-kf .ln, .av-pv-kf b { --s: calc(1 - var(--k) * .15); --y: calc(100% - 10px - var(--k) * var(--u) * 1.2 + var(--k) * var(--k) * var(--u) * .08); position: absolute; left: 50%; top: var(--y); transform-origin: 50% 100%; }
+.av-pv-kf .ln { width: calc(var(--u) * 13); height: calc(var(--u) * 1.02); border-radius: 7px; background: rgba(148, 163, 184, .16); transform: translate(-50%, calc(-100% + 2px)) scale(var(--s)); }
+.av-pv-kf b { display: grid; place-items: center; width: calc(var(--w) * var(--u) - 4px); height: calc(var(--u) - 4px); border-radius: 6px; font: 700 13px/1 ui-monospace, Menlo, monospace; color: #334155;
+  background: var(--bg, #e2e8f0); box-shadow: inset 0 -2px 0 rgba(15, 23, 42, .12); opacity: calc(1 - var(--k) * .18); transform: translate(-50%, -100%) translateX(calc(var(--x) * var(--u) * var(--s))) scale(var(--s)); }
+.av-pv-kf b.cur { box-shadow: 0 0 0 2px #1f2937, 0 4px 0 -1px #94a3b8; }
+
+/* DG-06 · Cartões de palavras */
+.av-pv-cd { position: relative; height: 130px; border-radius: 14px; overflow: hidden; background: #fffdf9; }
+.av-pv-cd .c { position: absolute; top: 50%; padding: 8px 12px; border-radius: 12px; background: #fff; box-shadow: 0 0 0 1px rgba(15, 23, 42, .08), 0 8px 16px -10px rgba(15, 23, 42, .5); font: 700 20px/1 ui-monospace, Menlo, monospace; color: #334155; translate: -50% -50%; }
+.av-pv-cd .c.on { left: 50%; box-shadow: 0 0 0 2px #3b82f6, 0 10px 20px -10px rgba(59, 130, 246, .6); }
+.av-pv-cd .c.on u { text-decoration: none; color: #10b981; } .av-pv-cd .c.on i { font-style: normal; box-shadow: inset 0 -3px 0 #3b82f6; }
+.av-pv-cd .c.on em { margin-left: 4px; padding: 1px 4px; border-radius: 4px; font: 600 11px/1 inherit; font-style: normal; color: #94a3b8; background: #f1f5f9; }
+.av-pv-cd .c.p, .av-pv-cd .c.n { scale: .62; } .av-pv-cd .c.p { left: 16%; opacity: .5; } .av-pv-cd .c.n { left: 84%; opacity: .75; }
+.av-pv-cd .c b { position: absolute; right: -8px; top: -8px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; font-size: 11px; color: #fff; background: #10b981; }
+/* DG-07 · Quadro revelado */
+.av-pv-qd { position: relative; height: 130px; border-radius: 14px; overflow: hidden; background: #fffdf9; padding: 10px 14px 0; }
+.av-pv-qd .pic { display: grid; grid-template-columns: repeat(8, 1fr); height: 78px; border-radius: 9px; overflow: hidden; background: linear-gradient(180deg, #6d28d9, #f472b6 55%, #fdba74 70%, #0ea5e9 72%, #0369a1 88%, #fcd34d 88%); }
+.av-pv-qd .pic i { background: #e2e8f0; box-shadow: inset 0 0 0 1px #fff; animation: avQd 4s var(--d) ease-in-out infinite; }
+.av-pv-qd .pic i.off { opacity: 0; animation: none; }
+@keyframes avQd { 0%, 60% { opacity: 1; } 75%, 100% { opacity: 0; } }
+.av-pv-qd p { margin: 8px 0 0; font: 600 15px/1 ui-monospace, Menlo, monospace; color: #475569; white-space: nowrap; }
+.av-pv-qd p u { text-decoration: none; color: #10b981; } .av-pv-qd p i { font-style: normal; box-shadow: inset 0 -3px 0 #3b82f6; color: #0f172a; }
+/* DG-08 · Trilha das pedras */
+.av-pv-tr { position: relative; height: 130px; border-radius: 14px; overflow: hidden; background: linear-gradient(180deg, #67e8f9, #0891b2); }
+.av-pv-tr .bank { position: absolute; left: -20px; top: 0; bottom: 0; width: 40px; border-radius: 0 30px 30px 0; background: #84cc16; }
+.av-pv-tr span { position: absolute; top: 50%; width: 26px; height: 22px; margin: -11px 0 0 -13px; translate: 0 var(--y); display: grid; place-items: center; border-radius: 48% 52% 46% 54%; background: radial-gradient(circle at 35% 30%, #e2e8f0, #94a3b8 70%); font: 700 13px/1 ui-monospace, Menlo, monospace; color: #1e293b; }
+.av-pv-tr span.ly { background: radial-gradient(circle, #86efac, #16a34a); border-radius: 50%; }
+.av-pv-tr span.ok { color: #059669; } .av-pv-tr span.cur { box-shadow: 0 0 0 2px #fff, 0 0 10px #fff; }
+.av-pv-tr .bot { position: absolute; left: calc(29% - 8px); top: calc(50% + 6px); width: 16px; height: 14px; margin-top: -26px; border-radius: 5px 5px 4px 4px; background: linear-gradient(#dbeafe, #60a5fa); animation: avBlBob 1.2s ease-in-out infinite alternate; }

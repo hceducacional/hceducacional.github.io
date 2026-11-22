@@ -78,4 +78,5 @@
 
   window.HC_teclado = HC_teclado;
   window.HC_tecladoIdOf = idOf;
+  window.HC_tecladoMapa = { ROWS, FINGER_OF }; // usado pelo nível "Teclas do fundo" (DG-05) para pôr cada tecla na posição dela
 })();
