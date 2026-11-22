@@ -456,6 +456,7 @@ window.HC_CONTENT = {
       "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/b23f30b9-d25b-4d2b-bdee-1cc3cd1263d2.webp"
     }
   ],
+  "cursoConteudo": [],
   "loginBanner": [
     {
       "id": "login",

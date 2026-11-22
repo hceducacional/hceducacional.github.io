@@ -774,6 +774,7 @@ const CONTENT = {
   brand: [() => brandList, (v) => { brandList = v; }], connect: [() => connect, (v) => { connect = v; }],
   authors: [() => authors, (v) => { authors = v; }], radar: [() => radar, (v) => { radar = v; }],
   cursoExtra: [() => cursoExtra, (v) => { cursoExtra = v; }], cursoEdit: [() => cursoEdit, (v) => { cursoEdit = v; }],
+  cursoConteudo: [() => cursoConteudo, (v) => { cursoConteudo = v; }],
   loginBanner: [() => loginBanner, (v) => { loginBanner = v; }], hubs: [() => hubs, (v) => { hubs = v; }],
 };
 // alterações que ainda não chegaram ao banco (sem internet, por exemplo): não são sobrescritas

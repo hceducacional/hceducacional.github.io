@@ -131,6 +131,9 @@ const saveCursoExtra = () => saveShared('cursoExtra', cursoExtra);
 /* capas e textos dos módulos e lições alterados pelo administrador (botão de lápis na plataforma) */
 let cursoEdit = store.get('cursoEdit', PUBLISHED.cursoEdit || []);
 const saveCursoEdit = () => saveShared('cursoEdit', cursoEdit);
+/* "Conteúdos para aprender" da Plataforma de Informática (textos, PDFs, questionários e provas), criados pelo administrador */
+let cursoConteudo = store.get('cursoConteudo', PUBLISHED.cursoConteudo || []);
+const saveCursoConteudo = () => saveShared('cursoConteudo', cursoConteudo);
 /* banner do lado esquerdo da janela de entrar (um item só: { id: 'login', image }), trocado pelo administrador */
 let loginBanner = store.get('loginBanner', PUBLISHED.loginBanner || []);
 const saveLoginBanner = () => saveShared('loginBanner', loginBanner);
@@ -301,7 +304,7 @@ async function storeImage(file, kind) {
   return ref;
 }
 
-const allImageRefs = () => [...banners, ...exclusive, ...links, ...news, ...brandList, ...connect, ...authors, ...radar, ...cursoEdit, ...cursoExtra, ...loginBanner, ...hubs].flatMap((x) => [x.image, x.imageMobile, x.logo, x.avatar, ...(x.gallery || [])]).filter(Boolean);
+const allImageRefs = () => [...banners, ...exclusive, ...links, ...news, ...brandList, ...connect, ...authors, ...radar, ...cursoEdit, ...cursoExtra, ...cursoConteudo, ...loginBanner, ...hubs].flatMap((x) => [x.image, x.imageMobile, x.logo, x.avatar, ...(x.gallery || [])]).filter(Boolean);
 async function loadImages() {
   for (const ref of allImageRefs()) {
     if (!ref.startsWith('idb:') || imgCache.has(ref)) continue;
@@ -357,7 +360,7 @@ async function exportContent() {
     if (Array.isArray(it.gallery)) out.gallery = (await Promise.all(it.gallery.map(one))).filter(Boolean);
     return out;
   }));
-  return { banners: await conv(banners), exclusive: await conv(exclusive), links: await conv(links), news: await conv(news), brand: await conv(brandList), connect: await conv(connect), authors: await conv(authors), radar: await conv(radar), cursoExtra: await conv(cursoExtra), cursoEdit: await conv(cursoEdit), loginBanner: await conv(loginBanner), hubs: await conv(hubs) };
+  return { banners: await conv(banners), exclusive: await conv(exclusive), links: await conv(links), news: await conv(news), brand: await conv(brandList), connect: await conv(connect), authors: await conv(authors), radar: await conv(radar), cursoExtra: await conv(cursoExtra), cursoEdit: await conv(cursoEdit), cursoConteudo: await conv(cursoConteudo), loginBanner: await conv(loginBanner), hubs: await conv(hubs) };
 }
 window.HC_exportContent = exportContent;
 

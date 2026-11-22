@@ -259,7 +259,23 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     chart: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     pen: '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/>',
     photo: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 8"/>',
+    texto: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+    pdf: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/><path d="M12 11v6m-3-3 3 3 3-3"/>',
+    quiz: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.3-2.5 3.9M12 17h.01"/>',
+    prova: '<path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1Z"/><path d="M8 5H6.5A1.5 1.5 0 0 0 5 6.5v13A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-13A1.5 1.5 0 0 0 17.5 5H16"/><path d="m9 13 2 2 4-4"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
   };
+  /* "Conteúdos para aprender": cards criados pelo administrador (chave cursoConteudo no banco).
+     Cada um é um texto, um PDF, um questionário ou uma prova; só os marcados como visíveis aparecem para os alunos. */
+  const CT = {
+    texto: { nome: 'Texto', tint: '28, 64, 120', sub: 'Leitura' },
+    pdf: { nome: 'PDF', tint: '128, 32, 40', sub: 'Material em PDF' },
+    quiz: { nome: 'Questionário', tint: '82, 38, 130', sub: 'Perguntas para treinar' },
+    prova: { nome: 'Prova', tint: '150, 70, 18', sub: 'Avaliação com nota' },
+  };
+  const conts = () => (typeof cursoConteudo !== 'undefined' && Array.isArray(cursoConteudo) ? cursoConteudo : []);
+  const visConts = () => conts().filter((c) => isAdmin() || c.visivel);
   /* lições criadas pelo administrador (botão "Nova lição"): ficam no banco, junto do conteúdo do site,
      e entram no fim do módulo até serem configuradas aqui no código */
   /* capas e textos trocados pelo administrador (botão de lápis): ficam no banco (chave cursoEdit) e
@@ -288,6 +304,158 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   const slot = (src, label, size, k = 0) => src
     ? `<img class="pf-img" src="${esc(imgUrl(src))}" alt="" loading="lazy" />`
     : `<span class="pf-ph" style="--k:${k}">${svg('keys')}${isAdmin() ? `<em>${label}<small>${size}</small></em>` : ''}</span>`;
+
+  /* seção "Conteúdos para aprender", logo abaixo dos módulos: cards no mesmo estilo dos módulos */
+  function contsSection() {
+    const list = visConts(), adm = isAdmin();
+    const card = (c, i) => {
+      const t = CT[c.tipo] || CT.texto, ico = CT[c.tipo] ? c.tipo : 'texto';
+      return `
+      <article class="pf-lesson pf-modcard pf-ccard${c.visivel ? '' : ' draft'}" style="--i:${i};--tint:${t.tint}" data-cont="${esc(c.id)}" tabindex="0" role="button" aria-label="${esc(t.nome)}: ${esc(c.titulo)}">
+        <div class="pf-lesson-img">${c.image ? `<img class="pf-img" src="${esc(imgUrl(c.image))}" alt="" loading="lazy" />`
+          : `<span class="pf-ph" style="--k:${i}">${svg(ico)}${adm ? '<em>Imagem do conteúdo<small>1000 × 1250</small></em>' : ''}</span>`}</div>
+        <div class="pf-lesson-app">
+          <div class="pf-lesson-text">
+            <span class="pf-lesson-tag">${esc(t.nome)}${adm && !c.visivel ? ' · Rascunho' : ''}</span>
+            <h3>${esc(c.titulo || 'Sem título')}</h3>
+            <p>${esc(c.desc || '')}</p>
+          </div>
+          <div class="pf-lesson-bar">
+            <span class="pf-lesson-av">${svg(ico)}</span>
+            <span class="pf-lesson-who"><strong>${esc(t.nome)}</strong><small>${esc(c.meta || t.sub)}</small></span>
+            <span class="pf-lesson-go">Abrir</span>
+          </div>
+        </div>
+        ${adm ? `<div class="pf-adm"><button class="pf-adm-btn" type="button" data-editcont="${esc(c.id)}" aria-label="Editar o conteúdo" title="Editar conteúdo">${svg('pen')}</button><button class="pf-adm-btn" type="button" data-delcont="${esc(c.id)}" aria-label="Apagar o conteúdo" title="Apagar conteúdo">${svg('trash')}</button></div>` : ''}
+      </article>`;
+    };
+    const empty = `
+      <div class="pf-cempty">
+        <div class="pf-cempty-icos">${['texto', 'pdf', 'quiz', 'prova'].map((k, i) => `<span style="--tint:${CT[k].tint};--i:${i}">${svg(k)}</span>`).join('')}</div>
+        <h3>${adm ? 'Crie o primeiro conteúdo' : 'Em breve, novos conteúdos'}</h3>
+        <p>${adm ? 'Textos para ler, PDFs, questionários e provas para os alunos responderem. Eles aparecem aqui, logo abaixo dos módulos.' : 'Textos, PDFs, questionários e provas preparados pelo seu professor vão aparecer aqui.'}</p>
+        ${adm ? `<button class="pf-cnew-btn" type="button" data-newcont>${svg('plus')} Novo conteúdo</button>` : ''}
+      </div>`;
+    return `
+    <section class="pf-conts" aria-label="Conteúdos para aprender">
+      <div class="pf-mods-head">
+        <h2 class="pf-st-title">Conteúdos para aprender <span>Textos, PDFs, questionários e provas</span></h2>
+        ${list.length ? `<div class="ap-paddles pf-mod-paddles">
+          <button class="ap-paddle" data-cdir="-1" aria-label="Conteúdos anteriores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+          <button class="ap-paddle" data-cdir="1" aria-label="Próximos conteúdos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+        </div>` : ''}
+      </div>
+      ${list.length ? `<div class="pf-mod-row pf-cont-row" id="pf-cont-row">${list.map(card).join('')}
+        ${adm ? `<button class="pf-cnew" type="button" data-newcont><span>${svg('plus')}</span><b>Novo conteúdo</b><small>Texto, PDF, questionário ou prova</small></button>` : ''}
+      </div>` : empty}
+    </section>`;
+  }
+  function bindConts(view) {
+    const sec = view.querySelector('.pf-conts'); if (!sec) return;
+    sec.querySelectorAll('[data-cont]').forEach((c) => {
+      const act = () => openCont(c.dataset.cont);
+      c.addEventListener('click', act);
+      c.addEventListener('keydown', (e) => { if (e.target !== c) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
+    });
+    sec.querySelectorAll('[data-newcont]').forEach((b) => b.addEventListener('click', () => editCont(view, null)));
+    sec.querySelectorAll('[data-editcont]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); editCont(view, b.dataset.editcont); }));
+    sec.querySelectorAll('[data-delcont]').forEach((b) => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const c = conts().find((x) => x.id === b.dataset.delcont); if (!c) return;
+      confirmDel(`Apagar “${c.titulo || 'conteúdo'}”?`, 'O card sai da Plataforma de Informática para todos os alunos e não dá para desfazer. Para confirmar, digite a senha mestra.', () => {
+        cursoConteudo = conts().filter((x) => x.id !== c.id); saveCursoConteudo(); refreshConts(view); toast('Conteúdo apagado.');
+      });
+    }));
+    const row = sec.querySelector('#pf-cont-row'); if (!row) return;
+    const pads = sec.querySelectorAll('[data-cdir]');
+    pads.forEach((b) => b.addEventListener('click', () => row.scrollBy({ left: +b.dataset.cdir * row.clientWidth * .8, behavior: 'smooth' })));
+    const upd = () => { if (!pads.length) return; pads[0].disabled = row.scrollLeft < 4; pads[1].disabled = row.scrollLeft + row.clientWidth >= row.scrollWidth - 4; pads[0].parentNode.classList.toggle('none', pads[0].disabled && pads[1].disabled); };
+    row.addEventListener('scroll', upd, { passive: true }); addEventListener('resize', upd, { passive: true }); upd();
+  }
+  function refreshConts(view, toEnd) {
+    const sec = view.querySelector('.pf-conts'); if (!sec) return;
+    sec.outerHTML = contsSection(); bindConts(view);
+    const row = view.querySelector('#pf-cont-row');
+    if (row && toEnd) requestAnimationFrame(() => row.scrollTo({ left: row.scrollWidth, behavior: 'smooth' }));
+  }
+  /* abrir um conteúdo: a leitura e as respostas chegam nas próximas etapas */
+  function openCont(id) {
+    const c = conts().find((x) => x.id === id); if (!c) return;
+    toast(`${(CT[c.tipo] || CT.texto).nome} “${c.titulo || 'Sem título'}”: o conteúdo será liberado em breve.`);
+  }
+  /* administrador: criar (id null) ou editar um card de conteúdo */
+  function editCont(view, id) {
+    if (!isAdmin() || document.querySelector('.lk') || typeof saveCursoConteudo !== 'function') return;
+    const old = id ? conts().find((x) => x.id === id) : null; if (id && !old) return;
+    const cur = old ? { ...old } : { tipo: 'texto', titulo: '', desc: '', image: '', visivel: false };
+    let img; // undefined = sem troca; '' = remover; 'idb:…' = nova foto
+    const wrap = document.createElement('div');
+    wrap.className = 'lk au';
+    wrap.innerHTML = `<div class="lk-backdrop"></div>
+      <form class="lk-card au-card pf-ed" role="dialog" aria-modal="true" aria-labelledby="ec-t" novalidate>
+        <h2 id="ec-t">${old ? 'Editar conteúdo' : 'Novo conteúdo'}</h2>
+        <p class="lk-sub">Conteúdos para aprender · aparece abaixo dos módulos.</p>
+        <span class="au-label">Tipo</span>
+        <div class="pf-ed-types" role="radiogroup" aria-label="Tipo do conteúdo">${Object.entries(CT).map(([k, t]) => `
+          <button type="button" role="radio" class="pf-ed-type" data-tipo="${k}" style="--tint:${t.tint}" aria-checked="${cur.tipo === k}">${svg(k)}<span>${t.nome}</span></button>`).join('')}
+        </div>
+        <div class="pf-ed-covers"><div class="pf-ed-one">
+          <div class="pf-ed-cover" style="aspect-ratio:4 / 5"><div class="pf-ed-prev"></div>
+            <div class="pf-ed-acts"><button type="button" class="pf-ed-btn" data-ed="pick">${svg('photo')}Trocar foto</button><button type="button" class="pf-ed-btn" data-ed="clear">Remover</button></div>
+          </div>
+          <small class="pf-ed-hint">Tamanho sugerido: 1000 × 1250 (JPG, PNG ou WebP)</small>
+          <input type="file" accept="image/*" hidden>
+        </div></div>
+        <label class="au-label" for="ec-titulo">Título</label>
+        <div class="lk-field"><input id="ec-titulo" value="${esc(cur.titulo || '')}" autocomplete="off" placeholder="Ex.: Partes do computador"></div>
+        <label class="au-label" for="ec-desc">Descrição no card</label>
+        <div class="lk-field"><textarea id="ec-desc" rows="3" placeholder="Uma frase sobre o que o aluno vai aprender">${esc(cur.desc || '')}</textarea></div>
+        <label class="au-label" for="ec-meta">Linha de baixo (opcional)</label>
+        <div class="lk-field"><input id="ec-meta" value="${esc(cur.meta || '')}" autocomplete="off" placeholder="Ex.: 10 questões · 5 min de leitura"></div>
+        <label class="pf-ed-check"><input type="checkbox" id="ec-vis"${cur.visivel ? ' checked' : ''}><span><b>Visível para os alunos</b><small>Desligado, só os administradores veem o card (rascunho).</small></span></label>
+        <p class="lk-msg" role="alert"></p>
+        <div class="lk-actions"><button type="button" class="btn-soft lk-cancel">Cancelar</button><button type="submit" class="btn-dark lk-go">${old ? 'Salvar' : 'Criar'}</button></div>
+      </form>`;
+    document.body.appendChild(wrap);
+    const msg = wrap.querySelector('.lk-msg'), prev = wrap.querySelector('.pf-ed-prev'), file = wrap.querySelector('input[type=file]');
+    let tipo = cur.tipo in CT ? cur.tipo : 'texto';
+    const show = () => {
+      const src = img === undefined ? cur.image : img;
+      prev.innerHTML = src ? `<img src="${esc(imgUrl(src))}" alt="">` : `<span>${svg(tipo)}Sem foto de capa</span>`;
+      wrap.querySelector('[data-ed="clear"]').hidden = !src;
+    };
+    show();
+    wrap.querySelectorAll('.pf-ed-type').forEach((b) => b.addEventListener('click', () => {
+      tipo = b.dataset.tipo; wrap.querySelectorAll('.pf-ed-type').forEach((x) => x.setAttribute('aria-checked', x === b)); show();
+    }));
+    wrap.querySelector('[data-ed="pick"]').addEventListener('click', () => file.click());
+    wrap.querySelector('[data-ed="clear"]').addEventListener('click', () => { img = ''; show(); });
+    file.addEventListener('change', async () => {
+      const f = file.files[0]; file.value = ''; if (!f) return;
+      msg.textContent = '';
+      try { prev.classList.add('busy'); img = await storeImage(f, 'curso'); show(); }
+      catch { msg.textContent = 'Não foi possível usar essa imagem. Tente outra.'; }
+      finally { prev.classList.remove('busy'); }
+    });
+    const close = () => { wrap.classList.remove('in'); setTimeout(() => wrap.remove(), 300); };
+    wrap.querySelector('.lk-backdrop').addEventListener('click', close);
+    wrap.querySelector('.lk-cancel').addEventListener('click', close);
+    wrap.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    const tIn = wrap.querySelector('#ec-titulo');
+    wrap.querySelector('form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const titulo = tIn.value.trim();
+      if (!titulo) { msg.textContent = 'Dê um título ao conteúdo.'; return tIn.focus(); }
+      const next = { ...cur, id: old?.id || 'c' + Date.now().toString(36), tipo, titulo,
+        desc: wrap.querySelector('#ec-desc').value.trim(), meta: wrap.querySelector('#ec-meta').value.trim(),
+        visivel: wrap.querySelector('#ec-vis').checked, image: img === undefined ? cur.image || '' : img };
+      if (!next.meta) delete next.meta;
+      cursoConteudo = old ? conts().map((x) => (x.id === old.id ? next : x)) : [...conts(), next];
+      saveCursoConteudo(); close(); refreshConts(view, !old);
+      toast(old ? 'Conteúdo salvo.' : 'Conteúdo criado.');
+    });
+    requestAnimationFrame(() => { wrap.classList.add('in'); if (!old) tIn.focus(); });
+  }
 
   /* lições: o motor (licao.js/.css) e os dados de cada lição só são baixados quando o aluno abre uma */
   const loaded = {};
@@ -880,9 +1048,11 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     </div>
     <div class="wrap pf">
       <div class="pf-mod-open${openMod !== null ? ' show' : ''}" id="pf-mod-open"><div class="pf-mod-inner" id="pf-mod-inner">${openMod !== null ? modBody(openMod) : ''}</div></div>
+      ${contsSection()}
     </div>`;
 
     bindLessons(view, view);
+    bindConts(view);
     heroCarousel(view);
     view.querySelector('.slide-cta[data-lesson]')?.addEventListener('click', (e) => openN(+e.currentTarget.dataset.lesson));
 
@@ -1055,15 +1225,22 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   const MASTER_SHA = '618a865ecfa5327507b402d6a4d9bdfa52745e6da3296eb5ffcb5ec3add5d563';
   const sha256 = async (t) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map((b) => b.toString(16).padStart(2, '0')).join('');
   function delLesson(view, id) {
-    if (!isAdmin() || document.querySelector('.lk')) return;
     const l = extras().find((x) => x.id === id); if (!l) return;
+    confirmDel(`Apagar “${l.titulo}”?`, 'O card sai do módulo para todos os alunos e não dá para desfazer. Para confirmar, digite a senha mestra.', () => {
+      cursoExtra = extras().filter((x) => x.id !== id);
+      saveCursoExtra(); refillMod(view, openMod, false);
+      toast('Card da lição apagado.');
+    });
+  }
+  function confirmDel(title, sub, onOk) {
+    if (!isAdmin() || document.querySelector('.lk')) return;
     const wrap = document.createElement('div');
     wrap.className = 'lk au';
     wrap.innerHTML = `<div class="lk-backdrop"></div>
       <form class="lk-card au-card" role="dialog" aria-modal="true" aria-labelledby="dl-t" novalidate>
         <span class="lk-icon au-ico pf-del-ico"><i data-icon="trash"></i></span>
-        <h2 id="dl-t">Apagar “${esc(l.titulo)}”?</h2>
-        <p class="lk-sub">O card sai do módulo para todos os alunos e não dá para desfazer. Para confirmar, digite a senha mestra.</p>
+        <h2 id="dl-t">${esc(title)}</h2>
+        <p class="lk-sub">${esc(sub)}</p>
         <label class="au-label" for="dl-pw">Senha mestra</label>
         <div class="lk-field"><input type="password" id="dl-pw" autocomplete="off" autocapitalize="off" spellcheck="false" required></div>
         <p class="lk-msg" role="alert"></p>
@@ -1079,9 +1256,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       e.preventDefault();
       if (!pw.value) { msg.textContent = 'Digite a senha mestra.'; return pw.focus(); }
       if (await sha256(pw.value) !== MASTER_SHA) { msg.textContent = 'Senha mestra incorreta.'; pw.select(); return; }
-      cursoExtra = extras().filter((x) => x.id !== id);
-      saveCursoExtra(); close(); refillMod(view, openMod, false);
-      toast('Card da lição apagado.');
+      close(); onOk();
     });
     requestAnimationFrame(() => { wrap.classList.add('in'); pw.focus(); });
   }

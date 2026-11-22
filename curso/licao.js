@@ -14,6 +14,7 @@
   const PTS_MAX = 13000;
   const STAR_AT = [2000, 4000, 6000, 8000, 10000];
   const SUPER_AT = 11000, MEGA_AT = 12000;
+  let ativa = null; // a lição que está rodando agora (para desligá-la se outra for aberta)
   const rankOf = (pts) => (pts >= MEGA_AT ? 'mega' : pts >= SUPER_AT ? 'super' : '');
   const starsOf = (pts) => STAR_AT.filter((t) => pts >= t).length;
   const RANK_NAME = { super: 'Superstar', mega: 'Megastar' };
@@ -1076,7 +1077,7 @@
         </div>`;
       kbTarget('enter');
     }
-    /* ---------- NÍVEL DE DIGITAÇÃO: TECLAS DO FUNDO (DG-05) ----------
+    /* ---------- NÍVEL DE DIGITAÇÃO: TECLAS DO FUNDO (DG-04) ----------
        O texto vira uma fila de teclas que vem do fundo, como num teclado visto em perspectiva:
        a tecla da frente é a que precisa ser digitada e as próximas esperam atrás, em fileiras que
        vão ficando menores. Cada tecla aparece na posição dela no teclado ABNT2 e com a cor do dedo
@@ -1134,7 +1135,7 @@
         el.classList.toggle('cur', i === game.pos);
       }
     }
-    /* ---------- estilos de digitação com cena própria (DG-05 em diante) ----------
+    /* ---------- estilos de digitação com cena própria (DG-04 em diante) ----------
        Todos usam a mesma regra do DG-01: a tecla certa avança e conta pontos; a errada não avança.
        Cada estilo só diz o que acontece na tela: ok(i) (letra i acertada), bad(i) (erro na letra i)
        e after() (depois de avançar). game.est guarda o nome do estilo. */
@@ -1179,7 +1180,7 @@
     }
     const dgCh = (c, i) => `<i data-i="${i}"${c === ' ' ? ' class="sp"' : ''}>${c === ' ' ? '␣' : esc(c)}</i>`;
 
-    /* ---------- DG-06 · CARTÕES DE PALAVRAS ----------
+    /* ---------- DG-05 · CARTÕES DE PALAVRAS ----------
        Uma palavra por vez num cartão grande no meio (com o espaço depois dela como uma teclinha "␣").
        Os cartões feitos vão para a esquerda com um ✓; os próximos esperam à direita, menores. */
     function cdInit(lv) {
@@ -1216,7 +1217,7 @@
       after: () => { game.chs[game.pos]?.classList.add('cur'); const before = game.curCard; cdLayout(); if (game.curCard !== before) replay(game.cardsEl[game.curCard], 'pop'); if (game.pos >= game.text.length) game.cardsEl.at(-1)?.classList.add('past'); },
     };
 
-    /* ---------- DG-07 · QUADRO REVELADO ----------
+    /* ---------- DG-06 · QUADRO REVELADO ----------
        Um quadro desenhado (praia ao pôr do sol, cidade à noite ou montanhas) coberto de peças;
        cada letra certa vira peças (em ordem sorteada) e, no fim do texto, a imagem aparece inteira
        com um brilho. O texto fica numa linha embaixo, que anda sozinha (a letra da vez fica fixa). */
@@ -1287,7 +1288,7 @@
       after: () => qdCaret(),
     };
 
-    /* ---------- DG-08 · TRILHA DAS PEDRAS ----------
+    /* ---------- DG-07 · TRILHA DAS PEDRAS ----------
        Um rio com pedras em zigue-zague, cada uma com uma letra (o espaço é uma folha de vitória-régia).
        A cada letra certa o robozinho pula para a pedra dela; a câmera acompanha. Errou: a pedra treme
        em vermelho e o robô se desequilibra. No fim ele pula para a outra margem, onde está a bandeira. */
@@ -1338,6 +1339,627 @@
       after: () => trCur(),
     };
 
+    /* ---------- peças comuns dos estilos DG-08 a DG-14 ----------
+       dgLine(): a linha de texto que anda sozinha embaixo da cena (a mesma do DG-06; a letra da vez
+       fica fixa a cerca de 30% e qdCaret() a move). lnOk/lnBad pintam a letra certa/errada da linha.
+       dgCam(): câmera horizontal das cenas com trilho (a peça da vez fica a "at" da largura). */
+    const dgLine = () => `<div class="lc-qd-line"><div class="lc-qd-txt" id="lc-qd-txt">${[...game.text].map(dgCh).join('')}</div></div>`;
+    const lnOk = (i) => { const c = game.chs[i]; c?.classList.remove('bad'); c?.classList.add('ok'); };
+    const lnBad = (i) => { const c = game.chs[i]; if (c) { c.classList.add('had'); replay(c, 'bad'); } };
+    function dgCam(boxSel, trackSel, x, at = .35, instant) {
+      const box = $q(boxSel), track = $q(trackSel); if (!box || !track) return;
+      track.style.transition = instant ? 'none' : '';
+      track.style.transform = `translateX(${(-Math.max(0, x - box.clientWidth * at)).toFixed(0)}px)`;
+    }
+    const DG_CORES = ['#f43f5e', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#ec4899', '#14b8a6', '#f97316'];
+
+    /* ---------- DG-08 · TORRE DE BLOCOS ----------
+       Um guindaste segura a letra da vez num bloco; cada letra certa solta o bloco, que cai no andar
+       da palavra. O Espaço põe a laje e começa o andar de cima. A câmera sobe com a torre e, no fim,
+       a bandeira é fincada no topo. Errou: o bloco do gancho balança em vermelho (não cai). */
+    const TO_B = 34, TO_F = 40, TO_G = 26;
+    function toInit(lv) {
+      game.text = lv.texto;
+      game.toW = []; let f = 0, n = 0, j = 0;
+      const words = lv.texto.split(' ');
+      [...lv.texto].forEach((c, i) => { if (c === ' ') { game.toW[i] = { f, sp: true, n: words[f].length }; f++; j = 0; } else { n = words[f].length; game.toW[i] = { f, j: j++, n }; } });
+      dgShell('to', 'lc-tow', `
+        <div class="lc-to" id="lc-to" aria-hidden="true">
+          <i class="sun"></i><i class="cl c1"></i><i class="cl c2"></i><i class="cl c3"></i>
+          <div class="world" id="lc-to-world"><i class="hills"></i><i class="ground"></i></div>
+          <div class="crane"><i class="arm"></i><span class="hook" id="lc-to-hook"><i class="rope"></i><b class="blk" id="lc-to-blk"></b></span></div>
+        </div>${dgLine()}`, 'Cada letra certa é um bloco a mais na torre e o <kbd>Espaço</kbd> põe a laje do andar. Construa até o topo!');
+      game.chs = [...$q('#lc-qd-txt').children];
+      qdCaret(); toHook(); toCam(true);
+    }
+    const toX = (w) => (w.sp ? 0 : (w.j - (w.n - 1) / 2) * TO_B);
+    function toHook() {
+      const hook = $q('#lc-to-hook'), blk = $q('#lc-to-blk'); if (!hook) return;
+      const c = game.text[game.pos];
+      if (c == null) { hook.classList.add('gone'); return; }
+      const w = game.toW[game.pos];
+      hook.style.transform = `translateX(${toX(w)}px)`;
+      blk.className = `blk${c === ' ' ? ' sp' : ''}`; blk.style.setProperty('--h', (w.f * 47) % 360);
+      blk.style.width = c === ' ' ? `${w.n * TO_B + 10}px` : '';
+      blk.textContent = c === ' ' ? 'laje' : c;
+    }
+    function toCam(instant) {
+      const box = $q('#lc-to'), world = $q('#lc-to-world'); if (!box || !world) return;
+      const w = game.toW[Math.min(game.pos, game.text.length - 1)];
+      const top = TO_G + (w.f + 1) * TO_F;
+      world.style.transition = instant ? 'none' : '';
+      world.style.transform = `translateY(${Math.max(0, top - (box.clientHeight - 96)).toFixed(0)}px)`;
+    }
+    DG_STYLE.to = {
+      fim: 1100,
+      ok: (i) => {
+        lnOk(i);
+        const world = $q('#lc-to-world'); if (!world) return;
+        const w = game.toW[i], el = document.createElement('span');
+        if (w.sp) { el.className = 'slab'; el.style.cssText = `--f:${w.f};width:${w.n * TO_B + 10}px`; }
+        else { el.className = 'blk'; el.style.cssText = `--x:${toX(w)}px;--f:${w.f};--h:${(w.f * 47) % 360}`; el.textContent = game.text[i]; }
+        world.appendChild(el);
+        el.animate([{ transform: 'translateY(-110px)', opacity: .5 }, { transform: 'translateY(0)', opacity: 1 }], { duration: 200, easing: 'cubic-bezier(.55,0,.8,.3)' })
+          .onfinish = () => replay(el, 'land');
+        if (i + 1 >= game.text.length) setTimeout(() => {
+          const fl = document.createElement('span'); fl.className = 'flag'; fl.style.setProperty('--f', w.f + 1); world.appendChild(fl);
+          $q('#lc-to')?.classList.add('win');
+        }, 260);
+      },
+      bad: (i) => { lnBad(i); replay($q('#lc-to-blk'), 'nope'); },
+      after: () => { qdCaret(); toHook(); toCam(); },
+    };
+
+    /* ---------- DG-09 · VARAL DE LUZES ----------
+       À noite, um fio de luzes vai de poste em poste e cada lâmpada tem uma letra (o espaço é uma
+       estrelinha). Cada letra certa acende a lâmpada na sua cor; errou, ela pisca em vermelho.
+       No fim, o varal inteiro pisca em festa. A câmera acompanha a lâmpada da vez. */
+    const VR_GAP = 50, VR_SEG = 8, VR_Y = 34, VR_SAG = 44;
+    function vrInit(lv) {
+      game.text = lv.texto;
+      const N = game.text.length, segs = Math.ceil(N / VR_SEG), x0 = 70;
+      game.vrP = [...game.text].map((c, i) => { const t = ((i % VR_SEG) + .5) / VR_SEG; return { x: x0 + i * VR_GAP + VR_GAP / 2, y: VR_Y + 4 * t * (1 - t) * VR_SAG }; });
+      const W = x0 + segs * VR_SEG * VR_GAP + 120;
+      let wire = '', posts = '';
+      for (let k = 0; k <= segs; k++) {
+        const a = x0 + k * VR_SEG * VR_GAP;
+        posts += `<i class="post" style="left:${a}px"></i>`;
+        if (k < segs) wire += `M${a} ${VR_Y}Q${a + VR_SEG * VR_GAP / 2} ${VR_Y + 2 * VR_SAG} ${a + VR_SEG * VR_GAP} ${VR_Y}`;
+      }
+      dgShell('vr', 'lc-vrp', `
+        <div class="lc-vr" id="lc-vr" aria-hidden="true">
+          <i class="moon"></i>
+          <div class="track" id="lc-vr-track" style="width:${W}px">
+            <i class="town"></i>${posts}
+            <svg class="wire" width="${W}" height="150" viewBox="0 0 ${W} 150"><path d="${wire}"/></svg>
+            ${game.vrP.map((p, i) => `<span class="bulb${game.text[i] === ' ' ? ' sp' : ''}" style="left:${p.x}px;top:${p.y.toFixed(1)}px;--c:${DG_CORES[i % DG_CORES.length]};--d:${(i % 6) * 90}ms"><i class="cap"></i><b>${game.text[i] === ' ' ? '✦' : esc(game.text[i])}</b></span>`).join('')}
+          </div>
+        </div>`, 'Cada letra certa acende uma lâmpada do varal. Acenda todas para a festa começar!');
+      game.chs = [...$q('#lc-vr-track').querySelectorAll('.bulb')];
+      vrCur(true);
+    }
+    function vrCur(instant) { game.chs.forEach((s, i) => s.classList.toggle('cur', i === game.pos)); const p = game.vrP[Math.min(game.pos, game.vrP.length - 1)]; dgCam('#lc-vr', '#lc-vr-track', p.x, .38, instant); }
+    DG_STYLE.vr = {
+      fim: 1300,
+      ok: (i) => { const s = game.chs[i]; s?.classList.remove('bad'); s?.classList.add('on'); if (i + 1 >= game.text.length) setTimeout(() => $q('#lc-vr')?.classList.add('party'), 200); },
+      bad: (i) => { const s = game.chs[i]; if (s) { s.classList.add('had'); replay(s, 'bad'); } },
+      after: () => vrCur(),
+    };
+
+    /* ---------- DG-10 · MÁQUINA DE ESCREVER ----------
+       O texto está clarinho no papel, como um molde; cada letra certa é carimbada em tinta e o carro
+       anda para a esquerda (a letra da vez fica sempre na marca vermelha do meio). O teclado redondo
+       da máquina acende a tecla da vez e afunda a tecla batida. No fim do texto: "ding!". */
+    const MQ_ROWS = ['qwertyuiop', 'asdfghjklç', 'zxcvbnm,.'];
+    function mqInit(lv) {
+      game.text = lv.texto;
+      dgShell('mq', 'lc-mqp', `
+        <div class="lc-mq" id="lc-mq" aria-hidden="true">
+          <div class="sheet" id="lc-mq-sheet"><div class="roll" id="lc-mq-roll">${[...game.text].map((c, i) => `<i data-i="${i}"${c === ' ' ? ' class="sp"' : ''}>${c === ' ' ? '' : esc(c)}</i>`).join('')}</div><i class="mark"></i></div>
+          <div class="platen"><i class="knob l"></i><i class="knob r"></i></div>
+          <div class="body">
+            <i class="bar" id="lc-mq-bar"></i>
+            <div class="keys">${MQ_ROWS.map((r) => `<div>${[...r].map((k) => `<b data-k="${esc(k)}">${esc(k)}</b>`).join('')}</div>`).join('')}<div><b class="space" data-k=" "></b></div></div>
+            <span class="ding" id="lc-mq-ding">ding!</span>
+          </div>
+        </div>`, 'Cada letra certa é carimbada no papel e o carro anda. A marca vermelha mostra a letra da vez.');
+      game.chs = [...$q('#lc-mq-roll').children];
+      mqCaret(true);
+      if (!game.onResize) { const mine = game, fn = () => { if (game !== mine || !$q('#lc-mq')) return removeEventListener('resize', fn); mqCaret(true); }; game.onResize = fn; addEventListener('resize', fn); }
+    }
+    function mqCaret(instant) {
+      const sheet = $q('#lc-mq-sheet'), roll = $q('#lc-mq-roll'); if (!sheet || !roll) return;
+      const c = game.chs[Math.min(game.pos, game.chs.length - 1)]; if (!c) return;
+      const x = game.pos >= game.chs.length ? c.offsetLeft + c.offsetWidth * 1.5 : c.offsetLeft + c.offsetWidth / 2;
+      roll.style.transition = instant ? 'none' : '';
+      roll.style.transform = `translateX(${(sheet.clientWidth / 2 - x).toFixed(1)}px)`;
+      game.chs.forEach((x, i) => x.classList.toggle('cur', i === game.pos));
+      const want = game.text[game.pos];
+      $q('#lc-mq')?.querySelectorAll('.keys b').forEach((b) => b.classList.toggle('nx', b.dataset.k === want));
+    }
+    const mqKey = (k) => [...($q('#lc-mq')?.querySelectorAll('.keys b') || [])].find((b) => b.dataset.k === k);
+    DG_STYLE.mq = {
+      fim: 1100,
+      ok: (i) => {
+        const c = game.chs[i];
+        if (c) { c.classList.remove('bad'); c.classList.add('ok'); c.style.setProperty('--r', `${(Math.random() * 6 - 3).toFixed(1)}deg`); c.style.setProperty('--o', (.78 + Math.random() * .22).toFixed(2)); }
+        replay($q('#lc-mq-bar'), 'hit'); replay(mqKey(game.text[i]), 'pr');
+        if (i + 1 >= game.text.length) setTimeout(() => $q('#lc-mq')?.classList.add('done'), 200);
+      },
+      bad: (i) => { const c = game.chs[i]; if (c) { c.classList.add('had'); replay(c, 'bad'); } replay($q('#lc-mq-sheet'), 'nope'); },
+      after: () => mqCaret(),
+    };
+
+    /* ---------- DG-11 · LIGUE OS PONTOS ----------
+       Os pontos de um desenho escondido (estrela, coração, casa ou peixe) estão espalhados na folha,
+       cada um com uma letra; cada letra certa puxa um traço até o ponto dela. Na última letra o
+       desenho fecha e se pinta com um brilho. O texto também fica numa linha embaixo, para ler. */
+    const LP_FORMAS = {
+      estrela: () => Array.from({ length: 10 }, (_, k) => { const a = -Math.PI / 2 + k * Math.PI / 5, r = k % 2 ? .42 : 1; return [Math.cos(a) * r, Math.sin(a) * r + .08]; }),
+      coracao: () => Array.from({ length: 80 }, (_, k) => { const t = Math.PI - (k / 80) * Math.PI * 2; return [16 * Math.sin(t) ** 3 / 17, -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 17 - .05]; }),
+      casa: () => [[0, -1], [.95, -.1], [.75, -.1], [.75, .95], [.2, .95], [.2, .4], [-.2, .4], [-.2, .95], [-.75, .95], [-.75, -.1], [-.95, -.1]],
+      peixe: () => [[-1, 0], [-.55, -.55], [.1, -.62], [.55, -.3], [.95, -.7], [.85, 0], [.95, .7], [.55, .3], [.1, .62], [-.55, .55]],
+    };
+    function lpPontos(poly, n) { // n pontos igualmente espaçados pelo contorno
+      const seg = poly.map((p, k) => { const q = poly[(k + 1) % poly.length]; return Math.hypot(q[0] - p[0], q[1] - p[1]); });
+      const tot = seg.reduce((a, b) => a + b, 0), out = [];
+      for (let m = 0; m < n; m++) {
+        let d = (m / n) * tot, k = 0;
+        while (d > seg[k]) { d -= seg[k]; k++; }
+        const p = poly[k], q = poly[(k + 1) % poly.length], t = seg[k] ? d / seg[k] : 0;
+        out.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]);
+      }
+      return out;
+    }
+    function lpInit(lv) {
+      game.text = lv.texto;
+      const nomes = Object.keys(LP_FORMAS), forma = nomes.includes(lv.pontos) ? lv.pontos : nomes[Math.floor(Math.random() * nomes.length)];
+      const N = game.text.length, cx = 230, cy = 100, s = forma === 'peixe' ? 120 : 92;
+      const sx = forma === 'peixe' ? s : s * 1.08;
+      game.lpP = lpPontos(LP_FORMAS[forma](), N).map(([x, y]) => [cx + x * sx, cy + y * s]);
+      const lab = (p) => { const dx = p[0] - cx, dy = p[1] - cy, d = Math.hypot(dx, dy) || 1; return [p[0] + dx / d * 13, p[1] + dy / d * 13 + 4]; };
+      dgShell('lp', 'lc-lpp', `
+        <div class="lc-lp f-${forma}" id="lc-lp" aria-hidden="true">
+          <svg viewBox="75 0 310 200" preserveAspectRatio="xMidYMid meet">
+            <defs><linearGradient id="lpg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fde047"/><stop offset=".5" stop-color="#f472b6"/><stop offset="1" stop-color="#818cf8"/></linearGradient></defs>
+            <polygon class="fill" points="${game.lpP.map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ')}"/>
+            <g id="lc-lp-lines"></g>
+            ${game.lpP.map((p, i) => { const sp = game.text[i] === ' ', l = lab(p); return `<g class="dot${sp ? ' sp' : ''}" data-i="${i}"><circle class="ring" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="7"/><circle class="pt" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${sp ? 2.2 : 3.4}"/>${sp ? '' : `<text x="${l[0].toFixed(1)}" y="${l[1].toFixed(1)}">${esc(game.text[i])}</text>`}</g>`; }).join('')}
+          </svg>
+          <span class="badge">Desenho completo!</span>
+        </div>${dgLine()}`, 'Cada letra certa liga o próximo ponto. Termine o texto para descobrir o desenho!');
+      game.lpDots = [...$q('#lc-lp').querySelectorAll('.dot')];
+      game.chs = [...$q('#lc-qd-txt').children];
+      qdCaret(); lpCur();
+    }
+    function lpCur() { game.lpDots.forEach((d, i) => d.classList.toggle('cur', i === game.pos)); }
+    function lpLine(a, b) {
+      const g = $q('#lc-lp-lines'); if (!g) return;
+      const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      l.setAttribute('x1', a[0]); l.setAttribute('y1', a[1]); l.setAttribute('x2', b[0]); l.setAttribute('y2', b[1]); l.setAttribute('pathLength', '1');
+      g.appendChild(l);
+    }
+    DG_STYLE.lp = {
+      fim: 1500,
+      ok: (i) => {
+        lnOk(i); game.lpDots[i]?.classList.add('ok');
+        if (i > 0) lpLine(game.lpP[i - 1], game.lpP[i]);
+        if (i + 1 >= game.text.length) setTimeout(() => { lpLine(game.lpP[i], game.lpP[0]); setTimeout(() => $q('#lc-lp')?.classList.add('full'), 260); }, 120);
+      },
+      bad: (i) => { lnBad(i); const d = game.lpDots[i]; if (d) replay(d, 'bad'); },
+      after: () => { qdCaret(); lpCur(); },
+    };
+
+    /* ---------- DG-12 · FILA DE DOMINÓS ----------
+       Cada letra é uma peça de dominó em pé; as palavras ficam separadas por um vão. Cada letra certa
+       derruba a peça, que se apoia na próxima (e a anterior termina de deitar). A última peça de cada
+       palavra deita de vez. Errou: a peça balança em vermelho. A câmera acompanha a fila. */
+    const DM_GAP = 40, DM_SP = 34;
+    function dmInit(lv) {
+      game.text = lv.texto;
+      let x = 60, word = 0; game.dmX = [];
+      [...game.text].forEach((c, i) => { if (c === ' ') { game.dmX[i] = x + DM_SP / 2 - DM_GAP / 2; x += DM_SP; word++; } else { game.dmX[i] = x; x += DM_GAP; } });
+      game.dmWord = []; { let w = 0; [...game.text].forEach((c, i) => { game.dmWord[i] = w; if (c === ' ') w++; }); }
+      const pips = (k) => ['<i style="--px:50%;--py:50%"></i>', '<i style="--px:30%;--py:30%"></i><i style="--px:70%;--py:70%"></i>', '<i style="--px:28%;--py:28%"></i><i style="--px:50%;--py:50%"></i><i style="--px:72%;--py:72%"></i>'][k % 3];
+      dgShell('dm', 'lc-dmp', `
+        <div class="lc-dm" id="lc-dm" aria-hidden="true">
+          <div class="track" id="lc-dm-track" style="width:${x + 200}px">
+            <i class="table"></i>
+            ${[...game.text].map((c, i) => c === ' ' ? `<span class="gap" style="left:${game.dmX[i]}px"><b>␣</b></span>` : `<span class="dm" style="left:${game.dmX[i]}px;--h:${(game.dmWord[i] * 53 + 200) % 360}"><b>${esc(c)}</b><em>${pips(i)}</em></span>`).join('')}
+            <span class="goal" style="left:${x + 30}px">🏁</span>
+          </div>
+        </div>`, 'Cada letra certa derruba uma peça do dominó. Derrube a fila inteira, palavra por palavra!');
+      game.chs = [...$q('#lc-dm-track').querySelectorAll('.dm, .gap')];
+      dmCur(true);
+    }
+    function dmCur(instant) { game.chs.forEach((s, i) => s.classList.toggle('cur', i === game.pos)); dgCam('#lc-dm', '#lc-dm-track', game.dmX[Math.min(game.pos, game.dmX.length - 1)] ?? 0, .4, instant); }
+    DG_STYLE.dm = {
+      fim: 1000,
+      ok: (i) => {
+        const s = game.chs[i]; if (!s) return;
+        s.classList.remove('bad'); s.classList.add('ok');
+        if (game.text[i] === ' ') return;
+        const nx = game.text[i + 1];
+        s.classList.add(nx && nx !== ' ' ? 'lean' : 'flat');
+        if (i > 0 && game.text[i - 1] !== ' ') { const p = game.chs[i - 1]; p.classList.remove('lean'); p.classList.add('down'); }
+        if (i + 1 >= game.text.length) setTimeout(() => $q('#lc-dm')?.classList.add('win'), 300);
+      },
+      bad: (i) => { const s = game.chs[i]; if (s) { s.classList.add('had'); replay(s, 'bad'); } },
+      after: () => dmCur(),
+    };
+
+    /* ---------- DG-13 · PARTITURA DAS LETRAS ----------
+       O texto vira uma música: cada letra é uma nota na pauta (a altura muda com a letra) e aparece
+       embaixo, como a letra de uma canção; o espaço é uma pausa. Cada letra certa toca a nota (um som
+       baixinho, que pode ser desligado no botão da cena) e ela fica colorida; errou, a nota treme em
+       vermelho e não toca. A partitura anda e a nota da vez fica na linha de leitura. */
+    const PT_GAP = 46, PT_FREQ = [261.63, 293.66, 329.63, 392, 440, 523.25, 587.33, 659.25, 783.99];
+    const ptNote = (c) => { const k = 'fjdkslaçghrueiwoqptyvbncmxz'.indexOf(c.toLowerCase()); return k < 0 ? 4 : k % 9; }; // as teclas da linha de base tocam notas diferentes
+    let ptAC = null;
+    const ptSom = () => { try { return localStorage.getItem('hc:dg-som') !== '0'; } catch { return true; } };
+    function ptTone(f) {
+      if (!ptSom()) return;
+      try {
+        ptAC = ptAC || new (window.AudioContext || window.webkitAudioContext)();
+        const t = ptAC.currentTime, o = ptAC.createOscillator(), g = ptAC.createGain();
+        o.type = 'triangle'; o.frequency.value = f;
+        g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.07, t + .012); g.gain.exponentialRampToValueAtTime(.0001, t + .55);
+        o.connect(g).connect(ptAC.destination); o.start(t); o.stop(t + .6);
+      } catch {}
+    }
+    function ptInit(lv) {
+      game.text = lv.texto;
+      game.ptX = [...game.text].map((_, i) => 110 + i * PT_GAP);
+      const W = 110 + game.text.length * PT_GAP + 160;
+      dgShell('pt', 'lc-ptp', `
+        <div class="lc-pt" id="lc-pt" aria-hidden="true">
+          <button class="som" id="lc-pt-som" type="button" tabindex="-1">${ptSom() ? '♪ Som ligado' : '♪ Som desligado'}</button>
+          <i class="read"></i>
+          <div class="track" id="lc-pt-track" style="width:${W}px">
+            <div class="staff"><i></i><i></i><i></i><i></i><i></i></div>
+            <span class="clef">𝄞</span>
+            ${[...game.text].map((c, i) => c === ' '
+              ? `<span class="nt rest" style="left:${game.ptX[i]}px"><i class="r"></i><b>␣</b></span>`
+              : `<span class="nt" style="left:${game.ptX[i]}px;--p:${ptNote(c)};--c:${DG_CORES[ptNote(c) % DG_CORES.length]}"><i class="hd"></i><i class="st"></i><b>${esc(c)}</b></span>`).join('')}
+            <span class="endbar" style="left:${W - 120}px"></span>
+          </div>
+        </div>`, 'Cada letra é uma nota da música: digite certinho para tocar a melodia até o fim!');
+      game.chs = [...$q('#lc-pt-track').querySelectorAll('.nt')];
+      const btn = $q('#lc-pt-som');
+      btn.addEventListener('mousedown', (e) => e.preventDefault());
+      btn.addEventListener('click', () => { const on = !ptSom(); try { localStorage.setItem('hc:dg-som', on ? '1' : '0'); } catch {} btn.textContent = on ? '♪ Som ligado' : '♪ Som desligado'; btn.classList.toggle('off', !on); btn.blur(); });
+      btn.classList.toggle('off', !ptSom());
+      ptCur(true);
+    }
+    function ptCur(instant) {
+      game.chs.forEach((s, i) => s.classList.toggle('cur', i === game.pos));
+      const x = game.ptX[Math.min(game.pos, game.ptX.length - 1)], box = $q('#lc-pt'), read = $q('#lc-pt .read');
+      dgCam('#lc-pt', '#lc-pt-track', x, .3, instant);
+      // a faixa de leitura fica em cima da nota da vez (no começo a partitura ainda não anda, então a faixa vai até a nota)
+      if (box && read) { read.style.transition = instant ? 'none' : ''; read.style.left = `${(x - Math.max(0, x - box.clientWidth * .3)).toFixed(0)}px`; }
+    }
+    DG_STYLE.pt = {
+      fim: 1100,
+      ok: (i) => {
+        const s = game.chs[i]; s?.classList.remove('bad'); s?.classList.add('ok');
+        const c = game.text[i];
+        if (c !== ' ') { ptTone(PT_FREQ[ptNote(c)]); s && replay(s, 'play'); }
+        if (i + 1 >= game.text.length) setTimeout(() => { $q('#lc-pt')?.classList.add('win'); [0, 2, 4, 5].forEach((n, k) => setTimeout(() => ptTone(PT_FREQ[n]), k * 110)); }, 250);
+      },
+      bad: (i) => { const s = game.chs[i]; if (s) { s.classList.add('had'); replay(s, 'bad'); } },
+      after: () => ptCur(),
+    };
+
+    /* ---------- DG-14 · LANTERNA NO ESCURO ----------
+       O texto está numa sala escura; só aparece o pedaço que a lanterna ilumina, em volta da letra da
+       vez (e um pouco à frente). As letras já digitadas ficam brilhando de leve no escuro. No fim, a luz
+       acende e o texto inteiro aparece. Ajuda a manter a atenção na letra certa. */
+    function lnInit(lv) {
+      game.text = lv.texto;
+      const words = [...lv.texto.matchAll(/\S+\s*|\s+/g)].map((m) => `<span class="wd">${[...m[0]].map((c, j) => dgCh(c, m.index + j)).join('')}</span>`).join('');
+      dgShell('ln', 'lc-lnp', `
+        <div class="lc-ln" id="lc-ln" aria-hidden="true">
+          <div class="txt" id="lc-ln-txt">${words}</div>
+          <i class="dark"></i><i class="halo"></i>
+        </div>`, 'Só dá para ver o que a lanterna ilumina: siga a luz, letra por letra. No fim, a luz da sala acende!');
+      game.chs = [...$q('#lc-ln-txt').querySelectorAll('i[data-i]')];
+      lnLight(true);
+      if (!game.onResize) { const mine = game, fn = () => { if (game !== mine || !$q('#lc-ln')) return removeEventListener('resize', fn); lnLight(true); }; game.onResize = fn; addEventListener('resize', fn); }
+    }
+    function lnLight(instant) {
+      const box = $q('#lc-ln'), txt = $q('#lc-ln-txt'); if (!box || !txt) return;
+      const c = game.chs[Math.min(game.pos, game.chs.length - 1)]; if (!c) return;
+      game.chs.forEach((x, i) => x.classList.toggle('cur', i === game.pos));
+      let top = 0; for (let el = c; el && el !== txt; el = el.offsetParent) top += el.offsetTop; // linha da letra dentro do texto
+      let left = 0; for (let el = c; el && el !== txt; el = el.offsetParent) left += el.offsetLeft;
+      const lh = c.offsetHeight, shift = Math.max(0, top - lh * .9);
+      txt.style.transition = instant ? 'none' : '';
+      txt.style.transform = `translateY(${-shift}px)`;
+      box.style.setProperty('--lx', `${(txt.offsetLeft + left + c.offsetWidth / 2 + 14).toFixed(0)}px`);
+      box.style.setProperty('--ly', `${(txt.offsetTop + top - shift + lh / 2).toFixed(0)}px`);
+    }
+    DG_STYLE.ln = {
+      fim: 1300,
+      ok: (i) => { const c = game.chs[i]; c?.classList.remove('bad'); c?.classList.add('ok'); if (i + 1 >= game.text.length) setTimeout(() => $q('#lc-ln')?.classList.add('lit'), 150); },
+      bad: (i) => { const c = game.chs[i]; if (c) { c.classList.add('had'); replay(c, 'bad'); } },
+      after: () => lnLight(),
+    };
+
+    /* ---------- DG-15 · RODA-GIGANTE ----------
+       Uma roda-gigante com 12 cabines, cada uma com uma letra; a cabine de baixo (na plataforma) é a da
+       vez. Cada letra certa embarca na cabine, que fica colorida, e a roda gira uma posição. As cabines
+       que passam pelo alto recebem as próximas letras do texto, então a roda dá quantas voltas precisar.
+       Errou: a cabine da vez balança em vermelho. No fim, as luzes da roda piscam. */
+    const RG_N = 12, RG_R = 92;
+    function rgInit(lv) {
+      game.text = lv.texto; game.had = {};
+      const P = (j, r) => [Math.cos((j / RG_N) * Math.PI * 2) * r, Math.sin((j / RG_N) * Math.PI * 2) * r].map((v) => v.toFixed(1));
+      dgShell('rg', 'lc-rgp', `
+        <div class="lc-rg" id="lc-rg" aria-hidden="true">
+          <i class="sun"></i>
+          <svg class="base" viewBox="0 0 200 140" preserveAspectRatio="none"><path d="M100 0 50 140M100 0l50 140M70 84h60"/></svg>
+          <div class="wheel" id="lc-rg-wheel" style="--rho:0deg">
+            <svg viewBox="-110 -110 220 220">
+              <circle r="${RG_R}" class="rim"/><circle r="${RG_R - 16}" class="rim2"/>
+              ${Array.from({ length: RG_N }, (_, j) => { const [x, y] = P(j, RG_R); return `<line x2="${x}" y2="${y}"/>`; }).join('')}
+              <g class="lights">${Array.from({ length: 24 }, (_, k) => { const [x, y] = P(k / 2, RG_R); return `<circle cx="${x}" cy="${y}" r="2.4" style="--d:${(k % 6) * 120}ms"/>`; }).join('')}</g>
+              <circle r="13" class="hub"/>
+            </svg>
+            ${Array.from({ length: RG_N }, (_, j) => `<span class="cab" style="--a:${90 + j * 30}deg;--c:${DG_CORES[j % DG_CORES.length]}"><i class="hang"></i><b></b></span>`).join('')}
+          </div>
+          <i class="dock"></i>
+        </div>${dgLine()}`, 'A cabine de baixo é a da vez: cada letra certa embarca e a roda gira. Dê quantas voltas o texto pedir!');
+      game.cabs = [...$q('#lc-rg-wheel').querySelectorAll('.cab')];
+      game.chs = [...$q('#lc-qd-txt').children];
+      qdCaret(); rgPaint(true);
+    }
+    function rgPaint(instant) {
+      const w = $q('#lc-rg-wheel'); if (!w) return;
+      w.classList.toggle('instant', !!instant);
+      w.style.setProperty('--rho', `${-game.pos * (360 / RG_N)}deg`);
+      for (let i = game.pos - 4; i < game.pos + RG_N - 4; i++) { // janela de 12 letras: 4 já feitas atrás e 7 pela frente
+        const cab = game.cabs[((i % RG_N) + RG_N) % RG_N], c = game.text[i];
+        cab.querySelector('b').textContent = c == null ? '' : c === ' ' ? '␣' : c;
+        cab.className = `cab${i < game.pos ? ' done' : ''}${i === game.pos ? ' cur' : ''}${c == null ? ' empty' : ''}${game.had[i] ? ' had' : ''}`;
+      }
+      if (instant) requestAnimationFrame(() => requestAnimationFrame(() => w.classList.remove('instant')));
+    }
+    DG_STYLE.rg = {
+      fim: 1300,
+      ok: (i) => { lnOk(i); if (i + 1 >= game.text.length) setTimeout(() => $q('#lc-rg')?.classList.add('win'), 300); },
+      bad: (i) => { lnBad(i); game.had[i] = 1; const cab = game.cabs[i % RG_N]; cab?.classList.add('had'); replay(cab, 'bad'); },
+      after: () => { qdCaret(); rgPaint(); },
+    };
+
+    /* ---------- DG-16 · PAINEL DO AEROPORTO ----------
+       Um painel de embarque com plaquinhas que viram (split-flap). O texto aparece apagado nas plaquinhas,
+       em linhas de até 14 letras (a palavra não se divide), 3 linhas por página. Cada letra certa vira a
+       plaquinha e acende a letra em amarelo. Ao terminar a página, o painel inteiro vira para a próxima. */
+    const PN_COLS = 14, PN_ROWS = 3;
+    function pnInit(lv) {
+      game.text = lv.texto;
+      const lines = []; let cur = [];
+      [...lv.texto.matchAll(/\S+\s*|\s+/g)].forEach((m) => {
+        if (cur.length && cur.length + m[0].trimEnd().length > PN_COLS) { lines.push(cur); cur = []; }
+        for (let j = 0; j < m[0].length; j++) cur.push(m.index + j);
+      });
+      if (cur.length) lines.push(cur);
+      game.pnLines = lines; game.pnPage = -1; game.pnAt = []; game.pnPages = Math.ceil(lines.length / PN_ROWS);
+      lines.forEach((ln, r) => ln.forEach((i, c) => { game.pnAt[i] = { pg: Math.floor(r / PN_ROWS), r: r % PN_ROWS, c }; }));
+      dgShell('pn', 'lc-pnp', `
+        <div class="lc-pn" id="lc-pn" aria-hidden="true">
+          <div class="hd"><b><svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5Z"/></svg>EMBARQUE</b><span>Portão HC · página <em id="lc-pn-pg">1</em> de ${game.pnPages}</span></div>
+          <div class="board" id="lc-pn-board" style="--cols:${PN_COLS + 1}"></div>
+        </div>`, 'Cada letra certa vira uma plaquinha do painel. Termine a página para o painel virar!');
+      pnPage();
+    }
+    function pnPage() {
+      const at = game.pnAt[Math.min(game.pos, game.text.length - 1)], board = $q('#lc-pn-board'); if (!board || !at) return;
+      if (at.pg !== game.pnPage) {
+        game.pnPage = at.pg;
+        let h = '';
+        for (let r = 0; r < PN_ROWS; r++) {
+          const ln = game.pnLines[at.pg * PN_ROWS + r] || [];
+          for (let c = 0; c <= PN_COLS; c++) { const i = ln[c], ch = i == null ? '' : game.text[i]; h += `<span class="fl${i == null ? ' off' : ''}${ch === ' ' ? ' sp' : ''}"${i == null ? '' : ` data-i="${i}"`} style="--d:${(r * 4 + c) * 22}ms"><b>${ch === ' ' ? '' : esc(ch)}</b></span>`; }
+        }
+        board.innerHTML = h; replay(board, 'in');
+        game.pnT = {}; board.querySelectorAll('[data-i]').forEach((t) => { game.pnT[t.dataset.i] = t; });
+        const pg = $q('#lc-pn-pg'); if (pg) pg.textContent = at.pg + 1;
+      }
+      Object.values(game.pnT).forEach((t) => t.classList.toggle('cur', +t.dataset.i === game.pos));
+    }
+    DG_STYLE.pn = {
+      fim: 1100,
+      ok: (i) => { const t = game.pnT[i]; if (t) { t.classList.remove('bad'); t.classList.add('ok'); replay(t, 'flip'); } if (i + 1 >= game.text.length) setTimeout(() => $q('#lc-pn')?.classList.add('win'), 250); },
+      bad: (i) => { const t = game.pnT[i]; if (t) { t.classList.add('had'); replay(t, 'bad'); } },
+      after: () => { if (game.pos < game.text.length) pnPage(); else Object.values(game.pnT).forEach((t) => t.classList.remove('cur')); },
+    };
+
+    /* ---------- DG-17 · FOGOS DE ARTIFÍCIO ----------
+       Cada palavra é um foguete no chão da cidade, à noite. Cada letra certa faz o foguete subir um pouco
+       (no fim da palavra ele está lá no alto); o Espaço acende o pavio: o foguete explode em faíscas da
+       cor dele, com a palavra brilhando no céu, e o próximo foguete aparece. O texto fica embaixo. */
+    function fgInit(lv) {
+      game.text = lv.texto; game.fgW = [];
+      [...lv.texto.matchAll(/\S+/g)].forEach((m, w) => { for (let j = 0; j < m[0].length; j++) game.fgW[m.index + j] = { w, j, n: m[0].length, word: m[0] }; });
+      dgShell('fg', 'lc-fgp', `
+        <div class="lc-fg" id="lc-fg" aria-hidden="true">
+          <i class="city"></i><div class="sky" id="lc-fg-sky"></div>
+        </div>${dgLine()}`, 'Cada letra certa faz o foguete subir; o <kbd>Espaço</kbd> solta os fogos com a palavra no céu!');
+      game.chs = [...$q('#lc-qd-txt').children];
+      qdCaret(); fgRocket(0);
+    }
+    function fgRocket(w) {
+      const sky = $q('#lc-fg-sky'); if (!sky) return;
+      const el = document.createElement('span');
+      el.className = 'rk'; el.style.cssText = `left:${(14 + ((w * 37) % 72)).toFixed(0)}%;--c:${DG_CORES[(w * 3) % DG_CORES.length]};--y:0`;
+      el.innerHTML = '<i class="trail"></i><i class="body"></i><i class="fin"></i>';
+      sky.appendChild(el); game.fgR = el;
+    }
+    function fgBoom(word, last) {
+      const sky = $q('#lc-fg-sky'), r = game.fgR; if (!sky || !r) return;
+      const b = document.createElement('span');
+      b.className = `boom${last ? ' big' : ''}`; b.style.cssText = `left:${r.style.left};--c:${r.style.getPropertyValue('--c')};--y:${r.style.getPropertyValue('--y')}`;
+      b.innerHTML = Array.from({ length: 18 }, (_, k) => `<i style="--a:${k * 20}deg;--l:${50 + (k % 3) * 14}px"></i>`).join('') + `<b>${esc(word)}</b>`;
+      r.remove(); game.fgR = null; sky.appendChild(b);
+      setTimeout(() => b.remove(), 2200);
+    }
+    DG_STYLE.fg = {
+      fim: 1500,
+      ok: (i) => {
+        lnOk(i);
+        const c = game.text[i];
+        if (c === ' ') { const w = game.fgW[i - 1]; if (w && game.fgR) { fgBoom(w.word); fgRocket(w.w + 1); } return; }
+        const w = game.fgW[i];
+        if (!game.fgR) fgRocket(w.w);
+        game.fgR.style.setProperty('--y', ((w.j + 1) / w.n).toFixed(3));
+        if (i + 1 >= game.text.length) setTimeout(() => { fgBoom(w.word, true); $q('#lc-fg')?.classList.add('win'); }, 220);
+      },
+      bad: (i) => { lnBad(i); replay(game.fgR, 'nope'); },
+      after: () => qdCaret(),
+    };
+
+    /* ---------- DG-18 · PIPOCA NA PANELA ----------
+       Os milhos estão na panela no fogo, em fila, cada um com uma letra; o primeiro da fila é o da vez e
+       chia. Cada letra certa estoura o milho: vira pipoca e voa para o balde, que vai enchendo com o
+       progresso. O espaço é um grãozinho que só some. Errou: o milho treme em vermelho. */
+    const PP_GAP = 42;
+    function ppInit(lv) {
+      game.text = lv.texto;
+      dgShell('pp', 'lc-ppp', `
+        <div class="lc-pp" id="lc-pp" aria-hidden="true">
+          <div class="stove"><i class="fire"><i></i><i></i><i></i></i></div>
+          <div class="pan"><i class="handle"></i><div class="win"><div class="track" id="lc-pp-track">${[...game.text].map((c, i) => `<span class="kn${c === ' ' ? ' sp' : ''}" style="left:${18 + i * PP_GAP}px;--t:${((i * 53) % 30) - 15}deg"><b>${c === ' ' ? '␣' : esc(c)}</b></span>`).join('')}</div></div></div>
+          <div class="bucket"><div class="in"><i class="fill" id="lc-pp-fill"></i></div><b>PIPOCA</b></div>
+        </div>`, 'O milho da frente é o da vez: cada letra certa estoura uma pipoca para o balde. Encha o balde!');
+      game.chs = [...$q('#lc-pp-track').children];
+      ppCur(true);
+    }
+    function ppCur(instant) {
+      const track = $q('#lc-pp-track'); if (!track) return;
+      track.style.transition = instant ? 'none' : '';
+      track.style.transform = `translateX(${-game.pos * PP_GAP}px)`;
+      game.chs.forEach((k, i) => k.classList.toggle('cur', i === game.pos));
+    }
+    function ppFly(k) {
+      const box = $q('#lc-pp'), fill = $q('#lc-pp-fill'); if (!box || !k) return;
+      const b = box.getBoundingClientRect(), r = k.getBoundingClientRect(), f = fill.parentElement.getBoundingClientRect();
+      const pc = document.createElement('i'); pc.className = 'corn';
+      const x0 = r.left - b.left + r.width / 2, y0 = r.top - b.top + r.height / 2;
+      const x1 = f.left - b.left + f.width * (.3 + Math.random() * .4), y1 = f.bottom - b.top - f.height * (game.pos / game.text.length) - 8;
+      pc.style.cssText = `left:${x0}px;top:${y0}px`; box.appendChild(pc);
+      const mx = (x0 + x1) / 2, my = Math.min(y0, y1) - 70 - Math.random() * 30;
+      pc.animate([{ transform: 'translate(-50%,-50%) scale(.4)' }, { transform: `translate(calc(${mx - x0}px - 50%), calc(${my - y0}px - 50%)) scale(1.15) rotate(160deg)`, offset: .45 }, { transform: `translate(calc(${x1 - x0}px - 50%), calc(${y1 - y0}px - 50%)) scale(.9) rotate(320deg)` }], { duration: 620, easing: 'ease-in-out' })
+        .onfinish = () => pc.remove();
+    }
+    DG_STYLE.pp = {
+      fim: 1100,
+      ok: (i) => {
+        const k = game.chs[i]; if (!k) return;
+        k.classList.remove('bad', 'cur'); k.classList.add('gone');
+        if (game.text[i] !== ' ') ppFly(k);
+        setTimeout(() => { const fill = $q('#lc-pp-fill'); if (fill) fill.style.height = `${((i + 1) / game.text.length) * 100}%`; }, 420);
+        if (i + 1 >= game.text.length) setTimeout(() => $q('#lc-pp')?.classList.add('win'), 650);
+      },
+      bad: (i) => { const k = game.chs[i]; if (k) { k.classList.add('had'); replay(k, 'bad'); } },
+      after: () => ppCur(),
+    };
+
+    /* ---------- DG-19 · JARDIM QUE FLORESCE ----------
+       Uma fileira de plaquinhas fincadas na terra, cada uma com uma letra (o espaço é uma pedrinha).
+       Cada letra certa faz brotar uma flor naquela plaquinha (margarida, tulipa ou flor redonda, em cores
+       e alturas variadas). A câmera acompanha a fileira; no fim, borboletas visitam o jardim. */
+    const JD_GAP = 46;
+    function jdInit(lv) {
+      game.text = lv.texto;
+      const W = 70 + game.text.length * JD_GAP + 160;
+      game.jdX = [...game.text].map((_, i) => 70 + i * JD_GAP);
+      dgShell('jd', 'lc-jdp', `
+        <div class="lc-jd" id="lc-jd" aria-hidden="true">
+          <i class="sun"></i><i class="cl"></i>
+          <div class="track" id="lc-jd-track" style="width:${W}px">
+            <i class="hill"></i><i class="soil"></i>
+            ${[...game.text].map((c, i) => c === ' '
+              ? `<span class="pl sp" style="left:${game.jdX[i]}px"><i class="rock"></i><b class="tag">␣</b></span>`
+              : `<span class="pl f${(i * 7) % 3}" style="left:${game.jdX[i]}px;--c:${DG_CORES[(i * 5) % DG_CORES.length]};--jh:${54 + ((i * 29) % 40)}px"><i class="stem"><i class="leaf"></i></i><i class="fw"></i><b class="tag">${esc(c)}</b></span>`).join('')}
+            <span class="bf b1">🦋</span><span class="bf b2">🦋</span>
+          </div>
+        </div>`, 'Cada letra certa faz uma flor brotar. Plante o jardim inteiro!');
+      game.chs = [...$q('#lc-jd-track').querySelectorAll('.pl')];
+      jdCur(true);
+    }
+    function jdCur(instant) {
+      game.chs.forEach((s, i) => s.classList.toggle('cur', i === game.pos));
+      const x = game.jdX[Math.min(game.pos, game.jdX.length - 1)];
+      dgCam('#lc-jd', '#lc-jd-track', x, .4, instant);
+      const box = $q('#lc-jd'), tr = $q('#lc-jd-track');
+      if (box && tr) { const sh = Math.max(0, x - box.clientWidth * .4); tr.querySelectorAll('.bf').forEach((b, k) => { b.style.left = `${sh + box.clientWidth * (.3 + k * .35)}px`; }); }
+    }
+    DG_STYLE.jd = {
+      fim: 1300,
+      ok: (i) => { const s = game.chs[i]; s?.classList.remove('bad'); s?.classList.add('ok'); if (i + 1 >= game.text.length) setTimeout(() => $q('#lc-jd')?.classList.add('win'), 350); },
+      bad: (i) => { const s = game.chs[i]; if (s) { s.classList.add('had'); replay(s, 'bad'); } },
+      after: () => jdCur(),
+    };
+
+    /* ---------- DG-20 · COFRE DE SENHAS ----------
+       Cada palavra é a senha de um cofre. A porta mostra um rolo por letra (a letra aparece apagada na
+       janelinha); cada letra certa gira o rolo, que para na letra e acende em dourado, e o disco do cofre
+       dá um clique. O espaço (ou a última letra do texto) destrava: a manivela gira, a porta abre mostrando
+       o ouro e o próximo cofre entra. Embaixo, as próximas senhas. Errou: o rolo pisca em vermelho. */
+    function cfInit(lv) {
+      game.text = lv.texto;
+      game.cfTok = [...lv.texto.matchAll(/\S+\s*|\s+/g)].map((m) => ({ at: m.index, s: m[0] }));
+      game.cfOf = []; game.cfTok.forEach((t, k) => { for (let j = 0; j < t.s.length; j++) game.cfOf[t.at + j] = k; });
+      dgShell('cf', 'lc-cfp', `
+        <div class="lc-cf" id="lc-cf" aria-hidden="true">
+          <span class="cnt" id="lc-cf-cnt"></span>
+          <div class="stage" id="lc-cf-stage"></div>
+          <div class="next" id="lc-cf-next"></div>
+        </div>`, 'Cada palavra é a senha de um cofre: digite as letras e aperte <kbd>Espaço</kbd> para abrir!');
+      game.cfCur = -1; game.cfDial = 0; game.chs = [];
+      cfLoad(true);
+    }
+    function cfLoad(first) {
+      const k = game.cfOf[Math.min(game.pos, game.text.length - 1)], stage = $q('#lc-cf-stage'); if (!stage) return;
+      if (k !== game.cfCur) {
+        game.cfCur = k;
+        const t = game.cfTok[k], el = document.createElement('div');
+        el.className = `safe${first ? '' : ' enter'}`;
+        el.innerHTML = `
+          <div class="inside"><i class="gold"></i><i class="coin c1"></i><i class="coin c2"></i><i class="coin c3"></i></div>
+          <div class="door"><i class="bolt b1"></i><i class="bolt b2"></i><i class="bolt b3"></i><i class="bolt b4"></i>
+            <span class="dial"><i></i></span>
+            <div class="rolls">${[...t.s].map((c, j) => `<span class="rl${c === ' ' ? ' sp' : ''}" data-i="${t.at + j}"><b>${c === ' ' ? '␣' : esc(c)}</b></span>`).join('')}</div>
+            <span class="handle"><i></i></span>
+          </div>`;
+        stage.querySelectorAll('.safe').forEach((o) => { if (!o.classList.contains('open')) o.remove(); });
+        stage.appendChild(el);
+        game.cfSafe = el;
+        el.querySelectorAll('.rl').forEach((r) => { game.chs[+r.dataset.i] = r; });
+        const cnt = $q('#lc-cf-cnt'); if (cnt) cnt.textContent = `Cofre ${k + 1} de ${game.cfTok.length}`;
+        const nx = $q('#lc-cf-next'); if (nx) nx.innerHTML = game.cfTok.slice(k + 1, k + 4).map((x) => `<span>${esc(x.s.trim() || '␣')}</span>`).join('') || '<em>último cofre!</em>';
+      }
+      game.chs.forEach((r, i) => r?.classList.toggle('cur', i === game.pos));
+    }
+    DG_STYLE.cf = {
+      fim: 1200,
+      ok: (i) => {
+        const r = game.chs[i]; if (r) { r.classList.remove('bad', 'cur'); r.classList.add('ok'); replay(r, 'spin'); }
+        const safe = game.cfSafe, dial = safe?.querySelector('.dial i');
+        game.cfDial += 36; if (dial) dial.style.transform = `rotate(${game.cfDial}deg)`;
+        const t = game.cfTok[game.cfOf[i]];
+        if (i === t.at + t.s.length - 1 && safe) { // senha completa: abre o cofre
+          safe.classList.add('open');
+          setTimeout(() => safe.classList.add('leave'), 800);
+          setTimeout(() => safe.remove(), 1150);
+          if (i + 1 >= game.text.length) $q('#lc-cf')?.classList.add('win');
+        }
+      },
+      bad: (i) => { const r = game.chs[i]; if (r) { r.classList.add('had'); replay(r, 'bad'); } replay(game.cfSafe, 'nope'); },
+      after: () => { if (game.pos < game.text.length) cfLoad(); },
+    };
+
     function typingInit(lv) {
       if (lv.nova && !game.introDone) return introInit(lv);
       if (lv.apresenta && !game.introDone) return apresentaInit(lv);
@@ -1345,6 +1967,19 @@
       if (lv.cartoes) return cdInit(lv);
       if (lv.quadro) return qdInit(lv);
       if (lv.trilha) return trInit(lv);
+      if (lv.torre) return toInit(lv);
+      if (lv.varal) return vrInit(lv);
+      if (lv.maquina) return mqInit(lv);
+      if (lv.pontos) return lpInit(lv);
+      if (lv.domino) return dmInit(lv);
+      if (lv.partitura) return ptInit(lv);
+      if (lv.lanterna) return lnInit(lv);
+      if (lv.roda) return rgInit(lv);
+      if (lv.painel) return pnInit(lv);
+      if (lv.fogos) return fgInit(lv);
+      if (lv.pipoca) return ppInit(lv);
+      if (lv.jardim) return jdInit(lv);
+      if (lv.cofre) return cfInit(lv);
       game.intro = null; game.t0 = 0;
       game.pos = 0; game.text = lv.texto;
       const g = lv.sombra || ''; // a frase de verdade por trás do ritmo (uma letra por tecla)
@@ -3180,6 +3815,9 @@
     document.addEventListener('keydown', onKey);
     function stop() { content?.classList.remove('lc-page'); bgWatch.disconnect(); dropBg(); alive = false; clearTimeout(kbTimer); clearInterval(speedTick); clearInterval(tick); clearInterval(game.timer); clearInterval(gs.glint); kbPopDrop(); document.removeEventListener('keydown', onKey); }
     window.addEventListener('hashchange', stop, { once: true });
+    // a página pode ser montada de novo no mesmo endereço (sem hashchange): desliga a lição anterior,
+    // senão as duas ouviriam o teclado e cada tecla contaria em dobro
+    ativa?.(); ativa = stop;
 
     /* ---------- fim do teste (acervo do professor) ---------- */
     function testDone() {

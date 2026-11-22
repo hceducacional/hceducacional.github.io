@@ -4,7 +4,9 @@
 
    Curva de aprendizagem (cada fase prepara a seguinte):
    1. Descoberta (1–4) ......... onde ficam F, J e Espaço; textos curtos, sem cansar
-   2. Ritmo (6–7) .............. duplas, trios e "palavras" de F e J com tamanhos variados
+                                 (Teclas do fundo mostra a posição do F; o Espaço é treinado nas folhas da Trilha)
+   2. Ritmo (6–7) ............... duplas, trios e "palavras" de F e J com tamanhos variados
+                                 (Cartões: palavra por palavra; Torre: palavras de tamanhos diferentes)
    3. A sombra das palavras (9 em diante)
       Com só duas letras não dá para escrever palavras de verdade, mas dá para digitar o RITMO delas:
       cada letra de uma frase real é batida pela mão que a digitaria no teclado completo
@@ -12,12 +14,15 @@
       já vai aprendendo de que lado fica cada letra (o que adianta as próximas lições)
       e as frases crescem até virar um texto que corre como numa máquina de escrever.
    4. Consolidação: frases mais longas, espelhos, sprint e a ponte para a Lição 02.
+   Os níveis de texto que não são sombra usam estilos com cena do acervo (Teclas do fundo, Jardim,
+   Trilha, Partitura, Cartões, Torre, Painel e Fogos), para variar o visual sem mudar o conteúdo.
 
    Tipos de nível:
    - typing:  digitar o texto (cada tecla certa avança; a errada não avança).
               nova: 'x'   → o nível começa apresentando a tecla nova ("Pressione a tecla X").
               frase: '…'  → o texto vira o ritmo das mãos daquela frase (a frase aparece em cima de cada tecla).
               apresenta   → um cartão explicando o desafio novo antes de começar.
+              esteira, jardim, trilha, cartoes, torre… → o estilo do nível (ver Conteúdo de Informática → Níveis de digitação).
    - hacker:  "Varredura Hacker" — tecle o alvo antes do tempo acabar (meta = acertos)
    - fila:    "Fila de Ancoragem" — tecle a tecla que chega no alvo (meta = teclas)
    - corrida: "Corrida das Teclas" — tecle a tecla de cada vírus quando ele entrar na faixa; o robô o elimina com um laser (meta = vírus)
@@ -41,21 +46,21 @@
     teclas: ['f', ' ', 'j'],
     intro: 'Aprenda a digitar sem olhar para o teclado começando pelas três teclas da linha de referência: F, J e a barra de espaço. Depois, use só essas três teclas para digitar o ritmo de frases de verdade.',
     cards: [
-      ['F, J e Espaço', 'Os dois relevos da linha de referência e os polegares: a base de toda a digitação.'],
+      ['F, J e Espaço', 'Os dois relevos da linha de referência e os polegares: a base de toda a digitação, praticada em cenas diferentes (teclas do fundo, jardim, torre, fogos e outras).'],
       ['A sombra das palavras', 'Digite o ritmo de frases reais: cada letra vira F ou J conforme a mão que a digitaria.'],
       ['Minijogos', 'Desafios de reflexo e ritmo: Varredura Hacker, Fila de Ancoragem e Corrida das Teclas.'],
     ],
     niveis: [
-      /* 1 · DESCOBERTA */
-      { tipo: 'typing', titulo: 'Introdução à tecla F (indicador esquerdo)', nova: 'f', dica: 'Sinta a pequena saliência na tecla F. Posicione o seu dedo indicador esquerdo nela.', texto: 'f f f f f f f f' },
-      { tipo: 'typing', titulo: 'Introdução à tecla J (indicador direito)', nova: 'j', dica: 'Sinta o relevo na tecla J. Posicione o seu dedo indicador direito nela.', texto: 'j j j j j j j j' },
-      { tipo: 'typing', titulo: 'Os polegares na barra de espaço', nova: ' ', dica: 'Indicadores em F e J, polegares descansando na barra. Um toque leve, sem tirar os outros dedos do lugar.', texto: 'f j f j f j f j' },
-      { tipo: 'typing', titulo: 'Duplas e trocas de lado', dica: 'Dois toques de cada lado, depois trocas rápidas. Não olhe para o teclado: o relevo mostra o caminho.', texto: 'ff jj ff jj fj fj jf jf' },
+      /* 1 · DESCOBERTA: cada tecla nova num estilo que mostra onde ela fica */
+      { tipo: 'typing', titulo: 'Introdução à tecla F (indicador esquerdo)', nova: 'f', esteira: true, dica: 'Sinta a pequena saliência na tecla F. Posicione o seu dedo indicador esquerdo nela.', texto: 'f f f f f f f f' },
+      { tipo: 'typing', titulo: 'Introdução à tecla J (indicador direito)', nova: 'j', jardim: true, dica: 'Sinta o relevo na tecla J. Posicione o seu dedo indicador direito nela. Cada toque faz uma flor brotar!', texto: 'j j j j j j j j' },
+      { tipo: 'typing', titulo: 'Os polegares na barra de espaço', nova: ' ', trilha: true, dica: 'Indicadores em F e J, polegares descansando na barra. As folhas no rio são os espaços: um toque leve para pular nelas.', texto: 'f j f j f j f j' },
+      { tipo: 'typing', titulo: 'Duplas e trocas de lado', partitura: true, dica: 'Dois toques de cada lado, depois trocas rápidas. Escute: F e J tocam notas diferentes, e o ritmo vira música.', texto: 'ff jj ff jj fj fj jf jf' },
       { tipo: 'hacker', titulo: 'Minijogo: Varredura Hacker inicial', dica: 'Destrua as ameaças virtuais! Tecle a tecla destacada na tela antes que o tempo acabe.', meta: 10, velocidade: 1.6 },
 
       /* 2 · RITMO: blocos que já têm cara de palavra */
-      { tipo: 'typing', titulo: 'Primeiras palavras de duas e três letras', dica: 'Pense em cada bloco como uma palavra: digite o bloco inteiro e só então o espaço.', texto: 'fj jf ff jj fjf jfj ffj jjf fjf jfj' },
-      { tipo: 'typing', titulo: 'Palavras de tamanhos diferentes', dica: 'Textos de verdade têm palavras curtas e longas. Mantenha o mesmo ritmo em todas.', texto: 'f jff fjjf j ffjj jf fjfj jjf f fjjff' },
+      { tipo: 'typing', titulo: 'Primeiras palavras de duas e três letras', cartoes: true, dica: 'Pense em cada bloco como uma palavra: digite o bloco inteiro e só então o espaço para o próximo cartão.', texto: 'fj jf ff jj fjf jfj ffj jjf fjf jfj' },
+      { tipo: 'typing', titulo: 'Palavras de tamanhos diferentes', torre: true, dica: 'Textos de verdade têm palavras curtas e longas: cada uma vira um andar da torre. Mantenha o mesmo ritmo em todas.', texto: 'f jff fjjf j ffjj jf fjfj jjf f fjjff' },
       { tipo: 'fila', titulo: 'Minijogo: Fila de Ancoragem', dica: 'Siga as colunas! Tecle cada tecla quando ela chegar ao alvo. Meta: 50 acertos.', meta: 50 },
 
       /* 3 · A SOMBRA DAS PALAVRAS */
@@ -73,7 +78,7 @@
       F({ titulo: 'Sombra: cada mão tem o seu lado', frase: 'A mão esquerda faz o F e a direita faz o J', dica: 'Uma frase sobre você mesmo! Siga a cor da letra pequena: amarelo é esquerda, azul é direita.' }),
       { tipo: 'hacker', titulo: 'Minijogo: Varredura Hacker intermediária', dica: 'Intercepte os pacotes de dados alternando a digitação rápida dentro do tempo.', meta: 15, velocidade: 1.8 },
       F({ titulo: 'Sombra: a casa dos dedos', frase: 'Cada dedo tem a sua casa no teclado', dica: 'A frase já passa da tela: ela corre para o lado como numa máquina de escrever. Olhe só para o cursor.' }),
-      { tipo: 'typing', titulo: 'Espelhos: palavras que se leem dos dois lados', dica: 'Cada bloco é igual de trás para frente. Sinta a simetria entre as mãos.', texto: 'fjjf jffj ffjjff jjffjj fjfjf jfjfj fjf jfj' },
+      { tipo: 'typing', titulo: 'Espelhos: palavras que se leem dos dois lados', painel: true, dica: 'Cada bloco é igual de trás para frente. Sinta a simetria entre as mãos enquanto as plaquinhas viram.', texto: 'fjjf jffj ffjjff jjffjj fjfjf jfjfj fjf jfj' },
       { tipo: 'fila', titulo: 'Minijogo: Fila de Ancoragem veloz', dica: 'A fila acelerou e aumentou! Tecle com ritmo e precisão as 65 teclas.', meta: 65 },
       F({ titulo: 'Sombra: sem olhar para baixo', frase: 'Quem digita sem olhar para o teclado ganha tempo', dica: 'Desafio: não olhe para o teclado do começo ao fim. Se errar, a tecla certa acende embaixo.' }),
       F({ titulo: 'Sombra: um provérbio', frase: 'Devagar se vai ao longe', dica: 'Precisão antes de velocidade. Um toque certo vale mais do que três apressados.' }),
@@ -81,7 +86,7 @@
 
       /* 4 · CONSOLIDAÇÃO */
       F({ titulo: 'Sombra: o segredo da digitação', frase: 'O segredo da digitação é a constância e não a pressa', dica: 'Um texto mais longo: deixe o papel correr e mantenha o mesmo ritmo do começo ao fim.' }),
-      { tipo: 'typing', titulo: 'Sprint de ritmo', dica: 'Agora sim, um pouco de velocidade: blocos curtos, toques firmes, sem parar entre eles.', texto: 'fj fj fj jf jf jf ff jj ff jj fjf jfj fjf jfj' },
+      { tipo: 'typing', titulo: 'Sprint de ritmo', fogos: true, dica: 'Agora sim, um pouco de velocidade: cada bloco é um foguete. Toques firmes e o Espaço solta os fogos!', texto: 'fj fj fj jf jf jf ff jj ff jj fjf jfj fjf jfj' },
       F({ titulo: 'Sombra: uma letra de cada vez', frase: 'Aprender é como digitar: uma letra de cada vez', dica: 'Repare como algumas palavras quase só usam uma mão. "Aprender" é quase toda da esquerda!' }),
       { tipo: 'hacker', titulo: 'Minijogo: Varredura Hacker profissional', dica: 'Os dados estão criptografados. Decodifique os sinais com máxima sincronia.', meta: 20, velocidade: 2.7 },
       F({ titulo: 'Sombra: conhecendo o Brasil', frase: 'O Brasil tem vinte e seis estados e um distrito federal', dica: 'A frase mais longa até aqui. Respire, relaxe os ombros e deixe a máquina correr.' }),
