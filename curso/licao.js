@@ -84,7 +84,7 @@
   /* ---------- visual escuro, herdado dos cards das lições ---------- */
   const TINT0 = '22, 60, 48';
   /* cor do cartão de cada tipo de nível (a de digitação é a do card da lição) */
-  const KIND_TINT = { hacker: '24, 46, 110', fila: '30, 70, 90', corrida: '70, 32, 120', estrelas: '30, 28, 92', nave: '14, 26, 70', gp: '40, 20, 90', baloes: '90, 40, 110', duelo: '20, 60, 90' };
+  const KIND_TINT = { hacker: '24, 46, 110', fila: '30, 70, 90', corrida: '70, 32, 120', estrelas: '30, 28, 92', nave: '14, 26, 70', gp: '40, 20, 90', baloes: '90, 40, 110', duelo: '20, 60, 90', resgate: '40, 30, 90', saltos: '20, 30, 80', mouse: '20, 50, 90' };
   const CARD_TINTS = ['24, 46, 110', '70, 32, 120', '120, 40, 30', '30, 70, 90'];
   /* cenários do cartão do nível: um sorteado a cada vez que a lição começa (nunca o mesmo da vez anterior).
      base = cor escura do fundo; a1, a2, a3 = as três luzes de aurora que flutuam devagar por trás */
@@ -919,7 +919,7 @@
           cash: C ? { from: C.get().saldo, gain: C.ganhoDe(starsOf(p), rankOf(p)), review: false } : null });
       });
       paintProgress(); paintStats(); gaugeLevel(lv);
-      ({ typing: typingInit, hacker: hackerInit, fila: filaInit, corrida: corridaInit, estrelas: estrelasInit, nave: naveInit, gp: gpInit, baloes: balaoInit, duelo: dueloInit })[lv.tipo](lv);
+      ({ typing: typingInit, hacker: hackerInit, fila: filaInit, corrida: corridaInit, estrelas: estrelasInit, nave: naveInit, gp: gpInit, baloes: balaoInit, duelo: dueloInit, resgate: resgateInit, saltos: saltosInit, mouse: mouseInit })[lv.tipo](lv);
     }
     function goal(n, total) {
       const t = $q('#lc-goal-txt'), b = $q('#lc-goal-bar'); if (!t) return;
@@ -3717,6 +3717,669 @@
       });
     }
 
+    /* ---------- MJ-09 · Resgate das Teclinhas (tipo 'resgate') ----------
+       Vale dos circuitos ao entardecer. Teclinhas (teclas com olhos e perninhas, na cor do dedo) chegam pela direita
+       e andam para a esquerda, onde a nave-vírus espera. Ao chegar embaixo da nave, o raio puxa a teclinha para cima.
+       Digitar a letra dela (andando ou já flutuando) salva: ela pula de alegria e volta correndo para o portal HC.
+       - Se a nave puxar a teclinha até em cima, perde uma vida (padrão 3); tecla errada zera o combo, mas não tira vida.
+       - Com o progresso, as teclinhas andam mais rápido, chegam mais seguidas e o raio puxa mais depressa.
+       - Duas teclinhas na tela nunca têm a mesma letra (quando a lição tem teclas suficientes).
+       - Portal HC: as teclinhas saem dele e as salvas entram nele. Cada uma salva carrega o portal (RS_CARGA);
+         cheio, o Espaço dispara o pulso HC: a nave fica tonta por RS_TONTA s, o raio desliga e quem estava
+         sendo puxada cai de volta no chão (ainda precisa ser salva).
+       - Vidas e reviver com o Saldo HC, iguais aos outros minijogos. */
+    const RS_CARGA = 6, RS_TONTA = 4;
+    const RS_TIPOS = { comum: { v: 1, nome: 'teclinha' }, ligeira: { v: 1.5, nome: 'teclinha ligeira' } };
+    function resgateInit(lv) {
+      game.score = 0; game.meta = lv.meta; game.paused = true; game.run = resgateRun;
+      game.maxLives = lv.vidas || 3; game.lives = game.maxLives; game.revives = 0; game.combo = 0;
+      game.need = game.meta * 4; game.ph = 0; game.pe = 0;
+      $q('#lc-stage').innerHTML = `
+        <div class="lc-term lc-rs" id="lc-rs">
+          <div class="lc-hk-bar">
+            <span class="lc-hk-title lc-rs-title"><i></i>Resgate das Teclinhas</span>
+            ${livesHTML()}
+            <span class="lc-fl-combo" id="lc-fl-combo" data-on="0">Combo <b>×0</b></span>
+            <span class="lc-hk-time lc-rs-cnt" id="lc-rs-cnt" title="Teclinhas salvas"><i class="mini"></i><b>0</b><small>/${game.meta}</small></span>
+          </div>
+          <div class="lc-rs-world" id="lc-rs-world">
+            <div class="lc-rs-sky" aria-hidden="true"><i class="sun"></i><i class="stars"></i><i class="city"></i><i class="hill h1"></i><i class="hill h2"></i><i class="ground"></i></div>
+            <div class="lc-rs-portal" id="lc-rs-portal" style="--c:0" title="Portal HC: cada teclinha salva carrega; cheio, aperte Espaço"><i class="ring"></i><i class="charge"></i><b>HC</b><small><span class="n">0/${RS_CARGA}</span><kbd>Espaço</kbd></small></div>
+            <div class="lc-rs-fx" id="lc-rs-fx"></div>
+            <div class="lc-rs-ship" id="lc-rs-ship" aria-hidden="true"><i class="beam"></i><span class="sh"><i class="dome"><b></b></i><i class="disc"></i><i class="lights"></i></span></div>
+            <div class="lc-rs-layer" id="lc-rs-layer"></div>
+          </div>
+          <p class="lc-hk-log" id="lc-hk-log"><span>&gt;</span> <em>Digite a letra de cada teclinha antes que a nave-vírus a puxe.</em></p>
+          ${startOverlay('Resgate das Teclinhas')}
+        </div>`;
+      rsReset();
+      goal(0, game.meta); bindStart();
+    }
+    function rsReset() {
+      (game.tk || []).forEach((t) => t.el?.remove());
+      game.tk = []; game.nextAt = 0; game.slowUntil = 0; game.lane = 0; game.lifting = 0; game.stunUntil = 0; game.charge = 0;
+      rsShip(rsGeo()); rsCharge();
+    }
+    function rsGeo() {
+      const w = $q('#lc-rs-world'); const W = w?.clientWidth || 760, H = w?.clientHeight || 360;
+      return { W, H, shipX: W * .15, shipY: H * .2, beam: W * .2, gy: [H * .8, H * .87, H * .94], sz: Math.max(36, Math.min(58, H * .155)), portal: W - 41 };
+    }
+    const rsProg = () => Math.min(1, game.score / Math.max(1, game.meta));
+    function rsShip(g) {
+      const el = $q('#lc-rs-ship'); if (!el) return;
+      el.style.left = `${g.shipX.toFixed(0)}px`; el.style.top = `${g.shipY.toFixed(0)}px`;
+      el.style.setProperty('--bh', `${(g.gy[2] - g.shipY).toFixed(0)}px`);
+    }
+    function rsLetter() { // letra que não está em nenhuma teclinha da tela
+      const ks = L.teclas.filter((k) => k !== ' '), busyK = new Set(game.tk.filter((t) => t.st !== 'flee' && t.st !== 'gone').map((t) => t.k));
+      const free = ks.filter((k) => !busyK.has(k));
+      const pool = free.length ? free : ks;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+    function rsSpawn(g) {
+      const tipo = game.score > 1 && Math.random() < .14 + .22 * rsProg() ? 'ligeira' : 'comum';
+      const lane = game.lane++ % 3, k = rsLetter();
+      const t = { k, tipo, T: RS_TIPOS[tipo], lane, x: g.portal, y: g.gy[lane], st: 'walk', lt: 0, vy: 0, ly0: 0, lx0: 0 };
+      const el = document.createElement('div');
+      el.className = `lc-rs-tk l${lane}${tipo === 'ligeira' ? ' fast' : ''}`;
+      el.style.setProperty('--kc', filaCor(k)); el.style.setProperty('--sz', `${g.sz}px`);
+      el.innerHTML = `<span class="tb"><i class="eyes"><i></i><i></i></i><b>${esc(keyGlyph(k))}</b><i class="cheek"></i></span><span class="feet"><i></i><i></i></span>`;
+      $q('#lc-rs-layer')?.appendChild(el); t.el = el; replay(el, 'born'); replay($q('#lc-rs-portal'), 'open');
+      game.tk.push(t); rsTarget();
+    }
+    function rsTarget() { // o teclado da tela destaca a teclinha mais perto da nave
+      const live = game.tk.filter((t) => t.st === 'walk' || t.st === 'lift');
+      const u = live.sort((a, b) => (b.st === 'lift') - (a.st === 'lift') || (b.st === 'lift' ? b.lt - a.lt : a.x - b.x))[0];
+      kbTarget(u ? u.k : null);
+    }
+    function rsCharge() { // o anel do portal enche a cada teclinha salva
+      const p = $q('#lc-rs-portal'); if (!p) return;
+      p.style.setProperty('--c', (game.charge / RS_CARGA).toFixed(3));
+      p.querySelector('.n').textContent = `${game.charge}/${RS_CARGA}`;
+      p.classList.toggle('ready', game.charge >= RS_CARGA);
+    }
+    const rsStunned = () => performance.now() < game.stunUntil;
+    function rsPulse() { // Espaço com o portal cheio: o pulso HC atordoa a nave
+      if (game.paused || busy) return;
+      if (game.charge < RS_CARGA) { replay($q('#lc-rs-portal'), 'deny'); return mjLog(`O portal HC ainda está carregando (${game.charge}/${RS_CARGA}): salve mais teclinhas.`, 'warn'); }
+      if (rsStunned()) return;
+      const g = rsGeo(), fx = $q('#lc-rs-fx');
+      game.charge = 0; rsCharge(); replay($q('#lc-rs-portal'), 'fire');
+      if (fx) {
+        const o = document.createElement('i'); o.className = 'lc-rs-blast'; o.style.left = `${g.portal}px`; o.style.top = `${g.H * .8}px`; fx.appendChild(o);
+        const a = o.animate([{ transform: 'translate(-50%,-50%) scale(.4)' }, { transform: `translate(calc(-50% + ${g.shipX - g.portal}px), calc(-50% + ${g.shipY - g.H * .8}px)) scale(1.3)` }],
+          { duration: 380, easing: 'cubic-bezier(.4, 0, .6, 1)', fill: 'forwards' });
+        a.onfinish = () => { o.remove(); rsStun(g); };
+      } else rsStun(g);
+    }
+    function rsStun(g) {
+      game.stunUntil = performance.now() + RS_TONTA * 1000;
+      const sh = $q('#lc-rs-ship'); sh?.classList.add('stun'); replay(sh, 'zap');
+      game.tk.forEach((t) => { if (t.st === 'lift') { t.st = 'drop'; t.back = true; t.vy = 0; t.el.classList.remove('lift'); } });
+      mjLog(`Pulso HC! A nave-vírus ficou tonta por ${RS_TONTA} s e soltou as teclinhas.`, 'ok');
+      clearTimeout(game.stunT); game.stunT = setTimeout(() => $q('#lc-rs-ship')?.classList.remove('stun'), RS_TONTA * 1000);
+      rsTarget();
+    }
+    const rsSpeed = (g, t) => g.W * (.05 + .035 * rsProg()) * t.T.v * (performance.now() < game.slowUntil ? .5 : 1);
+    const rsLiftDur = () => (2.4 - 1 * rsProg()) * (performance.now() < game.slowUntil ? 1.6 : 1);
+    function rsPaint(g) {
+      game.tk.forEach((t) => {
+        if (!t.el) return;
+        const r = t.st === 'lift' ? Math.sin(performance.now() / 120 + t.lane) * 10 : t.st === 'drop' ? -8 : 0;
+        const s = t.st === 'gone' ? Math.max(0, 1 - t.lt) : 1;
+        const tx = `translate3d(${t.x.toFixed(1)}px, ${t.y.toFixed(1)}px, 0) rotate(${r.toFixed(1)}deg) scale(${s.toFixed(3)})${t.st === 'flee' ? ' scaleX(-1)' : ''}`;
+        if (t.el._tx !== tx) { t.el._tx = tx; t.el.style.transform = tx; }
+      });
+      const n = game.tk.filter((t) => t.st === 'lift').length;
+      if (n !== game.lifting) { game.lifting = n; $q('#lc-rs-ship')?.classList.toggle('pull', n > 0); }
+    }
+    function resgateRun() {
+      cancelAnimationFrame(game.raf);
+      let last = performance.now();
+      $q('#lc-rs-world')?.classList.add('go');
+      rsTarget();
+      const frame = (now) => {
+        if (!alive || !$q('#lc-rs')) return;
+        game.raf = requestAnimationFrame(frame);
+        const dt = Math.min(.05, (now - last) / 1000); last = now;
+        if (busy || game.paused || document.visibilityState !== 'visible') return;
+        const g = rsGeo(), p = rsProg();
+        game.nextAt -= dt;
+        const onField = game.tk.filter((t) => t.st === 'walk' || t.st === 'lift').length;
+        const left = game.meta - game.score - onField;
+        if (game.nextAt <= 0 && onField < 5 && left > 0) { rsSpawn(g); game.nextAt = (2.7 - 1.5 * p) * (.85 + Math.random() * .3) * (performance.now() < game.slowUntil ? 1.5 : 1); }
+        let changed = false;
+        for (const t of game.tk) {
+          if (t.st === 'walk') {
+            t.x -= rsSpeed(g, t) * dt;
+            if (t.x <= g.beam && rsStunned()) { t.x = g.beam + 1; continue; } // nave tonta: a teclinha espera na beira
+            if (t.x <= g.beam) { t.st = 'lift'; t.lt = 0; t.lx0 = t.x; t.ly0 = t.y; t.el.classList.add('lift'); changed = true; mjLog(`A nave está puxando a teclinha “${keyGlyph(t.k)}”! Digite rápido!`, 'warn'); }
+          } else if (t.st === 'lift') {
+            t.lt += dt / rsLiftDur();
+            const e = t.lt * t.lt * (3 - 2 * t.lt);
+            t.x = t.lx0 + (g.shipX - t.lx0) * e; t.y = t.ly0 + (g.shipY + g.sz * .9 - t.ly0) * e;
+            if (t.lt >= 1) { t.st = 'gone'; t.lt = 0; t.el.classList.add('taken'); changed = true; rsTaken(t); }
+          } else if (t.st === 'drop') {
+            t.vy += 1500 * dt; t.y += t.vy * dt; t.x += g.W * .04 * dt;
+            if (t.y >= g.gy[t.lane]) {
+              t.y = g.gy[t.lane]; t.el.classList.remove('lift'); replay(t.el, 'land');
+              if (t.back) { t.back = false; t.st = 'walk'; t.x = Math.max(t.x, g.beam + g.sz); changed = true; } // solta pelo pulso: volta a andar
+              else { t.st = 'flee'; t.el.classList.add('flee'); }
+            }
+          } else if (t.st === 'flee') {
+            t.x += g.W * .55 * dt;
+            if (t.x >= g.portal) { t.st = 'out'; t.el.remove(); replay($q('#lc-rs-portal'), 'eat'); } // entra no portal
+          } else if (t.st === 'gone') {
+            t.lt += dt * 3;
+            if (t.lt >= 1) { t.st = 'out'; t.el.remove(); }
+          }
+        }
+        if (game.tk.some((t) => t.st === 'out')) game.tk = game.tk.filter((t) => t.st !== 'out');
+        if (changed) rsTarget();
+        rsPaint(g);
+      };
+      game.raf = requestAnimationFrame(frame);
+    }
+    function rsKey(k) {
+      if (k === ' ') return rsPulse();
+      if (game.paused) return;
+      const live = game.tk.filter((t) => (t.st === 'walk' || t.st === 'lift') && t.k === k);
+      if (live.length) {
+        const t = live.sort((a, b) => (b.st === 'lift') - (a.st === 'lift') || a.x - b.x)[0];
+        hit(k); game.combo++; filaCombo();
+        rsSave(t);
+        return;
+      }
+      miss(k); game.combo = 0; filaCombo();
+      replay($q('#lc-rs-ship'), 'laugh');
+      const u = game.tk.find((t) => t.st === 'lift') || game.tk.filter((t) => t.st === 'walk').sort((a, b) => a.x - b.x)[0];
+      mjLog(u ? `Nenhuma teclinha com “${keyGlyph(k)}” · a mais perto da nave é a “${keyGlyph(u.k)}”` : `Nenhuma teclinha com “${keyGlyph(k)}” na tela`, 'warn');
+    }
+    function rsSave(t) { // salvou: ela pula, cai (se estava no raio) e volta correndo para o portal
+      const g = rsGeo(), wasLift = t.st === 'lift';
+      t.st = wasLift ? 'drop' : 'flee'; t.vy = wasLift ? -120 : 0;
+      t.el.classList.add('saved'); if (!wasLift) t.el.classList.add('flee');
+      t.el.classList.remove('lift');
+      const fx = document.createElement('span'); fx.className = 'lc-rs-pop'; fx.textContent = wasLift ? 'Ufa!' : '+1';
+      fx.style.left = `${t.x}px`; fx.style.top = `${t.y - g.sz * 1.4}px`; $q('#lc-rs-layer')?.appendChild(fx); setTimeout(() => fx.remove(), 800);
+      game.score++; goal(game.score, game.meta);
+      if (game.charge < RS_CARGA) { game.charge++; rsCharge(); if (game.charge === RS_CARGA && game.score < game.meta) mjLog('Portal HC carregado! Aperte Espaço para disparar o pulso na nave.', 'ok'); }
+      const c = $q('#lc-rs-cnt b'); if (c) { c.textContent = game.score; replay($q('#lc-rs-cnt'), 'pop'); }
+      game.ph = Math.max(game.ph, Math.ceil(game.need * game.score / game.meta) - 1); score(true);
+      if (wasLift) mjLog(`Teclinha “${keyGlyph(t.k)}” salva do raio no último segundo!${game.combo >= 3 ? ` · combo ×${game.combo}` : ''}`, 'ok');
+      else if (game.combo >= 3 && game.combo % 5 === 0) mjLog(`Combo ×${game.combo}! As teclinhas estão a salvo.`, 'ok');
+      rsTarget();
+      if (game.score >= game.meta) {
+        game.paused = true; kbTarget(null);
+        game.tk.forEach((x) => { if (x.st === 'walk' || x.st === 'lift') { x.st = 'flee'; x.el.classList.remove('lift'); x.el.classList.add('flee'); } });
+        setTimeout(() => { $q('#lc-rs-world')?.classList.add('done'); }, 300);
+        // deixa as últimas correrem para o portal e a nave fugir antes de terminar
+        let n = 0; const run = () => { const g2 = rsGeo(); game.tk.forEach((x) => { if (x.st === 'flee' || x.st === 'drop') { x.st = 'flee'; x.y = g2.gy[x.lane]; x.x += g2.W * .02; if (x.x >= g2.portal) { x.st = 'out'; x.el.remove(); } } }); rsPaint(g2); if (++n < 60 && $q('#lc-rs')) requestAnimationFrame(run); };
+        cancelAnimationFrame(game.raf); requestAnimationFrame(run);
+        mjLog('Todas as teclinhas foram salvas! A nave-vírus fugiu.', 'ok');
+        setTimeout(complete, 1700);
+      }
+    }
+    function rsTaken(t) { // a nave puxou: perde uma vida
+      replay($q('#lc-rs-ship'), 'gulp'); replay($q('#lc-rs'), 'hurt');
+      miss(null); game.combo = 0; filaCombo();
+      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.slowUntil = performance.now() + 2500;
+      if (game.lives <= 0) return rsDown();
+      mjLog(`A nave levou a teclinha “${keyGlyph(t.k)}”! · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
+    }
+    function rsDown() {
+      cancelAnimationFrame(game.raf); $q('#lc-rs-world')?.classList.remove('go');
+      mjDown({
+        term: $q('#lc-rs'), titulo: 'A nave levou as teclinhas!', texto: `Você salvou <b>${game.score} de ${game.meta}</b> teclinhas.`,
+        onResume: () => { // as que estavam no raio caem de volta, um pouco antes da nave
+          const g = rsGeo();
+          game.tk.forEach((t) => { if (t.st === 'lift' || (t.st === 'drop' && t.back)) { t.st = 'walk'; t.back = false; t.x = g.beam + g.W * .22; t.y = g.gy[t.lane]; t.el.classList.remove('lift'); } });
+          game.slowUntil = performance.now() + 2500; game.nextAt = 1.2; resgateRun();
+        },
+        onRestart: (term) => {
+          game.score = 0; game.combo = 0; filaCombo(); game.ph = 0; game.pe = 0;
+          const c = $q('#lc-rs-cnt b'); if (c) c.textContent = 0;
+          rsReset(); $q('#lc-rs-world')?.classList.remove('done');
+          term.insertAdjacentHTML('beforeend', startOverlay('Resgate das Teclinhas')); bindStart();
+          mjLog('Digite a letra de cada teclinha antes que a nave-vírus a puxe.');
+        },
+      });
+    }
+
+    /* ---------- MJ-10 · Saltos na Rede (tipo 'saltos') ----------
+       O robô corre sozinho por uma cidade de dados à noite. No caminho aparecem obstáculos: firewall (espinhos
+       de laser), buraco com o fluxo de dados e vírus que vêm andando. Em cima de cada um há uma palavra:
+       digitada inteira antes de chegar, o robô pula por cima na hora certa. Se não der tempo, ele bate e perde
+       uma vida (o obstáculo não conta e outro aparece no lugar). Depois do último, o portal HC de chegada.
+       - Só a palavra do próximo obstáculo vale; ao terminá-la, já dá para digitar a seguinte.
+       - Tecla errada zera o combo, mas não tira vida. Com o progresso, o robô corre mais rápido e os obstáculos
+         ficam mais próximos; as palavras crescem (banco do MJ-04, só com as teclas da lição).
+       - Vidas e reviver com o Saldo HC, iguais aos outros minijogos. */
+    const SR_TIPOS = {
+      firewall: { w: 74, nome: 'firewall' },
+      buraco: { w: 96, nome: 'buraco' },
+      virus: { w: 40, nome: 'vírus', anda: true },
+    };
+    function saltosInit(lv) {
+      game.score = 0; game.meta = lv.meta; game.paused = true; game.run = saltosRun;
+      game.maxLives = lv.vidas || 3; game.lives = game.maxLives; game.revives = 0; game.combo = 0;
+      game.need = game.meta * 6; game.ph = 0; game.pe = 0;
+      $q('#lc-stage').innerHTML = `
+        <div class="lc-term lc-sr" id="lc-sr">
+          <div class="lc-hk-bar">
+            <span class="lc-hk-title lc-sr-title"><i></i>Saltos na Rede</span>
+            ${livesHTML()}
+            <span class="lc-fl-combo" id="lc-fl-combo" data-on="0">Combo <b>×0</b></span>
+            <span class="lc-hk-time lc-sr-cnt" id="lc-sr-cnt" title="Obstáculos pulados"><i class="mini"></i><b>0</b><small>/${game.meta}</small></span>
+          </div>
+          <div class="lc-sr-world" id="lc-sr-world">
+            <div class="lc-sr-sky" aria-hidden="true"><i class="stars"></i><i class="moon"></i><i class="city far"></i><i class="city"></i></div>
+            <div class="lc-sr-ground" id="lc-sr-ground" aria-hidden="true"></div>
+            <div class="lc-sr-layer" id="lc-sr-layer"></div>
+            <div class="lc-sr-hero" id="lc-sr-hero"><span class="rb"><i class="arm"></i><span class="body"><i class="eye"></i><i class="eye"></i></span><span class="legs"><i></i><i></i></span></span><i class="shadow"></i></div>
+          </div>
+          <p class="lc-hk-log" id="lc-hk-log"><span>&gt;</span> <em>Digite a palavra em cima de cada obstáculo para o robô pular.</em></p>
+          ${startOverlay('Saltos na Rede')}
+        </div>`;
+      srReset(lv);
+      goal(0, game.meta); bindStart();
+    }
+    function srReset(lv) {
+      (game.obs || []).forEach((o) => { o.el?.remove(); o.wd?.remove(); });
+      game.door?.remove(); game.door = null; game.doorX = null;
+      game.words = estFila(lv, Math.max(30, game.meta * 2)); game.wi = 0;
+      game.obs = []; game.cam = 0; game.jump = null; game.slowUntil = 0; game.hurtUntil = 0; game.lastX = 0; game.done = false;
+      const g = srGeo(); game.lastX = g.W * .55;
+      srFill(g); srCur(); srPaint(g);
+    }
+    function srGeo() {
+      const w = $q('#lc-sr-world'); const W = w?.clientWidth || 760, H = w?.clientHeight || 360;
+      return { W, H, gy: H * .76, heroX: W * .2 };
+    }
+    const srProg = () => Math.min(1, game.score / Math.max(1, game.meta));
+    const srSpeed = (g) => g.W * (.17 + .09 * srProg()) * (performance.now() < game.slowUntil ? .6 : 1);
+    function srNextWord() {
+      if (game.wi >= game.words.length - 2) game.words.push(...estFila(L.niveis[st.lvl], 20));
+      return game.words[game.wi++];
+    }
+    function srFill(g) { // cria obstáculos à frente até completar a meta (os que batem são trocados por novos)
+      const active = () => game.obs.filter((o) => o.st === 'wait' || o.st === 'armed' || o.st === 'jumping').length;
+      while (game.score + active() < game.meta && game.lastX < game.cam + g.W * 2.4) {
+        const pr = srProg(), r = Math.random();
+        const tipo = game.score + game.obs.length < 2 ? 'firewall' : r < .36 ? 'firewall' : r < .68 ? 'buraco' : 'virus';
+        const T = SR_TIPOS[tipo], x = game.lastX + g.W * (.62 + .32 * (1 - pr)) * (.9 + Math.random() * .25);
+        const o = { tipo, T, x, w: T.w, word: srNextWord(), pos: 0, st: 'wait' };
+        o.el = document.createElement('div'); o.el.className = `lc-sr-ob t-${tipo}`; o.el.style.width = `${o.w}px`;
+        o.el.innerHTML = tipo === 'virus' ? '<span class="vb"><i class="sp"></i><i class="eye"><b></b></i><i class="mouth"></i></span><span class="ft"><i></i><i></i></span>'
+          : tipo === 'buraco' ? '<i class="hole"></i><i class="flow"></i>' : '<i class="spk"></i><i class="glow"></i>';
+        o.wd = document.createElement('div'); o.wd.className = 'lc-sr-word';
+        o.wd.innerHTML = [...o.word].map((c, i) => `<i style="--i:${i}">${esc(c)}</i>`).join('');
+        $q('#lc-sr-layer')?.append(o.el, o.wd);
+        game.obs.push(o); game.lastX = x + o.w;
+      }
+    }
+    const srCurObs = () => game.obs.find((o) => o.st === 'wait');
+    function srCur() { // destaca a palavra da vez e a letra seguinte
+      const c = srCurObs();
+      game.obs.forEach((o) => {
+        o.wd?.classList.toggle('cur', o === c); o.wd?.classList.toggle('next', o !== c && o.st === 'wait');
+        if (o === c) [...o.wd.children].forEach((t, i) => { t.classList.toggle('ok', i < o.pos); t.classList.toggle('at', i === o.pos); });
+      });
+      kbTarget(c ? c.word[c.pos] : null);
+    }
+    function srPaint(g) {
+      const hero = $q('#lc-sr-hero'), gr = $q('#lc-sr-ground');
+      const jy = game.jump ? game.jump.h * 4 * game.jump.t * (1 - game.jump.t) : 0;
+      if (hero) { const t = `translate3d(${g.heroX.toFixed(1)}px, ${(g.gy - jy).toFixed(1)}px, 0)`; if (hero._tx !== t) { hero._tx = t; hero.style.transform = t; hero.style.setProperty('--jy', `${jy.toFixed(0)}px`); } }
+      if (gr) gr.style.backgroundPositionX = `${(-game.cam % 48).toFixed(1)}px`;
+      const w = $q('#lc-sr-world'); if (w) { w.style.setProperty('--cam1', `${(-game.cam * .12).toFixed(1)}px`); w.style.setProperty('--cam2', `${(-game.cam * .3).toFixed(1)}px`); }
+      for (const o of game.obs) {
+        const sx = o.x - game.cam;
+        const vis = sx > -g.W * .4 && sx < g.W * 1.3;
+        if (o.el._v !== vis) { o.el._v = vis; o.el.style.display = o.wd.style.display = vis ? '' : 'none'; }
+        if (!vis) continue;
+        const t = `translate3d(${sx.toFixed(1)}px, ${g.gy.toFixed(1)}px, 0)`; if (o.el._tx !== t) { o.el._tx = t; o.el.style.transform = t; }
+        const tw = `translate3d(${(sx + o.w / 2).toFixed(1)}px, ${(g.gy - (o.tipo === 'virus' ? 100 : 88)).toFixed(1)}px, 0)`; if (o.wd._tx !== tw) { o.wd._tx = tw; o.wd.style.transform = tw; }
+      }
+      if (game.door) { const t = `translate3d(${(game.doorX - game.cam).toFixed(1)}px, ${g.gy.toFixed(1)}px, 0)`; if (game.door._tx !== t) { game.door._tx = t; game.door.style.transform = t; } }
+    }
+    function saltosRun() {
+      cancelAnimationFrame(game.raf);
+      let last = performance.now();
+      $q('#lc-sr-world')?.classList.add('go');
+      srCur();
+      const frame = (now) => {
+        if (!alive || !$q('#lc-sr')) return;
+        game.raf = requestAnimationFrame(frame);
+        const dt = Math.min(.05, (now - last) / 1000); last = now;
+        if (busy || game.paused || document.visibilityState !== 'visible') return;
+        const g = srGeo(), v = srSpeed(g);
+        game.cam += v * dt;
+        if (game.jump) { game.jump.t += dt / game.jump.d; if (game.jump.t >= 1) { game.jump = null; replay($q('#lc-sr-hero'), 'land'); } }
+        const front = g.heroX + 16, back = g.heroX - 16;
+        let changed = false;
+        for (const o of game.obs) {
+          if (o.T.anda && (o.st === 'wait' || o.st === 'armed')) o.x -= g.W * .05 * dt; // o vírus vem andando
+          const sx = o.x - game.cam;
+          if (o.st === 'armed' && !game.jump && sx - front <= 14) { // pula na hora certa
+            const rel = v + (o.T.anda ? g.W * .05 : 0);
+            game.jump = { t: 0, d: Math.max(.42, (o.w + 64) / rel), h: o.tipo === 'buraco' ? 74 : 88 };
+            o.st = 'jumping'; replay($q('#lc-sr-hero'), 'hop');
+          } else if (o.st === 'wait' && sx <= front - 4 && !game.jump) { o.st = 'hit'; changed = true; srHit(o); }
+          if ((o.st === 'jumping' || o.st === 'hit') && sx + o.w < back) {
+            if (o.st === 'jumping') { o.st = 'passed'; srPass(o); } else o.st = 'gone';
+            changed = true;
+          }
+        }
+        // limpa o que ficou para trás e cria os próximos
+        game.obs = game.obs.filter((o) => { const keep = o.x + o.w - game.cam > -g.W * .5; if (!keep) { o.el.remove(); o.wd.remove(); } return keep; });
+        if (game.score < game.meta) srFill(g);
+        if (game.score >= game.meta && !game.door && !game.obs.some((o) => o.st === 'wait' || o.st === 'armed' || o.st === 'jumping')) {
+          game.doorX = Math.max(game.lastX + g.W * .35, game.cam + g.W * .85);
+          game.door = document.createElement('div'); game.door.className = 'lc-sr-door';
+          game.door.innerHTML = '<i class="ring"></i><b>HC</b><small>Chegada</small>';
+          $q('#lc-sr-layer')?.appendChild(game.door);
+        }
+        if (game.door && !game.done && game.doorX - game.cam <= g.heroX + 8) srWin();
+        if (changed) srCur();
+        srPaint(g);
+      };
+      game.raf = requestAnimationFrame(frame);
+    }
+    function srKey(k) {
+      if (game.paused || k === ' ') return;
+      const o = srCurObs(); if (!o) return;
+      const want = o.word[o.pos], tile = o.wd.children[o.pos];
+      if (k === want) {
+        hit(k); o.pos++;
+        if (o.pos >= o.word.length) {
+          o.st = 'armed'; game.combo++; filaCombo();
+          o.wd.classList.add('done'); o.el.classList.add('armed');
+          if (game.combo >= 3 && game.combo % 3 === 0) mjLog(`Combo ×${game.combo}! O robô está voando pela rede.`, 'ok');
+        }
+        srCur();
+      } else {
+        miss(k); game.combo = 0; filaCombo(); tile && replay(tile, 'shake');
+        mjLog(`Tecla errada: a próxima letra é “${keyGlyph(want)}”`, 'warn');
+      }
+    }
+    function srPass(o) { // pulou: conta e enche a barra
+      game.score++; goal(game.score, game.meta);
+      const c = $q('#lc-sr-cnt b'); if (c) { c.textContent = game.score; replay($q('#lc-sr-cnt'), 'pop'); }
+      game.ph = Math.max(game.ph, Math.ceil(game.need * game.score / game.meta) - 1); score(true);
+      o.wd.classList.add('gone');
+    }
+    function srHit(o) { // não deu tempo: bate no obstáculo
+      replay($q('#lc-sr-hero'), 'hurt'); replay($q('#lc-sr'), 'hurt'); o.el.classList.add('hit'); o.wd.classList.add('miss');
+      miss(null); game.combo = 0; filaCombo();
+      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.slowUntil = performance.now() + 2500;
+      if (game.lives <= 0) return srDown();
+      mjLog(`O robô bateu no ${o.T.nome}! · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
+    }
+    function srWin() {
+      game.done = true; game.paused = true; cancelAnimationFrame(game.raf); kbTarget(null);
+      $q('#lc-sr-world')?.classList.add('done'); replay(game.door, 'in');
+      mjLog('O robô atravessou a rede e chegou ao portal HC!', 'ok');
+      setTimeout(complete, 1500);
+    }
+    function srDown() {
+      cancelAnimationFrame(game.raf); $q('#lc-sr-world')?.classList.remove('go');
+      mjDown({
+        term: $q('#lc-sr'), titulo: 'O robô travou na rede!', texto: `Você pulou <b>${game.score} de ${game.meta}</b> obstáculos.`,
+        onResume: () => { // afasta os próximos obstáculos para dar tempo de digitar
+          const g = srGeo(), c = srCurObs();
+          if (c && c.x - game.cam < g.W * .75) { const d = game.cam + g.W * .75 - c.x; game.obs.forEach((o) => { if (o.st === 'wait' || o.st === 'armed') o.x += d; }); game.lastX += d; }
+          game.slowUntil = performance.now() + 2500; saltosRun();
+        },
+        onRestart: (term) => {
+          game.score = 0; game.combo = 0; filaCombo(); game.ph = 0; game.pe = 0;
+          const c = $q('#lc-sr-cnt b'); if (c) c.textContent = 0;
+          srReset(L.niveis[st.lvl]); $q('#lc-sr-world')?.classList.remove('done');
+          term.insertAdjacentHTML('beforeend', startOverlay('Saltos na Rede')); bindStart();
+          mjLog('Digite a palavra em cima de cada obstáculo para o robô pular.');
+        },
+      });
+    }
+
+    /* ---------- MJ-11 · Missão Mouse (tipo 'mouse') ----------
+       Minijogo de mouse (sem teclado): a área de trabalho do "HC OS". Aparecem itens com um anel de tempo e uma
+       etiqueta dizendo o que fazer; cada um pede uma ação diferente do mouse:
+         vírus → clique (botão esquerdo) · arquivo suspeito → botão direito (abre o menu "Escanear")
+         pacote dourado → clique duplo · documento → arrastar até a Pasta HC.
+       As ações entram aos poucos (MS_ONDAS: a partir de quantos itens cada uma aparece), com uma faixa
+       "Nova ação!" na primeira vez. Botão errado zera o combo (e conta como erro), clique no vazio não conta.
+       Se o anel acabar, o item "infecta" o computador: perde uma vida (padrão 3). Reviver com o Saldo HC. */
+    const MS_TIPOS = {
+      clique: { nome: 'Clique', dica: 'Clique', btn: 'l', dur: 6.5, txt: 'Clique com o botão <b>esquerdo</b> no vírus' },
+      direito: { nome: 'Botão direito', dica: 'Botão direito', btn: 'r', dur: 7.5, txt: 'Clique com o botão <b>direito</b> no arquivo e escolha <b>Escanear com HC</b>' },
+      duplo: { nome: 'Clique duplo', dica: 'Clique duplo', btn: 'l2', dur: 7.5, txt: 'Dê um <b>clique duplo</b> (dois cliques rápidos) no pacote' },
+      arrastar: { nome: 'Arrastar', dica: 'Arraste para a pasta', btn: 'drag', dur: 10, txt: '<b>Segure</b> o botão esquerdo no documento e <b>arraste</b> até a Pasta HC' },
+    };
+    const MS_ONDAS = { clique: 0, direito: 4, duplo: 9, arrastar: 14 };
+    const MS_MOUSE = (b) => `<svg class="ms-mo" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="7"/><path class="bl${b === 'l' || b === 'l2' || b === 'drag' ? ' on' : ''}" d="M12 2.5H12A7 7 0 0 0 5 9.5V10h7Z"/><path class="br${b === 'r' ? ' on' : ''}" d="M12 2.5A7 7 0 0 1 19 9.5V10h-7Z"/><path d="M12 2.5V10M5 10h14"/></svg>`;
+    const MS_ICO = {
+      clique: '<span class="vir"><i class="sp"></i><i class="eye"><b></b></i><i class="mouth"></i></span>',
+      direito: '<span class="fil"><i class="fold"></i><b>?</b></span>',
+      duplo: '<span class="box"><i class="lid"></i><i class="rib"></i></span>',
+      arrastar: '<span class="doc"><i></i><i></i><i></i></span>',
+    };
+    function mouseInit(lv) {
+      game.score = 0; game.meta = lv.meta; game.paused = true; game.run = mouseRun;
+      game.maxLives = lv.vidas || 3; game.lives = game.maxLives; game.revives = 0; game.combo = 0;
+      game.need = game.meta * 2; game.ph = 0; game.pe = 0;
+      $q('#lc-stage').innerHTML = `
+        <div class="lc-term lc-ms" id="lc-ms">
+          <div class="lc-hk-bar">
+            <span class="lc-hk-title lc-ms-title"><i></i>Missão Mouse</span>
+            ${livesHTML()}
+            <span class="lc-fl-combo" id="lc-fl-combo" data-on="0">Combo <b>×0</b></span>
+            <span class="lc-hk-time lc-ms-cnt" id="lc-ms-cnt" title="Itens resolvidos"><i class="mini"></i><b>0</b><small>/${game.meta}</small></span>
+          </div>
+          <div class="lc-ms-world" id="lc-ms-world">
+            <div class="lc-ms-desk" id="lc-ms-desk">
+              <div class="lc-ms-wall" aria-hidden="true"><i class="logo">HC</i></div>
+              <div class="lc-ms-folder" id="lc-ms-folder"><span class="fd"><i class="tab"></i><b>HC</b></span><small>Pasta HC</small></div>
+              <div class="lc-ms-layer" id="lc-ms-layer"></div>
+              <div class="lc-ms-new" id="lc-ms-new" hidden></div>
+            </div>
+            <div class="lc-ms-bar" aria-hidden="true"><span class="st"><b>HC</b></span><i class="app a1"></i><i class="app a2"></i><i class="app a3"></i><span class="clk" id="lc-ms-clk"></span></div>
+          </div>
+          <p class="lc-hk-log" id="lc-hk-log"><span>&gt;</span> <em>Faça o que cada item pede antes que o anel de tempo acabe.</em></p>
+          ${startOverlay('Missão Mouse')}
+        </div>`;
+      msReset();
+      goal(0, game.meta); bindStart();
+      msBind();
+    }
+    function msReset() {
+      msMenuClose();
+      (game.it || []).forEach((t) => t.el?.remove());
+      game.it = []; game.nextAt = .4; game.slowUntil = 0; game.seen = {}; game.drag = null;
+      const clk = $q('#lc-ms-clk'); if (clk) clk.textContent = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+    const msProg = () => Math.min(1, game.score / Math.max(1, game.meta));
+    const msBox = () => { const d = $q('#lc-ms-desk'); return { W: d?.clientWidth || 700, H: d?.clientHeight || 300 }; };
+    function msKinds() { // ações liberadas até agora
+      const n = game.score + game.it.length;
+      return Object.keys(MS_ONDAS).filter((k) => n >= MS_ONDAS[k] || (game.meta < 8 && MS_ONDAS[k] <= game.meta * .6));
+    }
+    function msSpawn() {
+      const ks = msKinds(), fresh = ks.find((k) => !game.seen[k]);
+      // a ação nova aparece logo; depois, as mais novas um pouco mais vezes
+      const kind = fresh || (Math.random() < .35 ? ks[ks.length - 1] : ks[Math.floor(Math.random() * ks.length)]);
+      if (kind === 'arrastar' && game.it.some((t) => t.kind === 'arrastar')) return; // um documento por vez
+      const { W, H } = msBox(), sz = 86;
+      let x = 0, y = 0;
+      for (let i = 0; i < 16; i++) {
+        x = 96 + Math.random() * Math.max(10, W * .76 - 150); y = sz * .7 + Math.random() * Math.max(10, H - sz * 1.75);
+        if (game.it.every((t) => Math.hypot(t.x - x, t.y - y) > sz * 1.35)) break;
+      }
+      const T = MS_TIPOS[kind];
+      const t = { kind, T, x, y, ox: x, oy: y, dur: T.dur * (1 - .2 * msProg()), age: 0, st: 'on', clicks: 0, lastClick: 0 };
+      const el = document.createElement('div');
+      el.className = `lc-ms-it k-${kind}`; el.dataset.kind = kind;
+      el.style.left = `${x}px`; el.style.top = `${y}px`;
+      el.innerHTML = `<svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle class="trk" cx="50" cy="50" r="45"/><circle class="arc" cx="50" cy="50" r="45" pathLength="100"/></svg>
+        <span class="ic">${MS_ICO[kind]}</span><span class="tag">${MS_MOUSE(T.btn)}${T.dica}${T.btn === 'l2' ? ' <em>2×</em>' : ''}</span>`;
+      $q('#lc-ms-layer')?.appendChild(el); t.el = el; el._t = t;
+      replay(el, 'in');
+      game.it.push(t);
+      if (fresh) msNew(kind);
+    }
+    function msNew(kind) { // faixa "Nova ação!" na primeira vez de cada ação
+      game.seen[kind] = true;
+      const b = $q('#lc-ms-new'); if (!b) return;
+      b.innerHTML = `<small>Nova ação!</small>${MS_MOUSE(MS_TIPOS[kind].btn)}<span>${MS_TIPOS[kind].txt}</span>`;
+      b.hidden = false; replay(b, 'show');
+      clearTimeout(game.newT); game.newT = setTimeout(() => { b.hidden = true; }, 3200);
+      mjLog(`Nova ação: ${MS_TIPOS[kind].nome.toLowerCase()}!`, 'ok');
+    }
+    function mouseRun() {
+      cancelAnimationFrame(game.raf);
+      let last = performance.now();
+      $q('#lc-ms-world')?.classList.add('go');
+      const frame = (now) => {
+        if (!alive || !$q('#lc-ms')) return;
+        game.raf = requestAnimationFrame(frame);
+        const dt = Math.min(.05, (now - last) / 1000); last = now;
+        if (busy || game.paused || document.visibilityState !== 'visible') return;
+        const p = msProg(), slow = performance.now() < game.slowUntil ? .55 : 1;
+        game.nextAt -= dt;
+        const left = game.meta - game.score - game.it.filter((t) => t.st === 'on').length;
+        if (game.nextAt <= 0 && left > 0 && game.it.filter((t) => t.st === 'on').length < 1 + Math.round(2 * p)) {
+          msSpawn(); game.nextAt = (2.6 - 1 * p) * (.8 + Math.random() * .4) / slow;
+        }
+        for (const t of game.it) {
+          if (t.st !== 'on' || game.drag?.t === t) continue; // o documento sendo arrastado não perde tempo
+          t.age += dt * slow;
+          const f = Math.min(1, t.age / t.dur);
+          t.el.style.setProperty('--p', f.toFixed(3));
+          t.el.classList.toggle('late', f > .72);
+          if (f >= 1) msLost(t);
+        }
+        if (game.it.some((t) => t.st === 'out')) game.it = game.it.filter((t) => t.st !== 'out');
+      };
+      game.raf = requestAnimationFrame(frame);
+    }
+    function msBind() {
+      const term = $q('#lc-ms'), desk = $q('#lc-ms-desk'); if (!term || !desk) return;
+      term.addEventListener('contextmenu', (e) => e.preventDefault()); // o botão direito é do jogo
+      desk.addEventListener('pointerdown', (e) => {
+        if (game.paused || busy) return;
+        const op = e.target.closest('.lc-ms-menu [data-op]');
+        if (op) { e.preventDefault(); if (e.button === 0) msMenuPick(op.dataset.op); return; } // as opções do menu são com o botão esquerdo
+        if (game.menu && !e.target.closest('.lc-ms-menu')) msMenuClose(); // clicar fora fecha o menu (como no computador)
+        const el = e.target.closest('.lc-ms-it'), t = el?._t;
+        if (!t || t.st !== 'on') return; // clique no vazio não conta
+        e.preventDefault();
+        const btn = e.button === 2 ? 'r' : e.button === 0 ? 'l' : null; if (!btn) return;
+        if (t.kind === 'clique') return btn === 'l' ? msOk(t) : msWrong(t, 'Esse vírus pede o botão ESQUERDO');
+        if (t.kind === 'direito') return btn === 'r' ? msScan(t, e) : msWrong(t, 'O arquivo suspeito pede o botão DIREITO');
+        if (t.kind === 'duplo') {
+          if (btn !== 'l') return msWrong(t, 'O pacote pede dois cliques rápidos com o botão ESQUERDO');
+          const now = performance.now();
+          if (now - t.lastClick < 480) return msOk(t);
+          t.lastClick = now; replay(el, 'tap'); el.classList.add('one'); setTimeout(() => el.classList.remove('one'), 480);
+          return;
+        }
+        if (t.kind === 'arrastar') {
+          if (btn !== 'l') return msWrong(t, 'Para arrastar, segure o botão ESQUERDO');
+          const r = desk.getBoundingClientRect();
+          game.drag = { t, dx: e.clientX - r.left - t.x, dy: e.clientY - r.top - t.y, id: e.pointerId };
+          try { desk.setPointerCapture(e.pointerId); } catch {} el.classList.add('grab'); $q('#lc-ms-folder')?.classList.add('wait');
+        }
+      });
+      desk.addEventListener('pointermove', (e) => {
+        const d = game.drag; if (!d || e.pointerId !== d.id) return;
+        const r = desk.getBoundingClientRect();
+        d.t.x = Math.max(20, Math.min(r.width - 20, e.clientX - r.left - d.dx)); d.t.y = Math.max(20, Math.min(r.height - 20, e.clientY - r.top - d.dy));
+        d.t.el.style.left = `${d.t.x}px`; d.t.el.style.top = `${d.t.y}px`;
+        $q('#lc-ms-folder')?.classList.toggle('over', msOnFolder(d.t));
+      });
+      const drop = (e) => {
+        const d = game.drag; if (!d || (e.pointerId != null && e.pointerId !== d.id)) return;
+        game.drag = null; d.t.el.classList.remove('grab');
+        const f = $q('#lc-ms-folder'); f?.classList.remove('wait', 'over');
+        if (d.t.st !== 'on') return;
+        if (msOnFolder(d.t)) { replay(f, 'eat'); return msOk(d.t); }
+        d.t.x = d.t.ox; d.t.y = d.t.oy; d.t.el.classList.add('back'); d.t.el.style.left = `${d.t.x}px`; d.t.el.style.top = `${d.t.y}px`;
+        setTimeout(() => d.t.el.classList.remove('back'), 320); mjLog('Solte o documento em cima da Pasta HC.', 'warn');
+      };
+      desk.addEventListener('pointerup', drop); desk.addEventListener('pointercancel', drop);
+    }
+    function msOnFolder(t) {
+      const f = $q('#lc-ms-folder'), d = $q('#lc-ms-desk'); if (!f || !d) return false;
+      const fr = f.getBoundingClientRect(), dr = d.getBoundingClientRect();
+      const cx = dr.left + t.x, cy = dr.top + t.y;
+      return cx > fr.left - 20 && cx < fr.right + 20 && cy > fr.top - 20 && cy < fr.bottom + 20;
+    }
+    function msScan(t, e) { // botão direito: abre o menu de contexto; o aluno escolhe "Escanear com HC" (o anel para enquanto ele está aberto)
+      msMenuClose();
+      const { W, H } = msBox();
+      t.st = 'menu'; t.el.classList.add('menu');
+      const m = document.createElement('div'); m.className = 'lc-ms-menu'; m._t = t;
+      const x = Math.min(t.x + 12, W - 190), y = Math.min(t.y + 6, H - 130);
+      m.style.left = `${x}px`; m.style.top = `${y}px`;
+      m.innerHTML = '<button type="button" data-op="abrir"><i class="o"></i>Abrir</button><button type="button" data-op="scan" class="sc"><i></i>Escanear com HC</button><button type="button" data-op="excluir"><i class="x"></i>Excluir</button>';
+      $q('#lc-ms-layer')?.appendChild(m); game.menu = m;
+      mjLog('Menu aberto! Agora clique em “Escanear com HC”.', 'ok');
+    }
+    function msMenuClose() { const m = game.menu; if (!m) return; game.menu = null; m.remove(); if (m._t?.st === 'menu') { m._t.st = 'on'; m._t.el.classList.remove('menu'); } }
+    function msMenuPick(op) {
+      const m = game.menu, t = m?._t; if (!t) return;
+      if (op === 'scan') { m.querySelector('.sc')?.classList.add('go'); game.menu = null; t.el.classList.remove('menu'); setTimeout(() => { m.remove(); msOk(t); }, 220); return; }
+      msMenuClose(); msWrong(t, op === 'abrir' ? 'Não abra arquivos suspeitos! Clique com o botão DIREITO de novo e escolha “Escanear com HC”.' : 'Excluir não é a opção certa: clique com o botão DIREITO de novo e escolha “Escanear com HC”.');
+    }
+    function msOk(t) {
+      if (game.menu?._t === t) msMenuClose();
+      t.st = 'done'; hit(null); game.combo++; filaCombo();
+      t.el.classList.add('ok');
+      game.score++; goal(game.score, game.meta);
+      const c = $q('#lc-ms-cnt b'); if (c) { c.textContent = game.score; replay($q('#lc-ms-cnt'), 'pop'); }
+      game.ph = Math.max(game.ph, Math.ceil(game.need * game.score / game.meta) - 1); score(true);
+      const msg = { clique: 'Vírus eliminado!', direito: 'Arquivo escaneado: está limpo!', duplo: 'Pacote aberto!', arrastar: 'Documento guardado na Pasta HC!' }[t.kind];
+      if (game.combo >= 3 && game.combo % 5 === 0) mjLog(`Combo ×${game.combo}! Mouse afiado.`, 'ok'); else mjLog(msg, 'ok');
+      setTimeout(() => { t.el.remove(); t.st = 'out'; }, 520);
+      if (game.score >= game.meta) {
+        game.paused = true; cancelAnimationFrame(game.raf);
+        game.it.forEach((x) => { if (x.st === 'on') { x.st = 'out'; x.el.classList.add('fade'); setTimeout(() => x.el.remove(), 400); } });
+        $q('#lc-ms-world')?.classList.add('done');
+        mjLog('Área de trabalho segura! Missão cumprida.', 'ok');
+        setTimeout(complete, 1300);
+      }
+    }
+    function msWrong(t, txt) {
+      miss(null); game.combo = 0; filaCombo(); replay(t.el, 'shake');
+      mjLog(txt, 'warn');
+    }
+    function msLost(t) { // o anel acabou: o item infecta o computador
+      t.st = 'lost'; t.el.classList.add('lost');
+      if (game.drag?.t === t) { game.drag = null; $q('#lc-ms-folder')?.classList.remove('wait', 'over'); }
+      setTimeout(() => { t.el.remove(); t.st = 'out'; }, 600);
+      replay($q('#lc-ms'), 'hurt'); replay($q('#lc-ms-world'), 'glitch');
+      miss(null); game.combo = 0; filaCombo();
+      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.slowUntil = performance.now() + 2500;
+      if (game.lives <= 0) return msDown();
+      mjLog(`O tempo acabou (${t.T.nome.toLowerCase()})! · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
+    }
+    function msDown() {
+      cancelAnimationFrame(game.raf); $q('#lc-ms-world')?.classList.remove('go');
+      mjDown({
+        term: $q('#lc-ms'), titulo: 'O computador travou!', texto: `Você resolveu <b>${game.score} de ${game.meta}</b> itens.`,
+        onResume: () => { game.it.forEach((t) => { if (t.st === 'on') t.age = 0; }); game.slowUntil = performance.now() + 2500; mouseRun(); },
+        onRestart: (term) => {
+          game.score = 0; game.combo = 0; filaCombo(); game.ph = 0; game.pe = 0;
+          const c = $q('#lc-ms-cnt b'); if (c) c.textContent = 0;
+          msReset(); $q('#lc-ms-world')?.classList.remove('done');
+          term.insertAdjacentHTML('beforeend', startOverlay('Missão Mouse')); bindStart();
+          mjLog('Faça o que cada item pede antes que o anel de tempo acabe.');
+        },
+      });
+    }
+
     /* ---------- início dos minijogos de tempo (botão + 3, 2, 1) ---------- */
     /* tela de início: cada minijogo com a sua cor, ícone, missão, meta e vidas */
     const MJ_START = {
@@ -3734,6 +4397,12 @@
         ico: '<path d="M12 2.5c3.9 0 6.5 3 6.5 6.6 0 4.2-3.7 7.7-6.5 8.4-2.8-.7-6.5-4.2-6.5-8.4 0-3.6 2.6-6.6 6.5-6.6Z"/><path d="M11 17.6 10 19.5h4l-1-1.9M12 19.5v2.5"/><path d="M9.5 7.5c.4-1.2 1.3-2 2.5-2.3"/>' },
       'Duelo no Penhasco': { c: '45, 212, 191', c2: '99, 102, 241', un: 'monstros', txt: 'Digite a palavra de cima para empurrar os monstros para fora da plataforma.',
         ico: '<path d="M6 20c0-5 2.7-9 6-9s6 4 6 9"/><path d="M8.5 12 6.5 7.5M15.5 12l2-4.5"/><circle cx="12" cy="15.5" r="1.6"/><path d="M3 20h18"/>' },
+      'Missão Mouse': { c: '96, 165, 250', c2: '52, 211, 153', un: 'itens', txt: 'Use o mouse: clique, botão direito, clique duplo e arrastar, cada item do jeito que ele pede.',
+        ico: '<rect x="6.5" y="3" width="11" height="18" rx="5.5"/><path d="M12 3v6M6.5 9h11"/>' },
+      'Saltos na Rede': { c: '56, 189, 248', c2: '236, 72, 153', un: 'obstáculos', txt: 'Digite a palavra de cada obstáculo para o robô pular por cima dele.',
+        ico: '<path d="M3 20h5l3-6 3 6h7"/><circle cx="12" cy="5.5" r="2"/><path d="M8 11.5 12 8l3 2.5 3-1"/>' },
+      'Resgate das Teclinhas': { c: '163, 230, 53', c2: '168, 85, 247', un: 'teclinhas', txt: 'Digite a letra das teclinhas antes que a nave-vírus as puxe para cima.',
+        ico: '<path d="M4 9.5c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3Z"/><path d="M8.5 7c.6-1.8 1.9-3 3.5-3s2.9 1.2 3.5 3"/><path d="m9 12.5-2.5 6M15 12.5l2.5 6"/><rect x="9.5" y="16" width="5" height="5" rx="1.2"/>' },
       'Patrulha das Palavras': { c: '34, 211, 238', c2: '99, 102, 241', un: 'asteroides', txt: 'Destrua os asteroides antes que eles batam na nave.',
         ico: '<path d="M12 2.5c3 2.6 4.3 6.3 4.3 10.2v3.8H7.7v-3.8c0-3.9 1.3-7.6 4.3-10.2Z"/><circle cx="12" cy="9.5" r="1.8"/><path d="M7.7 12.5 4.5 16v3l3.2-1.5M16.3 12.5l3.2 3.5v3l-3.2-1.5M10 19.5l2 2.5 2-2.5"/>' },
     };
@@ -3783,6 +4452,8 @@
       if (lv.tipo === 'gp') return gpKey(k);
       if (lv.tipo === 'baloes') return blKey(k);
       if (lv.tipo === 'duelo') return duKey(k);
+      if (lv.tipo === 'resgate') return rsKey(k);
+      if (lv.tipo === 'saltos') return srKey(k);
       if (lv.tipo === 'fila') return filaKey(k);
       if (lv.tipo === 'hacker') { if (game.paused) return; return hackerKey(k); }
     }
@@ -3795,7 +4466,7 @@
       if (k === 'escape' && kbOpen) { e.preventDefault(); return kbShow(false); }
       const lv = L.niveis[st.lvl];
       if (k === 'backspace' && lv?.tipo === 'typing' && !game.intro && !busy) { e.preventDefault(); return typingBack(); }
-      if (k === 'enter' && (lv?.tipo === 'hacker' || lv?.tipo === 'fila' || lv?.tipo === 'corrida' || lv?.tipo === 'estrelas' || lv?.tipo === 'nave' || lv?.tipo === 'gp' || lv?.tipo === 'baloes' || lv?.tipo === 'duelo') && game.paused) { e.preventDefault(); return countdown(); }
+      if (k === 'enter' && (lv?.tipo === 'hacker' || lv?.tipo === 'fila' || lv?.tipo === 'corrida' || lv?.tipo === 'estrelas' || lv?.tipo === 'nave' || lv?.tipo === 'gp' || lv?.tipo === 'baloes' || lv?.tipo === 'duelo' || lv?.tipo === 'resgate' || lv?.tipo === 'saltos' || lv?.tipo === 'mouse') && game.paused) { e.preventDefault(); return countdown(); }
       if (lv?.tipo === 'gp') { // corrida: qualquer letra, número ou sinal conta (Backspace não volta)
         if (k === 'backspace' || k.length === 1) { e.preventDefault(); if (k.length === 1) press(k); }
         return;
@@ -3805,6 +4476,7 @@
         if (k === ' ') { e.preventDefault(); return; }
         if (/^[a-zç]$/.test(k)) { e.preventDefault(); return press(k); }
       }
+      if (lv?.tipo === 'resgate' && k === ' ' && !game.intro) { e.preventDefault(); return press(k); } // Espaço: pulso do portal
       if (game.intro === 'found' && k === 'enter') { e.preventDefault(); kb?.flash('enter', true); game.introDone = true; return smoothResize(() => typingInit(lv)); }
       if (game.intro && k.length === 1) { e.preventDefault(); return press(k); }
       if (L.teclas.includes(k)) { e.preventDefault(); return press(k); }

@@ -466,3 +466,47 @@
 .av-pv-cf .rs b { display: grid; place-items: center; width: 17px; height: 24px; border-radius: 3px; font: 700 12px/1 ui-monospace, Menlo, monospace; color: #94a3b8; background: linear-gradient(#cbd5e1, #f8fafc 35% 65%, #cbd5e1); }
 .av-pv-cf .rs b.ok { color: #713f12; background: linear-gradient(#a16207, #fde68a 35% 65%, #a16207); } .av-pv-cf .rs b.cur { color: #0f172a; box-shadow: 0 0 0 2px #38bdf8; }
 .av-pv-cf .hd { width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle, #e2e8f0 25%, #64748b 27%); }
+
+/* MJ-09 · Resgate das Teclinhas */
+.av-pv-rs { position: relative; height: 130px; border-radius: 14px; overflow: hidden; background: linear-gradient(180deg, #1e1b4b, #6d28d9 45%, #f472b6 75%, #fb923c); }
+.av-pv-rs .gr { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; background: linear-gradient(#233d2e, #14251c); box-shadow: inset 0 2px 0 rgba(163, 230, 53, .5); }
+.av-pv-rs .ship { position: absolute; left: 10%; top: 12px; width: 52px; height: 18px; border-radius: 50%; background: linear-gradient(#7c3aed, #3b0764); box-shadow: 0 -8px 0 -2px #84cc16; animation: avRsShip 2s ease-in-out infinite alternate; }
+.av-pv-rs .beam { position: absolute; left: 8px; top: 14px; width: 36px; height: 86px; background: linear-gradient(rgba(217, 249, 157, .7), rgba(163, 230, 53, .1)); clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%); }
+.av-pv-rs b { position: absolute; bottom: 24px; display: grid; place-items: center; width: 24px; height: 24px; translate: -50% 0; border-radius: 6px; font: 800 12px/1 ui-monospace, Menlo, monospace; color: #1e1b4b; text-transform: uppercase;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--kc) 30%, #fff) 0 70%, color-mix(in srgb, var(--kc) 70%, #000) 70%); animation: avRsWalk 2.4s linear infinite; }
+.av-pv-rs b.up { animation: avRsUp 2.4s ease-in infinite; box-shadow: 0 0 0 2px #a3e635, 0 0 10px #a3e635; }
+.av-pv-rs .portal { position: absolute; right: 8px; bottom: 26px; width: 22px; height: 36px; border-radius: 12px 12px 3px 3px; border: 2px solid #a3e635; box-shadow: 0 0 12px rgba(163, 230, 53, .6); }
+@keyframes avRsShip { to { transform: translateY(4px) rotate(3deg); } }
+@keyframes avRsWalk { to { transform: translateX(-26px); } }
+@keyframes avRsUp { 0% { transform: none; } 70% { transform: translate(-6px, -66px) rotate(10deg); } 85% { transform: translate(-6px, -66px) rotate(-10deg); } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .av-pv-rs .ship, .av-pv-rs b { animation: none; } }
+
+/* MJ-10 · Saltos na Rede */
+.av-pv-sr { position: relative; height: 130px; border-radius: 14px; overflow: hidden; background: linear-gradient(180deg, #050816, #0f1b4d 50%, #6b2172); }
+.av-pv-sr .city { position: absolute; left: 0; right: 0; bottom: 30px; height: 46px; background: linear-gradient(90deg, transparent 6px, #1c1650 6px 26px, transparent 26px 40px, #1c1650 40px 52px, transparent 52px 70px, #1c1650 70px 96px, transparent 96px) 0 100% / 120px 100% repeat-x; animation: avSrCity 3s linear infinite; }
+.av-pv-sr .gr { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; background: linear-gradient(#16204f, #0b1030); box-shadow: inset 0 2px 0 #38bdf8; }
+.av-pv-sr .hero { position: absolute; left: 22%; bottom: 30px; width: 18px; height: 22px; border-radius: 6px 6px 4px 4px; background: linear-gradient(#dbeafe, #60a5fa); animation: avSrJump 2.4s ease-in-out infinite; }
+.av-pv-sr .fw { position: absolute; bottom: 30px; width: 34px; height: 14px; background: linear-gradient(#fecdd3, #f43f5e); clip-path: polygon(0 100%, 12% 0, 25% 100%, 38% 0, 50% 100%, 62% 0, 75% 100%, 88% 0, 100% 100%); filter: drop-shadow(0 0 4px #f43f5e); animation: avSrFw 2.4s linear infinite; }
+.av-pv-sr p { position: absolute; top: 34px; margin-left: 17px !important; display: flex; gap: 2px; margin: 0; translate: -50% 0; animation: avSrFw 2.4s linear infinite; }
+.av-pv-sr p i { display: grid; place-items: center; width: 15px; height: 18px; border-radius: 4px; font: 700 11px/1 ui-monospace, Menlo, monospace; font-style: normal; color: #e2e8f0; background: rgba(15, 23, 42, .7); }
+.av-pv-sr p i.ok { opacity: .5; } .av-pv-sr p i.at { color: #0b1030; background: #fff; box-shadow: 0 0 0 2px #38bdf8; }
+@keyframes avSrCity { to { background-position: -120px 100%; } }
+@keyframes avSrFw { from { left: 105%; } to { left: -20%; } }
+@keyframes avSrJump { 0%, 55%, 80%, 100% { transform: none; } 66% { transform: translateY(-34px) rotate(-10deg); } }
+@media (prefers-reduced-motion: reduce) { .av-pv-sr .city, .av-pv-sr .hero, .av-pv-sr .fw, .av-pv-sr p { animation: none; } .av-pv-sr .fw, .av-pv-sr p { left: 60%; } }
+
+/* MJ-11 · Missão Mouse */
+.av-pv-ms { position: relative; height: 130px; border-radius: 14px; overflow: hidden; background: radial-gradient(70% 90% at 15% 10%, rgba(52, 211, 153, .35), transparent 60%), radial-gradient(60% 80% at 90% 90%, rgba(168, 85, 247, .45), transparent 60%), linear-gradient(160deg, #0f2a4a, #1b1550 60%, #2b1142); }
+.av-pv-ms .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 16px; background: rgba(8, 12, 30, .85); }
+.av-pv-ms .it { position: absolute; display: grid; justify-items: center; gap: 3px; translate: -50% -50%; }
+.av-pv-ms .it i { width: 26px; height: 26px; border-radius: 50%; box-shadow: 0 0 0 3px rgba(255, 255, 255, .15); }
+.av-pv-ms .it.v i { background: radial-gradient(circle at 36% 30%, #d9f99d, #84cc16 55%, #3f6212); box-shadow: 0 0 0 3px #60a5fa; animation: avMsPulse 1.2s ease-in-out infinite; }
+.av-pv-ms .it.f i { border-radius: 4px; width: 20px; background: linear-gradient(#fbcfe8, #f472b6); box-shadow: 0 0 0 3px rgba(244, 114, 182, .5); }
+.av-pv-ms .it.d i { border-radius: 3px; width: 18px; background: linear-gradient(#f8fafc, #cbd5e1); box-shadow: 0 0 0 3px rgba(52, 211, 153, .5); animation: avMsDrag 2.4s ease-in-out infinite; }
+.av-pv-ms .it small { padding: 2px 6px; border-radius: 99px; font: 700 8px/1 Inter, system-ui, sans-serif; color: #fff; background: rgba(8, 12, 30, .75); white-space: nowrap; }
+.av-pv-ms .fd { position: absolute; right: 12px; bottom: 24px; width: 30px; height: 22px; border-radius: 3px 5px 5px 5px; background: linear-gradient(#fde68a, #f59e0b); }
+.av-pv-ms .cur { position: absolute; left: 24%; top: 38%; width: 14px; height: 18px; background: #fff; clip-path: polygon(0 0, 100% 70%, 55% 68%, 75% 100%, 60% 100%, 42% 72%, 0 100%); filter: drop-shadow(0 1px 1px #000); animation: avMsCur 1.2s ease-in-out infinite; }
+@keyframes avMsPulse { 50% { transform: scale(.85); } }
+@keyframes avMsCur { 50% { transform: translate(2px, 2px) scale(.9); } }
+@keyframes avMsDrag { 0%, 15% { transform: none; } 70%, 100% { transform: translate(110px, 8px); opacity: .2; } }
+@media (prefers-reduced-motion: reduce) { .av-pv-ms .it i, .av-pv-ms .cur { animation: none; } }

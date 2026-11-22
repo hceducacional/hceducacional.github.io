@@ -2754,6 +2754,377 @@ body.lc-bg-on .lc-shell { border-color: rgba(255, 255, 255, .12); box-shadow: 0 
 @media (prefers-reduced-motion: reduce) { .lc-du-sky .stars, .lc-du-sky .aur, .lc-du-sky .isl, .lc-du-hero .rb, .lc-du-mon .mb, .lc-du-mon .feet i { animation: none !important; } }
 
 /* =========================================================
+   MJ-11 · Missão Mouse (tipo 'mouse')
+   A área de trabalho do "HC OS": papel de parede, barra de tarefas, Pasta HC e itens com anel
+   de tempo (--p de 0 a 1) e uma etiqueta com o mouse mostrando qual botão usar.
+   ========================================================= */
+.lc-shell .lc-term.lc-ms { height: clamp(440px, calc(100vh - 360px), 540px); border-radius: 22px; background: #0b1226;
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, .3), 0 20px 44px -26px rgba(0, 0, 0, .9); user-select: none; -webkit-user-select: none; }
+.lc-ms::after { background: none; }
+.lc-ms.hurt { animation: lcHkHurt .45s ease; }
+.lc-ms-title { color: #bfdbfe; }
+.lc-ms-title i { background: #60a5fa; box-shadow: 0 0 10px #60a5fa; }
+.lc-ms .lc-hk-bar .lc-fl-combo { margin-left: auto; }
+.lc-ms-cnt { display: inline-flex; align-items: center; gap: 5px; min-width: 4.8em; color: #dbeafe; background: rgba(96, 165, 250, .12); box-shadow: inset 0 0 0 1px rgba(96, 165, 250, .3); }
+.lc-ms-cnt b { font: 800 14px/1 ui-monospace, Menlo, monospace; } .lc-ms-cnt small { opacity: .55; font-size: 11px; }
+.lc-ms-cnt .mini { width: 10px; height: 15px; border-radius: 5px; border: 2px solid #93c5fd; box-shadow: inset 0 5px 0 -3px #93c5fd; }
+.lc-ms-cnt.pop { animation: lcNvPts .4s cubic-bezier(.18, .89, .32, 1.28); }
+.lc-ms-world { position: absolute; left: 0; right: 0; top: 50px; bottom: 44px; overflow: hidden; z-index: 0; display: flex; flex-direction: column; }
+.lc-ms-world.glitch { animation: lcMsGlitch .5s steps(4); }
+@keyframes lcMsGlitch { 25% { filter: hue-rotate(90deg) saturate(2); transform: translateX(-4px); } 50% { filter: invert(.15); transform: translateX(3px); } 75% { filter: hue-rotate(-60deg); } }
+
+/* área de trabalho */
+.lc-ms-desk { position: relative; flex: 1; overflow: hidden; cursor: default; touch-action: none; }
+.lc-ms-wall { position: absolute; inset: 0; background: radial-gradient(70% 90% at 15% 10%, rgba(52, 211, 153, .35), transparent 60%), radial-gradient(60% 80% at 90% 90%, rgba(168, 85, 247, .45), transparent 60%),
+  radial-gradient(50% 60% at 70% 20%, rgba(56, 189, 248, .35), transparent 70%), linear-gradient(160deg, #0f2a4a, #1b1550 60%, #2b1142); }
+.lc-ms-wall::after { content: ""; position: absolute; inset: 0; opacity: .12; background: linear-gradient(rgba(255, 255, 255, .5) 1px, transparent 1px) 0 0 / 100% 32px, linear-gradient(90deg, rgba(255, 255, 255, .5) 1px, transparent 1px) 0 0 / 32px 100%; }
+.lc-ms-wall .logo { position: absolute; left: 50%; top: 50%; translate: -50% -50%; font: 900 110px/1 Inter, system-ui, sans-serif; font-style: normal; letter-spacing: -.05em; color: rgba(255, 255, 255, .05); }
+
+/* Pasta HC (destino do arrastar) */
+.lc-ms-folder { position: absolute; right: 22px; bottom: 18px; z-index: 1; display: grid; justify-items: center; gap: 6px; width: 96px; transition: transform .25s cubic-bezier(.18, .89, .32, 1.28); }
+.lc-ms-folder .fd { position: relative; display: grid; place-items: center; width: 78px; height: 60px; border-radius: 6px 10px 10px 10px; background: linear-gradient(180deg, #fde68a, #f59e0b); box-shadow: inset 0 -5px 0 rgba(0, 0, 0, .12), 0 10px 20px -8px rgba(0, 0, 0, .6); }
+.lc-ms-folder .tab { position: absolute; left: 0; top: -9px; width: 34px; height: 12px; border-radius: 5px 8px 0 0; background: #fbbf24; }
+.lc-ms-folder b { font: 900 17px/1 Inter, system-ui, sans-serif; color: #78350f; }
+.lc-ms-folder small { padding: 2px 8px; border-radius: 6px; font: 700 12px/1.3 Inter, system-ui, sans-serif; color: #fff; background: rgba(0, 0, 0, .35); }
+.lc-ms-folder.wait .fd { box-shadow: 0 0 0 3px rgba(253, 230, 138, .6), 0 0 24px rgba(251, 191, 36, .6); animation: lcMsWait .6s ease-in-out infinite alternate; }
+@keyframes lcMsWait { to { transform: translateY(-4px); } }
+.lc-ms-folder.over { transform: scale(1.15); } .lc-ms-folder.over .fd { box-shadow: 0 0 0 4px #fff, 0 0 30px #fbbf24; }
+.lc-ms-folder.eat .fd { animation: lcRsGate .35s ease; }
+
+/* itens: origem no centro */
+.lc-ms-layer { position: absolute; inset: 0; z-index: 2; }
+.lc-ms-it { --p: 0; position: absolute; width: 86px; height: 86px; translate: -50% -50%; display: grid; place-items: center; cursor: pointer; }
+.lc-ms-it.k-arrastar { cursor: grab; } .lc-ms-it.grab { cursor: grabbing; z-index: 5; scale: 1.08; }
+.lc-ms-it .ring { position: absolute; inset: 0; rotate: -90deg; pointer-events: none; }
+.lc-ms-it .ring circle { fill: none; stroke-width: 6; }
+.lc-ms-it .ring .trk { stroke: rgba(255, 255, 255, .14); fill: rgba(8, 12, 30, .35); }
+.lc-ms-it .ring .arc { stroke: #60a5fa; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: calc(var(--p) * 100); transition: stroke .2s; filter: drop-shadow(0 0 4px currentColor); }
+.lc-ms-it.late .ring .arc { stroke: #f43f5e; } .lc-ms-it.late .ic { animation: lcMsLate .3s ease-in-out infinite alternate; }
+@keyframes lcMsLate { to { transform: scale(1.07); } }
+.lc-ms-it .ic { position: relative; width: 54px; height: 54px; display: grid; place-items: center; pointer-events: none; }
+.lc-ms-it .tag { position: absolute; top: calc(100% + 2px); left: 50%; translate: -50% 0; display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px 4px 6px; border-radius: 999px; white-space: nowrap;
+  font: 700 12px/1 Inter, system-ui, sans-serif; color: #fff; background: rgba(8, 12, 30, .78); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16); pointer-events: none; }
+.lc-ms-it .tag em { font-style: normal; color: #fde047; }
+.ms-mo { width: 16px; height: 16px; flex: none; fill: none; stroke: #fff; stroke-width: 1.6; }
+.ms-mo .bl, .ms-mo .br { fill: transparent; stroke: none; } .ms-mo .on { fill: #60a5fa; }
+.lc-ms-it.k-direito .ms-mo .on { fill: #f472b6; } .lc-ms-it.k-duplo .ms-mo .on { fill: #fbbf24; } .lc-ms-it.k-arrastar .ms-mo .on { fill: #34d399; }
+.lc-ms-it.k-direito .ring .arc { stroke: #f472b6; } .lc-ms-it.k-duplo .ring .arc { stroke: #fbbf24; } .lc-ms-it.k-arrastar .ring .arc { stroke: #34d399; }
+.lc-ms-it.in { animation: lcMsIn .35s cubic-bezier(.18, .89, .32, 1.28); }
+@keyframes lcMsIn { from { scale: .3; opacity: 0; } }
+.lc-ms-it.shake { animation: lcNvShake .3s ease; } .lc-ms-it.shake .ring .trk { fill: rgba(244, 63, 94, .35); }
+.lc-ms-it.tap .ic { animation: lcMsTap .2s ease; } @keyframes lcMsTap { 50% { transform: scale(.88); } }
+.lc-ms-it.one .tag em { color: #fff; background: #f59e0b; border-radius: 4px; padding: 0 3px; }
+.lc-ms-it.back { transition: left .3s ease, top .3s ease; }
+.lc-ms-it.ok { pointer-events: none; animation: lcMsOk .5s ease forwards; } .lc-ms-it.ok .tag, .lc-ms-it.ok .ring { opacity: 0; transition: opacity .15s; }
+@keyframes lcMsOk { 30% { scale: 1.25; filter: brightness(1.6) drop-shadow(0 0 14px #fff); } to { scale: .2; opacity: 0; } }
+.lc-ms-it.k-arrastar.ok { animation: lcMsIn .4s ease reverse forwards; }
+.lc-ms-it.lost { pointer-events: none; animation: lcMsLost .6s ease forwards; }
+@keyframes lcMsLost { 30% { scale: 1.35; filter: hue-rotate(140deg) brightness(1.4) drop-shadow(0 0 16px #f43f5e); } to { scale: 1.6; opacity: 0; } }
+.lc-ms-it.fade { animation: lcMsIn .35s ease reverse forwards; }
+/* desenhos dos itens */
+.lc-ms-it .vir { position: relative; width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle at 36% 30%, #d9f99d, #84cc16 50%, #3f6212); box-shadow: 0 0 14px rgba(132, 204, 22, .55); animation: lcDuWob .45s ease-in-out infinite alternate; }
+.lc-ms-it .vir .sp { position: absolute; inset: -8px; border-radius: 50%; background: radial-gradient(circle, transparent 56%, #bef264 58% 70%, transparent 72%); -webkit-mask: repeating-conic-gradient(#000 0 12deg, transparent 12deg 45deg); mask: repeating-conic-gradient(#000 0 12deg, transparent 12deg 45deg); }
+.lc-ms-it .vir .eye { position: absolute; left: 12px; top: 9px; width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+.lc-ms-it .vir .eye b { position: absolute; left: 6px; top: 6px; width: 9px; height: 9px; border-radius: 50%; background: #7f1d1d; }
+.lc-ms-it .vir .mouth { position: absolute; left: 14px; bottom: 7px; width: 16px; height: 5px; border-radius: 0 0 6px 6px; background: #1a2e05; }
+.lc-ms-it .fil { position: relative; display: grid; place-items: center; width: 40px; height: 50px; border-radius: 5px; background: linear-gradient(180deg, #fbcfe8, #f472b6); clip-path: polygon(0 0, 70% 0, 100% 22%, 100% 100%, 0 100%); box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .12); }
+.lc-ms-it .fil .fold { position: absolute; right: 0; top: 0; width: 30%; height: 22%; background: #9d174d; opacity: .45; }
+.lc-ms-it .fil b { font: 900 24px/1 Inter, system-ui, sans-serif; color: #831843; }
+.lc-ms-it .box { position: relative; width: 46px; height: 40px; margin-top: 6px; border-radius: 6px; background: linear-gradient(180deg, #fde68a, #f59e0b); box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .14), 0 0 16px rgba(251, 191, 36, .5); }
+.lc-ms-it .box .lid { position: absolute; left: -4px; right: -4px; top: -8px; height: 12px; border-radius: 4px; background: linear-gradient(180deg, #fef3c7, #fbbf24); }
+.lc-ms-it .box .rib { position: absolute; left: 50%; top: -8px; bottom: 0; width: 8px; margin-left: -4px; background: #dc2626; }
+.lc-ms-it .box .rib::before { content: ""; position: absolute; left: -9px; top: -10px; width: 26px; height: 12px; border-radius: 50%; border: 4px solid #dc2626; border-bottom: 0; box-sizing: border-box; }
+.lc-ms-it.ok .box .lid { transform: translateY(-14px) rotate(-18deg); transition: transform .2s; }
+.lc-ms-it .doc { display: flex; flex-direction: column; gap: 5px; justify-content: center; width: 38px; height: 48px; padding: 0 7px; border-radius: 5px; background: linear-gradient(180deg, #f8fafc, #cbd5e1); box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .1), 0 6px 12px -6px rgba(0, 0, 0, .6); }
+.lc-ms-it .doc i { height: 4px; border-radius: 2px; background: #34d399; } .lc-ms-it .doc i:nth-child(2) { width: 70%; background: #93c5fd; } .lc-ms-it .doc i:nth-child(3) { width: 85%; background: #93c5fd; }
+/* menu do botão direito */
+.lc-ms-menu { position: absolute; z-index: 6; display: grid; min-width: 170px; padding: 5px; border-radius: 10px; background: rgba(15, 23, 42, .96); box-shadow: 0 0 0 1px rgba(255, 255, 255, .14), 0 14px 30px -10px rgba(0, 0, 0, .8);
+  font: 600 13px/1 Inter, system-ui, sans-serif; color: #cbd5e1; animation: lcMsIn .18s ease; transform-origin: 0 0; }
+.lc-ms-menu button { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.lc-ms-menu button:hover { color: #fff; background: rgba(255, 255, 255, .1); }
+.lc-ms-menu button i { flex: none; width: 12px; height: 12px; border-radius: 3px; background: #34d399; }
+.lc-ms-menu button i.o { background: #94a3b8; } .lc-ms-menu button i.x { background: #f43f5e; }
+.lc-ms-menu .sc { color: #fff; } .lc-ms-menu .sc:hover, .lc-ms-menu .sc.go { background: #2563eb; }
+.lc-ms-menu .sc.go { animation: lcMsTap .2s ease; }
+.lc-ms-it.menu .ring .arc { stroke: #94a3b8; } .lc-ms-it.menu .tag { opacity: 0; }
+/* faixa "Nova ação!" */
+.lc-ms-new { position: absolute; left: 50%; top: 12px; z-index: 7; translate: -50% 0; display: flex; align-items: center; gap: 9px; padding: 8px 16px 8px 10px; border-radius: 14px; white-space: nowrap;
+  color: #fff; background: rgba(15, 23, 42, .92); box-shadow: 0 0 0 1px rgba(96, 165, 250, .5), 0 12px 30px -12px rgba(0, 0, 0, .8); font: 500 14px/1.2 Inter, system-ui, sans-serif; pointer-events: none; }
+.lc-ms-new small { padding: 4px 8px; border-radius: 7px; font: 800 11px/1 Inter, system-ui, sans-serif; letter-spacing: .05em; text-transform: uppercase; color: #0b1226; background: #fde047; }
+.lc-ms-new .ms-mo { width: 22px; height: 22px; }
+.lc-ms-new b { color: #93c5fd; }
+.lc-ms-new.show { animation: lcMsNew .45s cubic-bezier(.18, .89, .32, 1.28); }
+@keyframes lcMsNew { from { opacity: 0; transform: translateY(-14px) scale(.9); } }
+/* barra de tarefas */
+.lc-ms-bar { flex: none; height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 12px; background: rgba(8, 12, 30, .82); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1); backdrop-filter: blur(8px); }
+.lc-ms-bar .st { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, #34d399, #3b82f6); }
+.lc-ms-bar .st b { font: 900 11px/1 Inter, system-ui, sans-serif; color: #fff; }
+.lc-ms-bar .app { width: 24px; height: 24px; border-radius: 7px; opacity: .85; }
+.lc-ms-bar .a1 { background: linear-gradient(135deg, #fbbf24, #f59e0b); } .lc-ms-bar .a2 { background: linear-gradient(135deg, #a78bfa, #7c3aed); } .lc-ms-bar .a3 { background: linear-gradient(135deg, #f472b6, #db2777); }
+.lc-ms-bar .clk { margin-left: auto; font: 600 13px/1 ui-monospace, Menlo, monospace; color: #cbd5e1; }
+.lc-ms-world.done .lc-ms-wall { animation: lcMsWin 1s ease; }
+@keyframes lcMsWin { 40% { filter: brightness(1.4) saturate(1.3); } }
+@media (prefers-reduced-motion: reduce) { .lc-ms-it .vir, .lc-ms-folder.wait .fd, .lc-ms-it.late .ic { animation: none !important; } }
+
+/* =========================================================
+   MJ-10 · Saltos na Rede (tipo 'saltos')
+   Corrida automática pela cidade de dados à noite. O chão e as duas fileiras de prédios andam em
+   velocidades diferentes (--cam1/--cam2). Origem do robô, dos obstáculos e do portal = o chão.
+   ========================================================= */
+.lc-shell .lc-term.lc-sr { height: clamp(420px, calc(100vh - 370px), 520px); border-radius: 22px; background: #0a0f2c;
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, .28), 0 20px 44px -26px rgba(0, 0, 0, .9); }
+.lc-sr::after { background: none; }
+.lc-sr.hurt { animation: lcHkHurt .45s ease; }
+.lc-sr-title { color: #bae6fd; }
+.lc-sr-title i { background: #38bdf8; box-shadow: 0 0 10px #38bdf8; }
+.lc-sr .lc-hk-bar .lc-fl-combo { margin-left: auto; }
+.lc-sr-cnt { display: inline-flex; align-items: center; gap: 5px; min-width: 4.8em; color: #e0f2fe; background: rgba(56, 189, 248, .12); box-shadow: inset 0 0 0 1px rgba(56, 189, 248, .3); }
+.lc-sr-cnt b { font: 800 14px/1 ui-monospace, Menlo, monospace; } .lc-sr-cnt small { opacity: .55; font-size: 11px; }
+.lc-sr-cnt .mini { width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 12px solid #f472b6; filter: drop-shadow(0 0 4px #f472b6); }
+.lc-sr-cnt.pop { animation: lcNvPts .4s cubic-bezier(.18, .89, .32, 1.28); }
+.lc-sr-world { --cam1: 0px; --cam2: 0px; position: absolute; left: 0; right: 0; top: 50px; bottom: 44px; overflow: hidden; z-index: 0; }
+
+/* céu e cidade */
+.lc-sr-sky { position: absolute; inset: 0; background: linear-gradient(180deg, #050816 0%, #0f1b4d 45%, #3b1a6e 72%, #6b2172 90%); }
+.lc-sr-sky .stars { position: absolute; inset: 0 0 45% 0; opacity: .75;
+  background: radial-gradient(1.2px 1.2px at 8% 20%, #fff, transparent), radial-gradient(1px 1px at 22% 8%, #fff, transparent), radial-gradient(1.4px 1.4px at 41% 30%, #fff, transparent),
+    radial-gradient(1px 1px at 58% 14%, #fff, transparent), radial-gradient(1.3px 1.3px at 73% 34%, #fff, transparent), radial-gradient(1px 1px at 88% 12%, #fff, transparent), radial-gradient(1px 1px at 33% 44%, #fff, transparent); }
+.lc-sr-sky .moon { position: absolute; right: 12%; top: 10%; width: 54px; height: 54px; border-radius: 50%; background: radial-gradient(circle at 36% 34%, #fdf4ff, #f0abfc 55%, #c026d3); box-shadow: 0 0 40px rgba(240, 171, 252, .55); }
+.lc-sr-sky .city { position: absolute; left: 0; right: 0; bottom: 24%; height: 34%; opacity: .95; }
+.lc-sr-sky .city { background-repeat: repeat-x;
+  background-image: linear-gradient(90deg, transparent 10px, #1c1650 10px 44px, transparent 44px), linear-gradient(90deg, transparent 52px, #1c1650 52px 74px, transparent 74px), linear-gradient(90deg, transparent 86px, #1c1650 86px 132px, transparent 132px), linear-gradient(90deg, transparent 146px, #1c1650 146px 174px, transparent 174px), linear-gradient(90deg, transparent 186px, #1c1650 186px 226px, transparent 226px), linear-gradient(90deg, transparent 238px, #1c1650 238px 256px, transparent 256px);
+  background-size: 260px 70%, 260px 45%, 260px 92%, 260px 60%, 260px 78%, 260px 40%;
+  background-position: var(--cam2) 100%, var(--cam2) 100%, var(--cam2) 100%, var(--cam2) 100%, var(--cam2) 100%, var(--cam2) 100%; }
+.lc-sr-sky .city::after { content: ""; position: absolute; inset: 0; background-repeat: repeat-x; background-size: 260px 100%; background-position: var(--cam2) 0; opacity: .9;
+  background-image: radial-gradient(2px 2px at 26px 40%, #38bdf8, transparent), radial-gradient(2px 2px at 98px 22%, #f472b6, transparent), radial-gradient(2px 2px at 104px 50%, #38bdf8, transparent),
+    radial-gradient(2px 2px at 200px 32%, #fde047, transparent), radial-gradient(2px 2px at 160px 60%, #38bdf8, transparent); }
+.lc-sr-sky .city.far { bottom: 30%; height: 30%; opacity: .45;
+  background-image: linear-gradient(90deg, transparent 20px, #2a1f6b 20px 46px, transparent 46px), linear-gradient(90deg, transparent 80px, #2a1f6b 80px 120px, transparent 120px), linear-gradient(90deg, transparent 150px, #2a1f6b 150px 170px, transparent 170px), linear-gradient(90deg, transparent 200px, #2a1f6b 200px 234px, transparent 234px);
+  background-size: 260px 80%, 260px 55%, 260px 95%, 260px 65%;
+  background-position: var(--cam1) 100%, var(--cam1) 100%, var(--cam1) 100%, var(--cam1) 100%; }
+.lc-sr-sky .city.far::after { display: none; }
+
+/* chão: plataforma em neon com ladrilhos que andam */
+.lc-sr-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 24%; z-index: 1;
+  background: linear-gradient(90deg, rgba(56, 189, 248, .14) 0 2px, transparent 2px) 0 0 / 48px 100% repeat-x, linear-gradient(180deg, #16204f, #0b1030 70%);
+  box-shadow: inset 0 3px 0 #38bdf8, inset 0 6px 18px -6px rgba(56, 189, 248, .7); }
+
+/* obstáculos e palavras */
+.lc-sr-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.lc-sr-ob { position: absolute; left: 0; top: 0; height: 0; will-change: transform; }
+.lc-sr-ob.t-firewall .spk { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; background: linear-gradient(180deg, #fecdd3, #f43f5e 60%, #9f1239);
+  clip-path: polygon(0 100%, 8% 0, 16% 100%, 25% 0, 33% 100%, 42% 0, 50% 100%, 58% 0, 67% 100%, 75% 0, 84% 100%, 92% 0, 100% 100%); filter: drop-shadow(0 0 6px #f43f5e); }
+.lc-sr-ob.t-firewall .glow { position: absolute; left: -6px; right: -6px; bottom: -3px; height: 6px; border-radius: 3px; background: #f43f5e; box-shadow: 0 0 16px 3px rgba(244, 63, 94, .7); animation: lcSrFw .5s ease-in-out infinite alternate; }
+@keyframes lcSrFw { to { opacity: .55; } }
+.lc-sr-ob.t-buraco .hole { position: absolute; left: 0; right: 0; top: -2px; height: 200px; background: linear-gradient(180deg, #02030c, #0b0620 40%, #3b0764);
+  box-shadow: inset 4px 0 0 #38bdf8, inset -4px 0 0 #38bdf8; }
+.lc-sr-ob.t-buraco .flow { position: absolute; left: 4px; right: 4px; top: 34px; height: 140px; opacity: .8;
+  background: repeating-linear-gradient(180deg, rgba(236, 72, 153, .9) 0 3px, transparent 3px 14px), repeating-linear-gradient(90deg, transparent 0 8px, rgba(236, 72, 153, .3) 8px 10px); animation: lcSrFlow .6s linear infinite; }
+@keyframes lcSrFlow { to { background-position: 0 14px, 0 0; } }
+.lc-sr-ob.t-virus .vb { position: absolute; left: 0; bottom: 6px; width: 40px; height: 36px; border-radius: 50% 50% 42% 42%; background: radial-gradient(circle at 36% 30%, #f5d0fe, #a855f7 55%, #6b21a8);
+  box-shadow: 0 0 14px rgba(168, 85, 247, .6); animation: lcDuWob .4s ease-in-out infinite alternate; }
+.lc-sr-ob.t-virus .sp { position: absolute; inset: -7px; border-radius: 50%; background: radial-gradient(circle, transparent 58%, #d8b4fe 60% 70%, transparent 72%);
+  -webkit-mask: repeating-conic-gradient(#000 0 12deg, transparent 12deg 45deg); mask: repeating-conic-gradient(#000 0 12deg, transparent 12deg 45deg); }
+.lc-sr-ob.t-virus .eye { position: absolute; left: 10px; top: 8px; width: 18px; height: 18px; border-radius: 50%; background: #fff; }
+.lc-sr-ob.t-virus .eye b { position: absolute; left: 3px; top: 5px; width: 9px; height: 9px; border-radius: 50%; background: #1e1b4b; }
+.lc-sr-ob.t-virus .mouth { position: absolute; left: 12px; bottom: 6px; width: 16px; height: 4px; border-radius: 2px; background: #3b0764; }
+.lc-sr-ob.t-virus .ft { position: absolute; left: 6px; right: 6px; bottom: 0; height: 7px; }
+.lc-sr-ob.t-virus .ft i { position: absolute; bottom: 0; width: 10px; height: 7px; border-radius: 50% 50% 30% 30%; background: #6b21a8; animation: lcDuStep .2s ease-in-out infinite alternate; }
+.lc-sr-ob.t-virus .ft i + i { right: 0; animation-direction: alternate-reverse; }
+.lc-sr-ob.armed.t-firewall .spk, .lc-sr-ob.armed .vb { filter: drop-shadow(0 0 8px #38bdf8) brightness(1.1); }
+.lc-sr-ob.hit { animation: lcSrHit .4s ease; }
+@keyframes lcSrHit { 30% { filter: brightness(2); transform-origin: 50% 100%; } }
+
+.lc-sr-word { position: absolute; left: 0; top: 0; display: flex; gap: 5px; translate: -50% -100%; will-change: transform; transition: opacity .25s; }
+.lc-sr-word i { display: grid; place-items: center; min-width: 38px; height: 46px; padding: 0 4px; border-radius: 10px; font: 700 28px/1 ui-monospace, Menlo, monospace; font-style: normal; color: #e2e8f0;
+  background: rgba(15, 23, 42, .55); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); transition: background .15s, color .15s, transform .15s, opacity .2s; }
+.lc-sr-word.next { opacity: .45; }
+.lc-sr-word.cur i { background: rgba(15, 23, 42, .8); box-shadow: inset 0 0 0 1px rgba(56, 189, 248, .45); }
+.lc-sr-word.cur i.at { color: #0b1030; background: #fff; transform: scale(1.12); box-shadow: 0 0 0 3px #38bdf8, 0 6px 16px -4px rgba(56, 189, 248, .9); }
+.lc-sr-word i.ok { color: #7dd3fc; opacity: .55; }
+.lc-sr-word.done i { color: #052e16; background: #86efac; opacity: 1; box-shadow: 0 0 12px rgba(134, 239, 172, .7); animation: lcSrDone .3s calc(var(--i) * 30ms) ease both; }
+@keyframes lcSrDone { 40% { transform: translateY(-5px); } }
+.lc-sr-word.gone { opacity: 0; }
+.lc-sr-word.miss i { background: #f43f5e; color: #fff; opacity: .7; }
+.lc-sr-word i.shake { animation: lcNvShake .3s ease; background: #f43f5e; color: #fff; }
+
+/* robô: a origem é o pé */
+.lc-sr-hero { --jy: 0px; position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 3; will-change: transform; }
+.lc-sr-hero .rb { position: absolute; left: -20px; bottom: 0; width: 40px; height: 58px; transform-origin: 50% 100%; scale: 1.25; translate: 0 0; }
+.lc-sr-world.go .lc-sr-hero .rb { animation: lcSrRun .26s ease-in-out infinite alternate; }
+@keyframes lcSrRun { from { transform: translateY(0) rotate(4deg); } to { transform: translateY(-3px) rotate(7deg); } }
+.lc-sr-hero .body { position: absolute; left: 3px; right: 3px; top: 0; height: 32px; border-radius: 12px 12px 9px 9px; display: flex; align-items: center; justify-content: center; gap: 6px;
+  background: linear-gradient(180deg, #dbeafe, #60a5fa); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .15), 0 0 14px rgba(96, 165, 250, .45); }
+.lc-sr-hero .body::before { content: ''; position: absolute; left: 50%; top: -10px; width: 3px; height: 10px; margin-left: -1.5px; background: #93c5fd; border-radius: 2px; }
+.lc-sr-hero .body::after { content: ''; position: absolute; left: 50%; top: -15px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 8px #38bdf8; }
+.lc-sr-hero .eye { width: 6px; height: 9px; margin-left: 6px; border-radius: 3px; background: #0f172a; } .lc-sr-hero .eye + .eye { margin-left: 0; }
+.lc-sr-hero .legs { position: absolute; left: 0; right: 0; top: 31px; height: 26px; }
+.lc-sr-hero .legs i { position: absolute; top: 0; width: 7px; height: 24px; border-radius: 4px; background: #1d4ed8; transform-origin: 50% 0; }
+.lc-sr-hero .legs i:first-child { left: 11px; } .lc-sr-hero .legs i + i { right: 11px; }
+.lc-sr-world.go .lc-sr-hero .legs i { animation: lcSrLeg .26s ease-in-out infinite alternate; }
+.lc-sr-world.go .lc-sr-hero .legs i + i { animation-direction: alternate-reverse; }
+@keyframes lcSrLeg { from { rotate: -28deg; } to { rotate: 28deg; } }
+.lc-sr-hero .arm { position: absolute; right: -6px; top: 12px; width: 14px; height: 5px; border-radius: 3px; background: #93c5fd; rotate: 30deg; z-index: 1; }
+.lc-sr-hero .shadow { position: absolute; left: -18px; top: calc(var(--jy) - 3px); width: 36px; height: 6px; border-radius: 50%; background: rgba(0, 0, 0, .45); opacity: calc(1 - var(--jy) / 120px); }
+.lc-sr-hero.hop .rb { animation: lcSrHop .35s ease !important; }
+@keyframes lcSrHop { 30% { transform: scale(1.12, .85); } 60% { transform: rotate(-12deg) scale(.95, 1.08); } }
+.lc-sr-hero.land .rb { animation: lcDuLand .3s ease !important; }
+.lc-sr-hero.hurt .rb { animation: lcSrHurt .6s ease !important; }
+@keyframes lcSrHurt { 15% { transform: translateX(-12px) rotate(-18deg); filter: drop-shadow(0 0 8px #f43f5e) brightness(1.4); } 40% { opacity: .4; } 60% { opacity: 1; } 80% { opacity: .5; } }
+
+/* portal HC de chegada */
+.lc-sr-door { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+.lc-sr-door .ring { position: absolute; left: -30px; bottom: 0; width: 60px; height: 96px; border-radius: 30px 30px 8px 8px; border: 3px solid #38bdf8;
+  background: radial-gradient(60% 60% at 50% 60%, rgba(186, 230, 253, .6), rgba(56, 189, 248, .08)); box-shadow: 0 0 26px rgba(56, 189, 248, .7), inset 0 0 20px rgba(56, 189, 248, .6); animation: lcRsPortal 1.6s ease-in-out infinite alternate; }
+.lc-sr-door b { position: absolute; left: 50%; bottom: 62px; translate: -50% 0; font: 900 13px/1 Inter, system-ui, sans-serif; color: #082f49; background: #bae6fd; padding: 3px 5px; border-radius: 6px; }
+.lc-sr-door small { position: absolute; left: 50%; bottom: 104px; translate: -50% 0; font: 800 11px/1 Inter, system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: #bae6fd; white-space: nowrap; text-shadow: 0 0 8px #38bdf8; }
+.lc-sr-world.done .lc-sr-hero { transition: opacity .6s .2s; opacity: 0; }
+.lc-sr-world.done .lc-sr-door .ring { animation: lcRsReady .4s ease-in-out infinite alternate; }
+.lc-sr-world:not(.go) .lc-sr-ob .glow, .lc-sr-world:not(.go) .lc-sr-ob .flow, .lc-sr-world:not(.go) .lc-sr-ob .vb, .lc-sr-world:not(.go) .lc-sr-ob .ft i { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .lc-sr-hero .rb, .lc-sr-hero .legs i, .lc-sr-ob .glow, .lc-sr-ob .flow, .lc-sr-ob .vb, .lc-sr-ob .ft i, .lc-sr-door .ring { animation: none !important; } }
+
+/* =========================================================
+   MJ-09 · Resgate das Teclinhas (tipo 'resgate')
+   Vale dos circuitos ao entardecer; a nave-vírus à esquerda puxa com o raio as teclinhas que chegam
+   pela direita; as salvas voltam correndo para o portal HC. Origem de cada teclinha = o pé.
+   ========================================================= */
+.lc-shell .lc-term.lc-rs { height: clamp(420px, calc(100vh - 370px), 520px); border-radius: 22px; background: #140f2e;
+  box-shadow: inset 0 0 0 1px rgba(163, 230, 53, .26), 0 20px 44px -26px rgba(0, 0, 0, .9); }
+.lc-rs::after { background: none; }
+.lc-rs.hurt { animation: lcHkHurt .45s ease; }
+.lc-rs-title { color: #d9f99d; }
+.lc-rs-title i { background: #a3e635; box-shadow: 0 0 10px #a3e635; }
+.lc-rs .lc-hk-bar .lc-fl-combo { margin-left: auto; }
+.lc-rs-cnt { display: inline-flex; align-items: center; gap: 5px; min-width: 4.8em; color: #ecfccb; background: rgba(163, 230, 53, .12); box-shadow: inset 0 0 0 1px rgba(163, 230, 53, .3); }
+.lc-rs-cnt b { font: 800 14px/1 ui-monospace, Menlo, monospace; } .lc-rs-cnt small { opacity: .55; font-size: 11px; }
+.lc-rs-cnt .mini { width: 13px; height: 13px; border-radius: 4px; background: linear-gradient(#fef9c3, #a3e635); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .25); }
+.lc-rs-cnt.pop { animation: lcNvPts .4s cubic-bezier(.18, .89, .32, 1.28); }
+.lc-rs-world { position: absolute; left: 0; right: 0; top: 50px; bottom: 44px; overflow: hidden; z-index: 0; }
+
+/* cenário */
+.lc-rs-sky { position: absolute; inset: 0; background: linear-gradient(180deg, #1e1b4b 0%, #4c1d95 34%, #a21caf 58%, #f472b6 72%, #fb923c 82%); }
+.lc-rs-sky .stars { position: absolute; inset: 0 0 50% 0; opacity: .7;
+  background: radial-gradient(1.2px 1.2px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 28% 8%, #fff, transparent), radial-gradient(1.4px 1.4px at 46% 26%, #fff, transparent),
+    radial-gradient(1px 1px at 63% 12%, #fff, transparent), radial-gradient(1.3px 1.3px at 78% 30%, #fff, transparent), radial-gradient(1px 1px at 90% 10%, #fff, transparent), radial-gradient(1px 1px at 36% 40%, #fff, transparent); }
+.lc-rs-sky .sun { position: absolute; left: 58%; top: 56%; width: 120px; height: 120px; translate: -50% -50%; border-radius: 50%;
+  background: radial-gradient(circle, #fef3c7, #fdba74 55%, rgba(251, 146, 60, 0) 70%); box-shadow: 0 0 80px rgba(253, 186, 116, .55); }
+.lc-rs-sky .city { position: absolute; left: 0; right: 0; bottom: 30%; height: 22%; opacity: .55;
+  background: linear-gradient(#2e1065, #2e1065) 4% 100% / 5% 70% no-repeat, linear-gradient(#2e1065, #2e1065) 11% 100% / 3% 45% no-repeat,
+    linear-gradient(#2e1065, #2e1065) 30% 100% / 6% 90% no-repeat, linear-gradient(#2e1065, #2e1065) 38% 100% / 3% 55% no-repeat,
+    linear-gradient(#2e1065, #2e1065) 70% 100% / 4% 80% no-repeat, linear-gradient(#2e1065, #2e1065) 76% 100% / 7% 50% no-repeat, linear-gradient(#2e1065, #2e1065) 90% 100% / 4% 100% no-repeat;
+  -webkit-mask: linear-gradient(#000 0 0); }
+.lc-rs-sky .city::after { content: ""; position: absolute; inset: 0; background: radial-gradient(2px 2px at 6% 50%, #fde047, transparent), radial-gradient(2px 2px at 32% 30%, #a3e635, transparent), radial-gradient(2px 2px at 33% 60%, #fde047, transparent), radial-gradient(2px 2px at 72% 40%, #a3e635, transparent), radial-gradient(2px 2px at 91% 20%, #fde047, transparent); }
+.lc-rs-sky .hill { position: absolute; left: -10%; right: -10%; border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
+.lc-rs-sky .h1 { bottom: 14%; height: 30%; background: linear-gradient(180deg, #4d2c7a, #2e1a52); }
+.lc-rs-sky .h2 { bottom: 0; left: -30%; right: 20%; height: 34%; background: linear-gradient(180deg, #2f4a3a, #1d2f26);
+  box-shadow: inset 0 3px 0 rgba(163, 230, 53, .35); }
+.lc-rs-sky .h2::before { content: ""; position: absolute; inset: 18% 10% 0 20%; opacity: .55;
+  background: linear-gradient(90deg, transparent 0 8%, #a3e635 8% 8.4%, transparent 8.4%) 0 30% / 100% 2px no-repeat, linear-gradient(90deg, transparent 0 30%, #a3e635 30% 60%, transparent 60%) 0 30% / 100% 2px no-repeat,
+    linear-gradient(90deg, transparent 0 46%, #a3e635 46% 82%, transparent 82%) 0 58% / 100% 2px no-repeat, radial-gradient(4px 4px at 30% 30%, #d9f99d, transparent), radial-gradient(4px 4px at 82% 58%, #d9f99d, transparent); }
+.lc-rs-sky .ground { position: absolute; left: 0; right: 0; bottom: 0; height: 26%; background: linear-gradient(180deg, #233d2e, #14251c);
+  box-shadow: inset 0 2px 0 rgba(163, 230, 53, .45), inset 0 14px 24px -12px rgba(163, 230, 53, .25); }
+.lc-rs-sky .ground::after { content: ""; position: absolute; left: 0; right: 0; top: 30%; height: 2px; opacity: .3; background: repeating-linear-gradient(90deg, #a3e635 0 14px, transparent 14px 34px); }
+.lc-rs-world.go .lc-rs-sky .ground::after { animation: lcRsDash 1.4s linear infinite; }
+@keyframes lcRsDash { to { background-position: -34px 0; } }
+
+/* portal HC: de onde as teclinhas vêm e para onde voltam */
+.lc-rs-portal { position: absolute; right: 14px; bottom: 12%; width: 54px; height: 86px; z-index: 1; display: grid; place-items: center; }
+.lc-rs-portal .ring { position: absolute; inset: 0; border-radius: 28px 28px 8px 8px; border: 3px solid #a3e635; background: radial-gradient(60% 60% at 50% 60%, rgba(217, 249, 157, .55), rgba(163, 230, 53, .08));
+  box-shadow: 0 0 22px rgba(163, 230, 53, .6), inset 0 0 18px rgba(163, 230, 53, .5); animation: lcRsPortal 2s ease-in-out infinite alternate; }
+@keyframes lcRsPortal { to { box-shadow: 0 0 34px rgba(163, 230, 53, .85), inset 0 0 26px rgba(163, 230, 53, .7); } }
+.lc-rs-portal b { position: relative; margin-top: -26px; font: 900 13px/1 Inter, system-ui, sans-serif; letter-spacing: .04em; color: #1a2e05; background: #d9f99d; padding: 3px 5px; border-radius: 6px; }
+/* carga: a moldura do portal enche de baixo para cima; cheio, brilha e mostra "Espaço" */
+.lc-rs-portal .charge { position: absolute; inset: 3px; border-radius: 25px 25px 6px 6px; overflow: hidden; }
+.lc-rs-portal .charge::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--c) * 100%); background: linear-gradient(0deg, rgba(163, 230, 53, .75), rgba(217, 249, 157, .35)); transition: height .4s cubic-bezier(.18, .89, .32, 1.28); }
+.lc-rs-portal small { position: absolute; left: 50%; top: calc(100% + 4px); translate: -50% 0; display: grid; place-items: center; white-space: nowrap; }
+.lc-rs-portal small .n { font: 800 11px/1 ui-monospace, Menlo, monospace; color: #d9f99d; text-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
+.lc-rs-portal kbd { display: none; padding: 3px 7px; border-radius: 6px; font: 800 11px/1 Inter, system-ui, sans-serif; color: #1a2e05; background: #ecfccb; box-shadow: 0 2px 0 #4d7c0f, 0 0 14px rgba(163, 230, 53, .9); }
+.lc-rs-portal.ready small .n { display: none; } .lc-rs-portal.ready kbd { display: block; animation: lcRsKbd .7s ease-in-out infinite alternate; }
+@keyframes lcRsKbd { to { transform: translateY(-3px); } }
+.lc-rs-portal.ready .ring { border-color: #ecfccb; animation: lcRsReady .5s ease-in-out infinite alternate; }
+@keyframes lcRsReady { from { box-shadow: 0 0 22px rgba(163, 230, 53, .7), inset 0 0 18px rgba(163, 230, 53, .6); } to { box-shadow: 0 0 44px #a3e635, inset 0 0 30px #d9f99d; } }
+.lc-rs-portal.open .ring, .lc-rs-portal.eat .ring { animation: lcRsGate .35s ease; }
+@keyframes lcRsGate { 40% { transform: scale(1.1, 1.06); filter: brightness(1.5); } }
+.lc-rs-portal.fire { animation: lcRsFire .4s ease; }
+@keyframes lcRsFire { 20% { transform: translateX(6px) scale(.94); filter: brightness(2); } }
+.lc-rs-portal.deny { animation: lcNvShake .3s ease; }
+.lc-rs-tk.born .tb { animation: lcRsBorn .35s cubic-bezier(.18, .89, .32, 1.28); }
+@keyframes lcRsBorn { from { transform: scale(.2); opacity: 0; } }
+/* pulso HC e nave tonta */
+.lc-rs-fx { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.lc-rs-blast { position: absolute; width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle, #fff, #d9f99d 35%, #a3e635 55%, rgba(163, 230, 53, 0) 72%); box-shadow: 0 0 30px #a3e635; }
+.lc-rs-ship.stun .beam { opacity: 0 !important; }
+.lc-rs-ship.stun .sh { animation: lcRsDizzy .9s ease-in-out infinite; filter: saturate(.35) brightness(.9); }
+@keyframes lcRsDizzy { 0%, 100% { transform: translate(-4px, 2px) rotate(-12deg); } 50% { transform: translate(4px, -2px) rotate(12deg); } }
+.lc-rs-ship.stun .dome b::after { animation: none; translate: 0 0; background: none; box-shadow: none; }
+.lc-rs-ship.stun .dome b::before { content: "✕"; position: absolute; inset: 0; display: grid; place-items: center; font: 900 11px/1 Inter, system-ui, sans-serif; color: #dc2626; }
+.lc-rs-ship.stun .sh::after { content: "★ ★ ★"; position: absolute; left: 50%; top: -18px; translate: -50% 0; font-size: 12px; letter-spacing: 4px; color: #fde047; text-shadow: 0 0 6px #fde047; animation: lcRsStars .8s linear infinite; white-space: nowrap; }
+@keyframes lcRsStars { 50% { transform: translateY(-3px) rotate(6deg); opacity: .7; } }
+.lc-rs-ship.zap .sh { animation: lcRsZap .4s ease; }
+@keyframes lcRsZap { 30% { transform: translateX(-12px) rotate(-20deg) scale(.92); filter: brightness(2.2) drop-shadow(0 0 16px #a3e635); } }
+
+/* nave-vírus: a origem é o centro do disco */
+.lc-rs-ship { --bh: 220px; position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 3; }
+.lc-rs-ship .sh { position: absolute; left: -66px; top: -34px; width: 132px; height: 62px; animation: lcRsHover 2.4s ease-in-out infinite alternate; }
+@keyframes lcRsHover { from { transform: translateY(-4px) rotate(-3deg); } to { transform: translateY(5px) rotate(3deg); } }
+.lc-rs-ship .disc { position: absolute; left: 0; right: 0; top: 26px; height: 26px; border-radius: 50%; background: linear-gradient(180deg, #6d28d9, #3b0764 70%);
+  box-shadow: inset 0 3px 0 rgba(216, 180, 254, .55), inset 0 -4px 0 rgba(0, 0, 0, .35), 0 10px 22px -6px rgba(0, 0, 0, .6); }
+.lc-rs-ship .lights { position: absolute; left: 14px; right: 14px; top: 37px; height: 6px;
+  background: radial-gradient(circle, #a3e635 2.5px, transparent 3px) 0 0 / 17px 6px repeat-x; filter: drop-shadow(0 0 4px #a3e635); animation: lcRsLights .5s steps(2) infinite; }
+@keyframes lcRsLights { 50% { opacity: .45; } }
+.lc-rs-ship .dome { position: absolute; left: 34px; right: 34px; top: 2px; height: 36px; border-radius: 50% 50% 12% 12%; background: radial-gradient(circle at 40% 30%, #ecfccb, #84cc16 55%, #3f6212);
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .2), 0 0 18px rgba(163, 230, 53, .55); }
+.lc-rs-ship .dome::before, .lc-rs-ship .dome::after { content: ""; position: absolute; top: -8px; width: 6px; height: 12px; border-radius: 3px; background: #84cc16; box-shadow: 0 -3px 0 1px #d9f99d inset; }
+.lc-rs-ship .dome::before { left: 10px; rotate: -24deg; } .lc-rs-ship .dome::after { right: 10px; rotate: 24deg; }
+.lc-rs-ship .dome b { position: absolute; left: 50%; top: 11px; width: 20px; height: 14px; margin-left: -10px; border-radius: 50%; background: #fff; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .15); }
+.lc-rs-ship .dome b::after { content: ""; position: absolute; left: 6px; top: 3px; width: 8px; height: 8px; border-radius: 50%; background: #dc2626; box-shadow: 0 0 6px #ef4444; animation: lcRsEye 3s ease-in-out infinite; }
+@keyframes lcRsEye { 0%, 100% { translate: -3px 0; } 50% { translate: 3px 1px; } }
+.lc-rs-ship .beam { position: absolute; left: -46px; top: 14px; width: 92px; height: var(--bh); transform-origin: 50% 0; opacity: .1; transform: scaleX(.6);
+  background: linear-gradient(180deg, rgba(217, 249, 157, .75), rgba(163, 230, 53, .28) 70%, rgba(163, 230, 53, .05)); clip-path: polygon(34% 0, 66% 0, 100% 100%, 0 100%);
+  transition: opacity .3s, transform .3s; }
+.lc-rs-ship .beam::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(180deg, rgba(255, 255, 255, .35) 0 2px, transparent 2px 16px); animation: lcRsBeam .6s linear infinite reverse; }
+@keyframes lcRsBeam { to { background-position: 0 16px; } }
+.lc-rs-ship.pull .beam { opacity: 1; transform: none; }
+.lc-rs-ship.laugh .sh { animation: lcDuLaugh .35s ease; }
+.lc-rs-ship.gulp .sh { animation: lcRsGulp .5s ease; }
+@keyframes lcRsGulp { 30% { transform: scale(1.15, .85); filter: brightness(1.5) drop-shadow(0 0 12px #a3e635); } }
+.lc-rs-world.done .lc-rs-ship .sh { animation: lcRsFlee 1.2s cubic-bezier(.5, 0, .9, .4) forwards; }
+@keyframes lcRsFlee { 30% { transform: translateY(8px) rotate(-8deg); } to { transform: translate(-260px, -220px) rotate(-20deg) scale(.4); opacity: 0; } }
+
+/* teclinhas */
+.lc-rs-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.lc-rs-tk { --kc: #34d399; --sz: 46px; position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+.lc-rs-tk.l0 { z-index: 1; } .lc-rs-tk.l1 { z-index: 2; } .lc-rs-tk.l2 { z-index: 3; }
+.lc-rs-tk .tb { position: absolute; left: calc(var(--sz) / -2); bottom: calc(var(--sz) * .16); width: var(--sz); height: var(--sz); border-radius: 22%;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--kc) 30%, #fff) 0 70%, color-mix(in srgb, var(--kc) 70%, #000) 70%);
+  box-shadow: inset 0 0 0 calc(var(--sz) * .07) color-mix(in srgb, var(--kc) 75%, #fff), 0 6px 10px -4px rgba(0, 0, 0, .55);
+  display: grid; place-items: center; transform-origin: 50% 100%; animation: lcRsWalk .34s ease-in-out infinite alternate; }
+.lc-rs-tk.fast .tb { animation-duration: .22s; }
+@keyframes lcRsWalk { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-3px) rotate(3deg); } }
+.lc-rs-tk .tb b { margin-top: calc(var(--sz) * .14); font: 800 calc(var(--sz) * .44)/1 ui-monospace, Menlo, monospace; color: #1e1b4b; text-transform: uppercase; }
+.lc-rs-tk .eyes { position: absolute; left: 50%; top: 16%; display: flex; gap: calc(var(--sz) * .14); translate: -50% 0; }
+.lc-rs-tk .eyes i { width: calc(var(--sz) * .11); height: calc(var(--sz) * .15); border-radius: 50%; background: #1e1b4b; }
+.lc-rs-tk .cheek { position: absolute; left: 14%; right: 14%; top: 28%; height: 8%; background: radial-gradient(circle at 10% 50%, rgba(244, 114, 182, .6) 30%, transparent 32%), radial-gradient(circle at 90% 50%, rgba(244, 114, 182, .6) 30%, transparent 32%); }
+.lc-rs-tk .feet { position: absolute; left: calc(var(--sz) * -.28); width: calc(var(--sz) * .56); bottom: 0; height: calc(var(--sz) * .18); }
+.lc-rs-tk .feet i { position: absolute; bottom: 0; width: 38%; height: 100%; border-radius: 40% 40% 30% 30%; background: #1e1b4b; animation: lcDuStep .17s ease-in-out infinite alternate; }
+.lc-rs-tk .feet i + i { right: 0; animation-direction: alternate-reverse; }
+.lc-rs-tk.fast .feet i { animation-duration: .11s; }
+/* no raio: pernas balançando, olhos assustados */
+.lc-rs-tk.lift .tb { animation: none; box-shadow: inset 0 0 0 calc(var(--sz) * .07) color-mix(in srgb, var(--kc) 75%, #fff), 0 0 0 3px #a3e635, 0 0 18px rgba(163, 230, 53, .8); }
+.lc-rs-tk.lift .eyes i { height: calc(var(--sz) * .13); width: calc(var(--sz) * .13); background: #fff; box-shadow: inset 0 0 0 calc(var(--sz) * .03) #1e1b4b; }
+.lc-rs-tk.lift .feet i { animation-duration: .09s; }
+.lc-rs-tk.taken .tb { filter: brightness(1.6) saturate(.4); }
+/* salva: olhos felizes, corre para o portal */
+.lc-rs-tk.saved .eyes i { height: calc(var(--sz) * .07); border-radius: 0 0 50% 50%; margin-top: calc(var(--sz) * .04); }
+.lc-rs-tk.flee .tb { animation-duration: .16s; }
+.lc-rs-tk.flee .tb b { transform: scaleX(-1); }
+.lc-rs-tk.land .tb { animation: lcDuLand .3s ease; }
+.lc-rs-pop { position: absolute; translate: -50% 0; font: 900 18px/1 Inter, system-ui, sans-serif; color: #ecfccb; text-shadow: 0 2px 0 #3f6212, 0 0 12px rgba(163, 230, 53, .8); animation: lcRsPop .8s ease-out forwards; z-index: 5; }
+@keyframes lcRsPop { from { opacity: 0; transform: translateY(6px) scale(.6); } 25% { opacity: 1; transform: scale(1.1); } to { opacity: 0; transform: translateY(-30px); } }
+.lc-rs-world:not(.go) .lc-rs-tk .tb, .lc-rs-world:not(.go) .lc-rs-tk .feet i { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .lc-rs-ship .sh, .lc-rs-ship .lights, .lc-rs-ship .beam::after, .lc-rs-tk .tb, .lc-rs-tk .feet i, .lc-rs-portal .ring, .lc-rs-sky .ground::after { animation: none !important; } }
+
+/* =========================================================
    DG-04 · Teclas do fundo
    O texto vira uma fila de teclas que vem do fundo em fileiras (perspectiva): a da frente é a da
    vez. Cada tecla fica na posição dela no teclado ABNT2, com a cor do dedo (mesmas do teclado
