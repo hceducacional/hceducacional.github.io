@@ -751,6 +751,8 @@ html:has(.pf-stage) { scrollbar-color: #3a3a3c transparent; }
 .pf-ccard .pf-lesson-img .pf-ph svg { top: 22%; width: 30%; color: rgba(255, 255, 255, .42); }
 .pf-ccard .pf-lesson-av svg { width: 19px; height: 19px; }
 .pf-ccard.draft .pf-lesson-img { opacity: .55; }
+/* capa da disciplina: ocupa o card inteiro (4:5, como a imagem de 1000 × 1250), sem cortar nada; a faixa de baixo fica por cima */
+.pf-dcard .pf-lesson-img:has(img) { inset: 0; }
 .pf-ccard.draft .pf-lesson-tag { opacity: 1; color: #fde68a; }
 /* card "Novo conteúdo" (só administrador), no fim da fileira */
 .pf-cnew { flex: 0 0 calc((100% - 64px) / 5); aspect-ratio: 4 / 5; scroll-snap-align: start; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
@@ -840,7 +842,7 @@ html:has(.pfd), body:has(.pfd) { background: #0d0d0f; }
 @media (max-width: 860px) {
   .pfd { padding-top: 4px; }
   .pfd-hero { grid-template-columns: 1fr; gap: 18px; padding: 16px; border-radius: 26px; }
-  .pfd-hero-img { width: min(46%, 200px); }
+  .pfd-hero-img { width: min(62%, 280px); } /* mesmo tamanho do card da disciplina no celular */
   .pfd-hero h1 { font-size: 34px; }
   .pfd-stats { margin-top: 16px; } .pfd-stats span { padding: 8px 12px; } .pfd-stats b { font-size: 17px; }
   .pfd-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
@@ -850,6 +852,8 @@ html:has(.pfd), body:has(.pfd) { background: #0d0d0f; }
 /* computador: módulos e disciplinas em cards grandes, como os do celular ("Mantenha-se conectado");
    o que não cabe na fileira continua para o lado, com as setas de navegação em cima à direita */
 @media (min-width: 861px) {
+  .pfd-hero { grid-template-columns: clamp(320px, 25vw, 420px) 1fr; } /* capa do tamanho do card da disciplina */
+  .pfd-hero-img { border-radius: 28px; }
   .pf-modcard, .pf-cnew { flex: 0 0 clamp(320px, 25vw, 420px); border-radius: 28px; }
   .pf-modcard .pf-lesson-text { padding: 0 22px 16px; }
   .pf-modcard .pf-lesson-tag { font-size: 12.5px; }
