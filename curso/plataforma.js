@@ -274,8 +274,20 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     quiz: { nome: 'Questionário', tint: '82, 38, 130', sub: 'Perguntas para treinar' },
     prova: { nome: 'Prova', tint: '150, 70, 18', sub: 'Avaliação com nota' },
   };
-  const conts = () => (typeof cursoConteudo !== 'undefined' && Array.isArray(cursoConteudo) ? cursoConteudo : []);
+  const saved = () => (typeof cursoConteudo !== 'undefined' && Array.isArray(cursoConteudo) ? cursoConteudo : []);
+  /* conteúdos prontos, escritos no código (texto em curso/conteudos/<id>.js). O administrador pode trocar capa e textos
+     do card pelo lápis (fica em cursoConteudo com o mesmo id) ou tirá-lo da tela (oculto: true). */
+  const CONTS_BASE = [
+    { id: 'texto-01', tipo: 'texto', titulo: 'O teclado e a digitação correta', desc: 'As partes do teclado, onde fica cada dedo, a postura certa e como ganhar velocidade sem perder a precisão.',
+      meta: '15 min · 15 perguntas', image: '', visivel: true, arquivo: 'curso/conteudos/texto-01.js', fixo: true },
+  ];
+  const conts = () => {
+    const s = saved(), ids = new Set(CONTS_BASE.map((b) => b.id));
+    return CONTS_BASE.map((b) => ({ ...b, ...(s.find((x) => x.id === b.id) || {}), arquivo: b.arquivo, fixo: true }))
+      .concat(s.filter((x) => !ids.has(x.id))).filter((c) => !c.oculto);
+  };
   const visConts = () => conts().filter((c) => isAdmin() || c.visivel);
+  const contProg = (id) => { try { return JSON.parse(localStorage.getItem(`hc:info:${auth?.user?.id || 'anon'}:cont-${id}`) || 'null'); } catch { return null; } };
   /* lições criadas pelo administrador (botão "Nova lição"): ficam no banco, junto do conteúdo do site,
      e entram no fim do módulo até serem configuradas aqui no código */
   /* capas e textos trocados pelo administrador (botão de lápis): ficam no banco (chave cursoEdit) e
@@ -306,6 +318,11 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     : `<span class="pf-ph" style="--k:${k}">${svg('keys')}${isAdmin() ? `<em>${label}<small>${size}</small></em>` : ''}</span>`;
 
   /* seção "Conteúdos para aprender", logo abaixo dos módulos: cards no mesmo estilo dos módulos */
+  const progTxt = (c) => {
+    const p = contProg(c.id); if (!p?.savedAt) return '';
+    const n = Object.keys(p.ans || {}).length, r = (p.read || []).length;
+    return n ? `${n} ${n === 1 ? 'resposta' : 'respostas'} · ${p.readXp ? 'leitura concluída' : `${r} partes lidas`}` : p.readXp ? 'Leitura concluída' : `${r} ${r === 1 ? 'parte lida' : 'partes lidas'}`;
+  };
   function contsSection() {
     const list = visConts(), adm = isAdmin();
     const card = (c, i) => {
@@ -322,8 +339,8 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
           </div>
           <div class="pf-lesson-bar">
             <span class="pf-lesson-av">${svg(ico)}</span>
-            <span class="pf-lesson-who"><strong>${esc(t.nome)}</strong><small>${esc(c.meta || t.sub)}</small></span>
-            <span class="pf-lesson-go">Abrir</span>
+            <span class="pf-lesson-who"><strong>${esc(t.nome)}</strong><small>${esc(progTxt(c) || c.meta || t.sub)}</small></span>
+            <span class="pf-lesson-go">${contProg(c.id)?.savedAt ? 'Continuar' : 'Abrir'}</span>
           </div>
         </div>
         ${adm ? `<div class="pf-adm"><button class="pf-adm-btn" type="button" data-editcont="${esc(c.id)}" aria-label="Editar o conteúdo" title="Editar conteúdo">${svg('pen')}</button><button class="pf-adm-btn" type="button" data-delcont="${esc(c.id)}" aria-label="Apagar o conteúdo" title="Apagar conteúdo">${svg('trash')}</button></div>` : ''}
@@ -363,7 +380,8 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       e.stopPropagation();
       const c = conts().find((x) => x.id === b.dataset.delcont); if (!c) return;
       confirmDel(`Apagar “${c.titulo || 'conteúdo'}”?`, 'O card sai da Plataforma de Informática para todos os alunos e não dá para desfazer. Para confirmar, digite a senha mestra.', () => {
-        cursoConteudo = conts().filter((x) => x.id !== c.id); saveCursoConteudo(); refreshConts(view); toast('Conteúdo apagado.');
+        cursoConteudo = c.fixo ? [...saved().filter((x) => x.id !== c.id), { id: c.id, oculto: true }] : saved().filter((x) => x.id !== c.id);
+        saveCursoConteudo(); refreshConts(view); toast('Conteúdo apagado.');
       });
     }));
     const row = sec.querySelector('#pf-cont-row'); if (!row) return;
@@ -378,10 +396,20 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     const row = view.querySelector('#pf-cont-row');
     if (row && toEnd) requestAnimationFrame(() => row.scrollTo({ left: row.scrollWidth, behavior: 'smooth' }));
   }
-  /* abrir um conteúdo: a leitura e as respostas chegam nas próximas etapas */
+  /* abrir um conteúdo: os prontos (com arquivo) abrem a tela de leitura; os outros ainda serão montados */
   function openCont(id) {
     const c = conts().find((x) => x.id === id); if (!c) return;
+    if (c.arquivo) { location.hash = `#informatica/conteudo-${c.id}`; return; }
     toast(`${(CT[c.tipo] || CT.texto).nome} “${c.titulo || 'Sem título'}”: o conteúdo será liberado em breve.`);
+  }
+  async function openContPage(view, id) {
+    const c = conts().find((x) => x.id === id);
+    if (!c?.arquivo || (!c.visivel && !isAdmin())) { location.hash = '#informatica/cursos'; return toast('Este conteúdo não está disponível.'); }
+    view.innerHTML = '<div class="wrap"><p class="me-loading">Carregando o conteúdo…</p></div>';
+    try { await Promise.all([load('curso/conteudo.css'), load('curso/conteudo.js'), load(c.arquivo)]); }
+    catch { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir o conteúdo. Verifique a internet e tente de novo.</p></div>'; return; }
+    if (location.hash !== `#informatica/conteudo-${id}`) return;
+    window.HC_conteudo.open(view, window.HC_CONTEUDOS[id], { id, image: c.image ? imgUrl(c.image) : '', tint: (CT[c.tipo] || CT.texto).tint });
   }
   /* administrador: criar (id null) ou editar um card de conteúdo */
   function editCont(view, id) {
@@ -450,7 +478,8 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
         desc: wrap.querySelector('#ec-desc').value.trim(), meta: wrap.querySelector('#ec-meta').value.trim(),
         visivel: wrap.querySelector('#ec-vis').checked, image: img === undefined ? cur.image || '' : img };
       if (!next.meta) delete next.meta;
-      cursoConteudo = old ? conts().map((x) => (x.id === old.id ? next : x)) : [...conts(), next];
+      delete next.arquivo; delete next.fixo;
+      cursoConteudo = old && saved().some((x) => x.id === old.id) ? saved().map((x) => (x.id === old.id ? next : x)) : [...saved(), next];
       saveCursoConteudo(); close(); refreshConts(view, !old);
       toast(old ? 'Conteúdo salvo.' : 'Conteúdo criado.');
     });
@@ -960,9 +989,10 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   }
 
   function render(view, sub = '') {
-    const ln = /^licao-(\d+)$/.exec(sub);
+    const ln = /^licao-(\d+)$/.exec(sub), cn = /^conteudo-([\w-]+)$/.exec(sub);
     mergeExtras();
     if (ln) return openLesson(view, +ln[1]);
+    if (cn) return openContPage(view, cn[1]);
     const m = HC_CURSO.modulos[mod];
     const first = HC_CURSO.modulos.slice(0, mod).reduce((a, x) => a + x.licoes.length, 0); // nº da 1ª lição do módulo - 1
     const nextM = HC_CURSO.modulos[mod + 1];
