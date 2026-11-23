@@ -20,9 +20,9 @@
 @keyframes pgWhite { from { transform: translate3d(-75%, 0, 0); } to { transform: none; } }
 
 /* blocos que entram subindo, um depois do outro */
-.pg-hero, .pg-level, .pg-card, .pg-tile { opacity: 0; transform: translateY(26px) scale(.97); }
-.pg.in :is(.pg-hero, .pg-level, .pg-card, .pg-tile) { animation: pgIn .8s var(--spring) calc(.25s + var(--i) * .09s) both; }
-.pg.still :is(.pg-hero, .pg-level, .pg-card, .pg-tile) { opacity: 1; transform: none; }
+.pg-hero, .pg-level, .pg-card, .pg-stage, .pg-tile { opacity: 0; transform: translateY(26px) scale(.97); }
+.pg.in :is(.pg-hero, .pg-level, .pg-card, .pg-stage, .pg-tile) { animation: pgIn .8s var(--spring) calc(.25s + var(--i) * .09s) both; }
+.pg.still :is(.pg-hero, .pg-level, .pg-card, .pg-stage, .pg-tile) { opacity: 1; transform: none; }
 @keyframes pgIn { 0% { opacity: 0; transform: translateY(26px) scale(.97); } 50% { opacity: 1; } 100% { opacity: 1; transform: none; } }
 
 /* ---------- lado branco ---------- */
@@ -83,6 +83,11 @@
 .pg.go .pg-card-bar i, .pg.still .pg-card-bar i { transform: scaleX(var(--p)); }
 .pg-card-s { margin: 0; font-size: 12px; color: var(--mut); }
 
+/* estágio no curso: o card escuro "Seu estágio" (estilos .pf-jr em curso/plataforma.css) sobre a faixa branca */
+.pg-stage .pf-jr { background: radial-gradient(80% 120% at 0% 0%, color-mix(in srgb, var(--c) 32%, transparent), transparent 60%), #12141c;
+  box-shadow: 0 22px 40px -24px rgba(15, 23, 42, .7); }
+.pg-stage .pf-jr-dot { background: #1c2030; }
+
 /* ---------- lado escuro ---------- */
 .pg-side { display: flex; flex-direction: column; gap: clamp(10px, 1.8vh, 16px); color: #fff; }
 .pg-tile { position: relative; padding: clamp(14px, 2.1vh, 20px) 20px clamp(14px, 2.1vh, 20px) clamp(92px, 11vh, 108px); border-radius: 24px; min-height: clamp(92px, 13vh, 118px);
@@ -113,6 +118,19 @@
 .pg-hint kbd { padding: 4px 9px; border-radius: 8px; font: 700 12px/1 inherit; color: #fff; background: rgba(255, 255, 255, .14); box-shadow: 0 0 0 1px rgba(255, 255, 255, .25) inset; }
 .pg.in .pg-hint, .pg.still .pg-hint { opacity: 1; }
 
+/* computador com tela mais baixa (ex.: 1366 × 768): o card do estágio fica compacto, numa linha só
+   (estágio à esquerda, trilho à direita, sem a frase de baixo), para tudo caber sem rolar */
+@media (max-height: 940px) and (min-width: 861px) {
+  .pg-stage .pf-jr { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 18px; padding: 12px 18px; }
+  .pg-stage .pf-jr-head { gap: 12px; }
+  .pg-stage .pf-jr-badge { width: 46px; height: 46px; border-radius: 14px; } .pg-stage .pf-jr-badge svg { width: 22px; height: 22px; }
+  .pg-stage .pf-jr-t strong { font-size: 22px; }
+  .pg-stage .pf-jr-pct, .pg-stage .pf-jr-msg, .pg-stage .pf-jr-track li small { display: none; }
+  .pg-stage .pf-jr-track { margin: 0; }
+  .pg-stage .pf-jr-track li b { font-size: 11.5px; }
+  .pg-card-s { display: none; }
+  .pg-card-t { margin-top: 8px; }
+}
 /* telas mais baixas: menos espaço entre os blocos */
 @media (max-height: 760px) and (min-width: 861px) {
   .pg-rank span { display: none; }

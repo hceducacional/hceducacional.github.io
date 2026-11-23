@@ -540,7 +540,7 @@ function renderDashboard(view) {
     heads.forEach((h) => stIO.observe(h));
   }
   // Faixa de painéis escuros (Acesso rápido, Financeiro...).
-  // Celular: o Acesso rápido abre e fecha para baixo. Computador: ficam lado a lado,
+  // Celular: o Acesso rápido abre e fecha para baixo; os painéis menores embaixo dele se esticam e depois abrem. Computador: ficam lado a lado,
   // o painel sob o mouse se alarga (como as Notícias recentes) e o clique abre o painel
   // para o lado, ocupando a faixa; os outros encolhem até a setinha fechar.
   const hub = $('#hub-row');
@@ -564,14 +564,19 @@ function renderDashboard(view) {
       panels.forEach((o) => o.classList.toggle('wide', on && o === p));
       hub.classList.toggle('has-open', on);
     };
-    if (!matchMedia('(min-width: 861px)').matches || reduceMotion()) { setPanel(p, open); setWide(open); return; }
+    // celular: só os painéis menores (Financeiro...) abrem em dois tempos; o Acesso rápido só desce.
+    // Abrir um painel fecha o outro que estiver aberto, para ninguém ficar aberto pela metade.
+    const desk = matchMedia('(min-width: 861px)').matches;
+    if (!desk && open) panels.forEach((o) => { if (o !== p && o.classList.contains('open')) setPanel(o, false); });
+    if ((!desk && !p.classList.contains('hub-only-desk')) || reduceMotion()) { setPanel(p, open); setWide(open); return; }
+    const [grow, shrink] = desk ? [680, 450] : [480, 500];
     if (open) {
       head.setAttribute('aria-expanded', true);
       setWide(true);
-      hubT = setTimeout(() => setPanel(p, true), 680);
+      hubT = setTimeout(() => setPanel(p, true), grow);
     } else {
       setPanel(p, false);
-      hubT = setTimeout(() => setWide(false), 450);
+      hubT = setTimeout(() => setWide(false), shrink);
     }
   }));
   hub?.addEventListener('click', (e) => {

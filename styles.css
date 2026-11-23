@@ -4301,9 +4301,32 @@ html.lk-lock, html.lk-lock body { overflow: hidden; }
    ========================================================= */
 .hub-ico { background: linear-gradient(135deg, #34d399, #047857); color: #fff; }
 .hub-ico svg { width: 17px; height: 17px; }
+/* celular: o Acesso rápido ocupa a linha inteira e os outros painéis (Financeiro...) ficam
+   menores, lado a lado, logo abaixo. Abrir um deles acontece em dois tempos, como no computador:
+   1º ele se estica até ocupar a linha (os vizinhos encolhem e somem), 2º o corpo desce com os botões.
+   Ao fechar, o inverso. Tudo com flex-grow e altura, sem pulos. */
 @media (max-width: 860px) {
-  .hub-only-desk { display: none; } /* celular: configurado depois */
+  .hub-row { display: flex; flex-wrap: wrap; align-items: flex-start; column-gap: 10px; }
+  .hub-row > .qa { flex: 1 0 100%; }
+  .hub-row > .hub-only-desk { flex: 1 1 0; min-width: 0; margin-top: 10px; border-radius: 20px;
+    transition: flex-grow .5s cubic-bezier(.32, .72, 0, 1), margin .5s cubic-bezier(.32, .72, 0, 1), opacity .3s ease .15s, visibility 0s, box-shadow .4s ease; }
+  .hub-row.has-open:has(> .hub-only-desk.wide) > .hub-only-desk:not(.wide) {
+    flex-grow: 0; margin-right: -10px; opacity: 0; visibility: hidden; pointer-events: none;
+    transition: flex-grow .5s cubic-bezier(.32, .72, 0, 1), margin .5s cubic-bezier(.32, .72, 0, 1), opacity .2s ease, visibility 0s linear .5s; }
+  .hub-row.has-open:has(> .hub-only-desk.wide) > .hub-only-desk:last-child:not(.wide) { margin-right: 0; margin-left: -10px; }
+  .hub-only-desk .qa-head { gap: 9px; padding: 10px 10px 10px 11px; overflow: hidden; }
+  .hub-only-desk .qa-head:focus-visible { border-radius: 20px; }
+  .hub-only-desk .qa-dot { width: 26px; height: 26px; font-size: 11px; }
+  .hub-only-desk .hub-ico svg { width: 14px; height: 14px; }
+  .hub-only-desk .qa-txt strong { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hub-only-desk .qa-txt small { display: none; }
+  .hub-only-desk .qa-chev { width: 24px; height: 24px; }
+  .hub-only-desk .qa-chev svg { width: 12px; height: 12px; }
+  /* a setinha gira já no toque, sem esperar o corpo abrir */
+  .hub-only-desk .qa-head[aria-expanded="true"] .qa-chev { transform: rotate(180deg); background: rgba(255, 255, 255, .2); }
+  .hub-only-desk .qa-head[aria-expanded="false"] .qa-chev { transform: none; }
 }
+@media (max-width: 860px) and (prefers-reduced-motion: reduce) { .hub-row > .hub-only-desk { transition: none; } }
 @media (min-width: 861px) {
   .hub-row { display: flex; align-items: flex-start; gap: 14px; margin-top: 34px; }
   .hub-row > .qa {

@@ -3,7 +3,8 @@
    Aberta pelo botão "progresso" da tela de seleção (curso/menu.js). Mesmo visual do menu:
    fundo escuro com luzes de aurora e malha de pontinhos, e a faixa branca na diagonal,
    aqui cobrindo mais da metade da tela.
-   - Na faixa branca: foto, nome e patente; o nível e o XP; aulas, questionários e provas.
+   - Na faixa branca: foto, nome e patente; o nível e o XP; aulas, questionários e provas; o estágio no curso
+     (o mesmo card "Seu estágio" do "Seu curso", vindo pronto de progressData()).
    - No lado escuro: estrelas, Saldo HC e quantos níveis faltam nos módulos.
    Os números vêm prontos de progressData() (curso/plataforma.js), contados na hora a partir do que
    está salvo: quando entram lições, aulas ou provas novas, os totais crescem sozinhos.
@@ -71,6 +72,7 @@
           ${card('c-quiz', 'quiz', 'Questionários', d.questionarios.feitos, d.questionarios.total, `${n(d.questionarios.tentativas)} ${d.questionarios.tentativas === 1 ? 'tentativa enviada' : 'tentativas enviadas'}`, 3)}
           ${card('c-prova', 'exam', 'Provas feitas', d.provas.feitas, d.provas.total, `${d.provas.aprovadas} ${d.provas.aprovadas === 1 ? 'aprovada' : 'aprovadas'}`, 4)}
         </div>
+        ${d.estagio ? `<div class="pg-stage" style="--i:5">${d.estagio}</div>` : ''}
       </div>
 
       <aside class="pg-side" aria-label="Conquistas">

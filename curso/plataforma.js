@@ -1448,14 +1448,9 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       : null;
     return { pct, k, st: STAGES[k], nx, faltam: nx ? Math.max(1, nx.de - pct) : 0, lic: { f: licFeitas, t: lessons.length }, aulas: { f: aulasFeitas, t: aulas.length }, passo };
   }
-  function journeyHTML() {
-    const j = journeyData(), m = HC_CURSO.modulos[mod];
+  /* card "Seu estágio" (também aparece na tela de progresso, curso/progresso.js) */
+  function stageCardHTML(j) {
     const track = STAGES.map((st, i) => `<li class="${i < j.k ? 'done' : i === j.k ? 'cur' : ''}" style="--c:${st.cor};--c2:${st.cor2}"><span class="pf-jr-dot">${svg(i < j.k ? 'check' : st.ico)}</span><b>${st.nome}</b><small>${st.de}%</small></li>`).join('');
-    const quick = [
-      ['stack', 'Módulo atual', `${mod + 1} de ${HC_CURSO.modulos.length}`, m.titulo, '#2563eb', '#38bdf8'],
-      ['kbd', 'Lições de digitação', `${j.lic.f} de ${j.lic.t}`, j.lic.t ? `${Math.round((j.lic.f / j.lic.t) * 100)}% concluídas` : 'Em breve', '#7c3aed', '#a78bfa'],
-      ['texto', 'Aulas aprovadas', `${j.aulas.f} de ${j.aulas.t}`, j.aulas.t ? 'com nota 7 ou mais' : 'Em breve', '#059669', '#34d399'],
-    ];
     return `
             <div class="pf-jr" style="--c:${j.st.cor};--c2:${j.st.cor2};--x:${(12.5 + (Math.min(j.pct, 75) / 75) * 75).toFixed(1)}%">
               <div class="pf-jr-head">
@@ -1465,7 +1460,17 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
               </div>
               <ol class="pf-jr-track">${track}<i class="pf-jr-fill" aria-hidden="true"></i></ol>
               <p class="pf-jr-msg">${j.nx ? `Faltam <b>${j.faltam}%</b> para chegar a <b>${j.nx.nome}</b>. Conclua lições e passe nas aulas para avançar.` : 'Você chegou ao estágio mais alto. Continue praticando para manter o ritmo!'}</p>
-            </div>
+            </div>`;
+  }
+  function journeyHTML() {
+    const j = journeyData(), m = HC_CURSO.modulos[mod];
+    const quick = [
+      ['stack', 'Módulo atual', `${mod + 1} de ${HC_CURSO.modulos.length}`, m.titulo, '#2563eb', '#38bdf8'],
+      ['kbd', 'Lições de digitação', `${j.lic.f} de ${j.lic.t}`, j.lic.t ? `${Math.round((j.lic.f / j.lic.t) * 100)}% concluídas` : 'Em breve', '#7c3aed', '#a78bfa'],
+      ['texto', 'Aulas aprovadas', `${j.aulas.f} de ${j.aulas.t}`, j.aulas.t ? 'com nota 7 ou mais' : 'Em breve', '#059669', '#34d399'],
+    ];
+    return `
+${stageCardHTML(j)}
             <div class="pf-qs">
               ${quick.map(([ico, label, val, sub, c1, c2]) => `
               <div class="pf-q" style="--c1:${c1};--c2:${c2}">
@@ -1929,6 +1934,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       questionarios: { feitos: aulas.filter(tentou).length, tentativas: aulas.reduce((t, c) => t + (contProg(c.id)?.hist || []).length, 0), total: aulas.length },
       provas: { feitas: provas.filter(tentou).length, aprovadas: provas.filter((c) => contDone(c.id)).length, total: provas.length },
       niveis: { total: nivTot, feitos: nivFeitos, faltam: nivTot - nivFeitos }, licoes: { feitas: licoesFeitas, total: lessons.length },
+      estagio: stageCardHTML(journeyData()),
     };
   }
   async function progressPage(view) {
