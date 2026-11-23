@@ -136,8 +136,9 @@
   const push = () => {
     clearTimeout(timer); timer = 0;
     const d = read(); if (!d || !online()) return;
-    sb.from('informatica_progresso').upsert({ user_id: auth.user.id, licao: ID, dados: d, updated_at: new Date().toISOString() })
-      .then(({ error }) => { if (error) console.info('Loja de itens salva só neste aparelho:', error.message); });
+    // o banco soma os itens comprados com os que já estavam na conta (script 21) e devolve a lista certa
+    sb.from('informatica_progresso').upsert({ user_id: auth.user.id, licao: ID, dados: d, updated_at: new Date().toISOString() }).select('dados').maybeSingle()
+      .then(({ data, error }) => { if (error) console.info('Loja de itens salva só neste aparelho:', error.message); else if (data?.dados) merge(data.dados); });
   };
   const save = (d) => { d.savedAt = Date.now(); write(d); if (!timer) timer = setTimeout(push, 1200); listeners.forEach((f) => f()); };
   const listeners = new Set();

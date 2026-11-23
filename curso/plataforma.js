@@ -82,8 +82,9 @@ window.HC_xp = (() => {
   const push = () => {
     clearTimeout(timer); timer = 0;
     const d = read(); if (!d || !online()) return;
-    sb.from('informatica_progresso').upsert({ user_id: auth.user.id, licao: ID, dados: d, updated_at: new Date().toISOString() })
-      .then(({ error }) => { if (error) console.info('XP geral salvo só neste aparelho:', error.message); });
+    // o banco nunca deixa o total diminuir (script 21) e devolve o que ficou valendo: junta com o daqui
+    sb.from('informatica_progresso').upsert({ user_id: auth.user.id, licao: ID, dados: d, updated_at: new Date().toISOString() }).select('dados').maybeSingle()
+      .then(({ data, error }) => { if (error) console.info('XP geral salvo só neste aparelho:', error.message); else if (data?.dados) merge(data.dados); });
   };
   /* soma (ou tira) XP; grava no aparelho na hora e na conta a cada poucos segundos */
   const add = (n) => {
@@ -172,8 +173,9 @@ window.HC_cash = (() => {
   const push = () => {
     clearTimeout(timer); timer = 0;
     const d = read(); if (!d || !online()) return;
-    sb.from('informatica_progresso').upsert({ user_id: auth.user.id, licao: ID, dados: d, updated_at: new Date().toISOString() })
-      .then(({ error }) => { if (error) console.info('Saldo HC salvo só neste aparelho:', error.message); });
+    // o banco nunca deixa ganho nem gasto diminuírem (script 21) e devolve o que ficou valendo
+    sb.from('informatica_progresso').upsert({ user_id: auth.user.id, licao: ID, dados: d, updated_at: new Date().toISOString() }).select('dados').maybeSingle()
+      .then(({ data, error }) => { if (error) console.info('Saldo HC salvo só neste aparelho:', error.message); else if (data?.dados) merge(data.dados); });
   };
   /* credita moedas (motivo: id da lição etc.); grava no aparelho na hora e na conta logo depois */
   const add = (n, motivo = '') => {
@@ -1755,7 +1757,12 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     if (synced || !auth?.user || typeof sb === 'undefined' || !sb) return;
     synced = true;
     const { data, error } = await sb.from('informatica_progresso').select('licao, dados').eq('user_id', auth.user.id);
-    if (error) return;
+    if (error) { // sem internet ou falha: tenta de novo daqui a pouco (e quando a internet voltar)
+      synced = false;
+      clearTimeout(sync.retry); sync.retry = setTimeout(() => { if (view.isConnected) sync(view); }, 8000);
+      if (!sync.onl) { sync.onl = true; addEventListener('online', () => { if (!synced && view.isConnected) sync(view); }); }
+      return false;
+    }
     let changed = false;
     const xpRow = data.find((r) => r.licao === window.HC_xp.ID);
     if (xpRow ? window.HC_xp.merge(xpRow.dados) : (window.HC_xp.pull(), false)) changed = true;
@@ -1770,6 +1777,17 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       let local = null; try { local = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
       if (!local || (dados?.savedAt || 0) > (local.savedAt || 0)) { try { localStorage.setItem(key, JSON.stringify(dados)); changed = true; } catch {} }
     });
+    // lições e conteúdos feitos neste aparelho que não chegaram à conta (sem internet na hora): manda agora.
+    // O banco só aceita se for avanço (script 21), então nada do que está na conta é perdido.
+    const pre = `hc:info:${auth.user.id}:`, remote = new Map(data.map((r) => [r.licao, r.dados]));
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i); if (!k?.startsWith(pre)) continue;
+      const licao = k.slice(pre.length); if (!/^(licao|cont)-/.test(licao)) continue;
+      let local = null; try { local = JSON.parse(localStorage.getItem(k) || 'null'); } catch {}
+      if (!local || (remote.has(licao) && (local.savedAt || 0) <= (remote.get(licao)?.savedAt || 0))) continue;
+      sb.from('informatica_progresso').upsert({ user_id: auth.user.id, licao, dados: local, updated_at: new Date().toISOString() })
+        .then(({ error: e }) => { if (e) console.info('Progresso ainda só neste aparelho:', e.message); });
+    }
     if (!changed || !view.isConnected) return changed;
     if (location.hash === '#informatica/progresso' || location.hash === '#informatica/loja') return true; // a tela de progresso e a loja se redesenham sozinhas
     if (onDiscPage()) return discPage(view, location.hash.slice('#informatica/disciplina-'.length), true);

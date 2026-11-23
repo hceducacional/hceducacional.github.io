@@ -59,8 +59,12 @@
     data.savedAt = Date.now();
     try { localStorage.setItem(lsKey(id), JSON.stringify(data)); } catch {}
     if (auth?.user && typeof sb !== 'undefined' && sb) {
-      sb.from('informatica_progresso').upsert({ user_id: auth.user.id, licao: id, dados: data, updated_at: new Date().toISOString() })
-        .then(({ error }) => { if (error) console.info('Progresso salvo só neste aparelho:', error.message); });
+      // o banco não deixa o progresso voltar para trás (script 21): se ele guardou outro, é o que vale também aqui
+      sb.from('informatica_progresso').upsert({ user_id: auth.user.id, licao: id, dados: data, updated_at: new Date().toISOString() }).select('dados').maybeSingle()
+        .then(({ data: row, error }) => {
+          if (error) return console.info('Progresso salvo só neste aparelho:', error.message);
+          if (row?.dados && row.dados.savedAt !== data.savedAt) { try { localStorage.setItem(lsKey(id), JSON.stringify(row.dados)); } catch {} }
+        });
     }
   }
   async function loadProgress(id) {

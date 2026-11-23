@@ -109,7 +109,16 @@
     const blank = () => ({ ans: {}, tried: [], read: [], hist: [], tent: 1, savedAt: 0 });
     let st; try { st = { ...blank(), ...JSON.parse(localStorage.getItem(key()) || 'null') }; } catch { st = blank(); }
     let t = 0;
-    const push = () => { clearTimeout(t); t = 0; if (online()) sb.from('informatica_progresso').upsert({ user_id: auth.user.id, licao: row, dados: st, updated_at: new Date().toISOString() }).then(({ error }) => { if (error) console.info('Conteúdo salvo só neste aparelho:', error.message); }); };
+    // o banco não deixa tentativas, notas e respostas voltarem para trás (script 21): se ele guardou outro, é o que vale aqui
+    const push = () => {
+      clearTimeout(t); t = 0; if (!online()) return;
+      const sent = st.savedAt;
+      sb.from('informatica_progresso').upsert({ user_id: auth.user.id, licao: row, dados: st, updated_at: new Date().toISOString() }).select('dados').maybeSingle()
+        .then(({ data, error }) => {
+          if (error) return console.info('Conteúdo salvo só neste aparelho:', error.message);
+          if (data?.dados && data.dados.savedAt !== sent && st.savedAt === sent) { st = { ...blank(), ...data.dados }; try { localStorage.setItem(key(), JSON.stringify(st)); } catch {} }
+        });
+    };
     const save = () => { st.savedAt = Date.now(); try { localStorage.setItem(key(), JSON.stringify(st)); } catch {} if (!t) t = setTimeout(push, 3000); };
     const pull = async () => {
       if (!online()) return false;
