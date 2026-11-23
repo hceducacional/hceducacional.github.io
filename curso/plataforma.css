@@ -1109,3 +1109,35 @@ html:has(.pfd), body:has(.pfd) { background: #0d0d0f; }
   .pf-q-btn { position: static; align-self: flex-start; }
 }
 @media (prefers-reduced-motion: reduce) { .pf-jr-fill { animation: none; } }
+
+/* card do estágio deslizável (só no celular): estágio · progresso · loja.
+   No computador o trilho "some" (display: contents) e só o card do estágio aparece. */
+.pf-jr-x, .pf-jr-dots { display: none; }
+.pf-jr-slider, .pf-jr-rail { display: contents; }
+@media (max-width: 860px) {
+  .pf-jr-slider { display: block; min-width: 0; }
+  .pf-jr-rail { display: flex; column-gap: 32px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none;
+    margin: 0 -16px; padding: 0 16px; scroll-padding: 0 16px; }
+  .pf-jr-rail::-webkit-scrollbar { display: none; }
+  .pf-jr-rail > .pf-jr { flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always; }
+  .pf-jr-x { display: flex; }
+  .pf-jr-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+  .pf-jr-dots button { width: 6px; height: 6px; padding: 0; border: 0; border-radius: 99px; background: rgba(255, 255, 255, .25); transition: width .35s cubic-bezier(.32, .72, 0, 1), background .3s; }
+  .pf-jr-dots button.on { width: 20px; background: #fff; }
+}
+/* cards de progresso e loja: o mesmo vidro escuro com o degradê da cor no canto, como o do estágio */
+.pf-jr-x { background: radial-gradient(85% 120% at 0% 0%, color-mix(in srgb, var(--c) 38%, transparent), transparent 62%),
+  radial-gradient(70% 90% at 100% 100%, color-mix(in srgb, var(--c2) 30%, transparent), transparent 65%), rgba(18, 20, 28, .94); }
+.pf-jr-x { color: #fff; text-decoration: none; -webkit-tap-highlight-color: transparent; transition: transform .25s ease; }
+.pf-jr-x:active { transform: scale(.98); }
+.pf-jx-msg { margin: 12px 0 0; font-size: 13px; line-height: 1.4; color: rgba(255, 255, 255, .72); }
+.pf-jx-msg b { color: #fff; }
+.pf-jx-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.pf-jx-stats span { min-width: 0; display: flex; flex-direction: column; padding: 7px 10px; border-radius: 12px; background: rgba(255, 255, 255, .07); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
+.pf-jx-stats b { font-size: 16px; font-weight: 800; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-jx-stats small { font-size: 10.5px; color: rgba(255, 255, 255, .55); }
+.pf-jx-go { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin-top: auto; padding: 8px 14px; border-radius: 99px; font-size: 13px; font-weight: 700; color: #111;
+  background: #fff; box-shadow: 0 10px 20px -12px var(--c); }
+.pf-jr-x .pf-jx-stats { margin-bottom: 14px; }
+.pf-jx-go svg { width: 13px; height: 13px; }
+

@@ -109,6 +109,18 @@
     };
     document.addEventListener('keydown', onKey);
 
+    /* computador: se a coluna branca não cabe na altura da janela (tela baixa ou zoom), deixa o estágio
+       compacto (.tight). Mede de novo quando a janela muda de tamanho. */
+    const main = stage.querySelector('.pg-main');
+    const fit = () => {
+      if (!alive()) return removeEventListener('resize', fit);
+      stage.classList.remove('tight');
+      if (innerWidth <= 860) return;
+      const cs = getComputedStyle(stage), room = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      if (main.offsetHeight > room) stage.classList.add('tight');
+    };
+    fit(); addEventListener('resize', fit);
+
     /* entrada: a faixa branca desliza, os blocos sobem e os números contam */
     const count = () => stage.querySelectorAll('.pg-num').forEach((el) => {
       const to = +el.dataset.to, dec = +el.dataset.dec, fmt = (v) => (dec ? window.HC_cashFmt(v) : n(v));

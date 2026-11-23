@@ -252,6 +252,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   let openMod = (() => { try { const v = sessionStorage.getItem('hc:pf:open'); return v === null ? null : +v; } catch { return null; } })();
   const saveOpen = () => { try { openMod === null ? sessionStorage.removeItem('hc:pf:open') : sessionStorage.setItem('hc:pf:open', String(openMod)); } catch {} };
   const ICO = {
+    bag: '<path d="M5 8h14l-1.2 12H6.2L5 8Z"/><path d="M9 8V7a3 3 0 0 1 6 0v1"/>',
     kbd: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/>',
     flag: '<path d="M4 22V4M4 4h13l-2 4 2 4H4"/>',
     seed: '<path d="M12 21v-7M12 14c0-4 3-7 8-7 0 5-3 8-8 7ZM12 14c0-3-2-6-7-6 0 4 2 7 7 6Z"/>',
@@ -1462,6 +1463,40 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
               <p class="pf-jr-msg">${j.nx ? `Faltam <b>${j.faltam}%</b> para chegar a <b>${j.nx.nome}</b>. Conclua lições e passe nas aulas para avançar.` : 'Você chegou ao estágio mais alto. Continue praticando para manter o ritmo!'}</p>
             </div>`;
   }
+  /* celular: a tela de seleção (progresso · curso · loja) é só do computador, então o card do estágio
+     vira uma fileira deslizável (um card por vez, bolinhas embaixo) com mais dois cards no mesmo estilo, que levam ao progresso e à loja.
+     No computador esses dois ficam escondidos e o card do estágio continua sozinho. */
+  function extraCardsHTML(j) {
+    const x = window.HC_xp.get(), rk = window.HC_xp.rankOf(x.xp), L = window.HC_loja;
+    const meus = L ? L.get().itens.length : 0, tot = L ? L.ALL.length : 0;
+    const card = (href, c, c2, ico, small, strong, msg, stats, go) => `
+            <a class="pf-jr pf-jr-x" href="${href}" style="--c:${c};--c2:${c2}">
+              <div class="pf-jr-head">
+                <span class="pf-jr-badge">${svg(ico)}</span>
+                <div class="pf-jr-t"><small>${small}</small><strong>${strong}</strong></div>
+              </div>
+              <p class="pf-jx-msg">${msg}</p>
+              <div class="pf-jx-stats">${stats.map(([v, l]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div>
+              <span class="pf-jx-go">${go} ${svg('next')}</span>
+            </a>`;
+    return card('#informatica/progresso', '#fbbf24', '#ea580c', 'chart', 'Seu progresso', `Nível ${String(x.nivel).padStart(2, '0')}`,
+      `Faltam <b>${x.falta.toLocaleString('pt-BR')} XP</b> para o nível ${String(x.nivel + 1).padStart(2, '0')}`,
+      [[Math.round(x.xp).toLocaleString('pt-BR'), 'XP'], [esc(rk.nome), 'patente'], [`${j.aulas.f}/${j.aulas.t}`, 'aulas aprovadas']], 'Ver progresso')
+      + card('#informatica/loja', '#38bdf8', '#2563eb', 'bag', 'Loja de itens', 'Personalize',
+      'Troque suas moedas por personagens, avatares e efeitos',
+      [[window.HC_cashFmt(window.HC_cash.get().saldo), 'Saldo HC'], [`${meus}/${tot}`, 'itens seus'], [L ? `${Object.values(L.get().eq).filter(Boolean).length}/${Object.keys(L.get().eq).length}` : '0', 'equipados']], 'Abrir a loja');
+  }
+  // bolinhas do card deslizável: acompanham a rolagem e levam ao card tocado
+  document.addEventListener('scroll', (e) => {
+    const r = e.target; if (!r.classList?.contains('pf-jr-rail')) return;
+    const w = r.firstElementChild.offsetWidth + parseFloat(getComputedStyle(r).columnGap || 0), i = Math.round(r.scrollLeft / w);
+    r.nextElementSibling?.querySelectorAll('button').forEach((d, k) => d.classList.toggle('on', k === i));
+  }, { capture: true, passive: true });
+  document.addEventListener('click', (e) => {
+    const d = e.target.closest?.('[data-jr]'); if (!d) return;
+    const r = d.parentElement.previousElementSibling, w = r.firstElementChild.offsetWidth + parseFloat(getComputedStyle(r).columnGap || 0);
+    r.scrollTo({ left: w * +d.dataset.jr, behavior: 'smooth' });
+  });
   function journeyHTML() {
     const j = journeyData(), m = HC_CURSO.modulos[mod];
     const quick = [
@@ -1470,7 +1505,10 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       ['texto', 'Aulas aprovadas', `${j.aulas.f} de ${j.aulas.t}`, j.aulas.t ? 'com nota 7 ou mais' : 'Em breve', '#059669', '#34d399'],
     ];
     return `
-${stageCardHTML(j)}
+            <div class="pf-jr-slider">
+              <div class="pf-jr-rail">${stageCardHTML(j)}${extraCardsHTML(j)}</div>
+              <div class="pf-jr-dots" aria-hidden="true">${[0, 1, 2].map((i) => `<button type="button" tabindex="-1" class="${i ? '' : 'on'}" data-jr="${i}"></button>`).join('')}</div>
+            </div>
             <div class="pf-qs">
               ${quick.map(([ico, label, val, sub, c1, c2]) => `
               <div class="pf-q" style="--c1:${c1};--c2:${c2}">
