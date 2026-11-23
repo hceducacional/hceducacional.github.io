@@ -252,6 +252,12 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   let openMod = (() => { try { const v = sessionStorage.getItem('hc:pf:open'); return v === null ? null : +v; } catch { return null; } })();
   const saveOpen = () => { try { openMod === null ? sessionStorage.removeItem('hc:pf:open') : sessionStorage.setItem('hc:pf:open', String(openMod)); } catch {} };
   const ICO = {
+    kbd: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/>',
+    flag: '<path d="M4 22V4M4 4h13l-2 4 2 4H4"/>',
+    seed: '<path d="M12 21v-7M12 14c0-4 3-7 8-7 0 5-3 8-8 7ZM12 14c0-3-2-6-7-6 0 4 2 7 7 6Z"/>',
+    rocket: '<path d="M5 15c-1.5 1.5-2 5-2 5s3.5-.5 5-2M12 15l-3-3M9 12c2-6 6-9 12-9 0 6-3 10-9 12l-3-3Z"/><circle cx="15" cy="9" r="1.5"/>',
+    medal: '<circle cx="12" cy="15" r="6"/><path d="M8 3h8l-2 6h-4L8 3ZM12 12.5l.9 1.8 2 .3-1.4 1.4.3 2-1.8-.9-1.8.9.3-2-1.4-1.4 2-.3.9-1.8Z"/>',
+    crown: '<path d="M3 8l4 4 5-7 5 7 4-4-2 11H5L3 8Z"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
     next: '<path d="M5 12h14M13 6l6 6-6 6"/>',
     prev: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
@@ -1416,29 +1422,63 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       </section>`;
   }
 
-  /* widget do XP geral e do nível do aluno (em "Seu curso") */
-  function xpWidget() {
-    const x = window.HC_xp.get(), nv = String(x.nivel).padStart(2, '0'), n = (v) => v.toLocaleString('pt-BR');
+  /* "SEU CURSO": resumo rápido do aluno. O estágio (Iniciante → Intermediário → Especialista → Avançado) vem do
+     quanto ele já fez de TUDO o que existe na plataforma hoje: lições de digitação e aulas/avaliações das disciplinas.
+     Lição concluída conta 1 (começada conta o quanto andou); aula aprovada conta 1 (tentada, 0,4). Com conteúdo novo
+     entrando na plataforma, a porcentagem se ajusta sozinha. XP e Saldo HC ficam só nos banners. */
+  const STAGES = [
+    { nome: 'Iniciante', ico: 'seed', de: 0, cor: '#34d399', cor2: '#059669' },
+    { nome: 'Intermediário', ico: 'rocket', de: 25, cor: '#60a5fa', cor2: '#2563eb' },
+    { nome: 'Especialista', ico: 'medal', de: 50, cor: '#c084fc', cor2: '#7c3aed' },
+    { nome: 'Avançado', ico: 'crown', de: 75, cor: '#fbbf24', cor2: '#ea580c' },
+  ];
+  function journeyData() {
+    const lessons = HC_CURSO.modulos.flatMap((m) => m.licoes).map((l, i) => ({ l, n: i + 1 })).filter((x) => x.l.arquivo);
+    const aulas = visDiscs().flatMap((d) => conts().filter((c) => c.disc === d.id && c.arquivo && (c.visivel || isAdmin())).sort((a, b) => a.ordem - b.ordem));
+    let soma = 0, licFeitas = 0, aulasFeitas = 0;
+    lessons.forEach(({ n }) => { const p = progress(n); if (p?.done) { soma += 1; licFeitas++; } else if (p?.lvl) soma += Math.min(.9, p.lvl / 30); });
+    aulas.forEach((c) => { if (contDone(c.id)) { soma += 1; aulasFeitas++; } else if ((contProg(c.id)?.hist || []).length) soma += .4; });
+    const total = lessons.length + aulas.length, pct = total ? Math.round((soma / total) * 100) : 0;
+    const k = STAGES.reduce((a, st, i) => (pct >= st.de ? i : a), 0), nx = STAGES[k + 1];
+    // próximo passo: no computador, a próxima lição de digitação; senão (ou se já fez todas), a próxima aula liberada
+    const nextLic = window.HC_isComputer() ? lessons.find(({ n }) => !progress(n)?.done) : null;
+    const nextAula = aulas.find((c) => !contDone(c.id) && !(c.seq && (() => { const p = conts().filter((x) => x.disc === c.disc && x.seq && x.ordem < c.ordem).sort((a, b) => b.ordem - a.ordem)[0]; return p && !contDone(p.id); })()));
+    const passo = nextLic ? { href: `#informatica/licao-${nextLic.n}`, ico: 'kbd', txt: `Lição ${String(nextLic.n).padStart(2, '0')}`, sub: nextLic.l.titulo, tag: progress(nextLic.n)?.lvl ? 'Continuar' : 'Começar' }
+      : nextAula ? { href: `#informatica/conteudo-${nextAula.id}`, ico: nextAula.tipo === 'prova' ? 'prova' : 'texto', txt: nextAula.rotulo?.split(' · ')[0] || 'Próxima aula', sub: nextAula.titulo, tag: contProg(nextAula.id)?.savedAt ? 'Continuar' : 'Começar' }
+      : null;
+    return { pct, k, st: STAGES[k], nx, faltam: nx ? Math.max(1, nx.de - pct) : 0, lic: { f: licFeitas, t: lessons.length }, aulas: { f: aulasFeitas, t: aulas.length }, passo };
+  }
+  function journeyHTML() {
+    const j = journeyData(), m = HC_CURSO.modulos[mod];
+    const track = STAGES.map((st, i) => `<li class="${i < j.k ? 'done' : i === j.k ? 'cur' : ''}" style="--c:${st.cor};--c2:${st.cor2}"><span class="pf-jr-dot">${svg(i < j.k ? 'check' : st.ico)}</span><b>${st.nome}</b><small>${st.de}%</small></li>`).join('');
+    const quick = [
+      ['stack', 'Módulo atual', `${mod + 1} de ${HC_CURSO.modulos.length}`, m.titulo, '#2563eb', '#38bdf8'],
+      ['kbd', 'Lições de digitação', `${j.lic.f} de ${j.lic.t}`, j.lic.t ? `${Math.round((j.lic.f / j.lic.t) * 100)}% concluídas` : 'Em breve', '#7c3aed', '#a78bfa'],
+      ['texto', 'Aulas aprovadas', `${j.aulas.f} de ${j.aulas.t}`, j.aulas.t ? 'com nota 7 ou mais' : 'Em breve', '#059669', '#34d399'],
+    ];
     return `
-        <div class="pf-xp" role="group" aria-label="Nível ${x.nivel}, ${n(x.xp)} XP">
-          <span class="pf-xp-lvl"><small>Nível</small><b>${nv}</b></span>
-          <div class="pf-xp-main">
-            <div class="pf-xp-top">
-              <span class="pf-xp-total"><strong>${n(x.xp)}</strong> XP</span>
-              <span class="pf-xp-next">Faltam <b>${n(x.falta)} XP</b> para o nível ${String(x.nivel + 1).padStart(2, '0')}</span>
+            <div class="pf-jr" style="--c:${j.st.cor};--c2:${j.st.cor2};--x:${(12.5 + (Math.min(j.pct, 75) / 75) * 75).toFixed(1)}%">
+              <div class="pf-jr-head">
+                <span class="pf-jr-badge">${svg(j.st.ico)}</span>
+                <div class="pf-jr-t"><small>Seu estágio</small><strong>${j.st.nome}</strong></div>
+                <div class="pf-jr-pct"><b>${j.pct}<small>%</small></b><small>do conteúdo da plataforma</small></div>
+              </div>
+              <ol class="pf-jr-track">${track}<i class="pf-jr-fill" aria-hidden="true"></i></ol>
+              <p class="pf-jr-msg">${j.nx ? `Faltam <b>${j.faltam}%</b> para chegar a <b>${j.nx.nome}</b>. Conclua lições e passe nas aulas para avançar.` : 'Você chegou ao estágio mais alto. Continue praticando para manter o ritmo!'}</p>
             </div>
-            <div class="pf-xp-bar"><i style="--w:${(x.pct / 100).toFixed(4)}"></i></div>
-            <small class="pf-xp-sub">${n(x.rest)} de ${n(x.proximo)} XP neste nível · todo XP das lições soma aqui, inclusive ao refazer</small>
-          </div>
-          ${window.HC_cash ? `<span class="pf-cash" title="Saldo HC: cada estrela rende 35,27, o Superstar +87,76 e o Megastar +97,43"><span class="pf-cash-txt"><small>Saldo HC</small><b>${cashParts(window.HC_cash.get().saldo)}</b></span><img src="assets/moeda/moeda.webp" alt="" draggable="false"></span>` : ''}
-        </div>`;
+            <div class="pf-qs">
+              ${quick.map(([ico, label, val, sub, c1, c2]) => `
+              <div class="pf-q" style="--c1:${c1};--c2:${c2}">
+                <span class="pf-q-ico">${svg(ico)}</span>
+                <span class="pf-q-txt"><small>${label}</small><strong>${esc(val)}</strong><em>${esc(sub)}</em></span>
+              </div>`).join('')}
+              ${j.passo ? `<a class="pf-q pf-q-go" href="${j.passo.href}" style="--c1:#ea580c;--c2:#fbbf24">
+                <span class="pf-q-ico">${svg(j.passo.ico)}</span>
+                <span class="pf-q-txt"><small>Próximo passo</small><strong>${esc(j.passo.txt)}</strong><em>${esc(j.passo.sub)}</em></span>
+                <span class="pf-q-btn">${j.passo.tag} ${svg('next')}</span>
+              </a>` : `<div class="pf-q" style="--c1:#ea580c;--c2:#fbbf24"><span class="pf-q-ico">${svg('flag')}</span><span class="pf-q-txt"><small>Próximo passo</small><strong>Tudo em dia</strong><em>Novos conteúdos aparecem aqui</em></span></div>`}
+            </div>`;
   }
-  /* "1.250,00" com os centavos menores */
-  function cashParts(v) {
-    const [a, b] = window.HC_cashFmt(v).split(',');
-    return `${a}<small>,${b}</small>`;
-  }
-
   /* palco do topo: decide a altura da imagem (--ih) e onde começam os cards (--sp).
      A imagem tem a proporção do banner (16:9 no computador, 9:16 no celular) e só cresce além disso
      quando o texto do banner e os cards não cabem. Os cards dos módulos ficam metade sobre a imagem
@@ -1495,12 +1535,6 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     const first = HC_CURSO.modulos.slice(0, mod).reduce((a, x) => a + x.licoes.length, 0); // nº da 1ª lição do módulo - 1
     const nextM = HC_CURSO.modulos[mod + 1];
     const n = m.licoes.length;
-    const stats = [
-      ['level', 'Nível', m.nivel.replace(/^Nível\s+/i, ''), '#059669', '#34d399'],
-      ['stack', 'Módulo', `${mod + 1} de ${HC_CURSO.modulos.length}`, '#2563eb', '#38bdf8'],
-      ['book', 'Lições do módulo', String(n), '#7c3aed', '#a78bfa'],
-      ['chart', 'Níveis no curso', String(m.totalNiveis), '#ea580c', '#fbbf24'],
-    ];
     // topo no estilo dos apps de streaming: a imagem do banner ocupa a largura toda (passa por trás da barra de cima),
     // com as informações do banner por cima e, na parte de baixo da imagem, "Seu curso" e os módulos.
     // A imagem rola junto com a página; abaixo dela o fundo é o do site.
@@ -1528,17 +1562,8 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
         <div class="pf-spacer"><div class="dots">${[0, 1, 2, 3].map((i) => `<button class="dot" data-i="${i}" style="--slide-ms:${PF_SLIDE_MS}ms" aria-label="Banner ${i + 1}"><span class="dot-fill"></span></button>`).join('')}</div></div>
         <div class="pf-shelf">
           <section class="pf-course" aria-label="Seu curso">
-            <h2 class="pf-st-title">Seu curso <span>Onde você está na Plataforma de Informática</span></h2>
-            <div class="pf-course-grid">
-              ${xpWidget()}
-              <div class="pf-stats">
-                ${stats.map(([ico, label, val, c1, c2], k) => `
-                <div class="pf-stat" style="--c1:${c1};--c2:${c2};--k:${k}">
-                  <span class="pf-stat-ico">${svg(ico)}</span>
-                  <span class="pf-stat-txt"><small>${label}</small><strong>${esc(val)}</strong></span>
-                </div>`).join('')}
-              </div>
-            </div>
+            <h2 class="pf-st-title">Seu curso <span>Um resumo rápido de onde você está</span></h2>
+            <div class="pf-course-grid pf-jr-grid">${journeyHTML()}</div>
           </section>
           <section class="pf-mods" aria-label="Módulos">
             <div class="pf-mods-head">

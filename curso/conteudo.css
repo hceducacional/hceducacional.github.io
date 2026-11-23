@@ -641,7 +641,15 @@
 .ct-readmode > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .ct-readmode b { font-size: 15px; } .ct-readmode small { font-size: 12.5px; opacity: .85; }
 .ct-readmode .ct-tb-btn.dark { color: var(--tc); }
-@media (max-width: 860px) { .ct-readmode { top: calc(var(--tb-top, 10px) + 64px); margin: 0 -8px 12px; } .ct-readmode small { display: none; } }
+/* celular: a faixa fica parada no alto do documento (não acompanha a rolagem): ao descer ela sai da tela junto
+   com o texto e só volta a aparecer quando o aluno sobe de novo até o começo; mais baixinha */
+@media (max-width: 860px) {
+  .ct-readmode { position: relative; top: 0; min-height: 52px; margin: 0 -8px 12px; padding: 6px 6px 6px 8px; gap: 8px; }
+  .ct-readmode small { display: none; }
+  .ct-readmode-ico { width: 30px; height: 30px; border-radius: 10px; }
+  .ct-readmode b { font-size: 14px; white-space: nowrap; }
+  .ct-readmode .ct-tb-btn { padding: 8px 12px; font-size: 12.5px; line-height: 1.15; }
+}
 
 .ct.testing .ct-readmode { position: relative; top: 0; } /* no teste, a faixa roxa já fica presa no alto */
 .ct.reading .ct-meta-lim { display: none; }

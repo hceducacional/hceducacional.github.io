@@ -441,19 +441,23 @@ window.HC_CONTENT = {
     },
     {
       "id": "bmod",
-      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/704e5d77-a1a7-4531-a1c4-2f938ccda1b4.webp"
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/704e5d77-a1a7-4531-a1c4-2f938ccda1b4.webp",
+      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/1980f26e-58cc-42e2-a677-06aea9734188.webp"
     },
     {
       "id": "bsaldo",
-      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/2542fa5b-30c3-42ed-9edd-a2f5cfcf7144.webp"
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/2542fa5b-30c3-42ed-9edd-a2f5cfcf7144.webp",
+      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/4e571fb9-5d94-4402-b27a-b323fea5f98a.webp"
     },
     {
       "id": "bnivel",
-      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/74edd282-2392-4946-b726-07cf75569d3e.webp"
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/74edd282-2392-4946-b726-07cf75569d3e.webp",
+      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/2f1014b7-7448-4ced-80be-d828619b88ee.webp"
     },
     {
       "id": "bpatente",
-      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/37336c6d-31c9-4c0f-99d6-b83e89e33176.webp"
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/37336c6d-31c9-4c0f-99d6-b83e89e33176.webp",
+      "imageMobile": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/4e423910-ef23-4409-af8d-0c0e9bd89dcd.webp"
     }
   ],
   "cursoConteudo": [
