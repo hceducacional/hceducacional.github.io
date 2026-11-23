@@ -3,7 +3,8 @@
    É a primeira tela de #informatica. Os três botões entram recolhidos (personagens
    dentro da forma); 1 s depois o do meio se expande e os personagens saem da forma.
    Passar o mouse ou usar ← → escolhe outro botão; Enter (ou clique) entra.
-   O botão do meio leva aos módulos (#informatica/cursos) e o da esquerda ao progresso (#informatica/progresso, curso/progresso.js).
+   O botão do meio leva aos módulos (#informatica/cursos), o da esquerda ao progresso (#informatica/progresso, curso/progresso.js)
+   e o da direita à loja de itens (#informatica/loja, curso/loja.js).
    Fundo: o mesmo das lições (degradê escuro + luzes de aurora + malha de pontinhos),
    trocando de cor devagar, com a faixa branca na diagonal por cima.
    ========================================================= */
@@ -46,7 +47,7 @@
   const HI_TITLE = 'BEM-VINDO', HI_SUB = 'Pronto para se tornar mestre da informática?';
   function welcome() {
     const p = typeof auth !== 'undefined' ? (auth.profile || (auth.user ? { email: auth.user.email, name: typeof meName === 'function' ? meName() : '' } : null)) : null;
-    const foto = typeof userAvatar === 'function' ? userAvatar(p || { name: '?' }, 'ifm-hi-av') : '';
+    const foto = window.HC_loja ? window.HC_loja.avatar(p || { name: '?' }, 'ifm-hi-av') : typeof userAvatar === 'function' ? userAvatar(p || { name: '?' }, 'ifm-hi-av') : ''; // avatar da loja, se equipado
     return `<div class="ifm-hi" role="note" aria-label="${HI_TITLE[0] + HI_TITLE.slice(1).toLowerCase()}! ${HI_SUB}">
         <i class="ifm-hi-bar" aria-hidden="true"></i>
         <span class="ifm-hi-ph" aria-hidden="true"><i class="ifm-hi-l ifm-hi-l1"></i><i class="ifm-hi-l ifm-hi-l2"></i><span class="ifm-hi-img">${foto}</span></span>
@@ -130,13 +131,9 @@
     const go = (k) => {
       if (leaving) return;
       const o = OPTS[k];
-      if (o.id === 'loja') {
-        opts[k].classList.remove('nope'); void opts[k].offsetWidth; opts[k].classList.add('nope');
-        return toast('A loja de itens chega em breve.');
-      }
       leaving = true; select(k);
       stage.classList.add('leave');
-      setTimeout(() => { if (alive()) location.hash = o.id === 'progresso' ? '#informatica/progresso' : '#informatica/cursos'; }, reduce ? 0 : 620);
+      setTimeout(() => { if (alive()) location.hash = o.id === 'curso' ? '#informatica/cursos' : `#informatica/${o.id}`; }, reduce ? 0 : 620);
     };
 
     opts.forEach((b, k) => {

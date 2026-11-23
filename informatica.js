@@ -113,7 +113,7 @@ const infoLoadPlatform = () => infoPlatform ||= new Promise((ok, fail) => {
   css.rel = 'stylesheet'; css.href = `curso/plataforma.css?v=${window.HC_V || ''}`;
   const css2 = document.createElement('link'); // tela de seleção (menu de entrada)
   css2.rel = 'stylesheet'; css2.href = `curso/menu.css?v=${window.HC_V || ''}`;
-  let left = 2;
+  let left = 3;
   const done = () => { if (--left === 0) ok(); };
   const err = () => { infoPlatform = null; fail(); };
   // a plataforma pode já ter vindo pelo Acervo do professor (app.js): baixar de novo dá erro de HC_CURSO repetido
@@ -123,9 +123,12 @@ const infoLoadPlatform = () => infoPlatform ||= new Promise((ok, fail) => {
   const menu = document.createElement('script');
   menu.src = `curso/menu.js?v=${window.HC_V || ''}`;
   menu.onload = done; menu.onerror = err;
+  const shop = document.createElement('script'); // catálogo e inventário da loja de itens (avatar, "Parabéns!" e poderes)
+  shop.src = `curso/loja-itens.js?v=${window.HC_V || ''}`;
+  shop.onload = done; shop.onerror = err;
   const cur = document.createElement('script'); // cursores desenhados da plataforma (só no computador)
   cur.src = `curso/cursores.js?v=${window.HC_V || ''}`;
-  document.head.append(css, css2); document.body.append(...[js, menu, cur].filter(Boolean));
+  document.head.append(css, css2); document.body.append(...[js, menu, shop, cur].filter(Boolean));
 });
 
 function renderInformatica(view, route = 'informatica') {

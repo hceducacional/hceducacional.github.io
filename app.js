@@ -3226,7 +3226,7 @@ async function renderAcervoTest(view, cod) {
   view.innerHTML = '<div class="wrap"><p class="me-loading">Preparando o teste…</p></div>';
   try {
     // plataforma.js traz o XP e o Saldo HC (usados nos testes da tela de XP e das moedas)
-    await Promise.all(['curso/licao.css', 'curso/acervo.css', 'curso/teclado.js', 'curso/licao.js', 'curso/acervo.js', 'curso/plataforma.js'].map(lazy)); // lazy só baixa uma vez (a página da Informática usa o mesmo)
+    await Promise.all(['curso/licao.css', 'curso/acervo.css', 'curso/teclado.js', 'curso/licao.js', 'curso/acervo.js', 'curso/plataforma.js', 'curso/loja-itens.js'].map(lazy)); // lazy só baixa uma vez (a página da Informática usa o mesmo)
     const t = await window.HC_acervo.testLesson(cod);
     if (!view.isConnected) return;
     if (!t) { location.hash = '#config/informatica'; return; }

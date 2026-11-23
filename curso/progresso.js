@@ -49,7 +49,7 @@
       <div class="pg-main">
         <a class="pg-back" href="#informatica">${svg('back')}Voltar</a>
         <header class="pg-hero" style="--i:0">
-          <div class="pg-photo">${typeof userAvatar === 'function' ? userAvatar(d.perfil, 'pg-avatar') : ''}<img class="pg-medal" src="${pt.img}" alt="" draggable="false"></div>
+          <div class="pg-photo">${window.HC_loja ? window.HC_loja.avatar(d.perfil, 'pg-avatar') : typeof userAvatar === 'function' ? userAvatar(d.perfil, 'pg-avatar') : ''}<img class="pg-medal" src="${pt.img}" alt="" draggable="false"></div>
           <div class="pg-who">
             <h1 class="pg-title">progresso</h1>
             <p class="pg-name">${esc(d.nome || 'Aluno')}</p>

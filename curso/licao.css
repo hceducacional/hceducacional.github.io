@@ -3722,3 +3722,55 @@ body.lc-bg-on .lc-shell { border-color: rgba(255, 255, 255, .12); box-shadow: 0 
 .lc-cf .next em { font: 700 12px/1 Inter, system-ui, sans-serif; font-style: normal; color: #fde68a; }
 .lc-cf.win .next em { display: none; }
 @media (prefers-reduced-motion: reduce) { .lc-cf .rl.spin b, .lc-cf .safe.open .coin { animation: none !important; } }
+
+/* =========================================================
+   PODER DO PERSONAGEM (loja de itens, curso/loja-itens.js)
+   Cartão no alto da coluna da direita: pronto (brilha), ativo (anel esvaziando) e recarregando (anel enchendo).
+   Ao ligar, o personagem entra pela lateral com o nome do poder.
+   ========================================================= */
+.lc-pw { --c1: #7dd3fc; --c2: #2563eb; position: relative; display: flex; align-items: center; gap: 10px; min-height: 76px; padding: 10px 10px 10px 62px; border: 0; border-radius: 22px; cursor: pointer;
+  font: inherit; color: #fff; text-align: left; overflow: hidden; -webkit-tap-highlight-color: transparent;
+  background: radial-gradient(80% 120% at 0% 0%, rgba(255, 255, 255, .28), transparent 60%), linear-gradient(135deg, var(--c1), var(--c2));
+  box-shadow: 0 16px 30px -18px var(--c2), 0 0 0 1px rgba(255, 255, 255, .25) inset; transition: transform .3s cubic-bezier(.34, 1.56, .64, 1), filter .3s; }
+.lc-pw:hover { transform: translateY(-2px); }
+.lc-pw-art { position: absolute; left: 0; bottom: 0; width: 60px; height: 100%; overflow: hidden; }
+.lc-pw-art img { position: absolute; left: 50%; top: 6px; height: 260%; width: auto; translate: -50% 0; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .3)); transition: transform .4s cubic-bezier(.34, 1.56, .64, 1); }
+.lc-pw:hover .lc-pw-art img, .lc-pw.on .lc-pw-art img { transform: translateY(-4px) scale(1.05); }
+.lc-pw-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.lc-pw-txt small { font-size: 11px; font-weight: 700; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 30px; }
+.lc-pw-txt b { font-size: 13.5px; font-weight: 800; line-height: 1.15; margin: 2px 0; }
+.lc-pw-txt em { font-style: normal; font-size: 10.5px; line-height: 1.2; opacity: .9; }
+.lc-pw-dial { position: absolute; right: 8px; top: 8px; width: 30px; height: 30px; display: grid; place-items: center; }
+.lc-pw-dial svg { position: absolute; inset: 0; transform: rotate(-90deg); fill: none; stroke-width: 4; }
+.lc-pw-dial circle { stroke: rgba(255, 255, 255, .25); }
+.lc-pw-dial circle.v { stroke: #fff; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: calc(100 - var(--p, 100)); transition: stroke-dashoffset .26s linear; }
+.lc-pw-dial b { font-size: 11px; font-weight: 800; }
+.lc-pw.ready .lc-pw-dial::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #fff; box-shadow: 0 0 12px #fff; animation: lcPwReady 1.6s ease-in-out infinite; }
+@keyframes lcPwReady { 50% { transform: scale(.6); opacity: .6; } }
+.lc-pw.ready { animation: lcPwGlow 2.4s ease-in-out infinite; }
+@keyframes lcPwGlow { 50% { box-shadow: 0 16px 34px -14px var(--c2), 0 0 0 1px rgba(255, 255, 255, .25) inset, 0 0 22px color-mix(in srgb, var(--c1) 70%, transparent); } }
+.lc-pw.on { box-shadow: 0 0 0 2px #fff inset, 0 0 28px color-mix(in srgb, var(--c1) 80%, transparent); }
+.lc-pw.on::before { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, .35) 50%, transparent 65%); animation: lcPwSweep 1.4s linear infinite; }
+@keyframes lcPwSweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.lc-pw.cd { filter: saturate(.35) brightness(.8); cursor: default; }
+.lc-pw.fire { animation: lcPwFire .6s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes lcPwFire { 0% { transform: scale(1); } 30% { transform: scale(1.08); } 100% { transform: scale(1); } }
+.lc-pw.nope { animation: lcPwNope .45s ease; }
+@keyframes lcPwNope { 20% { translate: -6px; } 40% { translate: 5px; } 60% { translate: -3px; } 80% { translate: 2px; } }
+.lc-pw.block { animation: lcPwFire .5s ease; }
+/* o cartão do nível ganha a cor do poder enquanto ele está ligado */
+.lc-shell.pw-on .lc-main { box-shadow: 0 0 0 2px rgba(255, 255, 255, .55), 0 0 40px rgba(255, 255, 255, .18); transition: box-shadow .4s; }
+.lc-hk-lives.shielded { animation: lcShield .6s ease; }
+@keyframes lcShield { 0% { filter: drop-shadow(0 0 0 #7dd3fc); } 40% { filter: drop-shadow(0 0 10px #7dd3fc) brightness(1.6); transform: scale(1.15); } 100% { filter: none; transform: none; } }
+.lc-hk-lives.healed { animation: lcShield .8s ease; }
+/* entrada do personagem pela lateral */
+.lc-pw-cut { position: fixed; inset: 0; z-index: 80; pointer-events: none; overflow: hidden; }
+.lc-pw-cut-band { position: absolute; left: -10%; right: -10%; top: 50%; height: 190px; margin-top: -95px; rotate: -6deg;
+  background: linear-gradient(90deg, var(--c2), var(--c1) 60%, #fff); box-shadow: 0 30px 60px -20px rgba(0, 0, 0, .6); animation: lcCutBand 1.4s cubic-bezier(.22, 1, .36, 1) both; }
+.lc-pw-cut img { position: absolute; right: 16%; top: 50%; height: 420px; margin-top: -250px; filter: drop-shadow(0 20px 30px rgba(0, 0, 0, .45)); animation: lcCutChar 1.4s cubic-bezier(.22, 1, .36, 1) both; }
+.lc-pw-cut b { position: absolute; left: 14%; top: 50%; translate: 0 -50%; rotate: -6deg; font-size: clamp(40px, 5vw, 72px); font-weight: 900; letter-spacing: -.03em; color: #fff; text-shadow: 0 6px 0 rgba(0, 0, 0, .18), 0 0 30px rgba(255, 255, 255, .5); white-space: nowrap; animation: lcCutTxt 1.4s cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes lcCutBand { 0% { transform: scaleY(0); } 18% { transform: scaleY(1); } 80% { transform: scaleY(1); opacity: 1; } 100% { transform: scaleY(0); opacity: 0; } }
+@keyframes lcCutChar { 0% { transform: translateX(60vw); } 22% { transform: translateX(0); } 78% { transform: translateX(-30px); opacity: 1; } 100% { transform: translateX(-60vw); opacity: 0; } }
+@keyframes lcCutTxt { 0% { transform: translateX(-50vw); opacity: 0; } 25% { transform: translateX(0); opacity: 1; } 78% { transform: translateX(20px); opacity: 1; } 100% { transform: translateX(50vw); opacity: 0; } }
+@media (max-width: 1100px) { .lc-side .lc-pw { grid-column: 1 / -1; } }
+@media (prefers-reduced-motion: reduce) { .lc-pw, .lc-pw::before, .lc-pw-dial::after, .lc-pw-cut { animation: none !important; } .lc-pw-cut { display: none; } }

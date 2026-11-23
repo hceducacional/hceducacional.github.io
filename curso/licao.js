@@ -523,6 +523,7 @@
         <aside class="lc-gauge" id="lc-gauge" aria-label="Pontuação do nível"></aside>
         <section class="lc-card lc-main" id="lc-main"></section>
         <aside class="lc-side">
+          ${pwChip()}
           <div class="lc-stat lc-w" style="--wc:#ffb020;--wd:#ff4d1f">
             <i class="lc-w-deco" aria-hidden="true">${svg('zap')}</i>
             <span class="lc-w-label">${svg('zap')}XP</span>
@@ -539,6 +540,7 @@
         </aside>
       </div>`;
       paintStats();
+      pwBind();
       gaugeBuild();
       // o teclado virtual começa fechado: só aparece quando o aluno clica em "Ver teclado virtual"
       kbOpen = false;
@@ -547,7 +549,7 @@
       clearInterval(tick);
       tick = setInterval(() => {
         if (!view.isConnected || !alive) return stop();
-        if (phase === 'play' && !busy && document.visibilityState === 'visible' && !game.paused) { st.time++; $q('#lc-time') && ($q('#lc-time').textContent = fmt(st.time)); }
+        if (phase === 'play' && !busy && document.visibilityState === 'visible' && !game.paused && !powerOn('relogio')) { st.time++; $q('#lc-time') && ($q('#lc-time').textContent = fmt(st.time)); }
       }, 1000);
     }
 
@@ -580,12 +582,87 @@
     /* acerto e erro valem para todos os tipos de nível */
     function hit(k) {
       presses.push(performance.now()); speedWake();
-      st.hits++; st.xp += 5; gain(5); paintStats(); spark(); kb?.flash(k, true);
+      const x = powerOn('xp3') ? 15 : powerOn('xp2') ? 10 : 5; // poderes de XP do personagem
+      st.hits++; st.xp += x; gain(x); paintStats(); spark(); kb?.flash(k, true);
+      if (powerOn('ima')) pw.coins += .25;
       score(true);
     }
     function miss(k) {
+      if (powerOn('magico')) { if (k) kb?.flash(k, true); return; } // Teclado Mágico: o erro não conta
       st.errors++; { const was = st.xp; st.xp = Math.max(0, st.xp - (1 + Math.floor(Math.random() * 6))); gain(st.xp - was); } paintStats(); if (k) kb?.flash(k, false);
       score(false);
+    }
+
+    /* ---------- poder do personagem equipado na loja de itens (curso/loja-itens.js) ----------
+       O cartão do personagem fica no alto da coluna da direita. Clicar nele (ou Ctrl + Enter) liga o poder,
+       que dura "dur" segundos e depois recarrega por "recarga" segundos. powerOn(id) diz se o poder está ligado:
+       escudo → lifeLoss() não tira vida; magico → na digitação qualquer tecla vira a certa e nos minijogos o erro
+       não conta (miss); xp2/xp3 → hit() dá o dobro/triplo de XP; relogio → o tempo da lição não anda;
+       ima → cada acerto junta 0,25 moeda (creditada quando o poder acaba); cura → vidas cheias na hora. */
+    const PW = window.HC_loja?.power() || null;
+    const pw = { until: 0, ready: 0, timer: 0, coins: 0, banked: 0 };
+    const powerOn = (pid) => !!PW && PW.poder.id === pid && performance.now() < pw.until;
+    function pwChip() {
+      if (!PW) return '';
+      const { item: it, poder: p } = PW;
+      return `<button type="button" class="lc-pw ready" id="lc-pw" tabindex="-1" style="--c1:${it.cores[0]};--c2:${it.cores[1]}" title="${esc(p.desc)}" aria-label="Usar o poder ${esc(p.nome)} (Ctrl + Enter)">
+            <span class="lc-pw-art"><img src="${esc(it.img)}" alt="" draggable="false"></span>
+            <span class="lc-pw-txt"><small>${esc(it.nome)}</small><b>${esc(p.nome)}</b><em id="lc-pw-st">Clique ou Ctrl + Enter</em></span>
+            <span class="lc-pw-dial"><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="18" pathLength="100"/><circle class="v" id="lc-pw-ring" cx="22" cy="22" r="18" pathLength="100"/></svg><b id="lc-pw-sec"></b></span>
+          </button>`;
+    }
+    function pwBind() {
+      const b = $q('#lc-pw'); if (!b) return;
+      b.addEventListener('pointerdown', (e) => e.preventDefault()); // não fica com o foco: o Espaço da digitação não aperta o botão
+      b.addEventListener('click', pwUse);
+      pwPaint();
+    }
+    function pwBank() { // moedas do Ímã: vão para o saldo quando o poder acaba (ou a lição fecha)
+      const v = Math.round((pw.coins - pw.banked) * 100) / 100;
+      if (v > 0 && !TEST) window.HC_cash?.add(v, 'poder-ima');
+      pw.banked = pw.coins;
+    }
+    function pwPaint() {
+      clearTimeout(pw.timer);
+      const b = $q('#lc-pw'); if (!b || !alive) return;
+      const now = performance.now(), on = now < pw.until, cd = !on && now < pw.ready, p = PW.poder;
+      b.classList.toggle('on', on); b.classList.toggle('cd', cd); b.classList.toggle('ready', !on && !cd);
+      shell.classList.toggle('pw-on', on);
+      if (!on) pwBank();
+      const st = $q('#lc-pw-st'), ring = $q('#lc-pw-ring'), sec = $q('#lc-pw-sec');
+      if (on) {
+        const left = (pw.until - now) / 1000;
+        st.textContent = p.id === 'ima' ? `Ativo · +${(window.HC_cashFmt || String)(pw.coins - pw.banked)} moedas` : 'Poder ativo!';
+        sec.textContent = Math.ceil(left); ring.style.setProperty('--p', ((left / p.dur) * 100).toFixed(1));
+      } else if (cd) {
+        const left = (pw.ready - now) / 1000;
+        st.textContent = 'Recarregando…'; sec.textContent = Math.ceil(left); ring.style.setProperty('--p', ((1 - left / p.recarga) * 100).toFixed(1));
+      } else { st.textContent = 'Pronto! Clique ou Ctrl + Enter'; sec.textContent = ''; ring.style.setProperty('--p', 100); }
+      if (on || cd) pw.timer = setTimeout(pwPaint, 250);
+    }
+    function pwUse() {
+      const b = $q('#lc-pw');
+      if (!PW || !b || phase !== 'play') return;
+      const now = performance.now(), p = PW.poder;
+      if (now < pw.until || now < pw.ready) return replay(b, 'nope');
+      if (p.id === 'cura') {
+        if (!$q('#lc-hk-lives') || !game.maxLives) { replay(b, 'nope'); return toast('A Cura Total funciona nos minijogos com vidas.'); }
+        if (game.lives >= game.maxLives) { replay(b, 'nope'); return toast('Suas vidas já estão cheias.'); }
+        game.lives = game.maxLives; mjLives(-1); replay($q('#lc-hk-lives'), 'healed');
+      }
+      pw.until = now + p.dur * 1000; pw.ready = pw.until + p.recarga * 1000;
+      replay(b, 'fire');
+      // entrada do personagem pela lateral, como nos jogos, com o nome do poder
+      const cut = document.createElement('div');
+      cut.className = 'lc-pw-cut'; cut.style.cssText = `--c1:${PW.item.cores[0]};--c2:${PW.item.cores[1]}`;
+      cut.innerHTML = `<i class="lc-pw-cut-band"></i><img src="${esc(PW.item.img)}" alt="" draggable="false"><b>${esc(p.nome)}!</b>`;
+      shell.append(cut); setTimeout(() => cut.remove(), 1500);
+      pwPaint();
+    }
+    /* perder uma vida (todos os minijogos): com o Escudo ligado, a vida fica */
+    function lifeLoss() {
+      if (powerOn('escudo')) { replay($q('#lc-hk-lives'), 'shielded'); replay($q('#lc-pw'), 'block'); return game.lives; }
+      return Math.max(0, game.lives - 1);
     }
 
     /* ---------- pontuação da lição e medidor de estrelas (à esquerda) ----------
@@ -1153,6 +1230,7 @@
     function dgKey(k) {
       const S = DG_STYLE[game.est], want = game.text[game.pos];
       if (!S || want == null) return;
+      if (powerOn('magico')) k = want; // Teclado Mágico
       if (k === want) {
         if (!game.t0) game.t0 = performance.now();
         hit(k);
@@ -2051,6 +2129,7 @@
     }
     function typingKey(k) {
       if (game.est) return dgKey(k);
+      if (powerOn('magico') && game.text[game.pos] != null) k = game.text[game.pos]; // Teclado Mágico: qualquer tecla é a certa
       const want = game.text[game.pos];
       if (k === want) {
         if (!game.t0) game.t0 = performance.now();
@@ -2166,7 +2245,7 @@
     }
     /* perde uma vida; devolve false se acabaram */
     function hackerHurt(msg) {
-      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.lives = lifeLoss(); mjLives(game.lives);
       replay($q('#lc-hkt'), 'hurt');
       game.grace = 2;
       if (game.lives <= 0) { hackerDown(); return false; }
@@ -2377,7 +2456,7 @@
       game.items.shift(); it.el.classList.add('crash'); it.el.style.transform += ' scale(1.2, .4)'; setTimeout(() => it.el.remove(), 450);
       miss(null); game.combo = 0; filaCombo();
       replay(filaSlot(it.k), 'hurt'); replay($q('#lc-fl'), 'hurt');
-      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.lives = lifeLoss(); mjLives(game.lives);
       game.slowUntil = performance.now() + 2500;
       if (game.lives <= 0) return filaDown();
       mjLog(`Um contêiner bateu na doca · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
@@ -2519,7 +2598,7 @@
       game.gates.shift(); g.el.classList.add('crash'); setTimeout(() => g.el.remove(), 450);
       miss(null); game.combo = 0; filaCombo();
       replay($q('#lc-runner'), 'trip'); replay($q('#lc-run'), 'hurt'); corridaRate('Infectado!', 'bad');
-      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.lives = lifeLoss(); mjLives(game.lives);
       game.slowUntil = performance.now() + 2500;
       if (game.lives <= 0) return corridaDown();
       mjLog(`Um vírus atingiu o robô · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
@@ -2708,7 +2787,7 @@
       s.el.classList.add('gone'); setTimeout(() => s.el.remove(), 900);
       miss(null); game.combo = 0; filaCombo();
       replay($q('#lc-est'), 'hurt');
-      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.lives = lifeLoss(); mjLives(game.lives);
       game.slowUntil = performance.now() + 2500;
       if (game.lives <= 0) return estDown();
       mjLog(`A estrela “${s.w}” se apagou · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
@@ -2972,7 +3051,7 @@
       r.el.remove(); naveBoom(r.x, r.y, false, true);
       miss(null); game.combo = 0; filaCombo();
       replay($q('#lc-nv-ship'), 'hit'); replay($q('#lc-nv'), 'hurt');
-      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.lives = lifeLoss(); mjLives(game.lives);
       game.slowUntil = performance.now() + 2500;
       // os outros asteroides são empurrados um pouco para trás (a onda do escudo)
       game.rocks.forEach((x) => { x.d = Math.max(0, x.d - 60); });
@@ -3233,7 +3312,7 @@
       } else {
         miss(want === ' ' ? null : gpNorm(want)); game.errs++;
         c.classList.add('bad'); replay(c, 'shake'); replay(me, 'trip');
-        game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+        game.lives = lifeLoss(); mjLives(game.lives);
         if (game.lives <= 0) gpDown();
       }
     }
@@ -3493,7 +3572,7 @@
       b.st = 'pop'; b.el?.classList.add('pop'); setTimeout(() => { b.el?.remove(); b.el = null; b.st = 'gone'; }, 450);
       game.ride = -1; game.fall = { vy: -160 }; game.bot.el.classList.remove('scared'); game.bot.el.classList.add('falling');
       miss(null); game.combo = 0; filaCombo(); replay($q('#lc-bl'), 'hurt');
-      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.lives = lifeLoss(); mjLives(game.lives);
       game.slowUntil = performance.now() + 2500;
       if (game.lives <= 0) return setTimeout(blDown, 700);
       mjLog(`O balão “${keyGlyph(b.k)}” estourou · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
@@ -3701,7 +3780,7 @@
       m.x = g.heroX + g.reach + 2; m.kv = g.W * .55; // é jogado de volta para o meio
       replay($q('#lc-du-mon'), 'bump'); replay($q('#lc-du-hero'), 'hurt'); replay($q('#lc-du'), 'hurt');
       miss(null); game.combo = 0; filaCombo();
-      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.lives = lifeLoss(); mjLives(game.lives);
       game.slowUntil = performance.now() + 2500;
       if (game.lives <= 0) return duDown();
       mjLog(`O monstro chegou no robô! · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
@@ -3927,7 +4006,7 @@
     function rsTaken(t) { // a nave puxou: perde uma vida
       replay($q('#lc-rs-ship'), 'gulp'); replay($q('#lc-rs'), 'hurt');
       miss(null); game.combo = 0; filaCombo();
-      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.lives = lifeLoss(); mjLives(game.lives);
       game.slowUntil = performance.now() + 2500;
       if (game.lives <= 0) return rsDown();
       mjLog(`A nave levou a teclinha “${keyGlyph(t.k)}”! · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
@@ -4117,7 +4196,7 @@
     function srHit(o) { // não deu tempo: bate no obstáculo
       replay($q('#lc-sr-hero'), 'hurt'); replay($q('#lc-sr'), 'hurt'); o.el.classList.add('hit'); o.wd.classList.add('miss');
       miss(null); game.combo = 0; filaCombo();
-      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.lives = lifeLoss(); mjLives(game.lives);
       game.slowUntil = performance.now() + 2500;
       if (game.lives <= 0) return srDown();
       mjLog(`O robô bateu no ${o.T.nome}! · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
@@ -4364,7 +4443,7 @@
       setTimeout(() => { t.el.remove(); t.st = 'out'; }, 600);
       replay($q('#lc-ms'), 'hurt'); replay($q('#lc-ms-world'), 'glitch');
       miss(null); game.combo = 0; filaCombo();
-      game.lives = Math.max(0, game.lives - 1); mjLives(game.lives);
+      game.lives = lifeLoss(); mjLives(game.lives);
       game.slowUntil = performance.now() + 2500;
       if (game.lives <= 0) return msDown();
       mjLog(`O tempo acabou (${t.T.nome.toLowerCase()})! · ${game.lives} ${game.lives === 1 ? 'vida restante' : 'vidas restantes'}`, 'err');
@@ -4463,6 +4542,7 @@
     }
     function onKey(e) {
       if (!view.isConnected || !$q('.lc')) return stop();
+      if (e.ctrlKey && e.key === 'Enter' && PW && phase === 'play' && !e.repeat) { e.preventDefault(); return pwUse(); } // poder do personagem
       if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
       if (e.target.closest?.('input, textarea, select')) return;
       const k = e.key === ' ' || e.key === 'Spacebar' ? ' ' : (e.key || '').toLowerCase();
@@ -4484,12 +4564,14 @@
       if (game.intro === 'found' && k === 'enter') { e.preventDefault(); kb?.flash('enter', true); game.introDone = true; return smoothResize(() => typingInit(lv)); }
       if (game.intro && k.length === 1) { e.preventDefault(); return press(k); }
       if (L.teclas.includes(k)) { e.preventDefault(); return press(k); }
+      // Teclado Mágico: qualquer letra conta como a certa
+      if (lv?.tipo === 'typing' && k.length === 1 && /\S/.test(k) && !busy && !game.intro && powerOn('magico')) { e.preventDefault(); return typingKey(k); }
       // outra letra durante a digitação conta como erro (como no treino original)
       if (lv?.tipo === 'typing' && game.est && k.length === 1 && !busy && !game.intro) return dgKey(k); // estilos com cena: o erro aparece na cena
       if (lv?.tipo === 'typing' && k.length === 1 && /\S/.test(k) && !busy) { miss(k); game.chs?.[game.pos]?.classList.add('had'); shake(`.lc-ch[data-i="${game.pos}"]`); }
     }
     document.addEventListener('keydown', onKey);
-    function stop() { content?.classList.remove('lc-page'); bgWatch.disconnect(); dropBg(); alive = false; clearTimeout(kbTimer); clearInterval(speedTick); clearInterval(tick); clearInterval(game.timer); clearInterval(gs.glint); kbPopDrop(); document.removeEventListener('keydown', onKey); }
+    function stop() { if (alive) pwBank(); clearTimeout(pw.timer); content?.classList.remove('lc-page'); bgWatch.disconnect(); dropBg(); alive = false; clearTimeout(kbTimer); clearInterval(speedTick); clearInterval(tick); clearInterval(game.timer); clearInterval(gs.glint); kbPopDrop(); document.removeEventListener('keydown', onKey); }
     window.addEventListener('hashchange', stop, { once: true });
     // a página pode ser montada de novo no mesmo endereço (sem hashchange): desliga a lição anterior,
     // senão as duas ouviriam o teclado e cada tecla contaria em dobro
@@ -4554,7 +4636,7 @@
       if (!h) return;
       const word = h.textContent.trim(), POOL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<>/{}[]#$%&*+=?;:_';
       h.setAttribute('aria-label', word);
-      h.innerHTML = [...word].map((c) => `<span class="lr-ch" aria-hidden="true">${esc(c)}</span>`).join('');
+      h.innerHTML = [...word].map((c, n) => `<span class="lr-ch" aria-hidden="true" style="--n:${n}">${esc(c)}</span>`).join('');
       const spans = [...h.children];
       spans.forEach((s) => { s.style.width = `${s.getBoundingClientRect().width}px`; }); // trava a largura de cada letra para nada pular
       // trava também a altura: as letras embaralhadas (fonte monoespaçada) deixavam a linha mais alta e, ao se acertarem,
@@ -4597,10 +4679,10 @@
         <div class="lr-panel"><div class="lr-code" aria-hidden="true">${typeof infoBgRows === 'function' ? infoBgRows(14) : ''}</div><div class="lr-rays">${[0, 1, 2, 3, 4, 5].map((k) => `<i style="--k:${k}"></i>`).join('')}</div></div>
         <div class="lr-scroll">
           <div class="lr-stage">
-            <h2 class="lr-congrats">Parabéns!</h2>
+            <h2 class="lr-congrats ${window.HC_loja?.parabensClass() || ''}">Parabéns!</h2>
             <div class="lr-ribbon">
               <span class="lr-tab"></span><i class="lr-flash" aria-hidden="true"></i>
-              ${userAvatar(auth.profile || { name }, 'lr-av')}
+              ${(window.HC_loja?.avatar || userAvatar)(auth.profile || { name }, 'lr-av')}
               <div class="lr-who"><strong>${esc(name)}</strong><small>Lição ${L.numero} · ${esc(L.titulo)}</small><div class="lr-track"><div class="lr-bar"><i class="lr-fill"><b class="lr-beam"></b></i></div><div class="lr-rstars">${STAR_AT.map((_, i) => `<span class="lr-rstar" style="--i:${i}">${['amarela', 'superstar', 'megastar'].map((k) => `<img class="s-${k}" src="assets/estrelas/estrela-${k}.png" alt="" draggable="false">`).join('')}</span>`).join('')}</div><b class="lr-rnum">0</b></div></div>
               <div class="lr-score">
                 <div class="lr-stars">${STAR_AT.map((_, i) => `<span class="lr-star" style="--i:${i}">${['vazia', 'amarela', 'superstar', 'megastar'].map((k) => `<img class="s-${k}" src="assets/estrelas/estrela-${k}.png" alt="" draggable="false">`).join('')}</span>`).join('')}</div>
@@ -4638,6 +4720,7 @@
       requestAnimationFrame(() => el.classList.add('in'));
       const money = cash ? cashFx(el, cash, reduce) : null;
       if (!reduce) decode(el.querySelector('.lr-congrats'), 2000);
+      else { const h = el.querySelector('.lr-congrats.hcpb'); if (h) h.innerHTML = [...h.textContent.trim()].map((c, n) => `<span class="lr-ch" style="--n:${n}">${esc(c)}</span>`).join(''); } // estilo da loja: letra por letra
       ['superstar', 'megastar'].forEach((k) => { new Image().src = `assets/estrelas/titulo-${k}.png`; }); // já deixa as imagens prontas
 
       const num = el.querySelector('.lr-num'), fill = el.querySelector('.lr-fill'), stars = el.querySelectorAll('.lr-star');

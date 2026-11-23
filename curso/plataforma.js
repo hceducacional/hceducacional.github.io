@@ -1761,14 +1761,17 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     if (xpRow ? window.HC_xp.merge(xpRow.dados) : (window.HC_xp.pull(), false)) changed = true;
     const cashRow = data.find((r) => r.licao === window.HC_cash.ID);
     if (cashRow ? window.HC_cash.merge(cashRow.dados) : (window.HC_cash.pull(), false)) changed = true;
+    const lojaId = window.HC_loja?.ID, lojaRow = lojaId && data.find((r) => r.licao === lojaId); // itens da loja: junta os comprados nos dois lados
+    if (lojaRow && window.HC_loja.merge(lojaRow.dados)) changed = true;
+    else if (!lojaRow && lojaId) window.HC_loja.send();
     data.forEach(({ licao, dados }) => {
-      if (licao === window.HC_xp.ID || licao === window.HC_cash.ID) return;
+      if (licao === window.HC_xp.ID || licao === window.HC_cash.ID || licao === lojaId) return;
       const key = `hc:info:${auth.user.id}:${licao}`;
       let local = null; try { local = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
       if (!local || (dados?.savedAt || 0) > (local.savedAt || 0)) { try { localStorage.setItem(key, JSON.stringify(dados)); changed = true; } catch {} }
     });
     if (!changed || !view.isConnected) return changed;
-    if (location.hash === '#informatica/progresso') return true; // a tela de progresso se redesenha sozinha
+    if (location.hash === '#informatica/progresso' || location.hash === '#informatica/loja') return true; // a tela de progresso e a loja se redesenham sozinhas
     if (onDiscPage()) return discPage(view, location.hash.slice('#informatica/disciplina-'.length), true);
     if (location.hash === '#informatica/cursos' || (location.hash === '#informatica' && !window.HC_isComputer())) render(view);
     return true;
@@ -1809,10 +1812,21 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     if (await sync(view)) draw(); // chegou progresso de outro aparelho: atualiza os números
   }
 
+  /* ---------- loja de itens (curso/loja.js; catálogo e inventário em curso/loja-itens.js) ---------- */
+  async function shopPage(view) {
+    view.innerHTML = '<div class="wrap"><p class="me-loading">Abrindo a loja de itens…</p></div>';
+    try { await Promise.all([load('curso/loja.css'), load('curso/loja.js'), window.HC_loja ? null : load('curso/loja-itens.js')]); }
+    catch { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir a loja. Verifique a internet e tente de novo.</p></div>'; return; }
+    const draw = () => { if (location.hash === '#informatica/loja' && view.isConnected) window.HC_loja_tela.render(view, { perfil: auth.profile }); };
+    draw();
+    if (await sync(view)) draw(); // chegou saldo ou itens de outro aparelho
+  }
+
   window.HC_platform = { render: (view, sub) => {
     if (!sub && window.HC_menu && window.HC_isComputer()) return window.HC_menu.render(view); // #informatica: tela de seleção (curso/menu.js), só no computador
     if (sub === 'cursos') sub = ''; // #informatica/cursos: módulos e lições
     if (sub === 'progresso') return progressPage(view); // #informatica/progresso: a tela de progresso do aluno
+    if (sub === 'loja') return shopPage(view); // #informatica/loja: a loja de itens
     render(view, sub); if (!sub) sync(view);
   } };
 })();
