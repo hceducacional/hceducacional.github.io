@@ -598,7 +598,7 @@
     }
 
     /* ---------- poder do personagem equipado na loja de itens (curso/loja-itens.js) ----------
-       O cartão do personagem fica no alto da coluna da direita. Clicar nele (ou Ctrl + Enter) liga o poder,
+       O cartão do personagem fica no alto da coluna da direita, grande, ocupando o espaço que sobra. Clicar nele (ou Ctrl + Enter) liga o poder,
        que dura "dur" segundos e depois recarrega por "recarga" segundos. powerOn(id) diz se o poder está ligado:
        escudo → lifeLoss() não tira vida; magico → na digitação qualquer tecla vira a certa e nos minijogos o erro
        não conta (miss); xp2/xp3 → hit() dá o dobro/triplo de XP; relogio → o tempo da lição não anda;
@@ -611,7 +611,7 @@
       const { item: it, poder: p } = PW;
       return `<button type="button" class="lc-pw ready" id="lc-pw" tabindex="-1" style="--c1:${it.cores[0]};--c2:${it.cores[1]}" title="${esc(p.desc)}" aria-label="Usar o poder ${esc(p.nome)} (Ctrl + Enter)">
             <span class="lc-pw-art"><img src="${esc(it.img)}" alt="" draggable="false"></span>
-            <span class="lc-pw-txt"><small>${esc(it.nome)}</small><b>${esc(p.nome)}</b><em id="lc-pw-st">Clique ou Ctrl + Enter</em></span>
+            <span class="lc-pw-txt"><small>${esc(it.nome)}</small><b>${esc(p.nome)}</b><em id="lc-pw-st">Clique ou Ctrl + Enter</em><kbd class="lc-pw-key">Ctrl + Enter</kbd></span>
             <span class="lc-pw-dial"><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="18" pathLength="100"/><circle class="v" id="lc-pw-ring" cx="22" cy="22" r="18" pathLength="100"/></svg><b id="lc-pw-sec"></b></span>
           </button>`;
     }
@@ -641,7 +641,7 @@
       } else if (cd) {
         const left = (pw.ready - now) / 1000;
         st.textContent = 'Recarregando…'; sec.textContent = Math.ceil(left); ring.style.setProperty('--p', ((1 - left / p.recarga) * 100).toFixed(1));
-      } else { st.textContent = 'Pronto! Clique ou Ctrl + Enter'; sec.textContent = ''; ring.style.setProperty('--p', 100); }
+      } else { st.textContent = matchMedia('(min-width: 1101px)').matches ? 'Pronto! Clique no cartão ou use' : 'Pronto! Clique ou Ctrl + Enter'; sec.textContent = ''; ring.style.setProperty('--p', 100); }
       if (on || cd) pw.timer = setTimeout(pwPaint, 250);
     }
     function pwUse() {
@@ -656,11 +656,18 @@
       }
       pw.until = now + p.dur * 1000; pw.ready = pw.until + p.recarga * 1000;
       replay(b, 'fire');
-      // entrada do personagem pela lateral, como nos jogos, com o nome do poder
+      // anel de energia saindo do cartão
+      const burst = document.createElement('i'); burst.className = 'lc-pw-burst'; b.append(burst); setTimeout(() => burst.remove(), 900);
+      // ativação: a tela escurece na cor do poder, uma faixa branca cruza a tela, a faixa colorida abre atrás dela
+      // com linhas de velocidade, o personagem entra pela direita e o nome do poder pela esquerda; depois tudo sai pelo outro lado
+      document.querySelector('.lc-pw-cut')?.remove();
       const cut = document.createElement('div');
       cut.className = 'lc-pw-cut'; cut.style.cssText = `--c1:${PW.item.cores[0]};--c2:${PW.item.cores[1]}`;
-      cut.innerHTML = `<i class="lc-pw-cut-band"></i><img src="${esc(PW.item.img)}" alt="" draggable="false"><b>${esc(p.nome)}!</b>`;
-      shell.append(cut); setTimeout(() => cut.remove(), 1500);
+      cut.innerHTML = `<i class="lc-pw-cut-dim"></i><i class="lc-pw-cut-white"></i>
+        <i class="lc-pw-cut-band"><i class="lc-pw-cut-lines"></i></i><i class="lc-pw-cut-white lc-pw-cut-white2"></i>
+        <img src="${esc(PW.item.img)}" alt="" draggable="false">
+        <span class="lc-pw-cut-txt"><small>Poder ativado</small><b>${esc(p.nome)}!</b></span>`;
+      shell.append(cut); setTimeout(() => cut.remove(), 2000);
       pwPaint();
     }
     /* perder uma vida (todos os minijogos): com o Escudo ligado, a vida fica */

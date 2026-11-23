@@ -3763,14 +3763,72 @@ body.lc-bg-on .lc-shell { border-color: rgba(255, 255, 255, .12); box-shadow: 0 
 .lc-hk-lives.shielded { animation: lcShield .6s ease; }
 @keyframes lcShield { 0% { filter: drop-shadow(0 0 0 #7dd3fc); } 40% { filter: drop-shadow(0 0 10px #7dd3fc) brightness(1.6); transform: scale(1.15); } 100% { filter: none; transform: none; } }
 .lc-hk-lives.healed { animation: lcShield .8s ease; }
-/* entrada do personagem pela lateral */
+/* cartão grande no alto da coluna da direita (computador): ocupa o espaço que sobra, personagem em pé à direita */
+@media (min-width: 1101px) {
+  .lc-side .lc-pw { flex: 1 1 auto; min-height: 230px; max-height: 420px; flex-direction: column; align-items: flex-start; justify-content: flex-end; gap: 0; padding: 18px 18px 18px; border-radius: 26px;
+    background: radial-gradient(90% 70% at 85% 30%, rgba(255, 255, 255, .32), transparent 60%), radial-gradient(120% 90% at 0% 100%, rgba(0, 0, 0, .28), transparent 60%), linear-gradient(160deg, var(--c1), var(--c2)); }
+  .lc-side .lc-pw-art { left: auto; right: -6%; top: 0; bottom: 0; width: 78%; height: 100%; overflow: visible; }
+  .lc-side .lc-pw-art img { left: auto; right: 0; top: auto; bottom: -2%; height: 104%; translate: none; filter: drop-shadow(0 14px 18px rgba(0, 0, 0, .35)); transition: none; }
+  /* personagem parado e sem brilho (mais leve para o computador durante a lição) */
+  .lc-side .lc-pw:hover .lc-pw-art img, .lc-side .lc-pw.on .lc-pw-art img { transform: none; }
+  .lc-side .lc-pw.ready { animation: none; }
+  .lc-side .lc-pw.on::before { display: none; }
+  .lc-side .lc-pw-txt { position: relative; z-index: 2; flex: none; max-width: 62%; padding: 10px 12px 11px; margin-left: -4px; border-radius: 16px; background: rgba(0, 0, 0, .28); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .lc-side .lc-pw-txt small { font-size: 11.5px; padding-right: 0; }
+  .lc-side .lc-pw-txt b { font-size: 17px; letter-spacing: -.01em; margin: 3px 0 4px; }
+  .lc-side .lc-pw-txt em { font-size: 11px; }
+  .lc-side .lc-pw-key { display: inline-block; align-self: flex-start; margin-top: 7px; padding: 3px 7px; border-radius: 7px; background: rgba(255, 255, 255, .92); color: #1c1c1e; font: 800 10px/1.2 "Inter", sans-serif; box-shadow: 0 2px 0 rgba(0, 0, 0, .25); }
+  .lc-side .lc-pw.on .lc-pw-key, .lc-side .lc-pw.cd .lc-pw-key { opacity: .45; }
+  .lc-side .lc-pw-dial { right: auto; left: 16px; top: 16px; width: 42px; height: 42px; z-index: 2; }
+  .lc-side .lc-pw-dial b { font-size: 13px; }
+  .lc-side .lc-pw.ready .lc-pw-dial::after { width: 12px; height: 12px; }
+}
+.lc-pw-key { display: none; }
+/* anel de energia ao ligar o poder */
+.lc-pw-burst { position: absolute; left: 50%; top: 55%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; border: 3px solid #fff; pointer-events: none; z-index: 3;
+  box-shadow: 0 0 24px #fff, inset 0 0 18px rgba(255, 255, 255, .7); animation: lcPwBurst .85s cubic-bezier(.2, .8, .2, 1) forwards; }
+@keyframes lcPwBurst { from { transform: scale(.3); opacity: 1; } to { transform: scale(9); opacity: 0; border-width: .5px; } }
+
+/* ativação do poder: tela inteira (1,9 s) */
 .lc-pw-cut { position: fixed; inset: 0; z-index: 80; pointer-events: none; overflow: hidden; }
-.lc-pw-cut-band { position: absolute; left: -10%; right: -10%; top: 50%; height: 190px; margin-top: -95px; rotate: -6deg;
-  background: linear-gradient(90deg, var(--c2), var(--c1) 60%, #fff); box-shadow: 0 30px 60px -20px rgba(0, 0, 0, .6); animation: lcCutBand 1.4s cubic-bezier(.22, 1, .36, 1) both; }
-.lc-pw-cut img { position: absolute; right: 16%; top: 50%; height: 420px; margin-top: -250px; filter: drop-shadow(0 20px 30px rgba(0, 0, 0, .45)); animation: lcCutChar 1.4s cubic-bezier(.22, 1, .36, 1) both; }
-.lc-pw-cut b { position: absolute; left: 14%; top: 50%; translate: 0 -50%; rotate: -6deg; font-size: clamp(40px, 5vw, 72px); font-weight: 900; letter-spacing: -.03em; color: #fff; text-shadow: 0 6px 0 rgba(0, 0, 0, .18), 0 0 30px rgba(255, 255, 255, .5); white-space: nowrap; animation: lcCutTxt 1.4s cubic-bezier(.22, 1, .36, 1) both; }
-@keyframes lcCutBand { 0% { transform: scaleY(0); } 18% { transform: scaleY(1); } 80% { transform: scaleY(1); opacity: 1; } 100% { transform: scaleY(0); opacity: 0; } }
-@keyframes lcCutChar { 0% { transform: translateX(60vw); } 22% { transform: translateX(0); } 78% { transform: translateX(-30px); opacity: 1; } 100% { transform: translateX(-60vw); opacity: 0; } }
-@keyframes lcCutTxt { 0% { transform: translateX(-50vw); opacity: 0; } 25% { transform: translateX(0); opacity: 1; } 78% { transform: translateX(20px); opacity: 1; } 100% { transform: translateX(50vw); opacity: 0; } }
+.lc-pw-cut > * { will-change: transform, opacity; }
+.lc-pw-cut-dim { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 50%, color-mix(in srgb, var(--c2) 35%, transparent), rgba(0, 0, 0, .55)); animation: lcCutDim 1.9s ease both; }
+@keyframes lcCutDim { 0% { opacity: 0; } 14% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+/* faixa branca que atravessa a tela (abre a cena e, a segunda, fecha) */
+.lc-pw-cut-white { position: absolute; left: -20%; right: -20%; top: 50%; height: 230px; margin-top: -115px; rotate: -6deg; background: #fff;
+  box-shadow: 0 0 60px 10px rgba(255, 255, 255, .7); animation: lcCutWhite 1.9s cubic-bezier(.65, 0, .35, 1) both; }
+@keyframes lcCutWhite { 0% { transform: translateX(-120%) scaleY(.08); } 9% { transform: translateX(0) scaleY(.08); } 16% { transform: translateX(0) scaleY(1); opacity: 1; } 24% { transform: translateX(0) scaleY(1); opacity: 0; } 100% { opacity: 0; } }
+.lc-pw-cut-white2 { animation-name: lcCutWhite2; }
+@keyframes lcCutWhite2 { 0%, 76% { opacity: 0; transform: translateX(0) scaleY(1); } 82% { opacity: 1; transform: translateX(0) scaleY(1); } 90% { opacity: 1; transform: translateX(0) scaleY(.08); } 100% { opacity: 1; transform: translateX(120%) scaleY(.08); } }
+/* faixa colorida com linhas de velocidade */
+.lc-pw-cut-band { position: absolute; left: -20%; right: -20%; top: 50%; height: 230px; margin-top: -115px; rotate: -6deg; overflow: hidden;
+  background: linear-gradient(90deg, var(--c2), var(--c1) 55%, color-mix(in srgb, var(--c1) 55%, #fff));
+  box-shadow: 0 0 0 4px #fff, 0 30px 70px -20px rgba(0, 0, 0, .7); animation: lcCutBand 1.9s cubic-bezier(.65, 0, .35, 1) both; }
+@keyframes lcCutBand { 0%, 14% { opacity: 0; transform: scaleY(1); } 18% { opacity: 1; } 78% { opacity: 1; transform: scaleY(1); } 84%, 100% { opacity: 0; transform: scaleY(.9); } }
+.lc-pw-cut-lines { position: absolute; inset: -10% -50%; opacity: .35;
+  background: repeating-linear-gradient(90deg, transparent 0 60px, rgba(255, 255, 255, .7) 60px 64px, transparent 64px 150px, rgba(255, 255, 255, .4) 150px 152px);
+  mask-image: linear-gradient(180deg, transparent, #000 25%, #000 75%, transparent); -webkit-mask-image: linear-gradient(180deg, transparent, #000 25%, #000 75%, transparent);
+  animation: lcCutLines .45s linear infinite; }
+@keyframes lcCutLines { to { transform: translateX(-150px); } }
+/* personagem: entra pela direita saindo do desfoque, flutua e sai pela esquerda */
+.lc-pw-cut img { position: absolute; right: 14%; top: 50%; height: min(460px, 62vh); margin-top: calc(min(460px, 62vh) * -.6); filter: drop-shadow(0 24px 34px rgba(0, 0, 0, .5));
+  animation: lcCutChar 1.9s cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes lcCutChar {
+  0%, 14% { transform: translateX(50vw) scale(.85); opacity: 0; filter: blur(10px) drop-shadow(0 24px 34px rgba(0, 0, 0, .5)); }
+  30% { transform: translateX(0) scale(1.04); opacity: 1; filter: blur(0) drop-shadow(0 24px 34px rgba(0, 0, 0, .5)); }
+  38% { transform: translateX(0) scale(1); }
+  76% { transform: translateX(-22px) scale(1); opacity: 1; filter: blur(0) drop-shadow(0 24px 34px rgba(0, 0, 0, .5)); }
+  90%, 100% { transform: translateX(-45vw) scale(.95); opacity: 0; filter: blur(8px) drop-shadow(0 24px 34px rgba(0, 0, 0, .5)); }
+}
+/* nome do poder: entra pela esquerda inclinado */
+.lc-pw-cut-txt { position: absolute; left: 12%; top: 50%; translate: 0 -50%; rotate: -6deg; display: flex; flex-direction: column; color: #fff; animation: lcCutTxt 1.9s cubic-bezier(.22, 1, .36, 1) both; }
+.lc-pw-cut-txt small { align-self: flex-start; margin-bottom: 6px; padding: 5px 12px; border-radius: 999px; background: #fff; color: var(--c2); font: 800 13px/1 "Inter", sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+.lc-pw-cut-txt b { font-size: clamp(40px, 5.4vw, 78px); font-weight: 900; font-style: italic; letter-spacing: -.03em; line-height: 1; white-space: nowrap; text-shadow: 0 6px 0 rgba(0, 0, 0, .2), 0 0 34px rgba(255, 255, 255, .55); }
+@keyframes lcCutTxt {
+  0%, 16% { transform: translateX(-40vw) skewX(-12deg); opacity: 0; }
+  32% { transform: translateX(0) skewX(0); opacity: 1; }
+  76% { transform: translateX(18px); opacity: 1; }
+  90%, 100% { transform: translateX(45vw) skewX(12deg); opacity: 0; }
+}
 @media (max-width: 1100px) { .lc-side .lc-pw { grid-column: 1 / -1; } }
-@media (prefers-reduced-motion: reduce) { .lc-pw, .lc-pw::before, .lc-pw-dial::after, .lc-pw-cut { animation: none !important; } .lc-pw-cut { display: none; } }
+@media (prefers-reduced-motion: reduce) { .lc-pw, .lc-pw::before, .lc-pw-dial::after, .lc-pw-cut, .lc-pw-burst { animation: none !important; } .lc-pw-cut, .lc-pw-burst { display: none; } }
