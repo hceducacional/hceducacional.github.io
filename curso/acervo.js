@@ -465,10 +465,10 @@
           desc: 'Noite com aurora e uma plataforma flutuante. O robozinho fica numa ponta e monstrinhos caem do céu na outra, andando na direção dele. Em cima aparece uma palavra em letras: cada letra certa faz o robô arremessar um orbe de energia que empurra o monstro para trás, até ele cair do penhasco.',
           como: [
             'A letra atual fica branca e maior; as digitadas apagam; ao terminar a palavra, a próxima entra na hora',
-            'Cada orbe empurra o monstro um pouco (o combo deixa o orbe mais forte); a barra em cima dele mostra quanto falta para cair',
-            'Tecla errada faz o monstro dar um passo à frente (e rir) e zera o combo, mas não tira vida',
+            'Cada orbe empurra bem o monstro: uns 4 acertos seguidos derrubam um comum (o combo deixa o orbe ainda mais forte); a barra em cima dele mostra quanto falta para cair',
+            'Tecla errada faz o monstro dar um passinho à frente (e rir) e zera o combo, mas não tira vida',
             'Se o monstro chegar no robô, dá uma cabeçada: o robô perde uma vida, o monstro é jogado de volta e vêm 2,5 s mais devagar',
-            'Três monstros: comum (verde), ligeiro (rosa, mais rápido) e pesadão (roxo, maior, recua menos); com o progresso eles andam mais rápido e os pesadões aparecem mais',
+            'Os monstros andam devagar (versão facilitada em 2026-11-23). Três tipos: comum (verde, a maioria), ligeiro (rosa, um pouco mais rápido) e pesadão (roxo, maior, recua um pouco menos e é raro); com o progresso eles andam só um pouco mais rápido',
             'O contador mostra quantos monstros já caíram',
             'Sem vidas: “O robô foi derrubado!” → reviver com o Saldo HC (mesma regra e animação dos outros minijogos) ou recomeçar do zero',
             'Palavras: só as que dá para escrever com as teclas da lição (mesmo banco do MJ-04); com poucas teclas viram sequências com as teclas da lição',

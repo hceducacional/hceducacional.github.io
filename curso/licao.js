@@ -3694,15 +3694,16 @@
        - Se o monstro chegar até o robô, ele dá uma cabeçada: o robô perde uma vida e o monstro volta
          para o meio da plataforma (2,5 s mais devagar). Tecla errada faz o monstro dar um passo à
          frente e zera o combo, mas não tira vida.
-       - Três tipos: comum (verde), ligeiro (rosa, anda mais rápido) e pesadão (roxo, maior, recua
-         menos a cada orbe); com o progresso os monstros andam mais rápido e os pesadões aparecem mais.
+       - Três tipos: comum (verde, a maioria), ligeiro (rosa, um pouco mais rápido) e pesadão (roxo, maior,
+         recua um pouco menos; raro). Versão facilitada (2026-11-23): os monstros andam devagar e cada
+         letra empurra bastante (uns 4 acertos derrubam um comum).
        - A barra em cima do monstro mostra quanto falta para ele cair; o combo deixa o orbe mais forte.
        - Palavras: as do campo "palavras" do nível ou o banco do MJ-04, só com as teclas da lição.
        - Vidas (padrão 3) e reviver com o Saldo HC, iguais aos outros minijogos. */
     const DU_TIPOS = {
       comum: { cor: '74, 222, 128', v: 1, push: 1, nome: 'comum' },
-      ligeiro: { cor: '244, 114, 182', v: 1.45, push: 1.05, nome: 'ligeiro' },
-      pesado: { cor: '167, 139, 250', v: .85, push: .62, nome: 'pesadão', big: true },
+      ligeiro: { cor: '244, 114, 182', v: 1.15, push: 1.05, nome: 'ligeiro' },
+      pesado: { cor: '167, 139, 250', v: .8, push: .85, nome: 'pesadão', big: true },
     };
     const DU_MONSTRO = '<i class="horn l"></i><i class="horn r"></i><span class="mb"><i class="brow"></i><i class="eye"><b></b></i><i class="mouth"></i></span><span class="feet"><i></i><i></i></span>';
     function dueloInit(lv) {
@@ -3755,7 +3756,7 @@
     function duTipo() {
       const p = Math.min(1, game.score / Math.max(1, game.meta)), r = Math.random();
       if (game.score === 0) return 'comum';
-      return r < .12 + .25 * p ? 'pesado' : r < .42 + .1 * p ? 'ligeiro' : 'comum';
+      return r < .08 + .12 * p ? 'pesado' : r < .3 + .08 * p ? 'ligeiro' : 'comum'; // mais monstros comuns (fáceis)
     }
     function duSpawn(first) { // um monstro novo cai do céu na ponta da direita
       const g = duGeo(), t = duTipo(), T = DU_TIPOS[t], el = $q('#lc-du-mon');
@@ -3768,7 +3769,7 @@
     }
     const duSpeed = (g) => { // px/s que o monstro anda
       const p = Math.min(1, game.score / Math.max(1, game.meta));
-      return g.W * (.022 + .026 * p) * game.mon.T.v * (performance.now() < game.slowUntil ? .55 : 1);
+      return g.W * (.011 + .011 * p) * game.mon.T.v * (performance.now() < game.slowUntil ? .55 : 1); // anda devagar (mais fácil)
     };
     function duPaint(g) {
       const m = game.mon, el = $q('#lc-du-mon'), hero = $q('#lc-du-hero'), plat = $q('#lc-du-plat');
@@ -3825,7 +3826,7 @@
       a.onfinish = () => {
         o.remove();
         if (game.mon !== m || m.st !== 'walk' && m.st !== 'drop') return;
-        const push = g.W * .021 * m.T.push * (1 + Math.min(10, game.combo) * .03);
+        const push = g.W * .046 * m.T.push * (1 + Math.min(10, game.combo) * .03); // cada letra empurra bem: uns 4 acertos derrubam
         m.kv += push * 7; // recuo (vai somando e perdendo força)
         replay($q('#lc-du-mon'), 'hit');
         fx.insertAdjacentHTML('beforeend', `<span class="lc-du-pow" style="left:${tx}px;top:${ty}px">${Array.from({ length: 6 }, (_, i) => `<i style="--a:${i * 60 + Math.random() * 30}deg"></i>`).join('')}</span>`);
@@ -3845,7 +3846,7 @@
         duCur();
       } else {
         miss(k); game.combo = 0; filaCombo(); tile && replay(tile, 'shake');
-        const m = game.mon; if (m?.st === 'walk') { m.x -= duGeo().W * .012; replay($q('#lc-du-mon'), 'laugh'); }
+        const m = game.mon; if (m?.st === 'walk') { m.x -= duGeo().W * .005; replay($q('#lc-du-mon'), 'laugh'); }
         mjLog(`Tecla errada: a próxima letra é “${keyGlyph(want)}” · o monstro avançou`, 'warn');
       }
     }
