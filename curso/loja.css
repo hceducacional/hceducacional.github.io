@@ -60,7 +60,9 @@
 @keyframes ljShine { 0%, 55% { transform: translateX(-60%); } 85%, 100% { transform: translateX(60%); } }
 .lj-st-ring { position: absolute; left: 50%; top: 42%; width: 104%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; border: 2px dashed color-mix(in srgb, var(--c2) 45%, transparent); animation: ljSpin 26s linear infinite; }
 @keyframes ljSpin { to { rotate: 360deg; } }
-.lj-st-char { position: absolute; left: 50%; bottom: 2%; height: 104%; width: auto; translate: -50% 0; filter: drop-shadow(0 18px 22px rgba(15, 23, 42, .35)); animation: ljFloat 4.2s ease-in-out infinite; }
+.lj-st-char { position: absolute; left: 50%; bottom: 2%; height: 104%; width: auto; translate: -50% 0; filter: drop-shadow(0 18px 22px rgba(15, 23, 42, .35)); }
+/* quem flutua é o invólucro: a sombra desfocada do personagem é desenhada uma vez só, e não a cada quadro */
+.lj-st-fl { position: absolute; inset: 0; pointer-events: none; animation: ljFloat 4.2s ease-in-out infinite; }
 @keyframes ljFloat { 50% { transform: translateY(-8px); } }
 .lj-st-pw { position: absolute; right: -2%; top: 30%; display: grid; place-items: center; width: clamp(46px, 6vh, 60px); aspect-ratio: 1; border-radius: 50%; color: var(--c2);
   background: #fff; box-shadow: 0 12px 24px -10px var(--c2), 0 0 0 4px color-mix(in srgb, var(--c1) 60%, #fff); animation: ljBob 2.8s ease-in-out infinite; }
@@ -148,7 +150,9 @@
   background: linear-gradient(135deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .05)); box-shadow: 0 0 0 1px rgba(255, 255, 255, .18) inset, 0 20px 40px -24px rgba(0, 0, 0, .8);
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 .lj-coin { position: relative; width: 54px; height: 54px; perspective: 300px; }
-.lj-coin img { position: relative; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0, 0, 0, .4)); }
+.lj-coin img { position: relative; width: 100%; height: 100%; object-fit: contain; }
+/* sombra fixa embaixo da moeda (no lugar do drop-shadow, que era refeito a cada quadro enquanto ela gira) */
+.lj-coin::after { content: ''; position: absolute; left: 14%; right: 14%; bottom: -7px; height: 12px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0, 0, 0, .38), transparent); pointer-events: none; }
 .lj.go .lj-coin img { animation: ljCoin 5s cubic-bezier(.45, .05, .3, 1) .3s infinite; }
 @keyframes ljCoin { 0% { transform: rotateY(0); } 22% { transform: rotateY(720deg); } 30% { transform: rotateY(720deg) translateY(-4px); } 38%, 100% { transform: rotateY(720deg); } }
 .lj-coin-glow { position: absolute; inset: -30%; border-radius: 50%; background: radial-gradient(closest-side, rgba(253, 224, 71, .55), transparent); animation: ljGlow 2.6s ease-in-out infinite; }
@@ -326,3 +330,8 @@
   .lj-btn { padding: 17px 32px; font-size: 18px; }
   .lj-tab { padding: 12px 22px; font-size: 15px; }
 }
+
+/* prévias do "Parabéns!" na prateleira e na faixa dos equipados: paradas, e animam só com o mouse em cima
+   ou no card escolhido (a vitrine continua animando sempre) */
+.lj-ta-pb .hcpb, .lj-ta-pb .hcpb *, .lj-eq-pb .hcpb, .lj-eq-pb .hcpb * { animation-play-state: paused !important; }
+.lj-tile:hover .lj-ta-pb .hcpb, .lj-tile:hover .lj-ta-pb .hcpb *, .lj-tile.sel .lj-ta-pb .hcpb, .lj-tile.sel .lj-ta-pb .hcpb * { animation-play-state: running !important; }

@@ -903,6 +903,12 @@ function initCarousel(box, list, key) {
 /* =========================================================
    CONFIGURAÇÕES
    ========================================================= */
+/* Modo leve das lições de Informática (curso/licao.js): fica neste navegador, na chave hc:lc-leve.
+   '1' = ligado; '0' = desligado por escolha (a lição não liga sozinha); sem a chave = automático
+   (a lição liga sozinha quando o computador roda abaixo de 45 quadros por segundo). */
+const LITE_KEY = 'hc:lc-leve';
+const liteGet = () => { try { return localStorage.getItem(LITE_KEY) === '1'; } catch { return false; } };
+const liteSet = (on) => { try { localStorage.setItem(LITE_KEY, on ? '1' : '0'); } catch {} };
 function renderConfig(view) {
   view.innerHTML = `
   <div class="wrap">
@@ -935,6 +941,11 @@ function renderConfig(view) {
               <div class="pref-text"><strong>Ocultar dados sensíveis</strong><span>CPF e telefone aparecem mascarados</span></div>
               <label class="switch"><input type="checkbox" id="pref-hide" ${prefs.hideSensitive ? 'checked' : ''}><span></span></label>
             </div>
+            <div class="pref">
+              <span class="pref-icon"><i data-icon="monitor"></i></span>
+              <div class="pref-text"><strong>Modo leve nas lições</strong><span>Menos animações nas lições e minijogos de Informática, para computadores mais simples</span></div>
+              <label class="switch"><input type="checkbox" id="pref-leve" ${liteGet() ? 'checked' : ''}><span></span></label>
+            </div>
           </div>
         </section>
         <section class="cfg-sec">
@@ -960,6 +971,10 @@ function renderConfig(view) {
   $('#pref-hide').addEventListener('change', (e) => {
     prefs.hideSensitive = e.target.checked; store.set('prefs', prefs);
     toast('Preferência salva');
+  });
+  $('#pref-leve').addEventListener('change', (e) => {
+    liteSet(e.target.checked);
+    toast(e.target.checked ? 'Modo leve ligado' : 'Modo leve desligado');
   });
 
   initBannerEditor('top');

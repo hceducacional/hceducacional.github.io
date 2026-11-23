@@ -376,7 +376,7 @@
 /* barra de cor sólida (a cor é sorteada a cada início de lição) */
 .lc-g-bar { position: absolute; left: 51px; bottom: 0; width: 46px; height: 0; overflow: hidden; background: var(--bar);
   box-shadow: 0 0 14px color-mix(in srgb, var(--bar) 55%, transparent); transition: height .45s var(--ease); }
-.lc-g-bar::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: rgba(255, 255, 255, .85); box-shadow: 0 0 10px #fff; will-change: opacity; animation: gTopPulse 1.6s ease-in-out infinite; }
+.lc-g-bar::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: rgba(255, 255, 255, .85); box-shadow: 0 0 10px #fff; animation: gTopPulse 1.6s ease-in-out infinite; }
 @keyframes gTopPulse { 50% { opacity: .35; } }
 /* brilho subindo pela barra: anda com transform (a placa de vídeo faz sozinha, sem recalcular a página) */
 .lc-g-shine { position: absolute; left: 0; right: 0; bottom: 0; height: 100%; pointer-events: none; will-change: transform;
@@ -387,7 +387,7 @@
 /* estrelas: à esquerda da barra, cada uma na sua meta */
 /* mesmo tamanho e inclinação das estrelas da tela da lição concluída (.lc-best-stars) */
 .lc-g-star { position: absolute; left: 56px; bottom: var(--at); width: 124px; height: 124px; margin: 0 0 -62px -62px; rotate: -14deg; z-index: 2; opacity: 0; transform: scale(.5);
-  transition: opacity .45s ease, transform .55s cubic-bezier(.22, 1, .36, 1); will-change: transform, opacity; }
+  transition: opacity .45s ease, transform .55s cubic-bezier(.22, 1, .36, 1); }
 .lc-g-star.on, .lc-g-star.next { opacity: 1; transform: none; }
 /* estrela vazia na próxima meta: respira devagar */
 .lc-g-star.next { animation: gNext 2.6s ease-in-out infinite; }
@@ -395,7 +395,7 @@
 /* Brilho só no contorno: uma cópia branca e desfocada da estrela, atrás dela, que aparece um
    pouco maior. O desfoque é fixo; anima-se só a opacidade e o tamanho (roda liso). */
 .lc-g-edge { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; user-select: none;
-  opacity: 0; transform: scale(1.08); filter: brightness(0) invert(1) blur(2.5px); will-change: opacity, transform; }
+  opacity: 0; transform: scale(1.08); filter: brightness(0) invert(1) blur(2.5px); }
 .lc-g-star.next .lc-g-edge { display: none; }
 /* conquista: a estrela surge girando de leve, passa do tamanho e assenta, com o contorno acendendo */
 .lc-g-star.pop { animation: gPop 1.1s cubic-bezier(.22, 1, .36, 1) both; }
@@ -1271,13 +1271,13 @@
 /* feixes finos subindo (cada um na sua velocidade; o JS acelera todos juntos, de forma lisa) */
 .lc-g-streaks { position: absolute; inset: 0; z-index: 1; opacity: 0; pointer-events: none; transition: opacity .6s ease; }
 .lc-g-streaks.run { opacity: 1; }
-.lc-g-streaks i { position: absolute; bottom: 0; height: 100%; opacity: 0; border-radius: 3px; will-change: transform; transition: opacity .7s ease;
+.lc-g-streaks i { position: absolute; bottom: 0; height: 100%; opacity: 0; border-radius: 3px; transition: opacity .7s ease;
   background: linear-gradient(0deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, calc(var(--so) * .55)) 55%, rgba(255, 255, 255, var(--so)) 92%, #fff) bottom / 100% var(--sh) no-repeat;
 }
 .lc-g-streaks i.on { opacity: 1; }
 
 /* chegada: a barra se enche de brilho de baixo para cima e o brilho assenta */
-.lc-g-glow { position: absolute; inset: 0; z-index: 2; opacity: 0; pointer-events: none; transform-origin: 50% 100%; will-change: transform, opacity; }
+.lc-g-glow { position: absolute; inset: 0; z-index: 2; opacity: 0; pointer-events: none; transform-origin: 50% 100%; }
 .lc-gauge.arrive-super .lc-g-glow { background: linear-gradient(0deg, rgba(125, 211, 252, .9), #fff); animation: gGlowFill 2.1s cubic-bezier(.22, 1, .36, 1) both; }
 .lc-gauge.arrive-mega .lc-g-glow { background: linear-gradient(0deg, rgba(216, 180, 254, .95), #fff 70%, #fde68a); animation: gGlowFill 2.1s cubic-bezier(.22, 1, .36, 1) both; }
 @keyframes gGlowFill { 0% { opacity: 1; transform: scaleY(0); } 32% { opacity: 1; transform: scaleY(1); } 100% { opacity: 0; transform: scaleY(1); } }
@@ -1654,7 +1654,7 @@ body.lc-bg-on .lc-shell { border-color: rgba(255, 255, 255, .12); box-shadow: 0 
 
 /* formas que flutuam no fundo do cartão */
 .lc-shell .lc-main > .lc-fun { position: absolute; inset: 0; z-index: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
-.lc-fun i { position: absolute; display: block; font-style: normal; animation: lcFloat 9s ease-in-out infinite alternate; will-change: transform; }
+.lc-fun i { position: absolute; display: block; font-style: normal; animation: lcFloat 9s ease-in-out infinite alternate; }
 .lc-fun .b1 { left: -60px; bottom: -70px; width: 220px; height: 220px; border-radius: 50%; background: rgb(var(--a1) / .35); }
 .lc-fun .b2 { right: -40px; bottom: 18%; width: 130px; height: 130px; border-radius: 50%; background: rgb(var(--a2) / .32); animation-duration: 11s; }
 .lc-fun .b3 { left: 38%; top: -50px; width: 110px; height: 110px; border-radius: 50%; background: rgb(var(--a3) / .25); animation-duration: 13s; }
@@ -3313,7 +3313,7 @@ body.lc-bg-on .lc-shell { border-color: rgba(255, 255, 255, .12); box-shadow: 0 
 /* barra de estrelas: altura toda e sobe com transform (antes animava a altura a cada tecla);
    a área corta o que fica abaixo dela, mas deixa o brilho dos lados e de cima aparecer */
 .lc-g-area { clip-path: inset(-999px -999px 0 -999px); }
-.lc-g-bar { height: 100%; transform: translateY(100%); transition: transform .45s var(--ease); will-change: transform; }
+.lc-g-bar { height: 100%; transform: translateY(100%); transition: transform .45s var(--ease); }
 .lc-g-halo { height: 100%; transform: translateY(100%); transition: transform .45s var(--ease), opacity .8s ease; }
 
 /* =========================================================
@@ -3323,16 +3323,17 @@ body.lc-bg-on .lc-shell { border-color: rgba(255, 255, 255, .12); box-shadow: 0 
    ========================================================= */
 @property --wd { syntax: '<color>'; inherits: true; initial-value: #0d9488; }
 .lc-shell .lc-w { --wd: #0d9488;
-  background: radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, .28), transparent 55%), linear-gradient(145deg, var(--wc) 0%, var(--wd) 100%);
+  background: radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, .14), transparent 55%), linear-gradient(145deg, var(--wc) 0%, var(--wd) 100%);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22), inset 0 -18px 30px -24px rgba(0, 0, 0, .35), 0 14px 28px -16px color-mix(in srgb, var(--wd) 75%, transparent);
   transition: --wc .6s ease, --wd .6s ease, transform .4s var(--ease); }
 .lc-shell .lc-w > :not(.lc-w-deco):not(.lc-sparks) { position: relative; z-index: 1; }
 .lc-w-deco { position: absolute; right: -14px; bottom: -18px; width: 96px; height: 96px; color: #fff; opacity: .16; transform: rotate(-12deg); pointer-events: none; }
 .lc-w-deco svg { width: 100%; height: 100%; stroke-width: 1.6; }
-.lc-shell .lc-w .lc-w-label { color: #fff; font-weight: 700; text-shadow: 0 1px 2px rgba(0, 0, 0, .18); }
+/* fundos mais escuros e textos em tons da própria cor do card (rótulo e legenda), para ler bem */
+.lc-shell .lc-w .lc-w-label { color: color-mix(in srgb, var(--wc) 28%, #fff); font-weight: 700; text-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
 .lc-shell .lc-w .lc-w-label svg { padding: 3px; width: 21px; height: 21px; border-radius: 7px; background: rgba(255, 255, 255, .24); }
-.lc-shell .lc-w strong { font-weight: 700; text-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
-.lc-shell .lc-w small { color: rgba(255, 255, 255, .88); font-weight: 600; }
+.lc-shell .lc-w strong { font-weight: 700; color: #fff; text-shadow: 0 2px 8px rgba(0, 0, 0, .35); }
+.lc-shell .lc-w small { color: color-mix(in srgb, var(--wc) 40%, #fff); font-weight: 600; text-shadow: 0 1px 2px rgba(0, 0, 0, .3); }
 .lc-shell .lc-w .lc-mini { background: rgba(255, 255, 255, .28); }
 .lc-shell .lc-w .lc-mini i { background: #fff; box-shadow: 0 0 10px rgba(255, 255, 255, .7); }
 .lc-shell .lc-w-ring .lc-w-deco { display: none; } /* o anel já faz esse papel */
@@ -3773,11 +3774,14 @@ body.lc-bg-on .lc-shell { border-color: rgba(255, 255, 255, .12); box-shadow: 0 
   .lc-side .lc-pw:hover .lc-pw-art img, .lc-side .lc-pw.on .lc-pw-art img { transform: none; }
   .lc-side .lc-pw.ready { animation: none; }
   .lc-side .lc-pw.on::before { display: none; }
-  .lc-side .lc-pw-txt { position: relative; z-index: 2; flex: none; max-width: 62%; padding: 10px 12px 11px; margin-left: -4px; border-radius: 16px; background: rgba(0, 0, 0, .28); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-  .lc-side .lc-pw-txt small { font-size: 11.5px; padding-right: 0; }
-  .lc-side .lc-pw-txt b { font-size: 17px; letter-spacing: -.01em; margin: 3px 0 4px; }
-  .lc-side .lc-pw-txt em { font-size: 11px; }
-  .lc-side .lc-pw-key { display: inline-block; align-self: flex-start; margin-top: 7px; padding: 3px 7px; border-radius: 7px; background: rgba(255, 255, 255, .92); color: #1c1c1e; font: 800 10px/1.2 "Inter", sans-serif; box-shadow: 0 2px 0 rgba(0, 0, 0, .25); }
+  /* legenda sobre um degradê preto que sobe do pé do cartão, na largura toda: lê bem em qualquer cor de personagem */
+  .lc-side .lc-pw::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 62%; z-index: 1; pointer-events: none;
+    background: linear-gradient(0deg, rgba(0, 0, 0, .88) 0%, rgba(0, 0, 0, .7) 38%, rgba(0, 0, 0, .3) 70%, transparent 100%); }
+  .lc-side .lc-pw-txt { position: relative; z-index: 2; flex: none; width: 100%; max-width: none; padding: 0 2px; text-shadow: 0 1px 3px rgba(0, 0, 0, .6); }
+  .lc-side .lc-pw-txt small { font-size: 12px; padding-right: 0; letter-spacing: .02em; text-transform: uppercase; color: color-mix(in srgb, var(--c1) 45%, #fff); opacity: 1; }
+  .lc-side .lc-pw-txt b { font-size: 21px; letter-spacing: -.015em; line-height: 1.1; margin: 5px 0 7px; }
+  .lc-side .lc-pw-txt em { font-size: 12.5px; line-height: 1.35; color: rgba(255, 255, 255, .85); opacity: 1; }
+  .lc-side .lc-pw-key { display: inline-block; align-self: flex-start; margin-top: 11px; padding: 3px 7px; border-radius: 7px; background: rgba(255, 255, 255, .92); color: #1c1c1e; font: 800 10px/1.2 "Inter", sans-serif; box-shadow: 0 2px 0 rgba(0, 0, 0, .25); }
   .lc-side .lc-pw.on .lc-pw-key, .lc-side .lc-pw.cd .lc-pw-key { opacity: .45; }
   .lc-side .lc-pw-dial { right: auto; left: 16px; top: 16px; width: 42px; height: 42px; z-index: 2; }
   .lc-side .lc-pw-dial b { font-size: 13px; }
@@ -3832,3 +3836,62 @@ body.lc-bg-on .lc-shell { border-color: rgba(255, 255, 255, .12); box-shadow: 0 
 }
 @media (max-width: 1100px) { .lc-side .lc-pw { grid-column: 1 / -1; } }
 @media (prefers-reduced-motion: reduce) { .lc-pw, .lc-pw::before, .lc-pw-dial::after, .lc-pw-cut, .lc-pw-burst { animation: none !important; } .lc-pw-cut, .lc-pw-burst { display: none; } }
+
+/* =========================================================
+   DESEMPENHO
+   - Durante a partida (body.lc-playing) as formas que flutuam no fundo do cartão ficam paradas
+     e a aurora da página congela: o jogo já se mexe, e cada animação a mais obriga a placa de vídeo
+     a remontar a tela inteira a cada quadro.
+   - MODO LEVE (body.lc-leve, ligado por licao.js quando a lição roda abaixo de 45 quadros por segundo
+     ou quando o aparelho pede menos movimento): tira a aurora e as formas, para os brilhos do medidor
+     e os enfeites dos céus dos minijogos, dispensa as sombras desfocadas e deixa o fundo numa cor só.
+   ========================================================= */
+body.lc-playing .lc-fun i { animation: none; }
+body.lc-playing #lc-bgfx::before { animation-play-state: paused; }
+
+body.lc-leve #lc-bgfx::before, body.lc-leve .lc-fun { display: none; }
+body.lc-leve .lc-g-shine, body.lc-leve .lc-g-bar::after, body.lc-leve .lc-g-star.next,
+body.lc-leve .lc-best-num b, body.lc-leve .lc-gauge-pts, body.lc-leve .lc-segs i.cur { animation: none !important; }
+body.lc-leve .lc-gauge-pts, body.lc-leve #lc-acc-ring, body.lc-leve .lc-best-num b { filter: none; }
+body.lc-leve [class*="-sky"] > *, body.lc-leve [class*="-sky"] > * > * { animation: none !important; }
+body.lc-leve .lc-est-sky .neb { display: none; }
+/* no modo leve, o fundo da página fica numa cor só e os cartões perdem as sombras grandes e desfocadas
+   (a placa de vídeo fraca refaz essas camadas a cada quadro enquanto o jogo se mexe) */
+body.lc-leve #lc-bgfx { background: rgb(var(--b, 14, 32, 46)); }
+body.lc-leve .lc-shell, body.lc-leve .lc-card, body.lc-leve .lc-side > *, body.lc-leve .lc-gauge { box-shadow: none !important; }
+/* chave "Modo leve" ao lado do botão do teclado virtual */
+.lc-kbar-r { display: flex; align-items: center; gap: 14px; }
+.lc-shell .lc-lite label { font-size: 13px; color: rgba(255, 255, 255, .75); user-select: none; white-space: nowrap; }
+.lc-kbar-r .lc-kbtn { white-space: nowrap; flex: none; }
+.lc-shell .lc-lite input:focus-visible + span { box-shadow: 0 0 0 3px rgba(110, 231, 183, .5); }
+@media (max-width: 560px) { .lc-kbar-r { gap: 10px; } .lc-shell .lc-lite label { font-size: 12px; } }
+
+/* =========================================================
+   CARDS DA DIREITA EMPILHADOS (XP, Tempo, Precisão, Grau)
+   No computador ficam um sobre o outro: o da frente aparece inteiro e os de trás espiam embaixo,
+   menores. A cada 30 s (licao.js: wsNext) o da frente sobe e some, e o próximo vem para a frente.
+   No celular e no tablet (até 1100px) continuam lado a lado, como antes.
+   ========================================================= */
+.lc-wstack { display: contents; }
+@media (min-width: 1101px) {
+  .lc-shell .lc-wstack { position: relative; display: grid; padding-bottom: 22px; cursor: pointer; }
+  .lc-shell .lc-wstack > .lc-w { grid-area: 1 / 1; transform-origin: 50% 100%;
+    transition: translate .7s cubic-bezier(.22, 1, .36, 1), scale .7s cubic-bezier(.22, 1, .36, 1), opacity .5s ease, --wc .6s ease, --wd .6s ease, transform .4s var(--ease); }
+  .lc-shell .lc-wstack > .lc-w[data-k="0"] { z-index: 4; }
+  .lc-shell .lc-wstack > .lc-w[data-k="1"] { z-index: 3; translate: 0 11px; scale: .94; opacity: .8; }
+  .lc-shell .lc-wstack > .lc-w[data-k="2"] { z-index: 2; translate: 0 22px; scale: .88; opacity: .5; }
+  .lc-shell .lc-wstack > .lc-w[data-k="3"] { z-index: 1; translate: 0 22px; scale: .88; opacity: 0; }
+  /* só o da frente responde ao mouse e é lido pelo leitor de tela */
+  .lc-shell .lc-wstack > .lc-w:not([data-k="0"]) { pointer-events: none; }
+  .lc-shell .lc-wstack > .lc-w:not([data-k="0"]) > * { visibility: hidden; }
+  .lc-shell .lc-wstack:hover > .lc-w[data-k="0"] { transform: translateY(-2px); }
+  /* o que sai: sobe por cima de todos e se desfaz, enquanto o próximo cresce no lugar dele */
+  .lc-shell .lc-wstack > .lc-w.ws-out { z-index: 5; animation: lcWsOut .75s cubic-bezier(.4, 0, .2, 1) both; }
+  .lc-shell .lc-wstack > .lc-w.ws-out > * { visibility: visible; }
+  @keyframes lcWsOut {
+    0% { translate: 0 0; scale: 1; opacity: 1; }
+    100% { translate: 0 -34px; scale: 1.04; opacity: 0; }
+  }
+  body.lc-leve .lc-shell .lc-wstack > .lc-w.ws-out { animation-duration: .35s; }
+}
+@media (prefers-reduced-motion: reduce) { .lc-shell .lc-wstack > .lc-w { transition: opacity .2s ease !important; } .lc-shell .lc-wstack > .lc-w.ws-out { animation: none !important; opacity: 0; } }

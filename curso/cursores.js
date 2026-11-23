@@ -59,19 +59,30 @@
   };
 
   let on = false, last = null;
-  const apply = (el) => {
+  /* descobrir o cursor obriga o navegador a recalcular o estilo (tira o data-hcc e lê o cursor original).
+     Guardamos o resultado por elemento; ele é refeito se a classe ou o "desativado" do elemento mudar,
+     e sempre ao apertar e soltar o botão (:active) */
+  const known = new WeakMap();
+  const sig = (el) => `${el.getAttribute('class') || ''}|${el.disabled ? 1 : 0}|${el.getAttribute('aria-disabled') || ''}`;
+  const apply = (el, fresh) => {
     if (!on || !(el instanceof Element)) return;
-    el.removeAttribute('data-hcc');
-    let c = getComputedStyle(el).cursor.split(',').pop().trim();
-    let k = MAP[c];
-    if (c === 'auto' && isText(el)) k = 'text';
-    if (k) el.setAttribute('data-hcc', k);
+    const s = sig(el), m = fresh ? null : known.get(el);
+    let k;
+    if (m && m.s === s) k = m.k;
+    else {
+      el.removeAttribute('data-hcc');
+      const c = getComputedStyle(el).cursor.split(',').pop().trim();
+      k = MAP[c] || '';
+      if (c === 'auto' && isText(el)) k = 'text';
+      known.set(el, { s, k });
+    }
+    if ((el.getAttribute('data-hcc') || '') !== k) { if (k) el.setAttribute('data-hcc', k); else el.removeAttribute('data-hcc'); }
     last = el;
     showFol(k && C[k][3] ? k : '');
   };
   addEventListener('mouseover', (e) => apply(e.target), true);
-  addEventListener('mousedown', (e) => setTimeout(() => apply(e.target)), true); // :active (segurando)
-  addEventListener('mouseup', (e) => setTimeout(() => apply(e.target)), true);
+  addEventListener('mousedown', (e) => setTimeout(() => apply(e.target, true)), true); // :active (segurando)
+  addEventListener('mouseup', (e) => setTimeout(() => apply(e.target, true)), true);
   addEventListener('mousemove', (e) => { mx = e.clientX; my = e.clientY; if (folKind && !raf) raf = requestAnimationFrame(place); }, { passive: true, capture: true });
   document.addEventListener('mouseleave', () => showFol(''));
   // na abertura da lição e na tela de resultado a tela muda sozinha embaixo do mouse

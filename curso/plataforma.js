@@ -626,6 +626,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       });
     }));
   }
+  let contsResize = null, lessonsResize = null;
   function bindConts(view) {
     const sec = view.querySelector('.pf-conts'); if (!sec) return;
     bindCards(sec, view);
@@ -633,7 +634,10 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     const pads = sec.querySelectorAll('[data-cdir]');
     pads.forEach((b) => b.addEventListener('click', () => row.scrollBy({ left: +b.dataset.cdir * row.clientWidth * .8, behavior: 'smooth' })));
     const upd = () => { if (!pads.length) return; pads[0].disabled = row.scrollLeft < 4; pads[1].disabled = row.scrollLeft + row.clientWidth >= row.scrollWidth - 4; pads[0].parentNode.classList.toggle('none', pads[0].disabled && pads[1].disabled); };
-    row.addEventListener('scroll', upd, { passive: true }); addEventListener('resize', upd, { passive: true }); upd(); rowDots(row);
+    row.addEventListener('scroll', upd, { passive: true });
+    // um só ouvinte de redimensionar por vez: a cada redesenho da página o anterior sai (antes eles se acumulavam)
+    if (contsResize) removeEventListener('resize', contsResize);
+    contsResize = upd; addEventListener('resize', upd, { passive: true }); upd(); rowDots(row);
   }
   function refreshConts(view, toEnd) {
     const sec = view.querySelector('.pf-conts'); if (!sec) return;
@@ -1561,7 +1565,9 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       /* setas só aparecem quando as lições não cabem na fileira */
       const upd = () => { if (!pads.length || !pagesEl.isConnected) return; pads[0].disabled = pagesEl.scrollLeft < 4; pads[1].disabled = pagesEl.scrollLeft + pagesEl.clientWidth >= pagesEl.scrollWidth - 4; pads[0].parentNode.classList.toggle('none', pads[0].disabled && pads[1].disabled); };
       pads.forEach((b) => b.addEventListener('click', () => pagesEl.scrollBy({ left: +b.dataset.ldir * pagesEl.clientWidth * .8, behavior: 'smooth' })));
-      pagesEl.addEventListener('scroll', upd, { passive: true }); addEventListener('resize', upd, { passive: true }); upd(); setTimeout(upd, 1200);
+      pagesEl.addEventListener('scroll', upd, { passive: true });
+      if (lessonsResize) removeEventListener('resize', lessonsResize);
+      lessonsResize = upd; addEventListener('resize', upd, { passive: true }); upd(); setTimeout(upd, 1200);
       rowDots(pagesEl); // celular: barrinhas embaixo, como nas disciplinas
     }
     root.querySelectorAll('[data-addlesson]').forEach((b) => b.addEventListener('click', () => addLesson(view, +b.dataset.addlesson)));

@@ -47,6 +47,24 @@
   }
   const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   // reinicia uma animação de classe sem forçar o recálculo da página (dois quadros em vez de ler offsetWidth)
+  /* tamanho de um elemento guardado: os minijogos pedem o tamanho do cenário a cada quadro, e ler
+     clientWidth/clientHeight ali obrigava o navegador a recalcular a página toda vez. O ResizeObserver
+     atualiza o valor só quando o cenário muda de tamanho (janela, celular girando). */
+  const boxes = new WeakMap();
+  let boxRO = null;
+  const boxOf = (el) => {
+    if (!el) return null;
+    let b = boxes.get(el);
+    if (!b) {
+      b = { w: el.clientWidth, h: el.clientHeight }; boxes.set(el, b);
+      boxRO ||= new ResizeObserver((list) => list.forEach(({ target: t }) => {
+        if (!t.isConnected) { boxRO.unobserve(t); boxes.delete(t); return; }
+        const c = boxes.get(t); if (c) { c.w = t.clientWidth; c.h = t.clientHeight; }
+      }));
+      boxRO.observe(el);
+    }
+    return b;
+  };
   const replay = (el, cls, extra = []) => { if (!el) return; el.classList.remove(cls, ...extra); requestAnimationFrame(() => requestAnimationFrame(() => el.isConnected && el.classList.add(cls))); };
   const dur = (s) => (s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`);
 
@@ -397,7 +415,59 @@
     bgfx.id = 'lc-bgfx'; bgfx.setAttribute('aria-hidden', 'true');
     const paintBg = () => { bgfx.style.setProperty('--b', scene.base); bgfx.style.setProperty('--a1', scene.a1); bgfx.style.setProperty('--a2', scene.a2); bgfx.style.setProperty('--a3', scene.a3); };
     paintBg(); document.body.appendChild(bgfx); document.body.classList.add('lc-bg-on');
-    const dropBg = () => { bgfx.remove(); if (!document.getElementById('lc-bgfx')) document.body.classList.remove('lc-bg-on'); };
+    const dropBg = () => { bgfx.remove(); if (!document.getElementById('lc-bgfx')) document.body.classList.remove('lc-bg-on', 'lc-playing', 'lc-leve'); };
+    /* MODO LEVE: em computador com placa de vídeo fraca, a lição mede os quadros por segundo logo no início
+       (e de novo quando a partida começa); abaixo de 45 por segundo, desliga os enfeites que se mexem sozinhos
+       (aurora, formas do fundo, brilhos do medidor, céus dos minijogos). Fica lembrado no aparelho.
+       Também dá para ligar ou desligar à mão em Configurações › Preferências (app.js). */
+    const LITE_KEY = 'hc:lc-leve';
+    let liteProbing = false;
+    let liteChoice = null; try { liteChoice = localStorage.getItem(LITE_KEY); } catch {}
+    const liteSet = () => { document.body.classList.add('lc-leve'); try { localStorage.setItem(LITE_KEY, '1'); } catch {} liteSync(); };
+    const liteProbe = (delay = 1200) => {
+      // '0' = desligado em Configurações › Preferências: a lição não liga sozinha
+      if (liteProbing || liteChoice === '0' || document.body.classList.contains('lc-leve')) return;
+      liteProbing = true;
+      setTimeout(() => {
+        let n = 0, t0 = 0, hidden = false;
+        const step = (t) => {
+          if (!alive) { liteProbing = false; return; }
+          if (document.visibilityState !== 'visible') hidden = true;
+          if (!t0) t0 = t; n++;
+          if (t - t0 < 2000) return requestAnimationFrame(step);
+          liteProbing = false;
+          if (!hidden && (n - 1) / ((t - t0) / 1000) < 45) liteSet();
+        };
+        requestAnimationFrame(step);
+      }, delay);
+    };
+    if (liteChoice === '1' || (liteChoice !== '0' && matchMedia('(prefers-reduced-motion: reduce)').matches)) document.body.classList.add('lc-leve');
+    // chave "Modo leve" ao lado de "Ver teclado virtual": a escolha do aluno vale mais que a detecção automática
+    const liteSync = () => { const on = document.body.classList.contains('lc-leve'); shell.querySelectorAll('#lc-lite').forEach((i) => { i.checked = on; }); };
+    /* cards da direita (XP, Tempo, Precisão, Grau) empilhados num lugar só: a cada 30 s o da frente sobe
+       e some, e o de trás vem para a frente (no computador; no celular eles continuam lado a lado).
+       data-k = posição na pilha (0 = frente). Clicar na pilha passa para o próximo na hora. */
+    const WS_MS = 30000;
+    let wsTimer = 0;
+    const wsNext = () => {
+      const box = $q('#lc-wstack'); if (!box) return;
+      const cards = [...box.querySelectorAll(':scope > .lc-w')], n = cards.length;
+      const out = cards.find((c) => c.dataset.k === '0'); if (!out) return;
+      out.classList.remove('ws-out'); void out.offsetWidth; out.classList.add('ws-out');
+      clearTimeout(out._ws); out._ws = setTimeout(() => out.classList.remove('ws-out'), 900);
+      cards.forEach((c) => { c.dataset.k = String((+c.dataset.k + n - 1) % n); });
+    };
+    const wsStart = () => { clearInterval(wsTimer); wsTimer = setInterval(() => { if (document.visibilityState === 'visible') wsNext(); }, WS_MS); };
+    wsStart();
+    shell.addEventListener('click', (e) => { if (e.target.closest('#lc-wstack') && matchMedia('(min-width: 1101px)').matches) { wsNext(); wsStart(); } });
+    shell.addEventListener('change', (e) => { // no cartão da lição (refeito a cada lição), para não acumular ouvintes
+      if (e.target.id !== 'lc-lite') return;
+      const on = e.target.checked;
+      liteChoice = on ? '1' : '0';
+      document.body.classList.toggle('lc-leve', on);
+      try { localStorage.setItem(LITE_KEY, liteChoice); } catch {}
+      e.target.blur(); // a barra de espaço volta a digitar, e não a apertar a chave
+    });
     // some assim que a lição sai da tela (trocar de página), sem esperar a próxima tecla ou o relógio
     const bgWatch = new MutationObserver(() => { if (!shell.isConnected) { bgWatch.disconnect(); dropBg(); } });
     bgWatch.observe(view, { childList: true });
@@ -416,7 +486,7 @@
 
     /* ---------- tela de boas-vindas ---------- */
     function welcome() {
-      phase = 'welcome'; paintProgress(); shell.classList.add('is-wel'); kbPopDrop();
+      phase = 'welcome'; paintProgress(); shell.classList.add('is-wel'); document.body.classList.remove('lc-playing'); kbPopDrop(); liteProbe();
       const resume = saved && !saved.done && st.lvl > 0;
       const finished = saved?.done;
       const p = saved || null, tot = p ? p.hits + p.errors : 0;
@@ -519,7 +589,7 @@
 
     /* ---------- área de jogo (coluna principal + lateral) ---------- */
     function play() {
-      phase = 'play'; shell.classList.remove('is-wel');
+      phase = 'play'; shell.classList.remove('is-wel'); document.body.classList.add('lc-playing'); liteProbe(5500); // depois da contagem, com o jogo correndo
       if (play.ran) { scene = pickScene(); shell.style.setProperty('--b', scene.base); shell.style.setProperty('--a1', scene.a1); shell.style.setProperty('--a2', scene.a2); shell.style.setProperty('--a3', scene.a3); shell.dataset.cena = scene.nome; paintBg(); }
       play.ran = true; // cada vez que a lição (re)começa, um cenário novo
       body.innerHTML = `
@@ -528,19 +598,21 @@
         <section class="lc-card lc-main" id="lc-main"></section>
         <aside class="lc-side">
           ${pwChip()}
-          <div class="lc-stat lc-w" style="--wc:#ffb020;--wd:#ff4d1f">
+          <div class="lc-wstack" id="lc-wstack" role="group" aria-label="Seus números nesta lição (trocam a cada 30 segundos; clique para ver o próximo)">
+          <div class="lc-stat lc-w" data-k="0" style="--wc:#f97316;--wd:#9a3412">
             <i class="lc-w-deco" aria-hidden="true">${svg('zap')}</i>
             <span class="lc-w-label">${svg('zap')}XP</span>
             <strong id="lc-xp">0</strong><small>Pontos de experiência</small>
             <div class="lc-sparks" id="lc-sparks"></div>
           </div>
-          <div class="lc-stat lc-w" style="--wc:#38bdf8;--wd:#4f46e5"><i class="lc-w-deco" aria-hidden="true">${svg('clock')}</i><span class="lc-w-label">${svg('clock')}Tempo</span><strong id="lc-time">00:00</strong><small>Tempo nesta lição</small></div>
-          <div class="lc-stat lc-w lc-w-ring" id="lc-acc-card" style="--wc:#34d399;--wd:#0d9488">
+          <div class="lc-stat lc-w" data-k="1" style="--wc:#3b82f6;--wd:#312e81"><i class="lc-w-deco" aria-hidden="true">${svg('clock')}</i><span class="lc-w-label">${svg('clock')}Tempo</span><strong id="lc-time">00:00</strong><small>Tempo nesta lição</small></div>
+          <div class="lc-stat lc-w lc-w-ring" id="lc-acc-card" data-k="2" style="--wc:#10b981;--wd:#065f46">
             <i class="lc-w-deco" aria-hidden="true">${svg('target')}</i>
             <div><span class="lc-w-label">${svg('target')}Precisão</span><strong id="lc-acc">100%</strong><small id="lc-acc-txt">Excelente</small></div>
             <svg class="lc-ring2" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="18" pathLength="100"/><circle class="v" id="lc-acc-ring" cx="22" cy="22" r="18" pathLength="100"/></svg>
           </div>
-          <div class="lc-stat lc-w" style="--wc:#c084fc;--wd:#db2777"><i class="lc-w-deco" aria-hidden="true">${svg('level')}</i><span class="lc-w-label">${svg('level')}Grau de experiência</span><strong id="lc-grade">01</strong><b class="lc-mini"><i id="lc-grade-bar"></i></b><small id="lc-grade-txt"></small></div>
+          <div class="lc-stat lc-w" data-k="3" style="--wc:#a855f7;--wd:#9d174d"><i class="lc-w-deco" aria-hidden="true">${svg('level')}</i><span class="lc-w-label">${svg('level')}Grau de experiência</span><strong id="lc-grade">01</strong><b class="lc-mini"><i id="lc-grade-bar"></i></b><small id="lc-grade-txt"></small></div>
+          </div>
         </aside>
       </div>`;
       paintStats();
@@ -574,8 +646,8 @@
       // anel de precisão (como os anéis de atividade): verde, amarelo ou vermelho
       statSet('lc-acc-ring', 'var', a.toFixed(1), '--p');
       // a cor do card acompanha a precisão: verde (excelente), âmbar (bom) ou vermelho (atenção)
-      statSet('lc-acc-card', 'var', a >= 88 ? '#34d399' : a >= 70 ? '#fbbf24' : '#fb7185', '--wc');
-      statSet('lc-acc-card', 'var', a >= 88 ? '#0d9488' : a >= 70 ? '#ea580c' : '#e11d48', '--wd');
+      statSet('lc-acc-card', 'var', a >= 88 ? '#10b981' : a >= 70 ? '#f59e0b' : '#f43f5e', '--wc');
+      statSet('lc-acc-card', 'var', a >= 88 ? '#065f46' : a >= 70 ? '#9a3412' : '#9f1239', '--wd');
       statSet('lc-acc-txt', 'txt', a >= 88 ? 'Excelente' : a >= 70 ? 'Bom' : 'Atenção aos erros');
       const g = grade(st.xp);
       statSet('lc-grade', 'txt', String(g.g).padStart(2, '0'));
@@ -912,7 +984,10 @@
             <span class="lc-spd-track"><span class="lc-speed-pill"><i id="lc-speed-fill" class="zero"></i></span></span>
           </span>
         </span>
-        <button type="button" class="lc-kbtn${kbOpen ? ' open' : ''}" id="lc-kbtn" aria-expanded="${kbOpen}" aria-controls="lc-kbpop">${KB_ICO}<span>${kbOpen ? 'Ocultar teclado' : 'Ver teclado virtual'}</span><b aria-hidden="true">⌄</b></button>
+        <span class="lc-kbar-r">
+          <span class="lc-kbar-opts lc-lite" title="Menos animações, para computadores mais simples"><label><input type="checkbox" id="lc-lite" ${document.body.classList.contains('lc-leve') ? 'checked' : ''}><span></span>Modo leve</label></span>
+          <button type="button" class="lc-kbtn${kbOpen ? ' open' : ''}" id="lc-kbtn" aria-expanded="${kbOpen}" aria-controls="lc-kbpop">${KB_ICO}<span>${kbOpen ? 'Ocultar teclado' : 'Ver teclado virtual'}</span><b aria-hidden="true">⌄</b></button>
+        </span>
       </div>`;
     /* teclado virtual numa janela suspensa, presa embaixo da tela (fora do cartão, para não mexer no layout);
        fica no <body> e recebe as cores do cenário */
@@ -2442,7 +2517,7 @@
         const v = 1 / filaFall();
         const top = game.items[game.items.length - 1];
         if (!top || top.y >= game.gap) filaSpawn();
-        const H = field.clientHeight - 74; // a doca ocupa a parte de baixo
+        const H = boxOf(field).h - 74; // a doca ocupa a parte de baixo
         game.items.forEach((it, i) => {
           it.y += v * dt;
           it.el.style.transform = `translate3d(-50%, ${(it.y * H).toFixed(1)}px, 0)`;
@@ -2577,7 +2652,7 @@
         game.raf = requestAnimationFrame(frame);
         const dt = Math.min(.05, (t - last) / 1000); last = t;
         if (busy || game.paused || document.visibilityState !== 'visible') return;
-        const v = 1 / runTravel(), W = world.clientWidth;
+        const v = 1 / runTravel(), W = boxOf(world).w;
         game.dist += v * dt;
         // cenário em camadas (só transform): longe devagar, perto rápido
         far.style.transform = `translate3d(${-((game.dist * W * .15) % (W * .5))}px,0,0)`;
@@ -2600,7 +2675,7 @@
     /* laser: sai do canhão do robô até o vírus (largura medida na hora) */
     function corridaLaser(g) {
       const las = $q('#lc-laser'), world = $q('#lc-run-world'); if (!las || !world) return;
-      const W = world.clientWidth, x0 = RUN_X * W + 36, x1 = g.x * W - 20;
+      const W = boxOf(world).w, x0 = RUN_X * W + 36, x1 = g.x * W - 20;
       las.style.left = `${x0}px`; las.style.width = `${Math.max(10, x1 - x0)}px`; las.style.setProperty('--lc', g.el.style.getPropertyValue('--lc'));
       replay(las, 'fire');
     }
@@ -2961,7 +3036,7 @@
     }
     const naveProg = () => Math.min(1, game.score / Math.max(1, game.meta));
     function naveGeo() { // tamanho do espaço e posição da nave (centro)
-      const w = $q('#lc-nv-world'); const W = w?.clientWidth || 600, H = w?.clientHeight || 360;
+      const b = boxOf($q('#lc-nv-world')); const W = b?.w || 600, H = b?.h || 360;
       return { W, H, sx: W / 2, sy: H - 46 };
     }
     function naveSpawn(g) {
@@ -3236,7 +3311,7 @@
     const GP_X0 = 120;
     const gpLen = (W) => Math.max(W * 2.6, game.text.length * 26); // comprimento da pista em px
     function gpPlace(dt = 1) {
-      const W = $q('#lc-gp-world')?.clientWidth || 600, len = game.text.length, TL = gpLen(W);
+      const W = boxOf($q('#lc-gp-world'))?.w || 600, len = game.text.length, TL = gpLen(W);
       const me = game.racers[4];
       me.dp += (me.p - me.dp) * Math.min(1, dt * 12); // o robô do aluno desliza até a letra digitada
       const X = (r) => GP_X0 + TL * Math.min(1, (r.me ? r.dp : r.p) / len);
@@ -3428,7 +3503,7 @@
       blNext(); blPaint(g, 1);
     }
     function blGeo() {
-      const w = $q('#lc-bl-world'); const W = w?.clientWidth || 700, H = w?.clientHeight || 360;
+      const b = boxOf($q('#lc-bl-world')); const W = b?.w || 700, H = b?.h || 360;
       return { W, H, yTop: Math.max(140, H * .2 + 104), yFall: H - 84, yIsl: H * .64 };
     }
     function blIsland(x, first) {
@@ -3661,7 +3736,7 @@
       duWord(); duSpawn(true); duPaint(duGeo());
     }
     function duGeo() {
-      const w = $q('#lc-du-world'); const W = w?.clientWidth || 760, H = w?.clientHeight || 380;
+      const b = boxOf($q('#lc-du-world')); const W = b?.w || 760, H = b?.h || 380;
       return { W, H, py: H * .7, heroX: W * .14, edge: W * .78, spawn: W * .62, reach: W * .085 };
     }
     function duWord() { // a palavra em cima, em letras
@@ -3855,7 +3930,7 @@
       rsShip(rsGeo()); rsCharge();
     }
     function rsGeo() {
-      const w = $q('#lc-rs-world'); const W = w?.clientWidth || 760, H = w?.clientHeight || 360;
+      const b = boxOf($q('#lc-rs-world')); const W = b?.w || 760, H = b?.h || 360;
       return { W, H, shipX: W * .15, shipY: H * .2, beam: W * .2, gy: [H * .8, H * .87, H * .94], sz: Math.max(36, Math.min(58, H * .155)), portal: W - 41 };
     }
     const rsProg = () => Math.min(1, game.score / Math.max(1, game.meta));
@@ -4088,7 +4163,7 @@
       srFill(g); srCur(); srPaint(g);
     }
     function srGeo() {
-      const w = $q('#lc-sr-world'); const W = w?.clientWidth || 760, H = w?.clientHeight || 360;
+      const b = boxOf($q('#lc-sr-world')); const W = b?.w || 760, H = b?.h || 360;
       return { W, H, gy: H * .76, heroX: W * .2 };
     }
     const srProg = () => Math.min(1, game.score / Math.max(1, game.meta));
@@ -4294,7 +4369,7 @@
       const clk = $q('#lc-ms-clk'); if (clk) clk.textContent = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     }
     const msProg = () => Math.min(1, game.score / Math.max(1, game.meta));
-    const msBox = () => { const d = $q('#lc-ms-desk'); return { W: d?.clientWidth || 700, H: d?.clientHeight || 300 }; };
+    const msBox = () => { const b = boxOf($q('#lc-ms-desk')); return { W: b?.w || 700, H: b?.h || 300 }; };
     function msKinds() { // ações liberadas até agora
       const n = game.score + game.it.length;
       return Object.keys(MS_ONDAS).filter((k) => n >= MS_ONDAS[k] || (game.meta < 8 && MS_ONDAS[k] <= game.meta * .6));
@@ -4582,7 +4657,7 @@
       if (lv?.tipo === 'typing' && k.length === 1 && /\S/.test(k) && !busy) { miss(k); game.chs?.[game.pos]?.classList.add('had'); shake(`.lc-ch[data-i="${game.pos}"]`); }
     }
     document.addEventListener('keydown', onKey);
-    function stop() { if (alive) pwBank(); clearTimeout(pw.timer); content?.classList.remove('lc-page'); bgWatch.disconnect(); dropBg(); alive = false; clearTimeout(kbTimer); clearInterval(speedTick); clearInterval(tick); clearInterval(game.timer); clearInterval(gs.glint); kbPopDrop(); document.removeEventListener('keydown', onKey); }
+    function stop() { clearInterval(wsTimer); if (alive) pwBank(); clearTimeout(pw.timer); content?.classList.remove('lc-page'); bgWatch.disconnect(); dropBg(); alive = false; clearTimeout(kbTimer); clearInterval(speedTick); clearInterval(tick); clearInterval(game.timer); clearInterval(gs.glint); kbPopDrop(); document.removeEventListener('keydown', onKey); }
     window.addEventListener('hashchange', stop, { once: true });
     // a página pode ser montada de novo no mesmo endereço (sem hashchange): desliga a lição anterior,
     // senão as duas ouviriam o teclado e cada tecla contaria em dobro
@@ -4590,7 +4665,7 @@
 
     /* ---------- fim do teste (acervo do professor) ---------- */
     function testDone() {
-      phase = 'test'; paintProgress();
+      phase = 'test'; paintProgress(); document.body.classList.remove('lc-playing');
       const main = $q('#lc-main'); if (!main) return;
       main.classList.remove('is-typing');
       main.innerHTML = `
@@ -4606,7 +4681,7 @@
 
     /* ---------- resultado ---------- */
     function results(review = false) {
-      phase = 'results'; clearInterval(game.timer); paintProgress(); shell.classList.remove('is-wel'); kbPopDrop();
+      phase = 'results'; clearInterval(game.timer); paintProgress(); shell.classList.remove('is-wel'); document.body.classList.remove('lc-playing'); kbPopDrop();
       st.done = true; st.lvl = N;
       // refazendo: só salva se superou o recorde; senão o recorde anterior continua valendo
       let record = '';

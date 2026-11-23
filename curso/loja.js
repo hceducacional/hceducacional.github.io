@@ -69,7 +69,7 @@
         const pd = H.PODERES[it.poder];
         return `<div class="lj-st k-p" style="--c1:${it.cores[0]};--c2:${it.cores[1]}">
           <span class="lj-st-glow"></span><span class="lj-st-shape"><i class="lj-st-shine"></i></span><span class="lj-st-ring"></span>
-          <img class="lj-st-char" src="${it.img}" alt="" draggable="false">
+          <span class="lj-st-fl"><img class="lj-st-char" src="${it.img}" alt="" draggable="false"></span>
           <span class="lj-st-pw" title="${esc(pd?.nome || '')}">${svg(pd?.ico)}</span>
           ${[0, 1, 2, 3, 4].map((k) => `<i class="lj-st-spk" style="--k:${k}"></i>`).join('')}
         </div>`;
