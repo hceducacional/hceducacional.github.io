@@ -190,6 +190,7 @@ const saveConnect = () => saveShared('connect', connect);
 
 const normalizeUrl = (u = '') => {
   u = u.trim(); if (!u) return '';
+  if (/^#[a-z]/i.test(u)) return u; // página do próprio site (ex.: #informatica)
   return /^[a-z][a-z0-9+.-]*:/i.test(u) ? u : 'https://' + u;
 };
 const isSafeUrl = (u) => /^(https?:|mailto:)/i.test(u);
@@ -402,12 +403,13 @@ function carouselHTML(list, key) {
 }
 
 /* cartão de link (Acesso rápido e demais painéis da faixa) */
+const isRoute = (u) => /^#[a-z][\w/-]*$/i.test(u); // link para uma página do próprio site: abre na mesma aba
 const qlCard = (l, i) => `
         <a class="ql ${l.image ? 'has-img' : ''}" data-ql="${i}"
-           ${isSafeUrl(normalizeUrl(l.url)) ? `href="${esc(normalizeUrl(l.url))}" target="_blank" rel="noopener noreferrer"` : 'href="#" data-empty="1"'}
+           ${isRoute(normalizeUrl(l.url)) ? `href="${esc(normalizeUrl(l.url))}"` : isSafeUrl(normalizeUrl(l.url)) ? `href="${esc(normalizeUrl(l.url))}" target="_blank" rel="noopener noreferrer"` : 'href="#" data-empty="1"'}
            style="background:${linkBg(l)};color:${linkInk(l)};--k:${i}${l.image ? `;--img:url('${esc(imgUrl(l.image))}')` : ''}">
           <span class="ql-name">${esc(l.name)}</span>
-          <span class="ql-go"><i data-icon="external"></i></span>
+          <span class="ql-go"><i data-icon="${isRoute(normalizeUrl(l.url)) ? 'right' : 'external'}"></i></span>
           <span class="ql-cta" aria-hidden="true">Abrir</span>
         </a>`;
 
@@ -2306,7 +2308,7 @@ let stripTab = 'qa'; // aba aberta: 'qa' (Acesso rápido) ou o id do painel
 
 /* cartão de edição de um botão (Acesso rápido e painéis) — o: atributos de cada editor */
 function btnCard(b, k, n, o) {
-  const ok = isSafeUrl(normalizeUrl(b.url));
+  const ok = isSafeUrl(normalizeUrl(b.url)) || isRoute(normalizeUrl(b.url));
   const A = (act) => `${o.act}="${act}" ${o.key}`;
   return `
       <article class="bc">
@@ -2360,7 +2362,7 @@ function bcRefresh(card, b) {
   prev.setAttribute('style', bcPrevStyle(b));
   prev.querySelector('.ql-name').textContent = b.name;
   card.querySelector('.bc-name').textContent = b.name || 'Sem nome';
-  const ok = isSafeUrl(normalizeUrl(b.url)), chip = card.querySelector('.bc-chip');
+  const ok = isSafeUrl(normalizeUrl(b.url)) || isRoute(normalizeUrl(b.url)), chip = card.querySelector('.bc-chip');
   chip.className = 'bc-chip ' + (ok ? 'ok' : 'warn');
   chip.textContent = ok ? 'Link configurado' : 'Falta o link';
 }

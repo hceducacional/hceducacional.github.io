@@ -615,7 +615,30 @@ function removeAvatarFile(url) {
 
 /* ---------- Painel mestre: usuários ---------- */
 let usersCache = [], usersFilter = 'all', usersQuery = '';
-const USER_FILTERS = [['all', 'Todos'], ['pending', 'Aguardando'], ['approved', 'Aprovados'], ['blocked', 'Bloqueados'], ['admin', 'Administradores'], ['ped', 'Pedagógico'], ['info', 'Informática']];
+let turmasCache = null, turmaFilter = 'all'; // turmas de Informática (null = banco ainda sem a tabela)
+let turmaView = 'ativos'; // 'ativos' = ainda fazendo o curso · 'concluidos' = já terminaram
+const concluiu = (u) => !!u.informatica_concluido_em;
+let tmAnim = 0; // direção da troca Ativos ⇄ Concluídos que ainda vai animar a entrada (1 = para concluídos, -1 = para ativos)
+/* troca Ativos ⇄ Concluídos: a pílula desliza, os cards saem para um lado e os novos entram pelo outro */
+function switchTurmaView(view) {
+  const box = $('#us-turmas'), list = $('#us-list');
+  const dir = view === 'concluidos' ? 1 : -1;
+  const go = () => { turmaView = view; turmaFilter = 'all'; tmAnim = dir; drawUsers(); };
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return go();
+  const seg = box.querySelector('.tm-seg');
+  seg.dataset.v = view;
+  seg.querySelectorAll('[data-tv]').forEach((b) => { const on = b.dataset.tv === view; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+  box.classList.toggle('tm-done', view === 'concluidos');
+  box.style.setProperty('--dx', `${-dir * 36}px`);
+  box.classList.add('tm-leaving');
+  list.classList.add('us-leaving');
+  clearTimeout(switchTurmaView.t);
+  switchTurmaView.t = setTimeout(go, 230);
+}
+const USER_FILTERS = [['all', 'Todos', 'users', 'cadastros no site'], ['pending', 'Aguardando', 'clock', 'esperando aprovação'], ['approved', 'Aprovados', 'check', 'com acesso liberado'], ['blocked', 'Bloqueados', 'lock', 'sem acesso'], ['admin', 'Administradores', 'shield', 'cuidam do site'], ['ped', 'Pedagógico', 'cap', 'setor pedagógico'], ['info', 'Informática', 'monitor', 'alunos do curso']];
+// só a conta mestre (a do dono do site) marca quem é aluno de Informática
+const OWNER_ID = '885e66d2-3920-4a3c-b7a9-3ffdeaccc7cf';
+const isOwner = () => auth.user?.id === OWNER_ID;
 
 function renderUsers(view) {
   waitAuth(view, async () => {
@@ -627,21 +650,31 @@ function renderUsers(view) {
     view.innerHTML = `
     <div class="wrap us-page">
       ${pageHead('Painel mestre', 'Usuários.', 'Aprove novos cadastros, bloqueie acessos, ajude quem perdeu a senha e escolha quem administra o site.')}
+      <div class="us-filters" role="tablist">${USER_FILTERS.map(([k, t, ic, sub]) => `<button type="button" role="tab" data-uf="${k}" class="us-w w-${k} ${k === usersFilter ? 'on' : ''}" aria-selected="${k === usersFilter}"><span class="us-w-ic"><i data-icon="${ic}"></i></span><b data-uc="${k}">–</b><strong>${t}</strong><small>${sub}</small></button>`).join('')}</div>
       <div class="us-bar">
-        <div class="us-filters" role="tablist">${USER_FILTERS.map(([k, t]) => `<button type="button" role="tab" data-uf="${k}" class="${k === usersFilter ? 'on' : ''}">${t}<b data-uc="${k}"></b></button>`).join('')}</div>
         <label class="us-search"><i data-icon="search"></i><input type="search" id="us-q" placeholder="Buscar por nome ou e-mail" value="${esc(usersQuery)}"></label>
       </div>
+      <section class="tm-wrap" id="us-turmas" hidden></section>
       <div class="us-list" id="us-list"><p class="me-loading">Carregando usuários…</p></div>
     </div>`;
     paintIcons(view);
     view.querySelector('.us-filters').addEventListener('click', (e) => {
       const b = e.target.closest('[data-uf]'); if (!b) return;
       usersFilter = b.dataset.uf;
-      view.querySelectorAll('[data-uf]').forEach((x) => x.classList.toggle('on', x === b));
+      view.querySelectorAll('[data-uf]').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
       drawUsers();
     });
     $('#us-q').addEventListener('input', (e) => { usersQuery = e.target.value; drawUsers(); });
     $('#us-list').addEventListener('click', userAction);
+    $('#us-turmas').addEventListener('click', (e) => {
+      const ed = e.target.closest('[data-tm-edit]');
+      if (ed) return turmaDialog(turmasCache.find((t) => t.id === ed.dataset.tmEdit));
+      if (e.target.closest('[data-tm-new]')) return turmaDialog();
+      const v = e.target.closest('[data-tv]');
+      if (v) { if (turmaView !== v.dataset.tv) switchTurmaView(v.dataset.tv); return; }
+      const c = e.target.closest('[data-tm]'); if (!c) return;
+      turmaFilter = c.dataset.tm; drawUsers();
+    });
     await loadUsers();
   });
 }
@@ -649,6 +682,9 @@ async function loadUsers() {
   const { data, error } = await sb.from('profiles').select('*').order('created_at', { ascending: false });
   if (error) { $('#us-list').innerHTML = `<p class="me-loading">${esc(authError(error))}</p>`; return; }
   usersCache = data || [];
+  const tm = await sb.from('turmas').select('*').order('nome');
+  turmasCache = tm.error ? null : tm.data || [];
+  if (turmasCache && turmaFilter !== 'all' && turmaFilter !== 'none' && !turmasCache.some((t) => t.id === turmaFilter)) turmaFilter = 'all';
   auth.pending = usersCache.filter((u) => u.status === 'pending').length;
   paintUser();
   drawUsers();
@@ -656,10 +692,12 @@ async function loadUsers() {
 function drawUsers() {
   const list = $('#us-list'); if (!list) return;
   const match = (u, f) => f === 'all' || (f === 'admin' ? u.role === 'admin' : f === 'info' ? !!u.informatica : f === 'ped' ? !!u.pedagogico : u.status === f);
-  USER_FILTERS.forEach(([k]) => { const el = document.querySelector(`[data-uc="${k}"]`); if (el) el.textContent = usersCache.filter((u) => match(u, k)).length; });
+  USER_FILTERS.forEach(([k]) => { const el = document.querySelector(`[data-uc="${k}"]`); if (!el) return; const n = usersCache.filter((u) => match(u, k)).length; el.textContent = n; el.closest('.us-w').classList.toggle('hot', k === 'pending' && n > 0); });
+  drawTurmas();
   const q = fold(usersQuery.trim());
-  const rows = usersCache.filter((u) => match(u, usersFilter) && (!q || fold(`${u.name} ${u.email} ${u.username || ''}`).includes(q)));
-  if (!rows.length) { list.innerHTML = `<p class="us-empty">${usersCache.length ? 'Ninguém encontrado com esse filtro.' : 'Ainda não há cadastros.'}</p>`; return; }
+  const inTurma = (u) => usersFilter !== 'info' || ((!turmasCache || concluiu(u) === (turmaView === 'concluidos')) && (turmaFilter === 'all' || (turmaFilter === 'none' ? !u.turma_id : u.turma_id === turmaFilter)));
+  const rows = usersCache.filter((u) => match(u, usersFilter) && inTurma(u) && (!q || fold(`${u.name} ${u.email} ${u.username || ''}`).includes(q)));
+  if (!rows.length) { list.innerHTML = `<p class="us-empty">${usersFilter === 'info' && turmaView === 'concluidos' && !q ? 'Ninguém concluiu o curso ainda. Quando um aluno terminar, use o botão "Concluiu" nele.' : usersCache.length ? 'Ninguém encontrado com esse filtro.' : 'Ainda não há cadastros.'}</p>`; list.classList.remove('us-leaving'); tmAnim = 0; return; }
   const me = auth.user.id;
   list.innerHTML = rows.map((u) => `
     <article class="us-row" data-id="${esc(u.id)}">
@@ -674,11 +712,14 @@ function drawUsers() {
         ${u.role === 'admin' ? '<span class="us-pill admin">Administrador</span>' : ''}
         ${u.pedagogico ? '<span class="us-pill ped"><i data-icon="cap"></i>Setor pedagógico</span>' : ''}
         ${u.informatica ? '<span class="us-pill info"><i data-icon="monitor"></i>Aluno de Informática</span>' : ''}
+        ${concluiu(u) ? `<span class="us-pill done"><i data-icon="trophy"></i>Concluiu em ${new Date(u.informatica_concluido_em).toLocaleDateString('pt-BR')}</span>` : ''}
+        ${u.turma_id && turmaName(u.turma_id) ? `<span class="us-pill tm tm-c${turmaColor(u.turma_id)}"><i data-icon="cap"></i>${esc(turmaName(u.turma_id))}</span>` : ''}
       </div>
       <div class="us-actions">
         ${u.status !== 'approved' ? `<button class="btn-dark sm" type="button" data-ua="approve"><i data-icon="check"></i>Aprovar</button>` : ''}
         ${u.status !== 'blocked' && u.id !== me ? `<button class="btn-soft sm" type="button" data-ua="block"><i data-icon="lock"></i>Bloquear</button>` : ''}
-        <button class="btn-soft sm us-info-btn ${u.informatica ? 'on' : ''}" type="button" data-ua="info" aria-pressed="${!!u.informatica}" title="${u.informatica ? 'Tirar o acesso à Plataforma de Informática' : 'Marcar como aluno de Informática (libera a plataforma)'}"><i data-icon="monitor"></i>Informática</button>
+        ${isOwner() ? `<button class="btn-soft sm us-info-btn ${u.informatica ? 'on' : ''}" type="button" data-ua="info" aria-pressed="${!!u.informatica}" title="${u.informatica ? 'Tirar o acesso à Plataforma de Informática' : 'Marcar como aluno de Informática (libera a plataforma)'}"><i data-icon="monitor"></i>Informática</button>` : ''}
+        ${isOwner() && u.informatica ? `<button class="btn-soft sm us-done-btn ${concluiu(u) ? 'on' : ''}" type="button" data-ua="done" aria-pressed="${concluiu(u)}" title="${concluiu(u) ? 'Voltar para os alunos ativos' : 'Marcar o curso de Informática como concluído'}"><i data-icon="trophy"></i>${concluiu(u) ? 'Concluído' : 'Concluiu'}</button>` : ''}
         <button class="btn-soft sm us-ped-btn ${u.pedagogico ? 'on' : ''}" type="button" data-ua="ped" aria-pressed="${!!u.pedagogico}" title="${u.pedagogico ? 'Tirar do setor pedagógico' : 'Marcar como setor pedagógico (vê os avisos de agendamento no computador)'}"><i data-icon="cap"></i>Pedagógico</button>
         <button class="icon-btn us-at" type="button" data-ua="username" title="${u.username ? 'Trocar' : 'Definir'} o nome de usuário">@</button>
         <button class="icon-btn" type="button" data-ua="reset" title="Enviar link de nova senha por e-mail"><i data-icon="mail"></i></button>
@@ -688,7 +729,141 @@ function drawUsers() {
       </div>
     </article>`).join('');
   paintIcons(list);
+  list.classList.remove('us-leaving');
+  if (tmAnim) {
+    list.querySelectorAll('.us-row').forEach((r, i) => r.style.setProperty('--i', i));
+    list.classList.remove('us-entering'); void list.offsetWidth; list.classList.add('us-entering');
+    setTimeout(() => list.classList.remove('us-entering'), 900);
+    tmAnim = 0;
+  }
 }
+/* ---------- Turmas de Informática (dentro do widget Informática) ---------- */
+const turmaName = (id) => turmasCache?.find((t) => t.id === id)?.nome || '';
+// cada turma ganha uma cor fixa (tirada do id), a mesma no card e na etiqueta do aluno
+const turmaColor = (id) => [...String(id)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % 6;
+function drawTurmas() {
+  const box = $('#us-turmas'); if (!box) return;
+  box.hidden = usersFilter !== 'info';
+  if (box.hidden) return;
+  if (!turmasCache) {
+    box.innerHTML = `<p class="tm-hint"><i data-icon="users"></i>${isOwner() ? 'Para criar turmas, rode o script <b>19-turmas-informatica.sql</b> no Supabase.' : 'As turmas ainda não foram configuradas.'}</p>`;
+    return paintIcons(box);
+  }
+  const done = turmaView === 'concluidos';
+  const todos = usersCache.filter((u) => u.informatica);
+  const nDone = todos.filter(concluiu).length;
+  const alunos = todos.filter((u) => concluiu(u) === done);
+  const members = (id) => alunos.filter((u) => (id === 'all' ? true : id === 'none' ? !u.turma_id : u.turma_id === id));
+  const faces = (list) => list.length ? `<span class="tm-faces">${list.slice(0, 4).map((u) => userAvatar(u, 'tm-face')).join('')}${list.length > 4 ? `<i>+${list.length - 4}</i>` : ''}</span>` : '<span class="tm-faces tm-none">ninguém ainda</span>';
+  const card = (id, nome, sub, cls, icon, extra = '') => {
+    const m = members(id);
+    return `
+    <div class="tm-card ${cls} ${turmaFilter === id ? 'on' : ''}">
+      <button type="button" class="tm-pick" data-tm="${esc(id)}" aria-pressed="${turmaFilter === id}">
+        <span class="tm-ico"><i data-icon="${icon}"></i></span>
+        <span class="tm-n"><b>${m.length}</b>${m.length === 1 ? 'aluno' : 'alunos'}</span>
+        <strong>${esc(nome)}</strong>
+        <small>${sub ? `<i data-icon="clock"></i>${esc(sub)}` : 'sem horário definido'}</small>
+        ${faces(m)}
+      </button>${extra}
+    </div>`;
+  };
+  // nos concluídos aparecem só as turmas de onde alguém já se formou
+  const turmas = done ? turmasCache.filter((t) => members(t.id).length) : turmasCache;
+  box.classList.toggle('tm-done', done);
+  box.innerHTML = `
+    <header class="tm-head">
+      <span class="tm-head-ic"><i data-icon="${done ? 'trophy' : 'users'}"></i></span>
+      <div><h3>${done ? 'Concluídos' : 'Turmas'}</h3><p>${done ? (nDone ? `${nDone} ${nDone === 1 ? 'aluno concluiu' : 'alunos concluíram'} o curso de Informática` : 'Quem terminar o curso aparece aqui, junto da turma.') : turmasCache.length ? `${turmasCache.length} ${turmasCache.length === 1 ? 'turma' : 'turmas'} de Informática` : 'Organize os alunos de Informática em turmas.'}</p></div>
+      <div class="tm-seg" role="tablist" data-v="${turmaView}"><span class="tm-seg-ind" aria-hidden="true"></span>
+        <button type="button" role="tab" data-tv="ativos" aria-selected="${!done}" class="${done ? '' : 'on'}"><i data-icon="users"></i>Ativos<b>${todos.length - nDone}</b></button>
+        <button type="button" role="tab" data-tv="concluidos" aria-selected="${done}" class="${done ? 'on' : ''}"><i data-icon="trophy"></i>Concluídos<b>${nDone}</b></button>
+      </div>
+      ${isOwner() && !done ? '<button type="button" class="tm-new" data-tm-new><i data-icon="plus"></i>Nova turma</button>' : ''}
+    </header>
+    <div class="tm-row">
+      ${card('all', done ? 'Todos' : 'Todas', '', done ? 'tm-all tm-gold' : 'tm-all', done ? 'trophy' : 'monitor').replace('sem horário definido', done ? 'concluíram o curso' : 'alunos de Informática')}
+      ${turmas.map((t) => card(t.id, t.nome, t.horario, `tm-c${turmaColor(t.id)}`, 'cap', isOwner() ? `<button type="button" class="tm-edit" data-tm-edit="${esc(t.id)}" title="Editar ${esc(t.nome)}" aria-label="Editar ${esc(t.nome)}"><i data-icon="edit"></i></button>` : '')).join('')}
+      ${!done || members('none').length ? card('none', 'Sem turma', '', 'tm-free', 'userPlus').replace('sem horário definido', done ? 'concluíram sem turma' : 'ainda não designados') : ''}
+    </div>`;
+  paintIcons(box);
+  box.classList.remove('tm-leaving');
+  if (tmAnim) {
+    box.style.setProperty('--dx', `${tmAnim * 44}px`);
+    box.querySelectorAll('.tm-card').forEach((c, i) => c.style.setProperty('--i', i));
+    box.classList.remove('tm-entering'); void box.offsetWidth; box.classList.add('tm-entering');
+    clearTimeout(drawTurmas.t); drawTurmas.t = setTimeout(() => box.classList.remove('tm-entering'), 900);
+  }
+}
+
+/* criar ou editar uma turma: nome, dias/horário e quem faz parte */
+function turmaDialog(t = null) {
+  if (!isOwner() || document.querySelector('.lk')) return;
+  const alunos = usersCache.filter((u) => u.informatica && !concluiu(u)).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'));
+  // quem já concluiu continua na turma (não aparece na lista, mas não pode sair dela ao salvar)
+  const formados = t ? usersCache.filter((u) => u.turma_id === t.id && concluiu(u)).map((u) => u.id) : [];
+  const chosen = new Set(t ? alunos.filter((u) => u.turma_id === t.id).map((u) => u.id) : []);
+  const wrap = document.createElement('div');
+  wrap.className = 'lk au';
+  wrap.innerHTML = `<div class="lk-backdrop"></div>
+    <form class="lk-card au-card rf-dlg tm-dlg" role="dialog" aria-modal="true" aria-labelledby="tm-t" novalidate>
+      <span class="lk-icon au-ico"><i data-icon="users"></i></span>
+      <h2 id="tm-t">${t ? 'Editar turma' : 'Nova turma'}</h2>
+      <p class="lk-sub">${t ? 'Ajuste o nome, o horário e quem faz parte.' : 'Dê um nome, o horário e escolha os alunos.'}</p>
+      <label class="au-label" for="tm-n">Nome da turma</label><div class="lk-field"><input id="tm-n" maxlength="60" autocomplete="off" placeholder="Ex.: Turma A" value="${esc(t?.nome || '')}"></div>
+      <label class="au-label" for="tm-h">Dias e horário <span class="tm-opt">(opcional)</span></label><div class="lk-field"><input id="tm-h" maxlength="80" autocomplete="off" placeholder="Ex.: Seg e Qua · 14h às 16h" value="${esc(t?.horario || '')}"></div>
+      <div class="tm-al-head"><span class="au-label">Alunos</span><small id="tm-c"></small></div>
+      ${alunos.length > 5 ? '<div class="lk-field"><input id="tm-q" type="search" autocomplete="off" placeholder="Buscar aluno"></div>' : ''}
+      <div class="tm-al" id="tm-al">${alunos.length ? alunos.map((u) => {
+        const other = u.turma_id && u.turma_id !== t?.id ? turmaName(u.turma_id) : '';
+        return `<label class="tm-a" data-name="${esc(fold(`${u.name} ${u.email} ${u.username || ''}`))}">
+          ${userAvatar(u, 'us-avatar rf-gav')}
+          <span class="rf-gwho"><strong>${esc(u.name || 'Sem nome')}</strong><small>${other ? `Hoje na ${esc(other)}` : esc(u.username ? '@' + u.username : u.email)}</small></span>
+          <input type="checkbox" value="${esc(u.id)}" ${chosen.has(u.id) ? 'checked' : ''}>
+        </label>`;
+      }).join('') : '<p class="ag-desc">Ainda não há alunos de Informática. Marque-os pelo botão "Informática" na lista.</p>'}</div>
+      <p class="lk-msg" role="alert"></p>
+      <div class="lk-actions">${t ? '<button type="button" class="btn-soft tm-del" title="Apagar turma"><i data-icon="trash"></i></button>' : ''}<button type="button" class="btn-soft lk-cancel">Cancelar</button><button type="submit" class="btn-dark lk-go">${t ? 'Salvar' : 'Criar turma'}</button></div>
+    </form>`;
+  document.body.appendChild(wrap); paintIcons(wrap);
+  const msg = wrap.querySelector('.lk-msg'), list = wrap.querySelector('#tm-al'), cnt = wrap.querySelector('#tm-c');
+  const upd = () => { const n = list.querySelectorAll('input:checked').length; cnt.textContent = n ? `${n} ${n === 1 ? 'escolhido' : 'escolhidos'}` : ''; };
+  list.addEventListener('change', upd); upd();
+  wrap.querySelector('#tm-q')?.addEventListener('input', (e) => {
+    const f = fold(e.target.value.trim());
+    list.querySelectorAll('.tm-a').forEach((el) => { el.hidden = !!f && !el.dataset.name.includes(f); });
+  });
+  const close = () => { wrap.classList.remove('in'); document.removeEventListener('keydown', onKey); setTimeout(() => wrap.remove(), 300); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  wrap.querySelector('.lk-backdrop').addEventListener('click', close);
+  wrap.querySelector('.lk-cancel').addEventListener('click', close);
+  wrap.querySelector('.tm-del')?.addEventListener('click', async () => {
+    close();
+    if (!(await confirmDialog({ title: `Apagar a ${t.nome}?`, sub: 'Os alunos continuam com acesso à Informática, só ficam sem turma.', ok: 'Apagar turma' }))) return;
+    const { error } = await sb.rpc('owner_delete_turma', { tid: t.id });
+    if (error) return toast(authError(error));
+    if (turmaFilter === t.id) turmaFilter = 'all';
+    toast(`${t.nome} foi apagada.`); loadUsers();
+  });
+  wrap.querySelector('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nome = wrap.querySelector('#tm-n').value.trim().replace(/\s+/g, ' ');
+    if (!nome) { msg.textContent = 'Dê um nome para a turma.'; return wrap.querySelector('#tm-n').focus(); }
+    if (turmasCache.some((x) => x.id !== t?.id && fold(x.nome) === fold(nome))) { msg.textContent = 'Já existe uma turma com esse nome.'; return wrap.querySelector('#tm-n').focus(); }
+    const go = wrap.querySelector('.lk-go'); go.disabled = true;
+    const { data, error } = await sb.rpc('owner_save_turma', { tid: t?.id || null, p_nome: nome, p_horario: wrap.querySelector('#tm-h').value.trim(), alunos: [...list.querySelectorAll('input:checked')].map((i) => i.value).concat(formados) });
+    go.disabled = false;
+    if (error) { msg.textContent = authError(error); return; }
+    close();
+    if (!t && data) turmaFilter = data;
+    toast(t ? `${nome} foi atualizada.` : `${nome} foi criada.`);
+    loadUsers();
+  });
+  requestAnimationFrame(() => wrap.classList.add('in'));
+  setTimeout(() => wrap.querySelector('#tm-n').focus(), 60);
+}
+
 async function userAction(e) {
   const b = e.target.closest('[data-ua]'); if (!b) return;
   const u = usersCache.find((x) => x.id === b.closest('.us-row').dataset.id); if (!u) return;
@@ -697,7 +872,7 @@ async function userAction(e) {
     b.disabled = true;
     const { error } = await sb.rpc(fn, args);
     b.disabled = false;
-    if (error) return toast(/informatica/i.test(error.message || '') ? 'Falta atualizar o banco: rode o script 07-alunos-informatica.sql no Supabase.' : /pedagogico/i.test(error.message || '') ? 'Falta atualizar o banco: rode o script 15-setor-pedagogico.sql no Supabase.' : authError(error)), false;
+    if (error) return toast(/concluido/i.test(error.message || '') && !/conta mestre/i.test(error.message || '') ? 'Falta atualizar o banco: rode o script 20-informatica-concluidos.sql no Supabase.' : /informatica/i.test(error.message || '') ? 'Falta atualizar o banco: rode o script 07-alunos-informatica.sql no Supabase.' : /pedagogico/i.test(error.message || '') ? 'Falta atualizar o banco: rode o script 15-setor-pedagogico.sql no Supabase.' : authError(error)), false;
     toast(okMsg); await loadUsers(); return true;
   };
   switch (b.dataset.ua) {
@@ -711,10 +886,19 @@ async function userAction(e) {
       return rpc('admin_update_user', { target: u.id, new_role: make ? 'admin' : 'user', new_status: make ? 'approved' : null }, make ? `${who} agora é administrador.` : `${who} não é mais administrador.`);
     }
     case 'info': {
+      if (!isOwner()) return toast('Só a conta mestre pode marcar alunos de Informática.');
       const on = !u.informatica;
       if (!on && !(await confirmDialog({ title: `Tirar ${who} da Informática?`, sub: 'A pessoa deixa de entrar direto na Plataforma de Informática pelo banner.', ok: 'Tirar acesso', icon: 'monitor' }))) return;
       return rpc('admin_set_informatica', { target: u.id, value: on }, on ? `${who} agora tem acesso à Plataforma de Informática.` : `${who} não tem mais acesso à Plataforma de Informática.`)
         .then((ok) => { if (ok && u.id === auth.user.id) refreshMe(); });
+    }
+    case 'done': {
+      if (!isOwner()) return;
+      const on = !concluiu(u);
+      if (!(await confirmDialog(on
+        ? { title: `${who} concluiu o curso?`, sub: 'A pessoa sai das turmas ativas e vai para "Concluídos", junto da turma dela. O acesso à plataforma e o progresso continuam.', ok: 'Marcar como concluído', icon: 'trophy' }
+        : { title: `Voltar ${who} para os ativos?`, sub: 'A marcação de curso concluído é retirada e a pessoa volta para a turma ativa.', ok: 'Voltar para ativos', icon: 'users' }))) return;
+      return rpc('owner_set_concluido', { target: u.id, value: on }, on ? `${who} concluiu o curso de Informática!` : `${who} voltou para os alunos ativos.`);
     }
     case 'ped': {
       const on = !u.pedagogico;

@@ -107,7 +107,7 @@ window.HC_CONTENT = {
       "c1": "#22c55e",
       "c2": "#0e7490",
       "id": "l1794923521692",
-      "url": "",
+      "url": "#informatica",
       "name": "INFORMÁTICA",
       "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/15736941-f6f4-442e-9500-dfb0a454d3c7.webp"
     },
