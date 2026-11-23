@@ -156,6 +156,50 @@
   /* alternativas embaralhadas, sempre na mesma ordem para a mesma pergunta (a resposta certa não fica sempre na mesma letra) */
   const seeded = (str) => { let h = 2166136261; for (const ch of str) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); h = h || 1; return () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return (h >>> 0) / 4294967296; }; };
   const mix = (q, key) => { const r = seeded(key), ix = q.op.map((_, k) => k); for (let k = ix.length - 1; k > 0; k--) { const j = Math.floor(r() * (k + 1)); [ix[k], ix[j]] = [ix[j], ix[k]]; } return { ...q, op: ix.map((k) => q.op[k]), certa: ix.indexOf(q.certa) }; };
+  /* ANIMAÇÃO DE CARREGAMENTO ao abrir o material, o questionário ou a avaliação: uma folha sendo "escrita"
+     (linhas surgindo), e no questionário um cartão de perguntas com as alternativas aparecendo; frases de status
+     e uma barra que enche. Só dá a sensação de que as informações estão sendo buscadas: a tela já está pronta
+     por baixo e aparece quando a animação termina (de 4 a 6 s, com a última frase parada no fim; mais curta com "menos movimento"). */
+  const LOAD = {
+    ler: { t: 'Abrindo o material', ms: 3200, steps: ['Buscando o texto da aula…', 'Organizando as partes…', 'Preparando as ilustrações…', 'Tudo pronto!'] },
+    quiz: { t: 'Preparando o questionário', ms: 4000, steps: ['Buscando o texto da aula…', 'Separando as perguntas de cada parte…', 'Embaralhando as alternativas…', 'Tudo pronto. Boa sorte!'] },
+    res: { t: 'Buscando o seu resultado', ms: 2800, steps: ['Conferindo as suas respostas…', 'Calculando a nota…', 'Pronto!'] },
+    prova: { t: 'Montando a avaliação', ms: 4800, steps: ['Reunindo as aulas 01 a 09…', 'Sorteando as perguntas…', 'Embaralhando as alternativas…', 'Conferindo o tempo da prova…', 'Tudo pronto. Boa prova!'] },
+  };
+  function loader(kind, id, tint) {
+    const L = LOAD[kind]; if (!L) return;
+    if (document.querySelector('.cl-load:not(.out)')) return; // já está na tela (aberta no clique)
+    // com "menos movimento" no aparelho fica mais curta; no modo leve continua igual (é uma tela só, leve)
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const ms = calm ? 1400 : L.ms, HOLD = 1600; // HOLD: a última frase ("Tudo pronto. Boa sorte!") fica parada para dar tempo de ler
+    const cor = window.HC_CAPAS_COR?.[id], a = cor?.[1] || `rgb(${tint || '56, 189, 248'})`, b = cor?.[2] || `color-mix(in srgb, rgb(${tint || '28, 64, 120'}) 55%, #000)`;
+    const lines = (n) => Array.from({ length: n }, (_, i) => `<i style="--i:${i}"></i>`).join('');
+    const el = document.createElement('div');
+    el.className = `cl-load k-${kind}`; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+    el.style.cssText = `--a:${a};--b:${b};--ms:${ms}ms`;
+    el.innerHTML = `
+      <div class="cl-box">
+        <div class="cl-stage" aria-hidden="true">
+          <div class="cl-doc"><span class="cl-doc-h"></span><span class="cl-doc-img"></span><span class="cl-doc-l">${lines(6)}</span><span class="cl-scan"></span></div>
+          ${kind === 'ler' ? '' : `<div class="cl-quiz"><span class="cl-quiz-q"></span>${[0, 1, 2].map((k) => `<span class="cl-opt" style="--k:${k}"><em></em><i></i></span>`).join('')}${kind === 'prova' ? '<b class="cl-quiz-n">30</b>' : ''}</div>`}
+        </div>
+        <b class="cl-title">${L.t}</b>
+        <small class="cl-step">${L.steps[0]}</small>
+        <div class="cl-bar"><i></i></div>
+      </div>`;
+    document.body.append(el); // já entra cobrindo tudo (sem esmaecer), para nada da aula aparecer antes
+    const stepEl = el.querySelector('.cl-step');
+    const timers = L.steps.slice(1).map((txt, k) => setTimeout(() => {
+      stepEl.classList.remove('swap'); void stepEl.offsetWidth; stepEl.textContent = txt; stepEl.classList.add('swap');
+    }, ((k + 1) * ms) / L.steps.length));
+    const onHash = () => { if (!location.hash.startsWith(`#informatica/conteudo-${id}`)) done(); }; // saiu da aula no meio: some na hora
+    const done = () => { timers.forEach(clearTimeout); el.classList.add('out'); setTimeout(() => el.remove(), 450); removeEventListener('hashchange', onHash); };
+    // só sai quando a tela da aula (leitura ou questionário) já está montada por baixo; na internet lenta espera mais (até 10 s)
+    const t0 = Date.now();
+    const finish = () => { if (document.querySelector('#view > .ct:not(.cx-wrap)') || Date.now() - t0 > ms + 10000) done(); else timers.push(setTimeout(finish, 200)); };
+    timers.push(setTimeout(finish, ms + HOLD));
+    addEventListener('hashchange', onHash);
+  }
   let cleanup = null;
   function open(view, C0, meta = {}) {
     cleanup?.();
@@ -178,7 +222,14 @@
     const LIM = LIMITE(C, exam), LIMmin = LIM / 60000;
     const resta = () => (st().ini || Date.now()) + LIM - Date.now();
     const finished = () => !!st().fechada || Object.keys(st().ans).length === Q.length;
-    if (modo === 'intro') return intro();
+    if (modo === 'intro') {
+      // a pré-tela agora mora na página da disciplina (a aula se expande embaixo da fileira): quem chega aqui
+      // sem escolher ler ou responder (endereço direto, "Ir para o questionário", fim da leitura, testar) vai para lá com a aula aberta
+      if (!meta.embed && /^#informatica\/disciplina-/.test(meta.back || '')) {
+        cleanup?.(); window.HC_aulaOpen = { id, test }; location.hash = meta.back; return;
+      }
+      return intro();
+    }
     let part = Math.max(0, Math.min(P.length - 1, +st().part || 0)); // parte aberta (volta onde parou)
     let cur = -1, showResult = false, checking = null; // pergunta aberta; resultado geral; resposta em verificação {q, k}
 
@@ -264,58 +315,151 @@
       const lidas = (s0.read || []).length, resp = Object.keys(s0.ans || {}).length;
       const go = s0.fechada ? (exam ? 'Ver resultado da avaliação' : 'Ver resultado do questionário') : esgot ? 'Ver a nota' : inProg ? (exam ? 'Continuar avaliação' : 'Continuar questionário') : (exam ? 'Iniciar avaliação' : 'Iniciar questionário');
       const fmtLeft = (ms) => { const m = Math.max(0, Math.ceil(ms / 60000)); return m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}min` : ''}` : `${m} min`; };
-      const status = s0.fechada ? `<div class="cti-st ${best >= PASS ? 'ok' : 'rec'}">${svg(best >= PASS ? 'check' : 'warn')}<div><b>${best >= PASS ? 'Aprovado' : 'Recuperação'} · nota ${fmtN(best)}</b><small>${best >= PASS ? 'Você já passou nesta aula. Pode rever o material e o resultado quando quiser.' : `Abaixo de 7. Revise o material e libere uma nova tentativa por ${fmtC(PRICE)} do Saldo HC.`}</small></div></div>`
-        : esgot ? `<div class="cti-st rec">${svg('timer')}<div><b>O tempo acabou</b><small>O questionário será enviado com as ${resp} ${resp === 1 ? 'resposta' : 'respostas'} que você deu.</small></div></div>`
-        : inProg ? `<div class="cti-st run">${svg('timer')}<div><b>Em andamento · resta ${fmtLeft(left)}</b><small>${resp} de ${Q.length} perguntas respondidas. O tempo continua correndo.</small></div></div>` : '';
       /* cores da aula (as mesmas da capa); sem capa, a cor da disciplina */
       const cor = window.HC_CAPAS_COR?.[id], tint = cor?.[0] || meta.tint || '28, 64, 120';
       const cvars = cor ? `--tint:${tint};--a:${cor[1]};--b:${cor[2]}` : `--tint:${tint};--a:rgb(${tint});--b:color-mix(in srgb, rgb(${tint}) 55%, #000)`;
+      /* o caminho da aula: cada parte (ou bloco) com quantas perguntas tem e como o aluno está nela */
+      const ans = s0.ans || {}, read = s0.read || [];
+      const steps = P.map((pt, k) => {
+        const qs = qsOf(k), feitas = qs.filter((i) => ans[i] !== undefined).length;
+        const lida = read.includes(pt.id);
+        const est = s0.fechada || (qs.length && feitas === qs.length) ? 'ok' : feitas || lida ? 'meio' : '';
+        return `<li class="cx-step ${est}" style="--k:${k}">
+            <span class="cx-step-n">${est === 'ok' ? svg('check') : String(k + 1).padStart(2, '0')}</span>
+            <div class="cx-step-t"><b>${esc(pt.titulo || `${PART} ${k + 1}`)}</b>
+              <small>${qs.length ? `${qs.length} ${qs.length === 1 ? 'pergunta' : 'perguntas'}` : 'Só leitura'}${!exam && lida ? ' · lida' : ''}${feitas && !s0.fechada && feitas < qs.length ? ` · ${feitas} de ${qs.length} respondidas` : ''}</small></div>
+          </li>`;
+      }).join('');
+      const pRead = P.length ? Math.round((exam ? 0 : lidas / P.length) * 100) : 0, pResp = Q.length ? Math.round((resp / Q.length) * 100) : 0;
+      const sit = s0.fechada
+        ? { t: best >= PASS ? 'ok' : 'rec', ico: best >= PASS ? 'check' : 'warn', b: best >= PASS ? `Aprovado · nota ${fmtN(best)}` : `Recuperação · nota ${fmtN(best)}`,
+          s: best >= PASS ? (exam ? 'Você concluiu a disciplina. Pode rever o resultado quando quiser.' : 'Você já passou nesta aula. Pode rever o material e o resultado quando quiser.') : `Abaixo de 7. Revise o material e faça uma nova tentativa (${fmtC(PRICE)} do Saldo HC).` }
+        : esgot ? { t: 'rec', ico: 'timer', b: 'O tempo acabou', s: `O questionário será enviado com as ${resp} ${resp === 1 ? 'resposta' : 'respostas'} que você deu.` }
+        : inProg ? { t: 'run', ico: 'timer', b: `Em andamento · resta ${fmtLeft(left)}`, s: `${resp} de ${Q.length} perguntas respondidas. O tempo continua correndo.` }
+        : { t: 'new', ico: 'bulb', b: exam ? 'Pronto para a avaliação?' : 'Pronto para começar?', s: exam ? 'Revise as aulas antes: na avaliação o material fica fechado.' : `Leia com calma (uns ${C.leitura || 10} min) e responda as perguntas de cada parte.` };
+      const RULES = [
+        ['timer', `${fmtDur(LIMmin)} de prova`, `O tempo começa em <b>${exam ? 'Iniciar avaliação' : 'Iniciar questionário'}</b> e corre mesmo fora da página.`],
+        ['lockc', 'Em ordem', exam ? 'Responda um bloco para abrir o próximo.' : 'Responda as perguntas de uma parte para abrir a próxima.'],
+        ['warn', 'Se o tempo acabar', 'Envia o que você respondeu; em branco conta como errada.'],
+        ['coin', 'Nota 7 para passar', `Nova tentativa: <b>${fmtC(PRICE)}</b> do Saldo HC. Vale a maior nota.`],
+        exam ? ['book', 'Sem material', 'As perguntas vêm das Aulas 01 a 09.'] : ['book', 'Material sempre aberto', 'Em <b>Ler material</b>, sem tempo, antes e depois.'],
+      ];
       view.innerHTML = `
-      <div class="ct cti-wrap${test ? ' testing' : ''}" style="${cvars}">
+      <div class="ct cx-wrap${meta.embed ? ' cx-embed' : ''}${test ? ' testing' : ''}${exam ? ' exam' : ''}" style="${cvars}">
         ${test ? `<div class="ct-testbar"><span class="ct-testbar-ico">${svg('flask')}</span><div><b>Modo de teste</b><small>Nada é salvo e o saldo é fictício (${fmtC(TEST_SALDO)}).</small></div>
           <button type="button" class="ct-tb-btn dark" data-exittest>Sair do teste</button></div>` : ''}
-        <section class="cti">
-          <div class="ct-top">
-            <button class="ct-back" type="button">${svg('back')} ${esc(meta.backLabel || 'Disciplinas')}</button>
-            ${meta.admin && !test ? `<button class="ct-testbtn" type="button" data-test>${svg('flask')} Testar como aluno</button>` : ''}
+        <div class="cx-slide">
+        <div class="cx-scroller${meta.card ? ' has-card' : ''}">
+        <div class="cx-track">
+        ${meta.card ? `<div class="cx-card">${meta.card}</div>` : ''}
+        <section class="cx">
+          <div class="cx-top">
+            ${meta.embed ? `<span class="cx-embed-tag">${svg('book')} Sobre esta aula</span>` : `<button class="ct-back cx-back" type="button">${svg('back')} ${esc(meta.backLabel || 'Disciplinas')}</button>`}
+            ${meta.admin && !test ? `<button class="ct-testbtn cx-testbtn" type="button" data-test>${svg('flask')} Testar como aluno</button>` : ''}
           </div>
-          <div class="cti-hero">
-            ${meta.image ? `<div class="cti-cover"><img src="${esc(meta.image)}" alt=""></div>` : window.HC_CAPAS?.[id] ? `<div class="cti-cover cti-capa">${window.HC_CAPAS[id]}</div>` : `<div class="cti-cover cti-ico">${svg(exam ? 'quiz' : 'book')}</div>`}
-            <div class="cti-txt">
-              <span class="ct-tag">${esc(tagTxt)}</span>
-              <h1>${esc(C.titulo)}</h1>
-              ${C.subtitulo ? `<p class="ct-sub">${esc(C.subtitulo)}</p>` : ''}
+          <div class="cx-main">
+            <div class="cx-intro">
+              <div class="cx-head">
+                <div class="cx-head-t">
+                  <span class="cx-tag">${esc(tagTxt)}</span>
+                  <h1>${esc(C.titulo)}</h1>
+                  ${C.subtitulo ? `<p class="cx-sub">${esc(C.subtitulo)}</p>` : ''}
+                </div>
+              </div>
+              <div class="cx-chips">
+                <span>${svg('quiz')}<b>${Q.length}</b> perguntas</span>
+                <span>${svg('timer')}<b>${fmtDur(LIMmin)}</b> para responder</span>
+                ${exam ? '' : `<span>${svg('clock')}<b>${C.leitura || 10} min</b> de leitura</span>`}
+                <span>${svg('check')}nota <b>7</b> para passar</span>
+              </div>
+              <div class="cx-sit ${sit.t}">
+                <span class="cx-sit-ico">${svg(sit.ico)}</span>
+                <div class="cx-sit-t"><b>${sit.b}</b><small>${sit.s}</small></div>
+                ${h.length ? `<div class="cx-tries" title="Suas tentativas">${h.map((x, i) => `<span class="${x.nota >= PASS ? 'ok' : 'bad'}"><small>${i + 1}ª</small>${fmtN(x.nota)}</span>`).join('')}</div>` : ''}
+              </div>
+              <div class="cx-bars">
+                ${exam ? '' : `<div><span>Leitura</span><b>${lidas} de ${P.length} partes</b><i style="--p:${pRead}%"></i></div>`}
+                <div><span>Perguntas</span><b>${s0.fechada ? `${h[h.length - 1]?.ok ?? resp} de ${Q.length} certas` : `${resp} de ${Q.length} respondidas`}</b><i style="--p:${s0.fechada ? Math.round(((h[h.length - 1]?.ok ?? resp) / Math.max(1, Q.length)) * 100) : pResp}%"></i></div>
+              </div>
+              <div class="cx-acts">
+                <button type="button" class="cx-btn" data-modo="quiz">${go} ${svg('next')}</button>
+                ${exam ? '' : `<button type="button" class="cx-btn soft" data-modo="ler">${svg('book')} Ler material</button>`}
+              </div>
             </div>
+            <aside class="cx-path">
+              <div class="cx-path-h"><b>O que você vai encontrar</b><small>${P.length} ${exam ? (P.length === 1 ? 'bloco' : 'blocos') : (P.length === 1 ? 'parte' : 'partes')} · ${Q.length} perguntas</small></div>
+              <ol class="cx-steps">${steps}</ol>
+              ${!exam && nx ? `<div class="cx-next">${svg('lock')}<span>Com nota 7 você libera a <b>${esc(nx.nome)}</b>: ${esc(nx.titulo)}</span></div>` : ''}
+            </aside>
           </div>
-          <div class="cti-stats">
-            <div class="c1"><span>${svg('quiz')}</span><b>${Q.length}</b><small>perguntas</small></div>
-            <div class="c2"><span>${svg('timer')}</span><b>${fmtDur(LIMmin)}</b><small>para responder</small></div>
-            <div class="c3"><span>${svg('check')}</span><b>7</b><small>nota mínima</small></div>
-            <div class="c4"><span>${svg('list')}</span><b>${P.length}</b><small>${exam ? 'blocos' : 'partes de leitura'}</small></div>
-          </div>
-          ${status}
-          <ul class="cti-rules">
-            <li>${svg('timer')}<span>O tempo de <b>${fmtDur(LIMmin)}</b> começa quando você clica em <b>${exam ? 'Iniciar avaliação' : 'Iniciar questionário'}</b> e continua correndo mesmo se você sair da página.</span></li>
-            <li>${svg('lockc')}<span>${exam ? 'Os blocos abrem em ordem: responda as perguntas de um bloco para seguir para o próximo.' : 'O texto e as perguntas andam juntos: responda as perguntas de uma parte para seguir para a próxima.'}</span></li>
-            <li>${svg('warn')}<span>Se o tempo acabar, o questionário é enviado com o que você respondeu; as perguntas em branco contam como erradas.</span></li>
-            <li>${svg('coin')}<span>Precisa de 7 para passar. Uma nova tentativa custa <b>${fmtC(PRICE)}</b> do Saldo HC e vale a maior nota.</span></li>
-            ${exam ? `<li>${svg('book')}<span>A avaliação é feita sem o material: as perguntas vêm das Aulas 01 a 09.</span></li>` : `<li>${svg('book')}<span>O material fica sempre liberado em <b>Ler material</b>, sem tempo, para você estudar antes e depois.</span></li>`}
+          <div class="cx-rules-h">Como funciona</div>
+          <ul class="cx-rules">
+            ${RULES.map(([ic, t, d], i) => `<li style="--i:${i}"><div class="cx-rule-top"><span class="cx-rule-ico">${svg(ic)}</span><em>${String(i + 1).padStart(2, '0')}</em></div><b>${t}</b><small>${d}</small></li>`).join('')}
           </ul>
-          <div class="cti-acts">
-            ${exam ? '' : `<button type="button" class="cti-btn soft" data-modo="ler">${svg('book')} Ler material${lidas ? `<small>${lidas} de ${P.length} partes lidas</small>` : ''}</button>`}
-            <button type="button" class="cti-btn" data-modo="quiz">${go} ${svg('next')}</button>
-          </div>
         </section>
+        </div>
+        </div>
+        <div class="cx-nav" hidden>
+          <button type="button" class="cx-nav-btn" data-nav="-1" aria-label="Voltar para a esquerda">${svg('back')}</button>
+          <input type="range" class="cx-range" min="0" max="1000" value="0" step="1" aria-label="Deslizar a tela para os lados">
+          <button type="button" class="cx-nav-btn nx" data-nav="1" aria-label="Ir para a direita">${svg('next')}</button>
+        </div>
+        </div>
       </div>`;
-      const w = view.querySelector('.cti-wrap');
+      const w = view.querySelector('.cx-wrap');
+      /* card da aula ao lado (o mesmo da página da disciplina): sem os botões de administrador; tocar nele faz o mesmo que o botão principal */
+      const card = w.querySelector('.cx-card .pf-ccard');
+      if (card) {
+        card.querySelectorAll('.pf-adm').forEach((x) => x.remove());
+        card.removeAttribute('tabindex'); card.setAttribute('role', 'presentation');
+        card.addEventListener('click', () => w.querySelector('.cx-btn[data-modo="quiz"]')?.click());
+      }
+      /* se o card e a pré-tela não cabem lado a lado, a faixa desliza: arrastando com o mouse, pelas setas ou pelo controle deslizante */
+      const sc = w.querySelector('.cx-scroller'), nav = w.querySelector('.cx-nav'), rg = nav.querySelector('.cx-range');
+      const maxX = () => sc.scrollWidth - sc.clientWidth;
+      const navUpd = () => {
+        if (!sc.isConnected) return removeEventListener('resize', navUpd);
+        const m = maxX(); nav.hidden = m < 8; sc.classList.toggle('can-drag', m >= 8);
+        rg.value = m > 0 ? Math.round((sc.scrollLeft / m) * 1000) : 0;
+        rg.style.setProperty('--v', `${rg.value / 10}%`);
+        nav.querySelector('[data-nav="-1"]').disabled = sc.scrollLeft < 4;
+        nav.querySelector('[data-nav="1"]').disabled = sc.scrollLeft > m - 4;
+      };
+      sc.addEventListener('scroll', navUpd, { passive: true });
+      addEventListener('resize', navUpd, { passive: true });
+      rg.addEventListener('input', () => { sc.scrollLeft = (rg.value / 1000) * maxX(); });
+      nav.addEventListener('click', (e) => { const b = e.target.closest('[data-nav]'); if (b) sc.scrollBy({ left: +b.dataset.nav * sc.clientWidth * .6, behavior: 'smooth' }); });
+      let drag = null;
+      sc.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse' || e.button !== 0 || maxX() < 8 || e.target.closest('button, a, input')) return; drag = { x: e.clientX, l: sc.scrollLeft, moved: false }; });
+      // os ouvintes da janela saem sozinhos quando a pré-tela sai da página (não se acumulam)
+      const onMove = (e) => {
+        if (!sc.isConnected) return removeEventListener('pointermove', onMove);
+        if (!drag) return; const dx = e.clientX - drag.x;
+        if (!drag.moved && Math.abs(dx) < 6) return;
+        drag.moved = true; sc.classList.add('dragging'); sc.scrollLeft = drag.l - dx;
+      };
+      const eat = (e) => { e.stopPropagation(); e.preventDefault(); }; // o clique que termina o arrasto não abre nada
+      const onUp = () => {
+        if (!sc.isConnected) return removeEventListener('pointerup', onUp);
+        if (!drag) return; const was = drag.moved; drag = null; sc.classList.remove('dragging');
+        if (was) { sc.addEventListener('click', eat, { capture: true, once: true }); setTimeout(() => sc.removeEventListener('click', eat, { capture: true }), 0); }
+      };
+      addEventListener('pointermove', onMove); addEventListener('pointerup', onUp);
+      requestAnimationFrame(navUpd);
       w.addEventListener('click', (e) => {
         const t = e.target.closest('button'); if (!t) return;
         if (t.classList.contains('ct-back')) { location.hash = meta.back || '#informatica/cursos'; return; }
         if (t.hasAttribute('data-test')) { delete testStores[id]; return open(view, C0, { ...meta, test: true, modo: 'intro' }); }
         if (t.hasAttribute('data-exittest')) { delete testStores[id]; return open(view, C0, { ...meta, test: false, modo: 'intro' }); }
-        if (t.dataset.modo) { window.scrollTo(0, 0); return open(view, C0, { ...meta, modo: t.dataset.modo, verRes: !!s0.fechada }); }
+        if (t.dataset.modo) {
+          loader(t.dataset.modo === 'ler' ? 'ler' : s0.fechada ? 'res' : exam ? 'prova' : 'quiz', id, meta.tint);
+          window.scrollTo(0, 0);
+          // aberta dentro da página da disciplina: vai para a tela da aula já no modo escolhido (plataforma.js lê HC_conteudoGo)
+          if (meta.embed) { window.HC_conteudoGo = { id, modo: t.dataset.modo, verRes: !!s0.fechada, test }; location.hash = `#informatica/conteudo-${id}`; return; }
+          return open(view, C0, { ...meta, modo: t.dataset.modo, verRes: !!s0.fechada, loading: true });
+        }
       });
-      window.scrollTo(0, 0);
+      if (!meta.embed) window.scrollTo(0, 0);
       S.pull().then((changed) => { if (changed && w.isConnected) intro(); });
     }
     /* aviso quando tenta pular uma parte sem responder: aparece embaixo, com o atalho para as perguntas */
@@ -612,6 +756,7 @@
     showPart(Math.min(part, maxPart()), { scroll: false });
     if (!ler) { tick(); clockT = setInterval(tick, 1000); if (meta.verRes && finished()) { showResult = true; paint(); drawQ(); } }
     window.scrollTo(0, 0);
+    if (meta.loading) loader(ler ? 'ler' : meta.verRes && finished() ? 'res' : exam ? 'prova' : 'quiz', id, meta.tint);
     S.pull().then((changed) => { if (!changed || !root.isConnected) return; closeAttempt(); if (!ler) startClock(); showPart(Math.min(P.length - 1, +st().part || 0, maxPart()), { scroll: false }); if (!ler) tick(); });
 
     const onHash = () => { if (!root.isConnected || !location.hash.startsWith('#informatica/conteudo-')) cleanup?.(); };

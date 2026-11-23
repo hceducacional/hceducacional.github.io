@@ -595,13 +595,13 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     refreshConts(view, toEnd);
   }
   /* cliques dos cards (disciplinas e conteúdos), em qualquer uma das duas telas */
-  function bindCards(root, view) {
+  function bindCards(root, view, onCont) {
     const press = (sel, fn) => root.querySelectorAll(sel).forEach((c) => {
       c.addEventListener('click', () => fn(c));
       c.addEventListener('keydown', (e) => { if (e.target !== c) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(c); } });
     });
     press('[data-disc]', (c) => { location.hash = `#informatica/disciplina-${c.dataset.disc}`; });
-    press('[data-cont]', (c) => openCont(c.dataset.cont));
+    press('[data-cont]', (c) => (onCont || openCont)(c.dataset.cont));
     root.querySelectorAll('[data-newdisc]').forEach((b) => b.addEventListener('click', () => editDisc(view, null)));
     root.querySelectorAll('[data-editdisc]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); editDisc(view, b.dataset.editdisc); }));
     root.querySelectorAll('[data-deldisc]').forEach((b) => b.addEventListener('click', (e) => {
@@ -626,7 +626,8 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       });
     }));
   }
-  let contsResize = null, lessonsResize = null;
+  let contsResize = null, lessonsResize = null, discResize = null;
+  const discRowX = {}; // onde a fileira de aulas de cada disciplina estava (para voltar no mesmo lugar)
   function bindConts(view) {
     const sec = view.querySelector('.pf-conts'); if (!sec) return;
     bindCards(sec, view);
@@ -671,17 +672,94 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
         ${adm ? `<div class="pf-adm"><button class="pf-adm-btn" type="button" data-editdisc="${esc(d.id)}" aria-label="Editar a disciplina" title="Editar disciplina">${svg('pen')}</button><button class="pf-adm-btn" type="button" data-deldisc="${esc(d.id)}" aria-label="Apagar a disciplina" title="Apagar disciplina">${svg('trash')}</button></div>` : ''}
       </header>
       <section class="pfd-list" aria-label="Conteúdos da disciplina">
-        <h2 class="pf-st-title">Aulas <span>Uma de cada vez: passe com nota 7 ou mais para liberar a próxima</span></h2>
-        ${items.length || adm ? `<div class="pfd-grid">${items.map(contCard).join('')}
+        <div class="pf-mods-head">
+          <h2 class="pf-st-title">Aulas <span>Uma de cada vez: passe com nota 7 ou mais para liberar a próxima</span></h2>
+          ${items.length || adm ? `<div class="ap-paddles pf-mod-paddles">
+            <button class="ap-paddle" data-adir="-1" aria-label="Aulas anteriores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+            <button class="ap-paddle" data-adir="1" aria-label="Próximas aulas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+          </div>` : ''}
+        </div>
+        ${items.length || adm ? `<div class="pf-mod-row pfd-row" id="pfd-row">${items.map(contCard).join('')}
           ${adm ? `<button class="pf-cnew" type="button" data-newcont="${esc(d.id)}"><span>${svg('plus')}</span><b>Novo conteúdo</b><small>Texto, PDF, questionário ou prova</small></button>` : ''}
-        </div>` : `<div class="pf-cempty"><div class="pf-cempty-icos">${['texto', 'pdf', 'quiz', 'prova'].map((k, i) => `<span style="--tint:${CT[k].tint};--i:${i}">${svg(k)}</span>`).join('')}</div>
+        </div>
+        <div class="pf-mod-open pfd-open" id="pfd-open"><div class="pf-mod-inner pfd-inner" id="pfd-inner"></div></div>` : `<div class="pf-cempty"><div class="pf-cempty-icos">${['texto', 'pdf', 'quiz', 'prova'].map((k, i) => `<span style="--tint:${CT[k].tint};--i:${i}">${svg(k)}</span>`).join('')}</div>
           <h3>Em breve, novos conteúdos</h3><p>Os textos, PDFs, questionários e provas desta disciplina vão aparecer aqui.</p></div>`}
       </section>
     </div>`;
     view.querySelector('.pfd-back').addEventListener('click', () => { location.hash = '#informatica/cursos'; });
-    bindCards(view.querySelector('.pfd'), view); paintCapas(view);
+    bindCards(view.querySelector('.pfd'), view, (cid) => toggleAula(view, cid)); paintCapas(view);
+    openAula = null;
+    /* aulas numa fileira só, com as setas em cima à direita (e as barrinhas embaixo no celular);
+       abre já mostrando a aula em que o aluno está (a primeira ainda não aprovada) */
+    const row = view.querySelector('#pfd-row');
+    if (row) {
+      const pads = view.querySelectorAll('[data-adir]');
+      pads.forEach((b) => b.addEventListener('click', () => row.scrollBy({ left: +b.dataset.adir * row.clientWidth * .8, behavior: 'smooth' })));
+      const upd = () => { if (!pads.length || !row.isConnected) return; pads[0].disabled = row.scrollLeft < 4; pads[1].disabled = row.scrollLeft + row.clientWidth >= row.scrollWidth - 4; pads[0].parentNode.classList.toggle('none', pads[0].disabled && pads[1].disabled); };
+      row.addEventListener('scroll', upd, { passive: true });
+      if (discResize) removeEventListener('resize', discResize);
+      discResize = upd; addEventListener('resize', upd, { passive: true });
+      const curIdx = items.findIndex((c) => !contDone(c.id));
+      const curCard = curIdx > 0 ? row.children[curIdx] : null;
+      if (keepScroll && discRowX[d.id] != null) row.scrollLeft = discRowX[d.id];
+      else if (curCard) row.scrollLeft = Math.max(0, curCard.offsetLeft - row.offsetLeft - 2);
+      row.addEventListener('scroll', () => { discRowX[d.id] = row.scrollLeft; }, { passive: true });
+      upd(); rowDots(row);
+    }
     if (keepScroll) scrollTo(0, y); else scrollTo(0, 0);
+    // vindo de uma aula (endereço direto, fim da leitura, "Ir para o questionário"): já abre a aula expandida e desce até ela
+    const want = window.HC_aulaOpen;
+    if (want && row && items.some((c) => c.id === want.id)) {
+      window.HC_aulaOpen = null;
+      const el = row.querySelector(`[data-cont="${want.id}"]`);
+      if (el) row.scrollLeft = Math.max(0, el.offsetLeft - row.offsetLeft - 2);
+      toggleAula(view, want.id, !!want.test);
+      setTimeout(() => { const top = row.getBoundingClientRect().top + scrollY - 110; window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' }); }, 400);
+    }
     sync(view); // notas feitas em outro aparelho destrancam as aulas aqui também
+  }
+  /* página da disciplina: tocar numa aula abre embaixo da fileira a pré-tela dela (o que tem, o caminho das partes,
+     a situação do aluno e as regras), crescendo para baixo como os módulos; tocar de novo fecha. Os botões de dentro
+     levam à tela da aula já no modo escolhido. Aula trancada só avisa. */
+  let openAula = null;
+  async function toggleAula(view, id, test = false) {
+    const c = conts().find((x) => x.id === id); if (!c) return;
+    if (!c.arquivo || lockOf(c)) return openCont(id); // trancada ou ainda sem texto: o mesmo aviso de antes
+    const box = view.querySelector('#pfd-open'), inner = view.querySelector('#pfd-inner'); if (!box) return;
+    const cards = view.querySelectorAll('#pfd-row [data-cont]');
+    const setCards = () => cards.forEach((el) => {
+      const on = el.dataset.cont === openAula; el.classList.toggle('open', on); el.setAttribute('aria-expanded', on);
+      const go = el.querySelector('.pf-lesson-go');
+      if (go) { go.dataset.txt ||= go.textContent; go.textContent = on ? 'Fechar' : go.dataset.txt; }
+    });
+    view.querySelector('#pfd-row').classList.toggle('has-open', openAula !== id);
+    if (openAula === id) { // fechar
+      openAula = null; setCards(); box.classList.remove('show');
+      setTimeout(() => { if (openAula === null) inner.innerHTML = ''; }, 850);
+      return;
+    }
+    const swap = openAula !== null;
+    openAula = id; setCards();
+    try { await Promise.all([load('curso/conteudo.css'), load('curso/conteudo.js'), load(c.arquivo)]); }
+    catch { openAula = null; setCards(); return toast('Não foi possível abrir a aula. Verifique a internet e tente de novo.'); }
+    if (openAula !== id || !view.isConnected) return;
+    const d = discs().find((x) => x.id === c.disc), nx = nextOf(c);
+    const fill = () => {
+      window.HC_conteudo.open(inner, window.HC_CONTEUDOS[id], { id, embed: true, test, image: c.image ? imgUrl(c.image) : '', tint: c.seq && d ? discTint(d) : (CT[c.tipo] || CT.texto).tint, admin: isAdmin(),
+        back: d ? `#informatica/disciplina-${d.id}` : '#informatica/cursos', backLabel: d?.titulo || 'Disciplinas', rotulo: c.rotulo || '', disciplina: d?.titulo || '',
+        next: nx ? { hash: `#informatica/conteudo-${nx.id}`, nome: nx.rotulo?.split(' · ')[0] || 'próxima aula', titulo: nx.titulo } : null });
+      inner.classList.remove('enter'); void inner.offsetWidth; inner.classList.add('enter');
+    };
+    if (swap) { box.classList.remove('show'); setTimeout(() => { if (openAula === id) { fill(); box.classList.add('show'); } }, 650); }
+    else { fill(); box.classList.add('show'); }
+    // sobe a página um pouco para o aluno ver que abriu algo embaixo (sem esconder o painel atrás da barra de cima)
+    setTimeout(() => {
+      const bar = document.querySelector('.topbar-wrap, .topbar');
+      const limit = (bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0) + 20;
+      const top = box.getBoundingClientRect().top;
+      const step = Math.min(Math.round(innerHeight * .3), 300, top - limit);
+      if (step > 24) window.scrollBy({ top: step, behavior: 'smooth' });
+    }, swap ? 900 : 300);
   }
   /* abrir um conteúdo: os prontos (com arquivo) abrem a tela de leitura; os outros ainda serão montados */
   function openCont(id) {
@@ -701,7 +779,8 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     catch { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir o conteúdo. Verifique a internet e tente de novo.</p></div>'; return; }
     if (location.hash !== `#informatica/conteudo-${id}`) return;
     const nx = nextOf(c);
-    window.HC_conteudo.open(view, window.HC_CONTEUDOS[id], { id, image: c.image ? imgUrl(c.image) : '', tint: c.seq && d ? discTint(d) : (CT[c.tipo] || CT.texto).tint, admin: isAdmin(),
+    const go = window.HC_conteudoGo?.id === id ? window.HC_conteudoGo : null; window.HC_conteudoGo = null; // vindo da pré-tela aberta na página da disciplina
+    window.HC_conteudo.open(view, window.HC_CONTEUDOS[id], { ...(go ? { modo: go.modo, verRes: go.verRes, test: go.test, loading: true } : {}), id, image: c.image ? imgUrl(c.image) : '', tint: c.seq && d ? discTint(d) : (CT[c.tipo] || CT.texto).tint, admin: isAdmin(),
       back: d ? `#informatica/disciplina-${d.id}` : '#informatica/cursos', backLabel: d?.titulo || 'Disciplinas',
       rotulo: c.rotulo || '', disciplina: d?.titulo || '', next: nx ? { hash: `#informatica/conteudo-${nx.id}`, nome: nx.rotulo?.split(' · ')[0] || 'próxima aula', titulo: nx.titulo } : null });
   }

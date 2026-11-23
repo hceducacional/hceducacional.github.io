@@ -1009,3 +1009,37 @@ html:has(.pfd), body:has(.pfd) { background: #0d0d0f; }
 .pf-ccard:has(.pf-adm):not(:has(.pf-ph em)) .pf-cok { top: 72px; }
 .pf-clock { justify-content: flex-start; padding-top: 16%; }
 @media (max-width: 860px) { .pf-clock { padding: 12% 10% 0; gap: 6px; } .pf-ccard .pf-lesson-img .pf-clock svg { width: 28px; height: 28px; padding: 9px; } .pf-clock small { font-size: 11.5px; } }
+
+/* página da disciplina: aulas numa fileira só, que passa para o lado com as setas (como as disciplinas na tela do curso).
+   Computador: 3 por vez; tablet: 2; celular: um card grande e o próximo aparecendo na borda */
+.pfd-list .pf-mods-head { margin-bottom: 4px; }
+.pfd-list .ap-paddle { background: rgba(255, 255, 255, .12); color: #fff; }
+.pfd-list .ap-paddle:hover:not(:disabled) { background: rgba(255, 255, 255, .24); }
+.pfd-row > .pf-modcard, .pfd-row > .pf-cnew { flex: 0 0 calc((100% - 32px) / 3); aspect-ratio: 4 / 5.4; }
+@media (max-width: 1100px) { .pfd-row > .pf-modcard, .pfd-row > .pf-cnew { flex-basis: calc((100% - 16px) / 2); } }
+@media (max-width: 860px) {
+  .pfd-row { margin: 0 -16px; padding: 4px 16px 18px; scroll-padding: 0 16px; }
+  .pfd-row > .pf-modcard, .pfd-row > .pf-cnew { flex-basis: min(86%, 340px); aspect-ratio: 4 / 6; }
+}
+
+/* página da disciplina: a aula tocada se abre embaixo da fileira (mesma expansão dos módulos);
+   dentro vem a pré-tela da aula (curso/conteudo.js, modo embutido), com as partes entrando uma de cada vez */
+.pfd-open { margin-top: 4px; background: none; border: 0; box-shadow: none; }
+.pfd-inner { border-radius: 30px; }
+.pfd-inner .cx-wrap { max-width: none; margin: 0; }
+.pfd-inner .cx { max-width: none; animation: none; }
+.pfd-row.has-open .pf-modcard:not(.open) { opacity: .55; filter: saturate(.7); }
+.pfd-row.has-open .pf-modcard:not(.open):hover { opacity: .85; filter: none; }
+.pfd-inner.enter .cx-top, .pfd-inner.enter .cx-intro > *, .pfd-inner.enter .cx-path, .pfd-inner.enter .cx-rules-h, .pfd-inner.enter .cx-rules li {
+  animation: pfUp .7s var(--soft, cubic-bezier(.22, 1, .36, 1)) both; }
+.pfd-inner.enter .cx-top { animation-delay: .35s; }
+.pfd-inner.enter .cx-intro > :nth-child(1) { animation-delay: .45s; }
+.pfd-inner.enter .cx-intro > :nth-child(2) { animation-delay: .55s; }
+.pfd-inner.enter .cx-intro > :nth-child(3) { animation-delay: .65s; }
+.pfd-inner.enter .cx-intro > :nth-child(4) { animation-delay: .75s; }
+.pfd-inner.enter .cx-intro > :nth-child(5) { animation-delay: .85s; }
+.pfd-inner.enter .cx-path { animation-delay: .6s; }
+.pfd-inner.enter .cx-step { animation-delay: calc(.8s + var(--k) * .07s); }
+.pfd-inner.enter .cx-rules-h { animation-delay: .95s; }
+.pfd-inner.enter .cx-rules li { animation-delay: calc(1.05s + var(--i) * .08s); }
+@media (prefers-reduced-motion: reduce) { .pfd-inner.enter * { animation: none !important; } }

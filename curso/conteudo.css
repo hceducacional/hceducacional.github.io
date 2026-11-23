@@ -631,54 +631,6 @@
 .ctq-tout svg { width: 16px; height: 16px; flex: none; }
 @media (max-width: 1023px) { .ct-clock { margin: 0 16px 12px; } }
 
-/* ---------- pré-tela da aula: perguntas, tempo, regras, "Ler material" e "Iniciar questionário" ---------- */
-.cti { max-width: 880px; margin: 0 auto; padding: 36px clamp(22px, 5vw, 56px) 40px; border-radius: 32px; background: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 24px 50px -36px rgba(0, 0, 0, .3); animation: ctUp .6s var(--soft) both; }
-.cti-hero { display: flex; align-items: center; gap: clamp(18px, 3vw, 32px); }
-.cti-cover { flex: none; width: clamp(96px, 16vw, 150px); aspect-ratio: 4 / 5; border-radius: 22px; overflow: hidden; background: linear-gradient(150deg, rgba(var(--tint), .7), rgb(var(--tint)));
-  box-shadow: 0 18px 34px -18px rgba(var(--tint), .9); }
-.cti-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.cti-ico { display: grid; place-items: center; color: rgba(255, 255, 255, .9); }
-.cti-ico svg { width: 42%; height: auto; }
-.cti-txt { min-width: 0; }
-.cti-txt h1 { margin: 6px 0 10px; font-size: clamp(30px, 4vw, 46px); line-height: 1.05; font-weight: 800; letter-spacing: -.035em; }
-.cti-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 28px; }
-.cti-stats > div { display: flex; flex-direction: column; gap: 2px; padding: 16px; border-radius: 20px; background: #f5f5f7; }
-.cti-stats span { display: grid; place-items: center; width: 36px; height: 36px; margin-bottom: 8px; border-radius: 11px; background: rgba(var(--tint), .12); color: var(--tc); }
-.cti-stats span svg { width: 19px; height: 19px; }
-.cti-stats b { font-size: 24px; font-weight: 800; letter-spacing: -.03em; color: var(--ink); }
-.cti-stats small { font-size: 13px; font-weight: 600; color: var(--muted); }
-.cti-st { display: flex; align-items: center; gap: 14px; margin-top: 16px; padding: 14px 16px; border-radius: 18px; }
-.cti-st > svg { flex: none; width: 38px; height: 38px; padding: 9px; border-radius: 12px; color: #fff; }
-.cti-st div { display: flex; flex-direction: column; gap: 2px; }
-.cti-st b { font-size: 15.5px; } .cti-st small { font-size: 13.5px; line-height: 1.35; opacity: .8; }
-.cti-st.ok { background: #ecfdf3; color: #14532d; } .cti-st.ok > svg { background: #16a34a; }
-.cti-st.rec { background: #fff7ed; color: #7c2d12; } .cti-st.rec > svg { background: #f59e0b; }
-.cti-st.run { background: rgba(var(--tint), .08); color: var(--ink); } .cti-st.run > svg { background: var(--tc); }
-.cti-rules { display: grid; gap: 12px; margin: 26px 0 0; padding: 0; list-style: none; }
-.cti-rules li { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; line-height: 1.45; color: var(--ink-2, #424245); }
-.cti-rules li > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--tc); }
-.cti-acts { display: flex; gap: 12px; margin-top: 30px; }
-.cti-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 58px; padding: 10px 22px; border: 0; border-radius: 18px; cursor: pointer;
-  background: var(--tc); color: #fff; font: 700 16.5px/1.15 inherit; font-family: inherit; box-shadow: 0 14px 28px -16px rgba(var(--tint), .9); transition: transform .2s, filter .2s; }
-.cti-btn:hover { filter: brightness(1.1); } .cti-btn:active { transform: scale(.98); }
-.cti-btn svg { width: 19px; height: 19px; flex: none; }
-.cti-btn.soft { flex-wrap: wrap; background: #f0f0f4; color: var(--ink); box-shadow: none; }
-.cti-btn.soft svg { color: var(--tc); }
-.cti-btn.soft small { flex-basis: 100%; font-size: 12.5px; font-weight: 600; color: var(--muted); }
-.cti-wrap .ct-testbar { max-width: 880px; margin-left: auto; margin-right: auto; }
-@media (max-width: 860px) {
-  .cti { padding: 22px 18px 24px; border-radius: 26px; }
-  .cti-hero { align-items: flex-start; }
-  .cti-cover { width: 92px; border-radius: 16px; }
-  .cti-txt .ct-sub { font-size: 15px; }
-  .cti-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 20px; }
-  .cti-stats > div { padding: 12px 14px; border-radius: 16px; }
-  .cti-stats span { width: 30px; height: 30px; margin-bottom: 4px; } .cti-stats b { font-size: 20px; }
-  .cti-rules li { font-size: 14.5px; }
-  .cti-acts { flex-direction: column-reverse; }
-}
-
 /* ---------- leitura do material: só o texto, sem perguntas e sem relógio ---------- */
 .ct.reading .ct-grid { grid-template-columns: minmax(0, 1fr); max-width: 980px; margin: 0 auto; }
 .ct.reading .ct-quiz, .ct.reading .ct-fab, .ct.reading .ct-scrim, .ct.reading .ct-foot p { display: none; }
@@ -691,44 +643,239 @@
 .ct-readmode .ct-tb-btn.dark { color: var(--tc); }
 @media (max-width: 860px) { .ct-readmode { top: calc(var(--tb-top, 10px) + 64px); margin: 0 -8px 12px; } .ct-readmode small { display: none; } }
 
-.cti-capa { position: relative; }
-.cti-capa svg.cv { position: absolute; top: 14%; left: 3%; width: 94%; height: 72%; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .25)); }
 .ct.testing .ct-readmode { position: relative; top: 0; } /* no teste, a faixa roxa já fica presa no alto */
 .ct.reading .ct-meta-lim { display: none; }
 
-/* ---------- pré-tela colorida: nas cores da aula (as mesmas da capa) ---------- */
-.cti { background: linear-gradient(180deg, color-mix(in srgb, var(--a) 14%, #fff) 0%, #fff 42%); box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 30px 60px -40px rgba(var(--tint), .7); }
-.cti-hero { position: relative; isolation: isolate; overflow: hidden; padding: clamp(18px, 3vw, 28px); border-radius: 28px; color: #fff;
-  box-shadow: 0 22px 44px -26px rgba(var(--tint), .95); }
-/* fundo do topo: degradê escuro na cor da aula, liso, para o texto ler bem; o desenho fica só na capa ao lado */
-.cti-hero { background: radial-gradient(70% 120% at 0% 0%, color-mix(in srgb, var(--a) 35%, transparent), transparent 60%),
-  linear-gradient(135deg, color-mix(in srgb, var(--b) 78%, #000) 0%, color-mix(in srgb, var(--b) 45%, #000) 100%); }
-.cti-hero .ct-tag { color: rgba(255, 255, 255, .85); }
-.cti-hero .ct-sub { color: rgba(255, 255, 255, .9); }
-.cti-hero h1 { color: #fff; text-shadow: 0 2px 16px rgba(0, 0, 0, .18); }
-.cti-hero .cti-cover { box-shadow: 0 16px 30px -14px rgba(0, 0, 0, .55), 0 0 0 3px rgba(255, 255, 255, .55); }
-.cti-wrap .ct-top .ct-back { color: rgb(var(--tint)); }
-/* quatro quadros, cada um com a sua cor */
-.cti-stats > div { position: relative; overflow: hidden; background: var(--sb); box-shadow: inset 0 0 0 1px var(--sl); }
-.cti-stats > div::after { content: ""; position: absolute; right: -18px; bottom: -18px; width: 70px; height: 70px; border-radius: 50%; background: var(--sc); opacity: .12; }
-.cti-stats span { background: var(--sc); color: #fff; box-shadow: 0 8px 16px -8px var(--sc); }
-.cti-stats b { color: var(--sd); }
-.cti-stats small { color: color-mix(in srgb, var(--sd) 70%, #fff); }
-.cti-stats .c1 { --sc: #7c3aed; --sb: #f3edff; --sl: #e4d8ff; --sd: #4c1d95; }
-.cti-stats .c2 { --sc: #f59e0b; --sb: #fff7e6; --sl: #fde9b8; --sd: #78350f; }
-.cti-stats .c3 { --sc: #16a34a; --sb: #eafbf0; --sl: #c9f0d6; --sd: #14532d; }
-.cti-stats .c4 { --sc: #0ea5e9; --sb: #e8f6fe; --sl: #c6e9fb; --sd: #0c4a6e; }
-/* regras: cada ícone num círculo colorido */
-.cti-rules { padding: 18px; border-radius: 22px; background: color-mix(in srgb, var(--a) 7%, #fff); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--a) 18%, #fff); }
-.cti-rules li > svg { width: 30px; height: 30px; margin-top: -4px; padding: 6px; border-radius: 50%; color: #fff; background: var(--ic); }
-.cti-rules li:nth-child(1) { --ic: #f59e0b; } .cti-rules li:nth-child(2) { --ic: #7c3aed; } .cti-rules li:nth-child(3) { --ic: #ef4444; }
-.cti-rules li:nth-child(4) { --ic: #eab308; } .cti-rules li:nth-child(5) { --ic: #0ea5e9; }
-.cti-rules li b { color: var(--ink); }
-/* situação e botões */
-.cti-st.run { background: linear-gradient(120deg, color-mix(in srgb, var(--a) 22%, #fff), color-mix(in srgb, var(--a) 8%, #fff)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--a) 30%, #fff); }
-.cti-st.run > svg { background: linear-gradient(135deg, var(--a), var(--b)); }
-.cti-st.ok { box-shadow: inset 0 0 0 1px #bbf0cd; } .cti-st.rec { box-shadow: inset 0 0 0 1px #fed7aa; }
-.cti-btn { background: linear-gradient(120deg, var(--a), var(--b)); box-shadow: 0 16px 30px -16px rgba(var(--tint), .95); text-shadow: 0 1px 2px rgba(0, 0, 0, .15); }
-.cti-btn.soft { background: color-mix(in srgb, var(--a) 14%, #fff); color: var(--ink); text-shadow: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--a) 30%, #fff); }
-.cti-btn.soft svg { color: rgb(var(--tint)); }
-@media (max-width: 860px) { .cti-hero { border-radius: 22px; } .cti-rules { padding: 14px; } }
+
+/* =========================================================
+   PRÉ-TELA DA AULA (e da avaliação) — escura e informativa
+   Esquerda: o que é a aula (título, números, situação do aluno, progresso e botões).
+   Direita: "O que você vai encontrar" — o caminho das partes, com as perguntas de cada uma e o que já foi feito.
+   Embaixo: "Como funciona", as regras em cinco quadros.
+   Cores: --a e --b da capa da aula (ou da disciplina).
+   ========================================================= */
+/* fundo da página escuro em todo o conteúdo (pré-tela, leitura e questionário), como na página da disciplina (plataforma.css: body:has(.pfd)) */
+html:has(#view > .ct), body:has(#view > .ct) { background: #0d0d0f; }
+.cx-wrap { --cx-bg: color-mix(in srgb, var(--b) 30%, #070a12); --cx-card: rgba(255, 255, 255, .055); --cx-line: rgba(255, 255, 255, .1); --cx-mut: rgba(235, 240, 255, .66); }
+.cx { position: relative; isolation: isolate; overflow: hidden; max-width: 1280px; margin: 0 auto; padding: 18px clamp(18px, 2.6vw, 30px) 22px; border-radius: 30px; color: #fff;
+  background: radial-gradient(60% 70% at 0% 0%, color-mix(in srgb, var(--a) 34%, transparent), transparent 70%),
+    radial-gradient(50% 60% at 100% 100%, color-mix(in srgb, var(--b) 45%, transparent), transparent 70%), var(--cx-bg);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), 0 30px 60px -36px rgba(0, 0, 0, .8); animation: ctUp .5s var(--soft, ease) both; }
+.cx-wrap .ct-testbar { max-width: 1280px; margin-left: auto; margin-right: auto; }
+.cx-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.cx .cx-back { color: #fff; background: rgba(255, 255, 255, .1); padding: 7px 14px 7px 10px; border-radius: 999px; }
+.cx .cx-back:hover { background: rgba(255, 255, 255, .18); }
+.cx .cx-testbtn { padding: 7px 14px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, .1); color: #fff; box-shadow: none; white-space: nowrap; flex: none; }
+.cx .cx-back { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cx-main { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 20px; align-items: stretch; }
+
+/* esquerda */
+.cx-intro { display: flex; flex-direction: column; min-width: 0; }
+  background: linear-gradient(150deg, var(--a), var(--b)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18), 0 18px 34px -20px var(--a); }
+.cx-head { display: flex; align-items: center; gap: 18px; }
+.cx-head-t { flex: 1; min-width: 0; }
+.cx-tag { display: inline-block; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: color-mix(in srgb, var(--a) 45%, #fff); }
+.cx h1 { margin: 6px 0 8px; font-size: clamp(26px, 2.6vw, 38px); line-height: 1.05; font-weight: 800; letter-spacing: -.035em; color: #fff; }
+.cx-sub { margin: 0; font-size: 15px; line-height: 1.5; color: var(--cx-mut); }
+.cx-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.cx-chips span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px 6px 8px; border-radius: 999px; font-size: 12.5px; white-space: nowrap; color: var(--cx-mut); background: var(--cx-card); box-shadow: inset 0 0 0 1px var(--cx-line); }
+.cx-chips b { color: #fff; font-weight: 800; }
+.cx-chips svg { width: 16px; height: 16px; color: color-mix(in srgb, var(--a) 55%, #fff); }
+
+.cx-sit { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 10px 14px; border-radius: 18px; background: var(--cx-card); box-shadow: inset 0 0 0 1px var(--cx-line); }
+.cx-sit-ico { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; color: #fff; background: linear-gradient(135deg, var(--a), var(--b)); }
+.cx-sit-ico svg { width: 20px; height: 20px; }
+.cx-sit.ok .cx-sit-ico { background: linear-gradient(135deg, #22c55e, #15803d); }
+.cx-sit.rec .cx-sit-ico { background: linear-gradient(135deg, #f59e0b, #c2410c); }
+.cx-sit.ok { background: linear-gradient(120deg, rgba(34, 197, 94, .16), rgba(34, 197, 94, .04)); box-shadow: inset 0 0 0 1px rgba(134, 239, 172, .25); }
+.cx-sit.rec { background: linear-gradient(120deg, rgba(245, 158, 11, .16), rgba(245, 158, 11, .04)); box-shadow: inset 0 0 0 1px rgba(253, 186, 116, .25); }
+.cx-sit-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cx-sit-t b { font-size: 15.5px; } .cx-sit-t small { font-size: 13px; line-height: 1.4; color: var(--cx-mut); }
+.cx-tries { display: flex; gap: 6px; flex: none; }
+.cx-tries span { display: flex; flex-direction: column; align-items: center; min-width: 42px; padding: 5px 8px; border-radius: 11px; font-size: 15px; font-weight: 800; background: rgba(255, 255, 255, .08); }
+.cx-tries small { font-size: 10.5px; font-weight: 700; color: var(--cx-mut); }
+.cx-tries .ok { color: #86efac; } .cx-tries .bad { color: #fdba74; }
+
+.cx-bars { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 10px; }
+.cx-bars > div { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 6px 10px; padding: 11px 14px 13px; border-radius: 16px; background: var(--cx-card); box-shadow: inset 0 0 0 1px var(--cx-line); }
+.cx-bars span { font-size: 12.5px; font-weight: 700; color: var(--cx-mut); }
+.cx-bars b { font-size: 13px; }
+.cx-bars i { grid-column: 1 / -1; height: 7px; border-radius: 9px; background: linear-gradient(90deg, var(--a), color-mix(in srgb, var(--a) 50%, #fff)) 0 0 / var(--p) 100% no-repeat, rgba(255, 255, 255, .1); }
+
+.cx-acts { display: flex; gap: 10px; margin-top: auto; padding-top: 12px; }
+.cx-btn { flex: 1.4; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; padding: 10px 20px; border: 0; border-radius: 17px; cursor: pointer;
+  font: 700 16px/1.15 inherit; font-family: inherit; color: #fff; background: linear-gradient(120deg, var(--a), var(--b)); box-shadow: 0 16px 30px -16px var(--a), inset 0 0 0 1px rgba(255, 255, 255, .2);
+  transition: filter .2s, transform .2s; }
+.cx-btn:hover { filter: brightness(1.1); } .cx-btn:active { transform: scale(.98); }
+.cx-btn svg { width: 19px; height: 19px; flex: none; }
+.cx-btn.soft { flex: 1; background: rgba(255, 255, 255, .09); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16); }
+
+/* direita: o caminho */
+.cx-path { display: flex; flex-direction: column; min-width: 0; padding: 16px 16px 14px; border-radius: 22px; background: rgba(0, 0, 0, .28); box-shadow: inset 0 0 0 1px var(--cx-line); }
+.cx-path-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.cx-path-h b { font-size: 15.5px; } .cx-path-h small { font-size: 12.5px; color: var(--cx-mut); }
+.cx-steps { position: relative; flex: 1; display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; overflow: auto; max-height: 340px; }
+.cx-step { position: relative; display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 14px; animation: ctUp .45s ease calc(var(--k) * .05s) both; }
+.cx-step:not(:last-child)::after { content: ''; position: absolute; left: 27px; top: 44px; bottom: -10px; width: 2px; background: rgba(255, 255, 255, .12); }
+.cx-step-n { flex: none; position: relative; z-index: 1; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; font-size: 12.5px; font-weight: 800;
+  color: var(--cx-mut); background: #10141f; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .16); }
+.cx-step-n svg { width: 17px; height: 17px; }
+.cx-step-t { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.cx-step-t b { font-size: 14px; font-weight: 700; line-height: 1.25; }
+.cx-step-t small { font-size: 12px; color: var(--cx-mut); }
+.cx-step.meio .cx-step-n { color: #fff; box-shadow: inset 0 0 0 2px var(--a); }
+.cx-step.ok .cx-step-n { color: #fff; background: linear-gradient(135deg, #22c55e, #15803d); box-shadow: none; }
+.cx-step.ok:not(:last-child)::after { background: rgba(34, 197, 94, .5); }
+.cx-next { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; padding: 10px 12px; border-radius: 14px; font-size: 12.5px; line-height: 1.4; color: var(--cx-mut); background: rgba(255, 255, 255, .05); }
+.cx-next svg { flex: none; width: 15px; height: 15px; margin-top: 1px; }
+.cx-next b { color: #fff; }
+
+/* embaixo: como funciona */
+.cx-rules-h { margin: 14px 0 8px; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--cx-mut); }
+.cx-rules { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+/* cada regra num quadro com a cor do seu ícone: brilho suave no canto, faixa colorida em cima e o número da regra apagadinho */
+.cx-rules li { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 4px; padding: 13px 14px 14px; border-radius: 18px;
+  background: radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, var(--ic) 24%, transparent), transparent 65%), rgba(255, 255, 255, .04);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ic) 28%, rgba(255, 255, 255, .06)); transition: transform .3s var(--soft, ease), box-shadow .3s ease; }
+.cx-rules li::before { content: ''; position: absolute; left: 14px; right: 14px; top: 0; height: 3px; border-radius: 0 0 4px 4px; background: linear-gradient(90deg, var(--ic), transparent); }
+.cx-rules li:hover { transform: translateY(-3px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ic) 55%, transparent), 0 14px 26px -18px var(--ic); }
+.cx-rule-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.cx-rule-ico { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; color: #fff;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--ic) 80%, #fff), var(--ic)); box-shadow: 0 8px 16px -8px var(--ic), inset 0 1px 0 rgba(255, 255, 255, .35); }
+.cx-rule-ico svg { width: 18px; height: 18px; }
+.cx-rule-top em { font-style: normal; font-size: 22px; font-weight: 900; letter-spacing: -.04em; color: color-mix(in srgb, var(--ic) 45%, transparent); }
+.cx-rules li:nth-child(1) { --ic: #f59e0b; } .cx-rules li:nth-child(2) { --ic: #8b5cf6; } .cx-rules li:nth-child(3) { --ic: #ef4444; }
+.cx-rules li:nth-child(4) { --ic: #eab308; } .cx-rules li:nth-child(5) { --ic: #0ea5e9; }
+.cx-rules b { font-size: 14px; line-height: 1.25; color: #fff; }
+.cx-rules small { font-size: 12.5px; line-height: 1.4; color: var(--cx-mut); }
+.cx-rules small b { font-size: inherit; color: color-mix(in srgb, var(--ic) 40%, #fff); }
+
+/* botões: um brilho passa por eles de tempos em tempos e a seta dá um empurrãozinho, para mostrar que dá para clicar */
+.cx-btn { position: relative; overflow: hidden; isolation: isolate; }
+.cx-btn::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; transform: translateX(-120%) skewX(-18deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .38), transparent); animation: cxShine 3.6s ease-in-out 1s infinite; }
+.cx-btn.soft::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .16), transparent); animation-delay: 2.8s; }
+@keyframes cxShine { 0%, 55% { transform: translateX(-120%) skewX(-18deg); } 85%, 100% { transform: translateX(220%) skewX(-18deg); } }
+.cx-btn:not(.soft) > svg:last-child { animation: cxNudge 1.8s ease-in-out infinite; }
+@keyframes cxNudge { 0%, 60%, 100% { transform: none; } 30% { transform: translateX(4px); } }
+.cx-btn:hover { transform: translateY(-2px); }
+.cx-btn.soft:hover { background: rgba(255, 255, 255, .14); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--a) 60%, transparent); }
+.cx-btn.soft > svg { transition: transform .3s ease; } .cx-btn.soft:hover > svg { transform: rotate(-8deg) scale(1.12); }
+body.lc-leve .cx-btn, body.lc-leve .cx-btn::after, body.lc-leve .cx-btn > svg { animation: none !important; }
+
+@media (max-width: 999px) {
+  .cx-main { grid-template-columns: minmax(0, 1fr); }
+  .cx-rules { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cx-steps { max-height: none; }
+}
+@media (max-width: 560px) {
+  .cx { padding: 16px 14px 18px; border-radius: 24px; }
+  .cx-sit { flex-wrap: wrap; } .cx-tries { width: 100%; }
+  .cx-acts { flex-direction: column; }
+  .cx-rules { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .cx, .cx-step, .cx-btn, .cx-btn::after, .cx-btn > svg { animation: none !important; } }
+
+/* pré-tela com o card da aula ao lado (o mesmo da página da disciplina).
+   Se os dois não cabem na tela, a faixa desliza: arrastar com o mouse, setas ou o controle deslizante embaixo. */
+/* com o card ao lado, a pré-tela pode usar a largura toda da página */
+.ct.cx-wrap:has(.cx-scroller.has-card) { max-width: none; }
+.cx-scroller { overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+.cx-scroller::-webkit-scrollbar { display: none; }
+.cx-scroller.can-drag { cursor: grab; } .cx-scroller.dragging { cursor: grabbing; user-select: none; }
+.cx-scroller.dragging * { pointer-events: none; }
+.cx-scroller:not(.has-card) .cx-track { display: block; }
+.cx-track { display: flex; gap: 20px; justify-content: safe center; align-items: stretch; min-width: min-content; padding: 2px; }
+.cx-scroller.has-card .cx { flex: 0 1 1280px; min-width: 1000px; margin: 0; }
+.cx-card { flex: 0 0 360px; display: flex; }
+.cx-card .pf-ccard { flex: 1 1 auto; width: 100%; height: 100%; aspect-ratio: auto; cursor: pointer; }
+.cx-scroller.can-drag .cx-card .pf-ccard { cursor: inherit; }
+/* navegação por cima da faixa: setas nas laterais (só a do lado que ainda tem o que ver) e o controle deslizante numa pílula na borda de baixo */
+.cx-slide { position: relative; }
+.cx-nav { position: absolute; inset: 0; pointer-events: none; }
+.cx-nav[hidden] { display: none; }
+.cx-nav > * { pointer-events: auto; }
+.cx-nav-btn { position: absolute; top: 50%; z-index: 3; display: grid; place-items: center; width: 44px; height: 44px; margin-top: -22px; border: 0; border-radius: 50%; cursor: pointer; color: #fff;
+  background: rgba(12, 14, 22, .82); box-shadow: 0 10px 24px -8px rgba(0, 0, 0, .8), inset 0 0 0 1px rgba(255, 255, 255, .22); transition: opacity .25s, transform .2s, background .2s; }
+.cx-nav-btn[data-nav="-1"] { left: 8px; } .cx-nav-btn[data-nav="1"] { right: 8px; }
+.cx-nav-btn:hover:not(:disabled) { background: rgba(30, 34, 48, .95); transform: scale(1.06); }
+.cx-nav-btn:disabled { opacity: 0; pointer-events: none; }
+.cx-nav-btn svg { width: 20px; height: 20px; }
+.cx-range { position: absolute; left: 50%; bottom: 9px; z-index: 3; translate: -50% 0; -webkit-appearance: none; appearance: none; width: min(300px, 40%); height: 6px; border-radius: 9px; cursor: pointer; outline: none;
+  background: linear-gradient(90deg, #fff 0 var(--v, 0%), rgba(255, 255, 255, .22) var(--v, 0%)); box-shadow: 0 0 0 7px rgba(12, 14, 22, .82); }
+.cx-range::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .5); }
+.cx-range::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .5); }
+.cx-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(255, 255, 255, .35); }
+@media (max-width: 999px) {
+  .cx-scroller { overflow: visible; }
+  .cx-track { flex-direction: column; align-items: center; min-width: 0; }
+  .cx-scroller.has-card .cx { min-width: 0; width: 100%; flex: none; }
+  .cx-card { display: none; } /* no celular e no tablet a pré-tela já começa pelo título da aula */
+  .cx-nav { display: none !important; }
+}
+/* pré-tela aberta dentro da página da disciplina: no lugar do "voltar", uma etiqueta */
+.cx-embed-tag { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; flex: none; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; color: #fff; background: rgba(255, 255, 255, .1); }
+.cx-embed-tag svg { width: 15px; height: 15px; }
+
+/* =========================================================
+   CARREGANDO (ao abrir o material, o questionário, a avaliação ou o resultado) — conteudo.js: loader()
+   Folha sendo escrita (linhas surgindo, uma faixa de luz "lendo" de cima a baixo) e, no questionário,
+   um cartão de perguntas com as alternativas aparecendo; frases de status e barra que enche em --ms.
+   ========================================================= */
+.cl-load { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 20px; color: #fff;
+  background: radial-gradient(60% 55% at 50% 42%, color-mix(in srgb, var(--a) 30%, transparent), transparent 70%), #06080e;
+  opacity: 1; }
+.cl-load.out { opacity: 0; transition: opacity .4s ease; }
+.cl-load.out .cl-box { transform: scale(1.04); transition: transform .4s ease; }
+.cl-box { width: min(440px, 100%); display: flex; flex-direction: column; align-items: center; text-align: center; }
+.cl-stage { position: relative; width: 300px; height: 210px; margin-bottom: 18px; }
+
+/* a folha */
+.cl-doc { position: absolute; left: 40px; top: 10px; width: 150px; height: 190px; padding: 16px 14px; border-radius: 14px; overflow: hidden; background: #fff;
+  box-shadow: 0 24px 50px -20px rgba(0, 0, 0, .8), 0 0 0 1px rgba(255, 255, 255, .5); transform: rotate(-6deg) translateY(16px); opacity: 0;
+  animation: clIn .55s cubic-bezier(.22, 1, .36, 1) .05s forwards; }
+.cl-load.k-ler .cl-doc { left: 75px; transform: rotate(-3deg) translateY(16px); }
+.cl-doc-h { display: block; width: 62%; height: 10px; border-radius: 6px; background: linear-gradient(90deg, var(--a), var(--b)); transform: scaleX(0); transform-origin: left;
+  animation: clLine .45s ease calc(var(--ms) * .06) forwards; }
+.cl-doc-img { display: block; height: 42px; margin: 12px 0; border-radius: 9px; background: linear-gradient(135deg, color-mix(in srgb, var(--a) 30%, #fff), color-mix(in srgb, var(--b) 22%, #fff));
+  opacity: 0; animation: clFade .4s ease calc(var(--ms) * .14) forwards; }
+.cl-doc-l { display: flex; flex-direction: column; gap: 8px; }
+.cl-doc-l i { display: block; height: 6px; border-radius: 4px; background: #d6dbe4; transform: scaleX(0); transform-origin: left;
+  animation: clLine .4s ease calc(var(--ms) * .2 + var(--ms) * .085 * var(--i)) forwards; }
+.cl-doc-l i:nth-child(2) { width: 88%; } .cl-doc-l i:nth-child(3) { width: 94%; } .cl-doc-l i:nth-child(4) { width: 70%; } .cl-doc-l i:nth-child(6) { width: 56%; }
+.cl-scan { position: absolute; left: 0; right: 0; top: -20%; height: 26px; pointer-events: none;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--a) 35%, transparent), transparent); animation: clScan 1.3s ease-in-out .3s infinite; }
+
+/* o cartão de perguntas */
+.cl-quiz { position: absolute; right: 22px; top: 44px; width: 136px; padding: 14px 12px; border-radius: 16px; background: #141826;
+  box-shadow: 0 24px 50px -18px rgba(0, 0, 0, .9), inset 0 0 0 1px rgba(255, 255, 255, .14); transform: rotate(5deg) translateY(16px); opacity: 0;
+  animation: clIn .55s cubic-bezier(.22, 1, .36, 1) calc(var(--ms) * .3) forwards; }
+.cl-quiz-q { display: block; width: 82%; height: 8px; margin-bottom: 12px; border-radius: 5px; background: rgba(255, 255, 255, .85); }
+.cl-opt { display: flex; align-items: center; gap: 8px; height: 22px; margin-top: 6px; padding: 0 8px; border-radius: 8px; background: rgba(255, 255, 255, .07);
+  opacity: 0; transform: translateX(-8px); animation: clOpt .35s ease calc(var(--ms) * .42 + var(--ms) * .09 * var(--k)) forwards; }
+.cl-opt em { flex: none; width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .5); }
+.cl-opt i { flex: 1; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .3); }
+.cl-opt:nth-of-type(3) em { animation: clPick .3s ease calc(var(--ms) * .74) forwards; }
+.cl-quiz-n { position: absolute; right: -12px; top: -14px; display: grid; place-items: center; min-width: 34px; height: 34px; padding: 0 8px; border-radius: 12px; font-size: 15px; font-weight: 900;
+  color: #fff; background: linear-gradient(135deg, var(--a), var(--b)); box-shadow: 0 8px 18px -8px var(--a); transform: scale(0); animation: clPop .4s cubic-bezier(.34, 1.56, .64, 1) calc(var(--ms) * .55) forwards; }
+.cl-load.k-res .cl-opt em { animation: clPick .3s ease calc(var(--ms) * .5 + var(--ms) * .1 * var(--k)) forwards; }
+
+/* textos e barra */
+.cl-title { font-size: 21px; font-weight: 800; letter-spacing: -.02em; }
+.cl-step { margin-top: 6px; min-height: 20px; font-size: 14px; color: rgba(235, 240, 255, .7); }
+.cl-step.swap { animation: clStep .35s ease; }
+.cl-bar { width: min(280px, 80%); height: 6px; margin-top: 16px; border-radius: 9px; overflow: hidden; background: rgba(255, 255, 255, .12); }
+.cl-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--a), color-mix(in srgb, var(--a) 40%, #fff));
+  transform: scaleX(0); transform-origin: left; animation: clBar var(--ms) cubic-bezier(.4, .1, .3, 1) forwards; }
+
+@keyframes clIn { to { opacity: 1; transform: rotate(var(--r, 0deg)); } }
+.cl-doc { --r: -6deg; } .cl-load.k-ler .cl-doc { --r: -3deg; } .cl-quiz { --r: 5deg; }
+@keyframes clLine { to { transform: scaleX(1); } }
+@keyframes clFade { to { opacity: 1; } }
+@keyframes clScan { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { transform: translateY(230px); opacity: 0; } }
+@keyframes clOpt { to { opacity: 1; transform: none; } }
+@keyframes clPick { to { background: #22c55e; box-shadow: inset 0 0 0 2px #22c55e, 0 0 10px #22c55e; } }
+@keyframes clPop { to { transform: scale(1); } }
+@keyframes clBar { to { transform: scaleX(1); } }
+@keyframes clStep { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .cl-load *, .cl-load *::before { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; } .cl-bar i { animation-duration: var(--ms) !important; } }
