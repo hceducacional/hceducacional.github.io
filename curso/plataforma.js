@@ -423,7 +423,12 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   /* aulas em ordem: a aula fica trancada até o aluno passar (nota 7+) na anterior da mesma disciplina.
      O administrador abre todas. Devolve a aula que falta passar, ou null. */
   const prevOf = (c) => (c?.seq ? conts().filter((x) => x.disc === c.disc && x.seq && x.ordem < c.ordem).sort((a, b) => b.ordem - a.ordem)[0] || null : null);
-  const lockOf = (c) => { if (isAdmin()) return null; const p = prevOf(c); return p && !contDone(p.id) ? p : null; };
+  const lockOf = (c) => {
+    if (isAdmin()) return null;
+    const dl = c?.seq ? discLockOf(discs().find((d) => d.id === c.disc)) : null;
+    if (dl) return { rotulo: `disciplina ${dl.titulo}`, disc: dl };
+    const p = prevOf(c); return p && !contDone(p.id) ? p : null;
+  };
   const nextOf = (c) => (c?.seq ? conts().filter((x) => x.disc === c.disc && x.seq && x.ordem > c.ordem).sort((a, b) => a.ordem - b.ordem)[0] || null : null);
   /* lições criadas pelo administrador (botão "Nova lição"): ficam no banco, junto do conteúdo do site,
      e entram no fim do módulo até serem configuradas aqui no código */
@@ -527,6 +532,14 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
         ${adm ? `<div class="pf-adm"><button class="pf-adm-btn" type="button" data-editcont="${esc(c.id)}" aria-label="Editar o conteúdo" title="Editar conteúdo">${svg('pen')}</button><button class="pf-adm-btn" type="button" data-delcont="${esc(c.id)}" aria-label="Apagar o conteúdo" title="Apagar conteúdo">${svg('trash')}</button></div>` : ''}
       </article>`;
   }
+  /* disciplinas em ordem: a próxima só abre quando o aluno concluir a anterior (todas as aulas aprovadas).
+     O administrador abre todas. Devolve a disciplina que falta concluir, ou null. */
+  const discLockOf = (d) => {
+    if (!d || isAdmin()) return null;
+    const list = visDiscs(), i = list.findIndex((x) => x.id === d.id);
+    for (let k = i - 1; k >= 0; k--) { const p = discProg(list[k]); if (p.n && p.ok < p.n) return list[k]; }
+    return null;
+  };
   const discProg = (d) => { const it = discItems(d.id).filter((c) => c.visivel || !isAdmin()); const all = it.length ? it : discItems(d.id); return { n: all.length, ok: all.filter((c) => contDone(c.id)).length, began: all.some((c) => contProg(c.id)?.savedAt) }; };
   /* celular: barrinha embaixo da fileira de cards (um ponto por card, o atual vira um traço); tocar num ponto leva ao card */
   function rowDots(row) {
@@ -553,11 +566,13 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   function contsSection() {
     const list = visDiscs(), adm = isAdmin();
     const card = (d, i) => {
-      const p = discProg(d), small = !p.n ? 'Em breve' : p.ok ? `${p.ok} de ${p.n} ${p.n === 1 ? 'concluído' : 'concluídos'}` : p.began ? 'Em andamento' : 'Comece agora';
+      const p = discProg(d), lk = discLockOf(d);
+      const small = lk ? 'Trancada' : !p.n ? 'Em breve' : p.ok ? `${p.ok} de ${p.n} ${p.n === 1 ? 'concluído' : 'concluídos'}` : p.began ? 'Em andamento' : 'Comece agora';
       return `
-      <article class="pf-lesson pf-modcard pf-ccard pf-dcard${d.visivel ? '' : ' draft'}" style="--i:${i};--tint:${discTint(d)}" data-disc="${esc(d.id)}" tabindex="0" role="button" aria-label="Disciplina: ${esc(d.titulo)}">
+      <article class="pf-lesson pf-modcard pf-ccard pf-dcard${d.visivel ? '' : ' draft'}${lk ? ' locked' : ''}" style="--i:${i};--tint:${discTint(d)}" data-disc="${esc(d.id)}" tabindex="0" role="button" aria-label="Disciplina: ${esc(d.titulo)}">
         <div class="pf-lesson-img">${d.image ? `<img class="pf-img" src="${esc(imgUrl(d.image))}" alt="" loading="lazy" />`
-          : `<span class="pf-ph" style="--k:${i}">${svg(d.ico || 'book')}${adm ? '<em>Imagem da disciplina<small>1000 × 1250</small></em>' : ''}</span>`}</div>
+          : `<span class="pf-ph" style="--k:${i}">${svg(d.ico || 'book')}${adm ? '<em>Imagem da disciplina<small>1000 × 1250</small></em>' : ''}</span>`}
+          ${lk ? `<span class="pf-clock">${svg('lock')}<small>Conclua ${esc(lk.titulo)} para liberar</small></span>` : ''}</div>
         <div class="pf-lesson-app">
           <div class="pf-lesson-text">
             <span class="pf-lesson-tag">Disciplina${adm && !d.visivel ? ' · Rascunho' : ''}</span>
@@ -568,7 +583,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
           <div class="pf-lesson-bar">
             <span class="pf-lesson-av">${svg(d.ico || 'book')}</span>
             <span class="pf-lesson-who"><strong>${p.n} ${p.n === 1 ? 'aula' : 'aulas'}</strong><small>${small}</small></span>
-            <span class="pf-lesson-go">${p.began ? 'Continuar' : 'Abrir'}</span>
+            <span class="pf-lesson-go">${lk ? svg('lock') : p.began ? 'Continuar' : 'Abrir'}</span>
           </div>
         </div>
         ${adm ? `<div class="pf-adm"><button class="pf-adm-btn" type="button" data-editdisc="${esc(d.id)}" aria-label="Editar a disciplina" title="Editar disciplina">${svg('pen')}</button><button class="pf-adm-btn" type="button" data-deldisc="${esc(d.id)}" aria-label="Apagar a disciplina" title="Apagar disciplina">${svg('trash')}</button></div>` : ''}
@@ -607,7 +622,11 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
       c.addEventListener('click', () => fn(c));
       c.addEventListener('keydown', (e) => { if (e.target !== c) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(c); } });
     });
-    press('[data-disc]', (c) => { location.hash = `#informatica/disciplina-${c.dataset.disc}`; });
+    press('[data-disc]', (c) => {
+      const lk = discLockOf(discs().find((d) => d.id === c.dataset.disc));
+      if (lk) return toast(`Esta disciplina ainda está trancada. Conclua ${lk.titulo} (todas as aulas com nota 7 ou mais) para liberar.`);
+      location.hash = `#informatica/disciplina-${c.dataset.disc}`;
+    });
     press('[data-cont]', (c) => (onCont || openCont)(c.dataset.cont));
     root.querySelectorAll('[data-newdisc]').forEach((b) => b.addEventListener('click', () => editDisc(view, null)));
     root.querySelectorAll('[data-editdisc]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); editDisc(view, b.dataset.editdisc); }));
@@ -657,6 +676,8 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   function discPage(view, id, keepScroll) {
     const d = discs().find((x) => x.id === id);
     if (!d || (!d.visivel && !isAdmin())) { location.hash = '#informatica/cursos'; return toast('Esta disciplina não está disponível.'); }
+    const dl = discLockOf(d);
+    if (dl) { location.hash = '#informatica/cursos'; return toast(`Esta disciplina ainda está trancada. Conclua ${dl.titulo} para liberar.`); }
     const adm = isAdmin(), items = discItems(d.id), p = discProg(d), y = scrollY;
     const notas = items.map((c) => contProg(c.id)?.hist).filter((h) => Array.isArray(h) && h.length).map((h) => Math.max(...h.map((x) => x.nota)));
     const media = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) : '–';
@@ -772,7 +793,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
   function openCont(id) {
     const c = conts().find((x) => x.id === id); if (!c) return;
     const lk = lockOf(c);
-    if (lk) return toast(`Esta aula ainda está trancada. Passe na ${lk.rotulo?.split(' · ')[0] || 'aula anterior'} com nota 7 ou mais para liberar.`);
+    if (lk) return toast(lk.disc ? `Esta disciplina ainda está trancada. Conclua ${lk.disc.titulo} para liberar.` : `Esta aula ainda está trancada. Passe na ${lk.rotulo?.split(' · ')[0] || 'aula anterior'} com nota 7 ou mais para liberar.`);
     if (c.arquivo) { location.hash = `#informatica/conteudo-${c.id}`; return; }
     toast(`${(CT[c.tipo] || CT.texto).nome} “${c.titulo || 'Sem título'}”: o conteúdo será liberado em breve.`);
   }
@@ -780,7 +801,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     const c = conts().find((x) => x.id === id);
     const d = c && discs().find((x) => x.id === c.disc);
     if (!c?.arquivo || (!isAdmin() && (!c.visivel || !d?.visivel))) { location.hash = '#informatica/cursos'; return toast('Este conteúdo não está disponível.'); }
-    if (lockOf(c)) { location.hash = `#informatica/disciplina-${c.disc}`; return toast('Esta aula ainda está trancada. Passe na anterior com nota 7 ou mais.'); }
+    if (lockOf(c)) { const lk = lockOf(c); location.hash = lk.disc ? '#informatica/cursos' : `#informatica/disciplina-${c.disc}`; return toast(lk.disc ? `Esta disciplina ainda está trancada. Conclua ${lk.disc.titulo} para liberar.` : 'Esta aula ainda está trancada. Passe na anterior com nota 7 ou mais.'); }
     view.innerHTML = '<div class="wrap"><p class="me-loading">Carregando o conteúdo…</p></div>';
     try { await Promise.all([load('curso/conteudo.css'), load('curso/figuras.js'), load('curso/conteudo.js'), load(c.arquivo), load('curso/capas.css'), load('curso/capas.js').catch(() => {})]); }
     catch { view.innerHTML = '<div class="wrap"><p class="me-loading">Não foi possível abrir o conteúdo. Verifique a internet e tente de novo.</p></div>'; return; }
@@ -1443,7 +1464,7 @@ window.HC_cashFmt = (v) => (Math.round(v * 100) / 100).toLocaleString('pt-BR', {
     const k = STAGES.reduce((a, st, i) => (pct >= st.de ? i : a), 0), nx = STAGES[k + 1];
     // próximo passo: no computador, a próxima lição de digitação; senão (ou se já fez todas), a próxima aula liberada
     const nextLic = window.HC_isComputer() ? lessons.find(({ n }) => !progress(n)?.done) : null;
-    const nextAula = aulas.find((c) => !contDone(c.id) && !(c.seq && (() => { const p = conts().filter((x) => x.disc === c.disc && x.seq && x.ordem < c.ordem).sort((a, b) => b.ordem - a.ordem)[0]; return p && !contDone(p.id); })()));
+    const nextAula = aulas.find((c) => !contDone(c.id) && !(c.seq && discLockOf(discs().find((d) => d.id === c.disc))) && !(c.seq && (() => { const p = conts().filter((x) => x.disc === c.disc && x.seq && x.ordem < c.ordem).sort((a, b) => b.ordem - a.ordem)[0]; return p && !contDone(p.id); })()));
     const passo = nextLic ? { href: `#informatica/licao-${nextLic.n}`, ico: 'kbd', txt: `Lição ${String(nextLic.n).padStart(2, '0')}`, sub: nextLic.l.titulo, tag: progress(nextLic.n)?.lvl ? 'Continuar' : 'Começar' }
       : nextAula ? { href: `#informatica/conteudo-${nextAula.id}`, ico: nextAula.tipo === 'prova' ? 'prova' : 'texto', txt: nextAula.rotulo?.split(' · ')[0] || 'Próxima aula', sub: nextAula.titulo, tag: contProg(nextAula.id)?.savedAt ? 'Continuar' : 'Começar' }
       : null;

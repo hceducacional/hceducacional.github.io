@@ -6,12 +6,12 @@
    Progresso do aluno (partes lidas e respostas) fica no aparelho e na conta
    (tabela informatica_progresso, linha "cont-<id>"), como as lições.
    Os conteúdos não dão XP nem moedas. O questionário vale NOTA de 0 a 10 (acertos ÷ perguntas × 10, com uma casa);
-   abaixo de 7 é recuperação. Cada tentativa nova custa 500 do Saldo HC nas aulas e 1.250 na avaliação; fica valendo a maior nota.
+   abaixo de 7 é recuperação. Cada tentativa nova custa 100 do Saldo HC nos questionários das aulas e 500 na avaliação; fica valendo a maior nota.
    O administrador tem o "Testar como aluno": nada é salvo e o saldo é fictício (para ver a compra e a animação das moedas).
    Baixado só quando o aluno abre um conteúdo.
    ========================================================= */
 (() => {
-  const PRICE_AULA = 500, PRICE_PROVA = 1250, PASS = 7, TEST_SALDO = 5000; // preço da nova tentativa (aula / avaliação), nota mínima, saldo fictício do teste
+  const PRICE_AULA = 100, PRICE_PROVA = 500, PASS = 7, TEST_SALDO = 5000; // preço da nova tentativa (aula / avaliação), nota mínima, saldo fictício do teste
   const nota = (ok, n) => Math.round((ok / Math.max(1, n)) * 100) / 10; // 0 a 10, uma casa
   const fmtN = (v) => v.toLocaleString('pt-BR', { minimumFractionDigits: v % 1 ? 1 : 0, maximumFractionDigits: 1 });
   const fmtC = (v) => (window.HC_cashFmt ? window.HC_cashFmt(v) : (Math.round(v * 100) / 100).toFixed(2));
