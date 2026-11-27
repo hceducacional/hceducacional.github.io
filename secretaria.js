@@ -3,7 +3,7 @@
    Banco: supabase/22-secretaria.sql (tabelas sec_*). As regras de acesso
    ficam no banco; aqui é só a interface.
    Endereços: #secretaria (início) · /alunos · /aluno/<id|novo> · /cursos ·
-   /relatorios · /cadastros
+   /relatorios · /cadastros · /mapa
    ========================================================= */
 const SEC = { ready: false, loading: null, listas: [], cursos: [], alunos: [], mats: [], pend: [], tarefas: [] };
 const SEC_STATUS = {
@@ -92,7 +92,7 @@ const secErr = (error) => {
 
 /* ---------- moldura das páginas ---------- */
 const SEC_NAV = [['', 'Início', 'grid', '#5a5a5e', '#1d1d1f'], ['alunos', 'Alunos', 'users', '#34c759', '#1f9d55'], ['cursos', 'Cursos', 'cap', '#4aa3ff', '#0a5fd7'],
-  ['relatorios', 'Relatórios', 'report', '#b18cff', '#7c4dff'], ['cadastros', 'Cadastros', 'settings', '#ffb340', '#f08a00']];
+  ['relatorios', 'Relatórios', 'report', '#b18cff', '#7c4dff'], ['cadastros', 'Cadastros', 'settings', '#ffb340', '#f08a00'], ['mapa', 'Mapeamento', 'map', '#2dd4bf', '#0d9488']];
 let secSoft = false; // true quando a troca foi só do conteúdo (a moldura já estava na tela)
 function secShell(view, tab, title, sub, body, extra = '') {
   const head = `
@@ -999,6 +999,104 @@ function secCsv(name, head, rows) {
 }
 
 /* =========================================================
+   MAPEAMENTO — onde estão os alunos, por estado (e cidades)
+   O desenho do mapa fica em assets/mapa-brasil.js e só é baixado ao abrir a aba.
+   ========================================================= */
+let secMapaUF = '';
+let secMapaJS = null;
+const secMapaLoad = () => secMapaJS || (secMapaJS = typeof BR_MAPA !== 'undefined' ? Promise.resolve() : new Promise((ok, no) => {
+  const s = document.createElement('script');
+  s.src = `assets/mapa-brasil.js?v=${window.HC_V || ''}`; s.onload = ok; s.onerror = () => { secMapaJS = null; no(new Error('mapa')); };
+  document.head.appendChild(s);
+}));
+// cor do estado: do verde-água bem claro (poucos alunos) ao petróleo (muitos)
+const secMapaCor = (t) => {
+  const a = [204, 251, 241], b = [15, 118, 110], k = Math.sqrt(t);
+  return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * k)).join(',')})`;
+};
+// texto por cima da cor: escuro nos tons claros, branco nos escuros
+const secMapaBadge = (t) => `--f:${secMapaCor(t)};--tx:${Math.sqrt(t) > .5 ? '#fff' : '#115e59'}`;
+async function secMapa(view, soft) {
+  const sub = 'Onde estão os alunos, pelo estado da ficha. Toque num estado para ver as cidades.';
+  if (!soft) secShell(view, 'mapa', 'Mapeamento', sub, '<div class="mp-wait"><span class="mp-spin"></span>Carregando o mapa…</div>');
+  try { await secMapaLoad(); } catch {
+    const b = view.querySelector('.sc-body'); if (b) b.innerHTML = '<div class="mp-wait">Não foi possível carregar o mapa. Verifique a internet e tente de novo.</div>';
+    return;
+  }
+  if (!(location.hash || '').startsWith('#secretaria/mapa')) return;
+  const box = view.querySelector('.sc-body'); if (!box) return;
+
+  const ativosDe = new Set(SEC.mats.filter((m) => m.status === 'ativo').map((m) => m.aluno_id));
+  const por = {}; let sem = 0;
+  SEC.alunos.forEach((a) => {
+    const uf = String(a.estado || '').trim().toUpperCase();
+    if (!BR_MAPA.uf[uf]) { sem++; return; }
+    const e = por[uf] || (por[uf] = { n: 0, at: 0, cid: {} });
+    e.n++; if (ativosDe.has(a.id)) e.at++;
+    const c = String(a.cidade || '').trim(); if (c) e.cid[c] = (e.cid[c] || 0) + 1;
+  });
+  const ufs = Object.keys(por).sort((x, y) => por[y].n - por[x].n || x.localeCompare(y));
+  const comUF = SEC.alunos.length - sem, max = Math.max(1, ...ufs.map((u) => por[u].n));
+  if (secMapaUF && !por[secMapaUF]) secMapaUF = '';
+  const pct = (n) => (comUF ? Math.round((n / comUF) * 100) : 0);
+  const plural = (n, a, b) => `${n.toLocaleString('pt-BR')} ${n === 1 ? a : b}`;
+
+  const svg = `<svg class="mp-svg" viewBox="0 0 ${BR_MAPA.w} ${BR_MAPA.h}" role="img" aria-label="Mapa do Brasil com a quantidade de alunos por estado">
+    ${Object.entries(BR_MAPA.uf).map(([uf, d]) => `<path d="${d}" data-uf="${uf}" class="${por[uf] ? 'has' : ''} ${uf === secMapaUF ? 'sel' : ''}" style="${por[uf] ? `--f:${secMapaCor(por[uf].n / max)}` : ''}"><title>${BR_MAPA.n[uf]}: ${por[uf] ? plural(por[uf].n, 'aluno', 'alunos') : 'nenhum aluno'}</title></path>`).join('')}
+    ${ufs.map((uf) => { const [x, y] = BR_MAPA.c[uf]; const r = 15 + Math.round(13 * Math.sqrt(por[uf].n / max)); return `<g class="mp-pin ${uf === secMapaUF ? 'sel' : ''}" data-uf="${uf}" transform="translate(${x} ${y})"><circle r="${r}"/><text dy=".35em" style="font-size:${Math.max(13, r * .78)}px">${por[uf].n}</text></g>`; }).join('')}
+  </svg>`;
+
+  const sel = secMapaUF && por[secMapaUF];
+  const cidades = sel ? Object.entries(sel.cid).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'pt')) : [];
+  const semCid = sel ? sel.n - cidades.reduce((t, [, n]) => t + n, 0) : 0;
+  const detalhe = sel ? `
+    <section class="mp-det">
+      <header>
+        <span class="mp-badge" style="${secMapaBadge(sel.n / max)}">${secMapaUF}</span>
+        <div><h3>${BR_MAPA.n[secMapaUF]}</h3><p>${plural(sel.n, 'aluno', 'alunos')} · ${plural(sel.at, 'com matrícula ativa', 'com matrícula ativa')}</p></div>
+        <button type="button" class="icon-btn neutral" data-mpx aria-label="Fechar"><i data-icon="x"></i></button>
+      </header>
+      <h4>Cidades</h4>
+      ${cidades.length ? `<ul class="mp-cid">${cidades.slice(0, 12).map(([c, n]) => `<li><span>${esc(c)}</span><i style="--p:${n / cidades[0][1]}"></i><b>${n}</b></li>`).join('')}</ul>
+        ${cidades.length > 12 ? `<p class="mp-note">e mais ${cidades.length - 12} cidades</p>` : ''}` : ''}
+      ${semCid ? `<p class="mp-note">${plural(semCid, 'aluno ainda sem cidade na ficha', 'alunos ainda sem cidade na ficha')}</p>` : ''}
+      <button type="button" class="btn-soft mp-rel" data-mprel><i data-icon="report"></i>Ver os alunos no relatório</button>
+    </section>` : '';
+
+  box.innerHTML = `
+    <div class="mp">
+      <section class="mp-map">
+        <div class="mp-kpis">
+          <div><b>${comUF.toLocaleString('pt-BR')}</b><span>com estado na ficha</span></div>
+          <div><b>${ufs.length}</b><span>${ufs.length === 1 ? 'estado' : 'estados'}</span></div>
+          <div class="${sem ? 'warn' : ''}"><b>${sem.toLocaleString('pt-BR')}</b><span>sem estado</span></div>
+        </div>
+        <div class="mp-canvas">${svg}
+          ${ufs.length ? `<div class="mp-legend"><span>menos</span><i></i><span>mais alunos</span></div>` : ''}
+        </div>
+      </section>
+      <aside class="mp-side">
+        ${detalhe}
+        ${ufs.length ? `<div class="mp-list">${ufs.map((uf) => `
+          <button type="button" class="mp-uf ${uf === secMapaUF ? 'on' : ''}" data-uf="${uf}">
+            <span class="mp-badge" style="${secMapaBadge(por[uf].n / max)}">${uf}</span>
+            <span class="mp-uf-t"><b>${BR_MAPA.n[uf]}</b><small>${plural(por[uf].at, 'ativo', 'ativos')} · ${pct(por[uf].n)}%</small></span>
+            <b class="mp-uf-n">${por[uf].n.toLocaleString('pt-BR')}</b>
+            <i class="mp-bar" style="--p:${por[uf].n / max}"></i>
+          </button>`).join('')}</div>` : `
+          <div class="mp-empty"><i data-icon="map"></i><h3>O mapa ainda está em branco</h3><p>Nenhum aluno tem o estado preenchido na ficha. Assim que estados e cidades forem informados, cada estado ganha cor e um cartão aqui.</p></div>`}
+        ${sem ? `<div class="mp-sem"><span class="mp-badge none">?</span><span class="mp-uf-t"><b>Sem estado informado</b><small>complete na ficha do aluno</small></span><b class="mp-uf-n">${sem.toLocaleString('pt-BR')}</b></div>` : ''}
+      </aside>
+    </div>`;
+  paintIcons(box);
+  const pick = (uf) => { secMapaUF = secMapaUF === uf ? '' : uf; secMapa(view, true); if (secMapaUF && window.innerWidth <= 1000) view.querySelector('.mp-det')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+  box.querySelector('.mp-svg').addEventListener('click', (e) => { const t = e.target.closest('[data-uf]'); if (t && por[t.dataset.uf]) pick(t.dataset.uf); });
+  box.querySelectorAll('.mp-uf').forEach((b) => b.addEventListener('click', () => pick(b.dataset.uf)));
+  box.querySelector('[data-mpx]')?.addEventListener('click', () => pick(secMapaUF));
+  box.querySelector('[data-mprel]')?.addEventListener('click', () => { Object.assign(secRel, { estado: secMapaUF, cidade: '' }); location.hash = '#secretaria/relatorios'; });
+}
+
+/* =========================================================
    ROTA
    ========================================================= */
 window.HC_ROUTES = window.HC_ROUTES || {};
@@ -1019,6 +1117,7 @@ window.HC_ROUTES.secretaria = async (view, r = 'secretaria') => {
   else if (parts[1] === 'cursos') secCursos(view);
   else if (parts[1] === 'cadastros') secCadastros(view);
   else if (parts[1] === 'relatorios') secRelatorios(view);
+  else if (parts[1] === 'mapa') secMapa(view);
   else secHome(view);
   // troca de aba: só sobe se a pessoa estava lá embaixo (a pílula fica à vista); depois de salvar, não pula
   if (moved) {
