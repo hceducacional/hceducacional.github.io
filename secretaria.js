@@ -53,6 +53,22 @@ function secJanela(m) {
   if (hoje <= fecha) { const r = secDays(fecha); return { fase: r <= 3 ? 'fechando' : 'aberta', abre, fecha, dias: r }; }
   return { fase: 'atrasada', abre, fecha, dias: -secDays(m.expiracao < fecha ? m.expiracao : fecha) };
 }
+/* Período do curso: o campo "período" da matrícula diz em que período o aluno estava na data de início.
+   A cada ciclo do tipo do curso (6 meses na graduação) ele avança sozinho, até o nº de períodos do curso. */
+const secPerNum = (txt) => { const n = parseInt(String(txt || '').match(/\d+/)?.[0], 10); return n > 0 ? n : null; };
+const secPerNome = (n) => `${n}º Período`;
+function secPeriodo(m, hoje = secToday()) {
+  const p0 = secPerNum(m?.periodo); if (!p0) return null;
+  const c = secCurso(m.curso_id), tipo = secTipoDoCurso(c), meses = tipo?.meses && tipo.meses < 12 ? tipo.meses : 0;
+  const total = c?.periodos || null;
+  if (!meses || !m.inicio) return { n: p0, total, nome: secPerNome(p0), fim: null, final: total ? p0 >= total : false, passou: false };
+  let k = 0; while (k < 60 && secAddMonths(m.inicio, meses * (k + 1)) <= hoje) k++; // ciclos completos desde o início
+  const corrido = m.status === 'ativo' ? p0 + k : p0; // só avança enquanto a matrícula está ativa
+  const n = total ? Math.min(corrido, total) : corrido;
+  const fim = total && total >= p0 ? secAddMonths(m.inicio, meses * (total - p0 + 1)) : null;
+  return { n, total, nome: secPerNome(n), fim, final: total ? n >= total : false, passou: !!(fim && fim <= hoje) };
+}
+const secPerTxt = (pp) => pp ? `${pp.n}º${pp.total ? ` de ${pp.total}` : ''}` : '';
 const SEC_JANELA = { aberta: ['Rematrícula aberta', 'ok'], fechando: ['Rematrícula fechando', 'warn'], atrasada: ['Rematrícula atrasada', 'bad'] };
 const secJanelaTxt = (j) => j.fase === 'aberta' ? `aberta até ${secDate(j.fecha).slice(0, 5)}` : j.fase === 'fechando' ? (j.dias === 0 ? 'fecha hoje' : `fecha em ${j.dias} ${j.dias === 1 ? 'dia' : 'dias'}`) : `há ${j.dias} ${j.dias === 1 ? 'dia' : 'dias'} sem rematrícula`;
 const secStatusPill = (s) => `<span class="sc-pill" style="--c:${SEC_STATUS[s]?.[1] || '#6e6e73'}"><i></i>${SEC_STATUS[s]?.[0] || s}</span>`;
@@ -588,7 +604,9 @@ function secMatCard(m) {
   const plural = (n) => `${n} ${n === 1 ? 'dia' : 'dias'}`;
   const prazo = !ativo ? SEC_STATUS[m.status]?.[0] : d == null ? 'Sem data de expiração' : d < 0 ? `Venceu há ${plural(-d)}` : d === 0 ? 'Vence hoje' : `Faltam ${plural(d)}`;
   const j = secJanela(m), docs = secLista('documento'), docOk = docs.filter((dc) => (m.documentos || {})[dc.id]).length;
-  const info = [['Turma', m.turma], ['Período', m.periodo], ['Nº da matrícula', m.numero], ['Próxima avaliação', m.avaliacao && secDate(m.avaliacao)]].filter(([, v]) => v);
+  const pp = secPeriodo(m);
+  const info = [['Turma', m.turma], ['Período', pp ? `${secPerTxt(pp)}${pp.final && m.status === 'ativo' && !pp.passou ? ' · último' : ''}` : m.periodo],
+    ['Conclusão prevista', pp?.fim && m.status === 'ativo' ? `${secDate(pp.fim).slice(3)}${pp.passou ? ' (prazo encerrado)' : ''}` : ''], ['Nº da matrícula', m.numero], ['Próxima avaliação', m.avaliacao && secDate(m.avaliacao)]].filter(([, v]) => v);
   return `<article class="sm${alerta ? ' alert' : ''}" data-mat="${m.id}" style="--c:${SEC_STATUS[m.status]?.[1]}">
     <header class="sm-top">
       <span class="sm-ico"><i data-icon="cap"></i></span>
@@ -645,6 +663,13 @@ function secInicioPeriodo(data) {
   if (d <= 10) return `${y}-${String(m).padStart(2, '0')}-01`;
   return data;
 }
+// período que começa na rematrícula: o atual + 1 (ou mais, se ficou mais de um ciclo sem rematricular)
+function secProxPeriodo(m, ini) {
+  const p0 = secPerNum(m.periodo), c = secCurso(m.curso_id), tipo = secTipoDoCurso(c); if (!p0 || !tipo?.meses) return null;
+  let k = 0; if (m.inicio) while (k < 60 && secAddMonths(m.inicio, tipo.meses * (k + 1)) <= ini) k++;
+  const n = p0 + Math.max(1, k);
+  return c?.periodos ? Math.min(n, c.periodos) : n;
+}
 // renovação: o novo período conta a partir da rematrícula (atraso empurra o fim do curso)
 function secRenew(m) {
   const tipo = secTipoDoCurso(secCurso(m.curso_id)); if (!tipo?.meses) return;
@@ -658,6 +683,7 @@ function secRenew(m) {
       const data = f.data.value; if (!data) return say('Informe a data da rematrícula.'), false;
       if (secForaJanela(data)) return say('Fora da janela: a rematrícula só é feita do dia 25 ao dia 10.'), false;
       const ini = secInicioPeriodo(data), row = { inicio: ini, expiracao: secAddMonths(ini, tipo.meses) };
+      const prox = secProxPeriodo(m, ini); if (prox) row.periodo = secPerNome(prox);
       const { error } = await sb.from('sec_matriculas').update(row).eq('id', m.id); if (error) throw error;
       Object.assign(m, row); toast('Rematrícula registrada.'); route();
     },
@@ -666,7 +692,12 @@ function secRenew(m) {
     const v = form.data.value, el = $('#sc-renew-hint'), fora = v && secForaJanela(v), ini = v && secInicioPeriodo(v);
     el.classList.toggle('sc-warn', !!fora);
     el.textContent = !v ? '' : fora ? 'A faculdade só aceita rematrícula do dia 25 ao dia 10. Nos dias 11 a 24 ela fica fechada; aguarde a próxima janela.'
-      : `Novo período: ${secDate(ini)} até ${secDate(secAddMonths(ini, tipo.meses))} (${tipo.meses} meses).`;
+      : `Novo período: ${secDate(ini)} até ${secDate(secAddMonths(ini, tipo.meses))} (${tipo.meses} meses).${(() => {
+        const prox = secProxPeriodo(m, ini), tot = secCurso(m.curso_id)?.periodos, p0 = secPeriodo(m)?.n;
+        if (!prox) return '';
+        if (tot && p0 >= tot) return ` O aluno já está no último período (${tot}º); se terminou o curso, marque a matrícula como Concluído.`;
+        return ` Passa para o ${prox}º período${tot ? ` de ${tot}${prox === tot ? ' (último)' : ''}` : ''}.`;
+      })()}`;
     form.querySelector('[type=submit]').disabled = !!fora;
   };
   form.data.addEventListener('input', hint); hint();
@@ -688,7 +719,7 @@ function secMatSheet(aluno, m = null) {
       ${secField('Data de início', `<input type="date" name="inicio" value="${esc(m?.inicio || '')}">`)}
       ${secField('Expiração', `<input type="date" name="expiracao" value="${esc(m?.expiracao || '')}"><small class="sc-hint" id="sc-exp-hint"></small>`)}
       ${secField('Turma', `<select name="turma">${listOpts('turma', m?.turma)}</select>`)}
-      ${secField('Período', `<select name="periodo">${listOpts('periodo', m?.periodo)}</select>`)}
+      ${secField('Período no início', `<select name="periodo">${listOpts('periodo', m?.periodo)}</select><small class="sc-hint" id="sc-per-hint"></small>`)}
       ${secField('Nº da matrícula', `<input name="numero" maxlength="40" value="${esc(m?.numero || '')}">`)}
       ${secField('Próxima avaliação', `<input type="date" name="avaliacao" value="${esc(m?.avaliacao || '')}">`)}
     </div>
@@ -740,7 +771,17 @@ function secMatSheet(aluno, m = null) {
     if (!expManual && form.inicio.value) form.expiracao.value = secAddMonths(form.inicio.value, tipo.meses);
     hint.textContent = `${tipo.nome}: ${tipo.meses} meses após o início${expManual ? ' (ajustada à mão)' : ''}.`;
   };
-  fillCursos(); calc();
+  // período: mostra na hora em que período o aluno está hoje e quando termina o curso
+  const perHint = () => {
+    const el = $('#sc-per-hint'); if (!el) return;
+    const pp = secPeriodo({ periodo: form.periodo.value, curso_id: form.curso_id.value, inicio: form.inicio.value, status: form.status.value });
+    const c = secCurso(form.curso_id.value);
+    el.textContent = !pp ? 'Em que período o aluno estava na data de início; depois avança sozinho.'
+      : `Hoje: ${secPerTxt(pp)}${pp.fim ? ` · conclusão prevista ${secDate(pp.fim).slice(3)}` : ''}${c && !c.periodos ? ' · informe o nº de períodos do curso na aba Cursos' : ''}.`;
+  };
+  ['periodo', 'curso_id', 'inicio', 'status'].forEach((k) => form[k].addEventListener('change', perHint));
+  form.inicio.addEventListener('input', perHint);
+  fillCursos(); calc(); perHint();
   form.fac.addEventListener('change', () => { fillCursos(); calc(); });
   form.curso_id.addEventListener('change', () => { expManual = false; calc(); });
   form.inicio.addEventListener('input', () => { expManual = false; calc(); });
@@ -940,7 +981,7 @@ function secRelatorios(view) {
   $('#sc-rprint').addEventListener('click', () => { document.body.classList.add('sc-printing'); window.print(); setTimeout(() => document.body.classList.remove('sc-printing'), 500); });
   $('#sc-rcsv').addEventListener('click', () => secCsv('relatorio-alunos', ['Código', 'Nome', 'CPF', 'Nascimento', 'Sexo', 'Celular', 'Telefone', 'E-mail', 'Endereço', 'Nº', 'Bairro', 'Cidade', 'UF', 'CEP', 'Instrução', 'Formação', 'Como conheceu', 'Indicado por', 'Curso', 'Faculdade', 'Tipo', 'Situação', 'Turma', 'Período', 'Nº matrícula', 'Início', 'Expiração', 'Documentos pendentes', 'Cadastrado em'],
     rows.map(({ a, m, c }) => [a.codigo, a.nome, secCpfFmt(a.cpf), secDate(a.nascimento), a.sexo, a.celular, a.telefone, a.email, a.endereco, a.numero, a.bairro, a.cidade, a.estado, a.cep, a.instrucao, a.formacao, a.conhecimento, a.indicacao,
-      c?.nome, secLNome(c?.faculdade_id), secLNome(c?.tipo_id), m ? SEC_STATUS[m.status]?.[0] : '', m?.turma, m?.periodo, m?.numero, m ? secDate(m.inicio) : '', m ? secDate(m.expiracao) : '', m ? secLista('documento').filter((d) => !(m.documentos || {})[d.id]).map((d) => d.nome).join(', ') : '', secDate(a.created_at.slice(0, 10))])));
+      c?.nome, secLNome(c?.faculdade_id), secLNome(c?.tipo_id), m ? SEC_STATUS[m.status]?.[0] : '', m?.turma, m ? (secPeriodo(m)?.nome || m.periodo) : '', m?.numero, m ? secDate(m.inicio) : '', m ? secDate(m.expiracao) : '', m ? secLista('documento').filter((d) => !(m.documentos || {})[d.id]).map((d) => d.nome).join(', ') : '', secDate(a.created_at.slice(0, 10))])));
 }
 function secRelRows() {
   const r = secRel, ind = secFold(r.indicacao.trim());
@@ -971,7 +1012,7 @@ function secRelRows() {
       if (r.tipo && c?.tipo_id !== r.tipo) return false;
       if (r.status && m.status !== r.status) return false;
       if (r.turma && m.turma !== r.turma) return false;
-      if (r.periodo && m.periodo !== r.periodo) return false;
+      if (r.periodo && (secPeriodo(m)?.nome || m.periodo) !== r.periodo) return false;
       if (r.docs) { const ok = docIds.every((id) => (m.documentos || {})[id]); if ((r.docs === 'completo') !== ok) return false; }
       if ((r.de || r.ate) && ['inicio', 'expiracao'].includes(r.campo) && !inRange(m[r.campo])) return false;
       return true;
