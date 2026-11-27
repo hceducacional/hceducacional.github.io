@@ -4599,3 +4599,33 @@ html.lk-lock, html.lk-lock body { overflow: hidden; }
 .av-locked .lk-icon { margin: 0 0 10px; }
 .av-locked h2 { margin: 0; font-size: 22px; letter-spacing: -.02em; }
 .av-locked p { margin: 0 0 14px; color: var(--muted); }
+
+/* =========================================================
+   CELULAR — saudação ao abrir o site, relógio só com o "até"
+   e barra de cima recolhida no topo (pesquisa + foto)
+   ========================================================= */
+.tb-hello { display: none; }
+@media (max-width: 860px) {
+  /* o próprio celular já mostra a hora: no relógio fica só o "até 11:30" */
+  .hw-time { display: none; }
+
+  /* saudação: "Boa tarde, Mateus!" no lugar do nome do instituto */
+  .topbar.hello .tb-title { display: none; }
+  .topbar.hello .tb-hello { display: block; flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; position: relative; z-index: 2; }
+  .tb-hello-in { display: inline-flex; opacity: 0; }
+  .tb-hello-in span { font-size: 16px; font-weight: 600; letter-spacing: -.02em; color: #fff; padding-right: 40px; }
+  .tb-hello-in span:only-child { padding-right: 0; }
+  .topbar.hello-on .tb-hello-in { animation: helloIn .7s var(--ease) both; }
+  .topbar.hw-out .tb-hello { opacity: 0; transform: translateY(-10px) scale(.96); transition: opacity .35s ease, transform .45s var(--ease); }
+  /* nome grande: passa da direita para a esquerda, em volta contínua */
+  .tb-hello.marq { -webkit-mask-image: linear-gradient(90deg, transparent, #000 10px, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(90deg, transparent, #000 10px, #000 calc(100% - 18px), transparent); }
+  .topbar.hello-on .tb-hello.marq .tb-hello-in { animation: helloIn .7s var(--ease) both, helloMarq var(--d, 8s) linear 1.6s infinite; }
+
+  /* recolhida no topo: além da foto, fica o botão de pesquisar */
+  .topbar-wrap.mini .topbar:not(.searching) .tb-hello { opacity: 0; transition: opacity .3s ease; }
+  .topbar-wrap.mini.tuck .topbar:not(.searching)::before { left: calc(100% - 106px); }
+  .topbar-wrap.mini.tuck .topbar:not(.searching) .tb-search-btn { opacity: 1; transform: none; pointer-events: auto; transition: opacity .45s ease .25s, transform .9s cubic-bezier(.45, 0, .15, 1), background .2s; }
+}
+@keyframes helloIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes helloMarq { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .tb-hello.marq .tb-hello-in { animation: helloIn .01s both !important; } }

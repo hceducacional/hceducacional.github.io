@@ -160,7 +160,7 @@ function toggleMenu(open) {
   btn.setAttribute('aria-expanded', String(show));
 }
 document.addEventListener('click', (e) => {
-  if (e.target.closest('.tb-me')) return toggleMenu();
+  if (e.target.closest('.tb-me')) { if ($('#um')?.hidden && window.HC_bar?.tryPeek()) return; return toggleMenu(); } // celular: 1º toque abre a barra, 2º o menu
   const act = e.target.closest('[data-auth]')?.dataset.auth;
   if (act === 'login') { e.preventDefault(); openAuth('login'); }
   if (act === 'signup') { e.preventDefault(); openAuth('signup'); }

@@ -3523,9 +3523,34 @@ window.addEventListener('hashchange', route);
   const update = () => {
     ticking = false;
     wrap.classList.toggle('scrolled', window.scrollY > 8);
-    // celular: longe do topo, a barra se recolhe (só pesquisa e foto); no topo, volta inteira
-    wrap.classList.toggle('mini', PHONE() && window.scrollY > 40 && !wrap.classList.contains('menu-open'));
+    // celular: longe do topo, a barra se recolhe (só a foto). Depois da saudação inicial ela também fica
+    // recolhida no topo (pesquisa + foto) e só se abre inteira quando a pessoa toca na foto ("espiar").
+    const y = window.scrollY;
+    if (bar.peek && Math.abs(y - bar.peekY) > 30) endPeek();
+    const phone = PHONE(), open = wrap.classList.contains('menu-open') || bar.peek;
+    const mini = phone && !open && (y > 40 || bar.collapsed);
+    wrap.classList.toggle('mini', mini);
+    wrap.classList.toggle('tuck', mini && y <= 40); // no topo: aparece também o botão de pesquisar
   };
+  let peekTimer = 0;
+  const endPeek = () => {
+    clearTimeout(peekTimer);
+    if (wrap.classList.contains('menu-open')) { peekTimer = setTimeout(endPeek, 4000); return; } // menu aberto: espera fechar
+    bar.peek = false; document.getElementById('hours')?.classList.remove('open'); update();
+  };
+  const bar = window.HC_bar = {
+    collapsed: false, peek: false, peekY: 0, update: () => update(),
+    collapse() { bar.collapsed = true; update(); },
+    // toque na foto com a barra recolhida: abre a barra inteira (o segundo toque abre o menu do perfil)
+    tryPeek() {
+      if (!PHONE() || !wrap.classList.contains('mini')) return false;
+      bar.peek = true; bar.peekY = window.scrollY; update();
+      clearTimeout(peekTimer); peekTimer = setTimeout(endPeek, 10000);
+      return true;
+    },
+  };
+  // tocar fora da barra fecha a barra aberta pelo toque na foto
+  document.addEventListener('pointerdown', (e) => { if (bar.peek && !wrap.contains(e.target) && !e.target.closest('.um')) endPeek(); });
   window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
   update();
 })();
@@ -3676,15 +3701,43 @@ function hoursState(now = new Date()) {
   el.addEventListener('click', (e) => { if (!e.target.closest('.hw-card')) el.classList.toggle('open'); });
   el.addEventListener('keydown', (e) => { if (e.key === 'Escape') { el.classList.remove('open'); el.blur(); } });
   document.addEventListener('pointerdown', (e) => { if (!el.contains(e.target)) el.classList.remove('open'); });
-  // celular: ao abrir o site, o nome do instituto fica 3 s e depois dá lugar ao relógio
-  const bar = el.closest('.topbar');
-  const showClock = () => {
-    bar.classList.add('hw-out');
-    setTimeout(() => { bar.classList.remove('hw-out'); bar.classList.add('hw-in'); }, 380);
-  };
+  // celular: ao abrir o site (depois da tela de carregamento) aparece uma saudação ("Boa tarde, Mateus!"),
+  // depois o relógio, e 10 s após a saudação a barra se recolhe sozinha (fica a pesquisa e a foto)
+  const bar = el.closest('.topbar'), hello = $('#tb-hello'), helloIn = hello?.querySelector('.tb-hello-in');
   let seen = false;
   try { seen = sessionStorage.getItem('hc-hw-intro') === '1'; sessionStorage.setItem('hc-hw-intro', '1'); } catch (e) {}
-  if (seen) bar.classList.add('hw-in'); else setTimeout(showClock, 3000);
+  if (seen || !PHONE() || !hello) { bar.classList.add('hw-in'); if (PHONE()) window.HC_bar?.collapse(); }
+  else {
+    bar.classList.add('hello');
+    const greet = () => {
+      const h = new Date().getHours();
+      const g = h >= 5 && h < 12 ? 'Bom dia' : h >= 12 && h < 18 ? 'Boa tarde' : 'Boa noite';
+      const name = (typeof auth !== 'undefined' && auth.user) ? String(meName() || '').trim().split(/\s+/)[0] : '';
+      return name ? `${g}, ${name}!` : `${g}! Que bom ter você por aqui`;
+    };
+    const start = () => {
+      const text = greet();
+      helloIn.innerHTML = `<span>${esc(text)}</span>`;
+      bar.classList.add('hello-on');
+      // nome grande: o texto passa da direita para a esquerda, como nos players de música
+      requestAnimationFrame(() => {
+        const w = helloIn.firstChild.offsetWidth;
+        if (w > hello.clientWidth + 2) {
+          helloIn.innerHTML = `<span>${esc(text)}</span><span aria-hidden="true">${esc(text)}</span>`;
+          helloIn.style.setProperty('--d', `${((w + 40) / 32).toFixed(1)}s`);
+          hello.classList.add('marq');
+        }
+      });
+      setTimeout(() => { // relógio
+        bar.classList.add('hw-out');
+        setTimeout(() => { bar.classList.remove('hello', 'hello-on', 'hw-out'); hello.classList.remove('marq'); bar.classList.add('hw-in'); }, 380);
+      }, 5000);
+      setTimeout(() => window.HC_bar?.collapse(), 10000); // recolhe
+    };
+    // espera a tela de carregamento sair e o login carregar (no máximo 2 s a mais), para já ter o nome
+    const whenAuth = (t0 = Date.now()) => ((typeof auth !== 'undefined' && auth.ready) || Date.now() - t0 > 2000 ? start() : setTimeout(() => whenAuth(t0), 100));
+    document.documentElement.classList.contains('hc-splash') ? addEventListener('hc:splash-done', () => whenAuth(), { once: true }) : whenAuth();
+  }
   window.HC_hoursPreview = (h, m = 0, dow) => { // para testar outros horários pelo console
     const d = new Date(); d.setHours(h, m, 0, 0); if (dow != null) d.setDate(d.getDate() + ((dow - d.getDay() + 7) % 7));
     return hoursState(d);
