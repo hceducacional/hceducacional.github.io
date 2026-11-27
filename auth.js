@@ -46,6 +46,142 @@ function canvasBlank(c) {
     return true;
   } catch { return null; } // navegador não deixa conferir
 }
+/* Recorte da foto de perfil: o aluno arrasta, dá zoom (controle, botões, roda do mouse ou pinça)
+   e gira antes de enviar. Sai um quadrado de 480 px, já enquadrado no círculo.
+   Devolve o Blob pronto, 'raw' se o navegador não conseguir desenhar (aí vai pelo caminho antigo)
+   ou null se a pessoa cancelar. */
+function cropAvatar(src) {
+  return new Promise((resolve) => {
+    if (document.querySelector('.lk')) return resolve(null);
+    const img = new Image();
+    img.onerror = () => resolve('raw');
+    img.onload = () => open();
+    img.src = src;
+    function open() {
+      const W = img.naturalWidth, H = img.naturalHeight;
+      let rot = 0, s = 1, tx = 0, ty = 0, S = 0, minS = 1;
+      const wrap = document.createElement('div');
+      wrap.className = 'lk cr';
+      wrap.innerHTML = `
+        <div class="lk-backdrop"></div>
+        <div class="lk-card cr-card" role="dialog" aria-modal="true" aria-labelledby="cr-t">
+          <h2 id="cr-t">Ajustar foto</h2>
+          <p class="lk-sub">Arraste para posicionar e use o zoom para deixar o rosto no centro do círculo.</p>
+          <div class="cr-stage" tabindex="0" role="application" aria-label="Foto: arraste ou use as setas; + e − para o zoom">
+            <img src="${esc(src)}" alt="" draggable="false">
+            <span class="cr-mask" aria-hidden="true"></span>
+          </div>
+          <div class="cr-zoom">
+            <button type="button" class="icon-btn" data-cr="out" aria-label="Diminuir zoom"><i data-icon="minus"></i></button>
+            <input type="range" min="1" max="5" step="0.01" value="1" aria-label="Zoom">
+            <button type="button" class="icon-btn" data-cr="in" aria-label="Aumentar zoom"><i data-icon="plus"></i></button>
+          </div>
+          <div class="cr-row">
+            <span class="cr-pv" aria-hidden="true"><img src="${esc(src)}" alt=""></span>
+            <small>Assim fica no perfil</small>
+            <span class="fe-space"></span>
+            <button type="button" class="btn-soft sm" data-cr="rot"><i data-icon="rotate"></i>Girar</button>
+          </div>
+          <div class="fe-actions">
+            <button type="button" class="btn-soft fe-cancel" data-cr="cancel">Cancelar</button>
+            <span class="fe-space"></span>
+            <button type="button" class="btn-dark fe-save" data-cr="save"><i data-icon="check"></i>Usar foto</button>
+          </div>
+        </div>`;
+      document.body.appendChild(wrap);
+      paintIcons(wrap);
+      const stage = wrap.querySelector('.cr-stage'), pic = stage.querySelector('img');
+      const pv = wrap.querySelector('.cr-pv'), pvImg = pv.querySelector('img');
+      const range = wrap.querySelector('input[type=range]');
+      const lastFocus = document.activeElement;
+      [pic, pvImg].forEach((el) => { el.style.width = W + 'px'; el.style.height = H + 'px'; });
+      const dims = () => (rot % 180 ? [H, W] : [W, H]);
+      const clamp = () => {
+        const [w, h] = dims();
+        s = Math.min(Math.max(s, minS), minS * 5);
+        const mx = Math.max(0, (w * s - S) / 2), my = Math.max(0, (h * s - S) / 2);
+        tx = Math.min(mx, Math.max(-mx, tx)); ty = Math.min(my, Math.max(-my, ty));
+      };
+      const paint = () => {
+        clamp();
+        const t = (k) => `translate(-50%, -50%) translate(${tx * k}px, ${ty * k}px) rotate(${rot}deg) scale(${s * k})`;
+        pic.style.transform = t(1);
+        pvImg.style.transform = t(pv.clientWidth / S);
+        range.value = s / minS;
+      };
+      const fit = () => {
+        S = stage.clientWidth;
+        const [w, h] = dims(), rel = s / minS || 1;
+        minS = S / Math.min(w, h); s = minS * rel;
+        paint();
+      };
+      // zoom mantendo parado o ponto (px, py) do quadro (relativo ao centro)
+      const zoomTo = (ns, px = 0, py = 0) => {
+        ns = Math.min(Math.max(ns, minS), minS * 5);
+        const k = ns / s; tx = px - (px - tx) * k; ty = py - (py - ty) * k; s = ns; paint();
+      };
+      const rel = (e) => { const r = stage.getBoundingClientRect(); return [e.clientX - r.left - r.width / 2, e.clientY - r.top - r.height / 2]; };
+      const pts = new Map(); let pinch = null;
+      stage.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); stage.focus({ preventScroll: true }); stage.setPointerCapture(e.pointerId);
+        pts.set(e.pointerId, [e.clientX, e.clientY]); stage.classList.add('dragging');
+        if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), s }; }
+      });
+      stage.addEventListener('pointermove', (e) => {
+        const p = pts.get(e.pointerId); if (!p) return;
+        if (pts.size === 1) { tx += e.clientX - p[0]; ty += e.clientY - p[1]; pts.set(e.pointerId, [e.clientX, e.clientY]); return paint(); }
+        pts.set(e.pointerId, [e.clientX, e.clientY]);
+        const [a, b] = [...pts.values()]; const r = stage.getBoundingClientRect();
+        const mid = [(a[0] + b[0]) / 2 - r.left - r.width / 2, (a[1] + b[1]) / 2 - r.top - r.height / 2];
+        if (pinch) zoomTo(pinch.s * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d, mid[0], mid[1]);
+      });
+      const up = (e) => { pts.delete(e.pointerId); pinch = null; if (!pts.size) stage.classList.remove('dragging'); };
+      stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+      stage.addEventListener('wheel', (e) => { e.preventDefault(); const [px, py] = rel(e); zoomTo(s * Math.exp(-e.deltaY * 0.0015), px, py); }, { passive: false });
+      stage.addEventListener('keydown', (e) => {
+        const d = e.shiftKey ? 30 : 8;
+        const mv = { ArrowLeft: [d, 0], ArrowRight: [-d, 0], ArrowUp: [0, d], ArrowDown: [0, -d] }[e.key];
+        if (mv) { e.preventDefault(); tx += mv[0]; ty += mv[1]; return paint(); }
+        if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomTo(s * 1.1); }
+        if (e.key === '-') { e.preventDefault(); zoomTo(s / 1.1); }
+      });
+      range.addEventListener('input', () => zoomTo(minS * +range.value));
+      const onResize = () => fit();
+      window.addEventListener('resize', onResize);
+      const close = (result) => {
+        document.removeEventListener('keydown', onKey); window.removeEventListener('resize', onResize);
+        wrap.classList.remove('in'); setTimeout(() => wrap.remove(), 300);
+        lastFocus?.focus?.({ preventScroll: true });
+        resolve(result);
+      };
+      const onKey = (e) => { if (e.key === 'Escape') close(null); };
+      document.addEventListener('keydown', onKey);
+      const save = async () => {
+        const O = AVATAR_MAX, f = O / S, c = document.createElement('canvas');
+        c.width = c.height = O;
+        const ctx = c.getContext('2d');
+        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, O, O);
+        ctx.translate(O / 2 + tx * f, O / 2 + ty * f); ctx.rotate(rot * Math.PI / 180); ctx.scale(s * f, s * f);
+        ctx.drawImage(img, -W / 2, -H / 2);
+        if (canvasBlank(c) !== false) return close('raw'); // navegador não desenhou: vai pelo caminho antigo
+        const blob = await new Promise((ok) => c.toBlob((webp) => (webp && webp.type === 'image/webp' ? ok(webp) : c.toBlob(ok, 'image/jpeg', .88)), 'image/webp', .86));
+        close(blob || 'raw');
+      };
+      wrap.addEventListener('click', (e) => {
+        if (e.target.classList.contains('lk-backdrop')) return close(null);
+        const b = e.target.closest('[data-cr]'); if (!b) return;
+        const act = b.dataset.cr;
+        if (act === 'cancel') close(null);
+        else if (act === 'save') { b.disabled = true; save(); }
+        else if (act === 'in') zoomTo(s * 1.25);
+        else if (act === 'out') zoomTo(s / 1.25);
+        else if (act === 'rot') { rot = (rot + 90) % 360; const r = s / minS; [tx, ty] = [-ty, tx]; s = 0; minS = 1; fit(); zoomTo(minS * r, 0, 0); }
+      });
+      requestAnimationFrame(() => { wrap.classList.add('in'); fit(); stage.focus({ preventScroll: true }); });
+    }
+  });
+}
 function compressAvatar(file) {
   const toBlob = (c) => new Promise((ok) => c.toBlob((webp) => (webp && webp.type === 'image/webp' ? ok(webp) : c.toBlob(ok, 'image/jpeg', .86)), 'image/webp', .84));
   const draw = (src, w, h) => {
@@ -541,7 +677,7 @@ function renderProfile(view) {
           </div>
           <div class="me-photo-actions">
             <label class="btn-soft" for="me-file"><i data-icon="image"></i>${p.avatar_url ? 'Trocar foto' : 'Escolher foto'}</label>
-            ${p.avatar_url ? `<button class="btn-soft" type="button" data-me="focus"><i data-icon="focus"></i>Enquadrar</button><button class="btn-soft" type="button" data-me="rmphoto"><i data-icon="x"></i>Remover</button>` : ''}
+            ${p.avatar_url ? `<button class="btn-soft" type="button" data-me="focus"><i data-icon="focus"></i>Ajustar</button><button class="btn-soft" type="button" data-me="rmphoto"><i data-icon="x"></i>Remover</button>` : ''}
           </div>
           <p class="me-status s-${esc(p.status || 'pending')}"><i></i>${esc(STATUS_TXT[p.status] || STATUS_TXT.pending)}${isAdmin() ? ' · Administrador' : ''}</p>
         </section>
@@ -599,13 +735,15 @@ function renderProfile(view) {
       if (error) return toast(authError(error));
       e.target.reset(); toast('Senha alterada!');
     });
-    $('#me-file').addEventListener('change', async (e) => {
-      const file = e.target.files[0]; e.target.value = '';
-      if (!file) return;
-      if (!/^image\//.test(file.type)) return toast('Escolha um arquivo de imagem.');
+    // recorta (zoom/arrastar/girar) e envia; serve para foto nova e para reajustar a atual
+    const sendPhoto = async (file) => {
+      const src = URL.createObjectURL(file);
+      const cut = await cropAvatar(src);
+      URL.revokeObjectURL(src);
+      if (!cut) return; // cancelou
       toast('Enviando foto…');
       try {
-        const blob = await compressAvatar(file);
+        const blob = cut === 'raw' ? await compressAvatar(file) : cut;
         const ext = blob.type === 'image/webp' ? 'webp' : blob.type === 'image/png' ? 'png' : 'jpg';
         const path = `${auth.user.id}/foto-${Date.now().toString(36)}.${ext}`;
         const up = await sb.storage.from('avatars').upload(path, blob, { contentType: blob.type, upsert: false });
@@ -616,17 +754,28 @@ function renderProfile(view) {
         if (error) throw error;
         removeAvatarFile(old);
         await refreshMe(); renderProfile(view);
-        const pos = await focusEditor({ src: url, pos: '', round: true });
-        if (pos) { await sb.from('profiles').update({ avatar_focus: pos }).eq('id', auth.user.id); await refreshMe(); renderProfile(view); }
+        if (cut === 'raw') { // sem recorte (navegador não deixou): pelo menos escolhe o ponto de foco
+          const pos = await focusEditor({ src: url, pos: '', round: true });
+          if (pos) { await sb.from('profiles').update({ avatar_focus: pos }).eq('id', auth.user.id); await refreshMe(); renderProfile(view); }
+        }
         toast('Foto de perfil atualizada.');
       } catch (err) { toast(authError(err)); }
+    };
+    $('#me-file').addEventListener('change', (e) => {
+      const file = e.target.files[0]; e.target.value = '';
+      if (!file) return;
+      if (!/^image\//.test(file.type)) return toast('Escolha um arquivo de imagem.');
+      sendPhoto(file);
     });
-    view.querySelector('[data-me="focus"]')?.addEventListener('click', async () => {
-      const pos = await focusEditor({ src: auth.profile.avatar_url, pos: auth.profile.avatar_focus || '', round: true });
-      if (pos == null) return;
-      const { error } = await sb.from('profiles').update({ avatar_focus: pos }).eq('id', auth.user.id);
-      if (error) return toast(authError(error));
-      await refreshMe(); renderProfile(view); toast('Enquadramento salvo.');
+    view.querySelector('[data-me="focus"]')?.addEventListener('click', async (e) => {
+      const b = e.currentTarget; b.disabled = true;
+      try {
+        const r = await fetch(auth.profile.avatar_url, { cache: 'no-store' });
+        if (!r.ok) throw new Error();
+        const blob = await r.blob();
+        await sendPhoto(new File([blob], 'foto', { type: blob.type || 'image/jpeg' }));
+      } catch { toast('Não foi possível abrir a foto atual. Tente escolher a foto de novo.'); }
+      b.disabled = false;
     });
     view.querySelector('[data-me="rmphoto"]')?.addEventListener('click', async () => {
       if (!(await confirmDialog({ title: 'Remover foto de perfil?', sub: 'No lugar dela, aparecem as iniciais do seu nome.', image: auth.profile.avatar_url, ok: 'Remover' }))) return;
