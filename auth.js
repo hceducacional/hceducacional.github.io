@@ -110,7 +110,7 @@ async function setUser(user) {
   paintUser();
   if (isAdmin() && pending.size) [...pending].forEach((k) => queuePush(k)); // termina envios que ficaram pendentes
   const r = (location.hash || '').slice(1);
-  if ((changed || first) && (r === 'perfil' || r === 'usuarios' || r.startsWith('config') || r.startsWith('agendar') || r.startsWith('indicar') || r.startsWith('informatica'))) route(); // a página depende de quem entrou
+  if ((changed || first) && (r === 'perfil' || r === 'usuarios' || r.startsWith('config') || r.startsWith('secretaria') || r.startsWith('agendar') || r.startsWith('indicar') || r.startsWith('informatica'))) route(); // a página depende de quem entrou
 }
 async function refreshMe() { await loadProfile(); paintUser(); }
 

@@ -3321,6 +3321,7 @@ function confirmDialog({ title, sub = '', image = '', ok = 'Excluir', icon = 'tr
    ========================================================= */
 const TITLES = {
   relatorio: 'Relatório Mensal', seguranca: 'Segurança', ajuda: 'Ajuda / Suporte',
+  secretaria: 'Secretaria', // só administradores (ver o roteador)
 };
 /* Cabeçalho editorial: rótulo pequeno, título grande e uma linha de apoio */
 function pageHead(kicker, title, sub) {
@@ -3357,6 +3358,8 @@ function route() {
   document.getElementById('tab-more')?.classList.toggle('active', !!document.querySelector('.more-item.active'));
   // Configurações: só para administradores (conta do site, verificada pelo banco)
   if (r.split('/')[0] === 'config' && !window.HC_isAdmin?.()) window.HC_adminOnly?.(view, 'Configurações');
+  // Secretaria: por enquanto uma página "Em breve", só para administradores
+  else if (r.split('/')[0] === 'secretaria' && !window.HC_isAdmin?.()) window.HC_adminOnly?.(view, 'Secretaria');
   else if (r === 'config') renderConfig(view);
   else if (r === 'config/noticias') renderNewsAdmin(view);
   else if (r === 'config/informatica') renderAcervo(view);

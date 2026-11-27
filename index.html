@@ -80,7 +80,7 @@
       @keyframes hcsFade { to { opacity: 0; } }
     }
   </style>
-  <link rel="stylesheet" href="styles.css?v=202611271135" />
+  <link rel="stylesheet" href="styles.css?v=202611271304" />
 </head>
 <body>
   <!-- Tela de carregamento do celular (some sozinha quando o site está pronto; no computador nem aparece) -->
@@ -147,11 +147,11 @@
       <a class="sb-item" data-route="noticias" href="#noticias"><i data-icon="news"></i><span>Notícias</span></a>
       <a class="sb-item" data-route="indicar" href="#indicar"><i data-icon="plusCircle"></i><span>Indicar</span></a>
       <a class="sb-item" data-route="agendar" href="#agendar"><i data-icon="calendar"></i><span>Agendar Atendimento</span></a>
-      <a class="sb-item admin-only" href="#" data-locked="semipresencial"><i data-icon="lock"></i><span>Sistema Semipresencial</span></a>
       <a class="sb-item" data-route="informatica" href="#informatica"><i data-icon="monitor"></i><span>Plataforma de Informática</span></a>
 
       <div class="sb-section sb-section-gap">Outros</div>
       <a class="sb-item admin-only" data-route="config" href="#config"><i data-icon="settings"></i><span>Configurações</span></a>
+      <a class="sb-item admin-only" data-route="secretaria" href="#secretaria"><i data-icon="lock"></i><span>Secretaria</span></a>
       <a class="sb-item" data-route="seguranca" href="#seguranca"><i data-icon="shield"></i><span>Segurança</span></a>
       <a class="sb-item" data-route="ajuda" href="#ajuda"><i data-icon="help"></i><span>Ajuda / Suporte</span></a>
     </nav>
@@ -212,9 +212,9 @@
     <div class="more-backdrop" data-more-close></div>
     <div class="more-sheet" role="dialog" aria-modal="true" aria-label="Mais opções">
       <span class="more-grab" aria-hidden="true"></span>
-      <a class="more-item admin-only" href="#" data-locked="semipresencial"><span class="more-ico" style="--c:#5e5ce6"><i data-icon="lock"></i></span>Sistema Semipresencial</a>
       <a class="more-item" data-route="informatica" href="#informatica"><span class="more-ico" style="--c:#f97316"><i data-icon="monitor"></i></span>Plataforma de Informática</a>
       <a class="more-item admin-only" data-route="config" href="#config"><span class="more-ico" style="--c:#8e8e93"><i data-icon="settings"></i></span>Configurações</a>
+      <a class="more-item admin-only" data-route="secretaria" href="#secretaria"><span class="more-ico" style="--c:#5e5ce6"><i data-icon="lock"></i></span>Secretaria</a>
       <a class="more-item" data-route="seguranca" href="#seguranca"><span class="more-ico" style="--c:#34c759"><i data-icon="shield"></i></span>Segurança</a>
       <a class="more-item" data-route="ajuda" href="#ajuda"><span class="more-ico" style="--c:#ff9f0a"><i data-icon="help"></i></span>Ajuda / Suporte</a>
       <a class="more-item danger" href="#sair"><span class="more-ico" style="--c:#ff3b30"><i data-icon="logout"></i></span>Desconectar</a>
@@ -223,15 +223,16 @@
 
   <div class="toast" id="toast"></div>
 
-  <script>window.HC_V = '202611271135'; /* versão dos arquivos: scripts/versao.py troca a cada publicação */</script>
-  <script src="content.js?v=202611271135"></script>
+  <script>window.HC_V = '202611271304'; /* versão dos arquivos: scripts/versao.py troca a cada publicação */</script>
+  <script src="content.js?v=202611271304"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
-  <script src="app.js?v=202611271135"></script>
-  <script src="auth.js?v=202611271135"></script>
-  <script src="agenda.js?v=202611271135"></script>
-  <script src="indicar.js?v=202611271135"></script>
-  <script src="informatica.js?v=202611271135"></script>
-  <script src="avisos.js?v=202611271135"></script>
-  <script src="pedagogico.js?v=202611271135"></script>
+  <script src="app.js?v=202611271304"></script>
+  <script src="auth.js?v=202611271304"></script>
+  <script src="agenda.js?v=202611271304"></script>
+  <script src="indicar.js?v=202611271304"></script>
+  <script src="secretaria.js?v=202611271135"></script>
+  <script src="informatica.js?v=202611271304"></script>
+  <script src="avisos.js?v=202611271304"></script>
+  <script src="pedagogico.js?v=202611271304"></script>
 </body>
 </html>
