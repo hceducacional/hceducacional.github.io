@@ -619,6 +619,7 @@ function removeAvatarFile(url) {
 
 /* ---------- Painel mestre: usuários ---------- */
 let usersCache = [], usersFilter = 'all', usersQuery = '';
+let usersPage = 1; const USERS_PER_PAGE = 25; const usersOpen = new Set(); // página atual e cartões abertos
 let turmasCache = null, turmaFilter = 'all'; // turmas de Informática (null = banco ainda sem a tabela)
 let turmaView = 'ativos'; // 'ativos' = ainda fazendo o curso · 'concluidos' = já terminaram
 const concluiu = (u) => !!u.informatica_concluido_em;
@@ -627,7 +628,7 @@ let tmAnim = 0; // direção da troca Ativos ⇄ Concluídos que ainda vai anima
 function switchTurmaView(view) {
   const box = $('#us-turmas'), list = $('#us-list');
   const dir = view === 'concluidos' ? 1 : -1;
-  const go = () => { turmaView = view; turmaFilter = 'all'; tmAnim = dir; drawUsers(); };
+  const go = () => { turmaView = view; turmaFilter = 'all'; usersPage = 1; tmAnim = dir; drawUsers(); };
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return go();
   const seg = box.querySelector('.tm-seg');
   seg.dataset.v = view;
@@ -659,17 +660,26 @@ function renderUsers(view) {
         <label class="us-search"><i data-icon="search"></i><input type="search" id="us-q" placeholder="Buscar por nome ou e-mail" value="${esc(usersQuery)}"></label>
       </div>
       <section class="tm-wrap" id="us-turmas" hidden></section>
+      <p class="us-count" id="us-count"></p>
       <div class="us-list" id="us-list"><p class="me-loading">Carregando usuários…</p></div>
+      <nav class="sc-pager" id="us-pager" aria-label="Páginas da lista de usuários"></nav>
     </div>`;
     paintIcons(view);
     view.querySelector('.us-filters').addEventListener('click', (e) => {
       const b = e.target.closest('[data-uf]'); if (!b) return;
-      usersFilter = b.dataset.uf;
+      usersFilter = b.dataset.uf; usersPage = 1;
       view.querySelectorAll('[data-uf]').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
       drawUsers();
     });
-    $('#us-q').addEventListener('input', (e) => { usersQuery = e.target.value; drawUsers(); });
-    $('#us-list').addEventListener('click', userAction);
+    $('#us-q').addEventListener('input', (e) => { usersQuery = e.target.value; usersPage = 1; drawUsers(); });
+    $('#us-list').addEventListener('click', (e) => { if (!e.target.closest('[data-ua]') && e.target.closest('[data-ux]')) return toggleUserCard(e.target.closest('.us-row')); userAction(e); });
+    $('#us-list').addEventListener('keydown', (e) => { const h = e.target.closest('[data-ux]'); if (h && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleUserCard(h.closest('.us-row')); } });
+    $('#us-pager').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-pg]'); if (!b || b.disabled) return;
+      usersPage = +b.dataset.pg; drawUsers();
+      const top = $('.us-bar').getBoundingClientRect().top + window.scrollY - 110;
+      if (window.scrollY > top) window.scrollTo({ top, behavior: 'smooth' });
+    });
     $('#us-turmas').addEventListener('click', (e) => {
       const ed = e.target.closest('[data-tm-edit]');
       if (ed) return turmaDialog(turmasCache.find((t) => t.id === ed.dataset.tmEdit));
@@ -677,7 +687,7 @@ function renderUsers(view) {
       const v = e.target.closest('[data-tv]');
       if (v) { if (turmaView !== v.dataset.tv) switchTurmaView(v.dataset.tv); return; }
       const c = e.target.closest('[data-tm]'); if (!c) return;
-      turmaFilter = c.dataset.tm; drawUsers();
+      turmaFilter = c.dataset.tm; usersPage = 1; drawUsers();
     });
     await loadUsers();
   });
@@ -701,25 +711,40 @@ function drawUsers() {
   const q = fold(usersQuery.trim());
   const inTurma = (u) => usersFilter !== 'info' || ((!turmasCache || concluiu(u) === (turmaView === 'concluidos')) && (turmaFilter === 'all' || (turmaFilter === 'none' ? !u.turma_id : u.turma_id === turmaFilter)));
   const rows = usersCache.filter((u) => match(u, usersFilter) && inTurma(u) && (!q || fold(`${u.name} ${u.email} ${u.username || ''}`).includes(q)));
+  const pages = Math.max(1, Math.ceil(rows.length / USERS_PER_PAGE));
+  usersPage = Math.min(Math.max(1, usersPage), pages);
+  const pg = usersPage, from = (pg - 1) * USERS_PER_PAGE, shown = rows.slice(from, from + USERS_PER_PAGE);
+  const cnt = $('#us-count'); if (cnt) cnt.textContent = rows.length ? (pages > 1 ? `${from + 1}–${from + shown.length} de ${rows.length.toLocaleString('pt-BR')} usuários` : `${rows.length} ${rows.length === 1 ? 'usuário' : 'usuários'}`) : '';
+  drawUsersPager(pg, pages);
   if (!rows.length) { list.innerHTML = `<p class="us-empty">${usersFilter === 'info' && turmaView === 'concluidos' && !q ? 'Ninguém concluiu o curso ainda. Quando um aluno terminar, use o botão "Concluiu" nele.' : usersCache.length ? 'Ninguém encontrado com esse filtro.' : 'Ainda não há cadastros.'}</p>`; list.classList.remove('us-leaving'); tmAnim = 0; return; }
   const me = auth.user.id;
-  list.innerHTML = rows.map((u) => `
-    <article class="us-row" data-id="${esc(u.id)}">
-      ${userAvatar(u, 'us-avatar')}
-      <div class="us-who">
-        <strong>${esc(u.name || 'Sem nome')}${u.id === me ? ' <em>(você)</em>' : ''}</strong>
-        <span>${u.username ? `<b class="us-user">@${esc(u.username)}</b> · ` : ''}${esc(u.email)}</span>
-        <small>Cadastro em ${new Date(u.created_at).toLocaleDateString('pt-BR')}</small>
+  list.innerHTML = shown.map((u) => {
+    const open = usersOpen.has(u.id);
+    const cats = [u.role === 'admin', u.pedagogico, u.informatica, concluiu(u), u.turma_id && turmaName(u.turma_id)].filter(Boolean).length;
+    return `
+    <article class="us-row ${open ? 'open' : ''}" data-id="${esc(u.id)}">
+      <div class="us-head" data-ux role="button" tabindex="0" aria-expanded="${open}" aria-controls="us-more-${esc(u.id)}">
+        ${userAvatar(u, 'us-avatar')}
+        <div class="us-who">
+          <strong>${esc(u.name || 'Sem nome')}${u.id === me ? ' <em>(você)</em>' : ''}</strong>
+          <span>${u.username ? `<b class="us-user">@${esc(u.username)}</b> · ` : ''}${esc(u.email)}</span>
+          <small>Cadastro em ${new Date(u.created_at).toLocaleDateString('pt-BR')}</small>
+        </div>
+        <span class="us-pill s-${esc(u.status)}">${esc(STATUS_TXT[u.status])}</span>
+        ${cats ? `<span class="us-ncat" title="${cats} ${cats === 1 ? 'categoria' : 'categorias'}">+${cats}</span>` : ''}
+        <i data-icon="chevron" class="us-chev"></i>
       </div>
-      <div class="us-tags">
+      <div class="us-more" id="us-more-${esc(u.id)}"${open ? '' : ' inert'}><div class="us-more-in">
+        <div class="us-sec"><span class="us-lbl">Categorias</span><div class="us-tags">
         <span class="us-pill s-${esc(u.status)}">${esc(STATUS_TXT[u.status])}</span>
         ${u.role === 'admin' ? '<span class="us-pill admin">Administrador</span>' : ''}
         ${u.pedagogico ? '<span class="us-pill ped"><i data-icon="cap"></i>Setor pedagógico</span>' : ''}
         ${u.informatica ? '<span class="us-pill info"><i data-icon="monitor"></i>Aluno de Informática</span>' : ''}
         ${concluiu(u) ? `<span class="us-pill done"><i data-icon="trophy"></i>Concluiu em ${new Date(u.informatica_concluido_em).toLocaleDateString('pt-BR')}</span>` : ''}
         ${u.turma_id && turmaName(u.turma_id) ? `<span class="us-pill tm tm-c${turmaColor(u.turma_id)}"><i data-icon="cap"></i>${esc(turmaName(u.turma_id))}</span>` : ''}
-      </div>
-      <div class="us-actions">
+        </div></div>
+        <div class="us-sec"><span class="us-lbl">Ações</span>
+          <div class="us-actions">
         ${u.status !== 'approved' ? `<button class="btn-dark sm" type="button" data-ua="approve"><i data-icon="check"></i>Aprovar</button>` : ''}
         ${u.status !== 'blocked' && u.id !== me ? `<button class="btn-soft sm" type="button" data-ua="block"><i data-icon="lock"></i>Bloquear</button>` : ''}
         ${isOwner() ? `<button class="btn-soft sm us-info-btn ${u.informatica ? 'on' : ''}" type="button" data-ua="info" aria-pressed="${!!u.informatica}" title="${u.informatica ? 'Tirar o acesso à Plataforma de Informática' : 'Marcar como aluno de Informática (libera a plataforma)'}"><i data-icon="monitor"></i>Informática</button>` : ''}
@@ -731,7 +756,10 @@ function drawUsers() {
         ${u.id !== me ? `<button class="icon-btn" type="button" data-ua="admin" title="${u.role === 'admin' ? 'Tirar de administrador' : 'Tornar administrador'}"><i data-icon="${u.role === 'admin' ? 'shieldOff' : 'shield'}"></i></button>
         <button class="icon-btn danger" type="button" data-ua="delete" title="Excluir conta"><i data-icon="trash"></i></button>` : ''}
       </div>
-    </article>`).join('');
+        </div>
+      </div></div>
+    </article>`;
+  }).join('');
   paintIcons(list);
   list.classList.remove('us-leaving');
   if (tmAnim) {
@@ -740,6 +768,26 @@ function drawUsers() {
     setTimeout(() => list.classList.remove('us-entering'), 900);
     tmAnim = 0;
   }
+}
+function toggleUserCard(row) {
+  if (!row) return;
+  const id = row.dataset.id, open = !usersOpen.has(id);
+  open ? usersOpen.add(id) : usersOpen.delete(id);
+  row.classList.toggle('open', open);
+  row.querySelector('[data-ux]').setAttribute('aria-expanded', open);
+  row.querySelector('.us-more').inert = !open;
+}
+function drawUsersPager(pg, pages) {
+  const box = $('#us-pager'); if (!box) return;
+  if (pages <= 1) { box.innerHTML = ''; return; }
+  // sempre a 1ª e a última, e as vizinhas da atual (1 … 4 5 6 … 42)
+  const nums = [...new Set([1, pg - 2, pg - 1, pg, pg + 1, pg + 2, pages])].filter((n) => n >= 1 && n <= pages).sort((a, b) => a - b);
+  const btns = []; nums.forEach((n, i) => { if (i && n - nums[i - 1] > 1) btns.push('<span class="sc-pg-gap">…</span>'); btns.push(`<button type="button" data-pg="${n}" class="${n === pg ? 'on' : ''}"${n === pg ? ' aria-current="page"' : ''}>${n}</button>`); });
+  box.innerHTML = `
+    <button type="button" class="sc-pg-arrow" data-pg="${pg - 1}" ${pg === 1 ? 'disabled' : ''} aria-label="Página anterior"><i data-icon="left"></i></button>
+    ${btns.join('')}
+    <button type="button" class="sc-pg-arrow" data-pg="${pg + 1}" ${pg === pages ? 'disabled' : ''} aria-label="Próxima página"><i data-icon="right"></i></button>`;
+  paintIcons(box);
 }
 /* ---------- Turmas de Informática (dentro do widget Informática) ---------- */
 const turmaName = (id) => turmasCache?.find((t) => t.id === id)?.nome || '';
