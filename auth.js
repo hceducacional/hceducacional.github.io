@@ -33,24 +33,51 @@ async function recoverSession() {
 const AVATAR_MAX = 480; // maior lado da foto de perfil (ela aparece no máximo com 128 px; 480 fica nítido até em telas 3x)
 
 /* Foto de perfil sempre recomprimida: reduz para no máximo 480 px no maior lado e salva em
-   WebP (ou JPEG, no Safari) com qualidade alta. Fica entre ~20 e 60 KB, sem perda visível. */
+   WebP (ou JPEG, no Safari) com qualidade alta. Fica entre ~20 e 60 KB, sem perda visível.
+   Alguns navegadores (proteção contra rastreamento, navegador dentro do Instagram/WhatsApp,
+   foto ainda não decodificada) devolvem o desenho vazio: aí sairia uma foto toda branca.
+   Por isso confere o resultado, tenta de novo e, em último caso, envia a foto original. */
+const AVATAR_RAW_OK = ['image/jpeg', 'image/png', 'image/webp'];
+function canvasBlank(c) {
+  try {
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    const step = Math.max(4, Math.floor(d.length / 4 / 4000) * 4); // ~4 mil pontos bastam
+    for (let i = 0; i < d.length; i += step) if (d[i] < 250 || d[i + 1] < 250 || d[i + 2] < 250) return false;
+    return true;
+  } catch { return null; } // navegador não deixa conferir
+}
 function compressAvatar(file) {
+  const toBlob = (c) => new Promise((ok) => c.toBlob((webp) => (webp && webp.type === 'image/webp' ? ok(webp) : c.toBlob(ok, 'image/jpeg', .86)), 'image/webp', .84));
+  const draw = (src, w, h) => {
+    const k = Math.min(1, AVATAR_MAX / Math.max(w, h));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); // fundo branco se a foto tiver transparência
+    ctx.drawImage(src, 0, 0, c.width, c.height);
+    return c;
+  };
+  const original = () => (AVATAR_RAW_OK.includes(file.type) && file.size <= 4e6 ? file : null);
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const k = Math.min(1, AVATAR_MAX / Math.max(img.width, img.height));
-      const c = document.createElement('canvas');
-      c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k));
-      const ctx = c.getContext('2d');
-      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); // fundo branco se a foto tiver transparência
-      ctx.drawImage(img, 0, 0, c.width, c.height);
-      c.toBlob((webp) => {
-        if (webp && webp.type === 'image/webp') return resolve(webp);
-        c.toBlob((jpg) => (jpg ? resolve(jpg) : reject(new Error('Não foi possível preparar a foto.'))), 'image/jpeg', .86);
-      }, 'image/webp', .84);
+    img.onload = async () => {
+      try {
+        if (img.decode) await img.decode().catch(() => {});
+        let c = draw(img, img.naturalWidth || img.width, img.naturalHeight || img.height);
+        let blank = canvasBlank(c);
+        if (blank && window.createImageBitmap) { // segunda tentativa, por outro caminho
+          const bmp = await createImageBitmap(file).catch(() => null);
+          if (bmp) { c = draw(bmp, bmp.width, bmp.height); blank = canvasBlank(c); bmp.close?.(); }
+        }
+        URL.revokeObjectURL(url);
+        if (blank === false) { const b = await toBlob(c); return b ? resolve(b) : reject(new Error('Não foi possível preparar a foto.')); }
+        const raw = original();
+        if (raw) return resolve(raw);
+        if (blank === null) { const b = await toBlob(c); if (b) return resolve(b); }
+        reject(new Error('Este navegador não conseguiu preparar a foto. Tente pelo Chrome ou pelo Safari.'));
+      } catch (err) { URL.revokeObjectURL(url); reject(err); }
     };
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Esse arquivo não é uma imagem válida.')); };
     img.src = url;
@@ -753,6 +780,7 @@ function drawUsers() {
         <button class="icon-btn us-at" type="button" data-ua="username" title="${u.username ? 'Trocar' : 'Definir'} o nome de usuário">@</button>
         <button class="icon-btn" type="button" data-ua="reset" title="Enviar link de nova senha por e-mail"><i data-icon="mail"></i></button>
         <button class="icon-btn" type="button" data-ua="setpass" title="Definir uma senha nova"><i data-icon="key"></i></button>
+        ${u.avatar_url ? `<button class="icon-btn" type="button" data-ua="nophoto" title="Remover a foto de perfil"><i data-icon="image"></i></button>` : ''}
         ${u.id !== me ? `<button class="icon-btn" type="button" data-ua="admin" title="${u.role === 'admin' ? 'Tirar de administrador' : 'Tornar administrador'}"><i data-icon="${u.role === 'admin' ? 'shieldOff' : 'shield'}"></i></button>
         <button class="icon-btn danger" type="button" data-ua="delete" title="Excluir conta"><i data-icon="trash"></i></button>` : ''}
       </div>
@@ -924,7 +952,7 @@ async function userAction(e) {
     b.disabled = true;
     const { error } = await sb.rpc(fn, args);
     b.disabled = false;
-    if (error) return toast(/concluido/i.test(error.message || '') && !/conta mestre/i.test(error.message || '') ? 'Falta atualizar o banco: rode o script 20-informatica-concluidos.sql no Supabase.' : /informatica/i.test(error.message || '') ? 'Falta atualizar o banco: rode o script 07-alunos-informatica.sql no Supabase.' : /pedagogico/i.test(error.message || '') ? 'Falta atualizar o banco: rode o script 15-setor-pedagogico.sql no Supabase.' : authError(error)), false;
+    if (error) return toast(/concluido/i.test(error.message || '') && !/conta mestre/i.test(error.message || '') ? 'Falta atualizar o banco: rode o script 20-informatica-concluidos.sql no Supabase.' : /informatica/i.test(error.message || '') ? 'Falta atualizar o banco: rode o script 07-alunos-informatica.sql no Supabase.' : /pedagogico/i.test(error.message || '') ? 'Falta atualizar o banco: rode o script 15-setor-pedagogico.sql no Supabase.' : /admin_clear_avatar/i.test(error.message || '') ? 'Falta atualizar o banco: rode o script 24-remover-foto.sql no Supabase.' : authError(error)), false;
     toast(okMsg); await loadUsers(); return true;
   };
   switch (b.dataset.ua) {
@@ -956,6 +984,11 @@ async function userAction(e) {
       const on = !u.pedagogico;
       if (!on && !(await confirmDialog({ title: `Tirar ${who} do setor pedagógico?`, sub: 'A pessoa deixa de ver os avisos de agendamento no cabeçalho.', ok: 'Tirar', icon: 'cap' }))) return;
       return rpc('admin_set_pedagogico', { target: u.id, value: on }, on ? `${who} agora é do setor pedagógico.` : `${who} não é mais do setor pedagógico.`)
+        .then((ok) => { if (ok && u.id === auth.user.id) refreshMe(); });
+    }
+    case 'nophoto': {
+      if (!(await confirmDialog({ title: `Remover a foto de ${who}?`, sub: 'No lugar dela, aparecem as iniciais do nome. A pessoa pode enviar outra em "Meu perfil".', image: u.avatar_url, ok: 'Remover' }))) return;
+      return rpc('admin_clear_avatar', { target: u.id }, `Foto de ${who} removida.`)
         .then((ok) => { if (ok && u.id === auth.user.id) refreshMe(); });
     }
     case 'reset': {
