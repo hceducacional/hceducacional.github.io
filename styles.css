@@ -5464,7 +5464,7 @@ a.sc-row:hover, .sc-row:hover { background: #f5f5f7; }
 }
 
 /* ---------- Indicações: regulamento "Indique um amigo" ---------- */
-.rf-body > .rf-in > section, .rf-body > section, .rf-body > details, .rf-body > .rf-in > details { max-width: 860px; margin-left: auto; margin-right: auto; }
+.rf-side > section, .rf-rest > section, .rf-rest > details { max-width: 860px; margin-left: auto; margin-right: auto; }
 .rf-ways { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
 .rf-way { position: relative; overflow: hidden; padding: 24px; border-radius: 28px; color: #fff; box-shadow: 0 18px 40px -24px rgba(0, 0, 0, .45); }
 .rf-way.w-now { background: linear-gradient(145deg, #10b981, #047857); }
@@ -5554,3 +5554,34 @@ a.sc-row:hover, .sc-row:hover { background: #f5f5f7; }
 .rf-counts .c-used b { color: #6d28d9; }
 .rf-card .rf-counts { grid-template-columns: repeat(4, 1fr); }
 @media (max-width: 860px) { .rf-card .rf-counts { grid-template-columns: repeat(2, 1fr); } .rf-either { font-size: 14px; padding: 12px 14px; } }
+
+/* =========================================================
+   INDICAÇÕES — no computador, como o Agendar: título à esquerda,
+   resumo (ou as duas formas de ganhar, sem conta) à direita e o resto embaixo
+   ========================================================= */
+@media (min-width: 1100px) {
+  .ref { max-width: 1320px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 600px); column-gap: 56px; align-items: start; }
+  .ref > .ref-hero { grid-column: 1; grid-row: 1; align-self: center; text-align: left; padding: 24px 0 0; }
+  .ref-hero .ref-orb { width: 190px; height: 190px; margin: 0 0 18px -6px; }
+  .ref-hero .ref-ring.r2 { inset: 26px; } .ref-hero .ref-ring.r3 { inset: 52px; }
+  .ref-hero .orb-spin { --r: 86px !important; }
+  .ref-hero .ref-title { font-size: clamp(42px, 4.2vw, 64px); }
+  .ref-hero .ref-sub { margin-left: 0; margin-right: 0; max-width: 520px; font-size: 19px; }
+  .ref-hero .rf-cta { justify-content: flex-start; }
+  .ref-glow { inset: -140px -80px -200px -120px; }
+  .rf-body { display: contents; }
+  .rf-side { grid-column: 2; grid-row: 1; align-self: center; margin-top: 24px; }
+  .rf-side > section { max-width: none; }
+  .rf-side .rf-card { margin-bottom: 0; }
+  .rf-side .rf-goal { grid-template-columns: auto minmax(0, 1fr); }
+  .rf-side .rf-goal .rf-goal-btn { grid-column: 1 / -1; justify-self: start; }
+  .rf-side .rf-ways { grid-template-columns: 1fr; margin-bottom: 0; }
+  .rf-side .rf-list { max-height: 360px; overflow-y: auto; }
+  .rf-rest { grid-column: 1 / -1; margin-top: 56px; }
+  .rf-rest > section, .rf-rest > details, .rf-rest > .rf-sec-t { max-width: none; }
+  .rf-rest .rf-ways { grid-template-columns: 1fr 1fr; }
+  .rf-rest .rf-calc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 40px; padding: 32px; }
+  .rf-rest .rf-sub-t { margin-top: 0; }
+  .rf-rest .rf-calc-b { padding-top: 6px; }
+  .ref-steps.rf-steps4 { max-width: none; grid-template-columns: repeat(4, 1fr); }
+}

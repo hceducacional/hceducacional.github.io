@@ -73,10 +73,7 @@ const refSteps = () => `
   </section>`;
 
 /* as duas formas de ganhar, a calculadora, o passo a passo e as regras (com e sem conta) */
-function refInfo(conf) {
-  const logged = conf != null;
-  const chips = (name, opts, cur) => `<div class="rf-chips" role="radiogroup" data-chips="${name}">${opts.map(([k, t]) => `<button type="button" role="radio" aria-checked="${k === cur}" data-v="${k}" class="${k === cur ? 'on' : ''}">${t}</button>`).join('')}</div>`;
-  return `
+const refWays = () => `
     <section class="rf-ways">
       <article class="rf-way w-now">
         <span class="rf-way-ico"><i data-icon="check"></i></span>
@@ -92,19 +89,27 @@ function refInfo(conf) {
       </article>
       <p class="rf-either"><b>Cada indicação vale uma vez.</b> A que você usar como desconto não conta mais para a bolsa. Quer a bolsa? Guarde as indicações sem resgatar.</p>
       <p class="rf-out-note"><i data-icon="userPlus"></i><span><b>Não é aluno?</b> Você também pode indicar e recebe o valor em depósito.</span></p>
-    </section>
-
+    </section>`;
+/* simulador, passo a passo e regras (abaixo das duas colunas no computador) */
+function refMore(conf) {
+  const logged = conf != null;
+  const chips = (name, opts, cur) => `<div class="rf-chips" role="radiogroup" data-chips="${name}">${opts.map(([k, t]) => `<button type="button" role="radio" aria-checked="${k === cur}" data-v="${k}" class="${k === cur ? 'on' : ''}">${t}</button>`).join('')}</div>`;
+  return `
     <section class="rf-calc" id="rf-calc">
+      <div class="rf-calc-a">
       <header><p class="rf-kick">Simulador</p><h2>Quanto eu ganho?</h2></header>
       <label class="rf-lbl">Eu faço</label>
       ${chips('me', REF_ME, refPick('me', 'grad'))}
       <label class="rf-lbl">Meu amigo vai fazer</label>
       ${chips('fr', REF_FRIEND, refPick('fr', 'grad'))}
       <div class="rf-gain" id="rf-gain" aria-live="polite"></div>
+      </div>
+      <div class="rf-calc-b">
       <h3 class="rf-sub-t">Bolsas acumulando indicações</h3>
       <p class="rf-sub-p">${logged ? 'Contam só as indicações confirmadas que você ainda não usou como desconto.' : 'Contam só as indicações confirmadas que ainda não foram usadas como desconto.'}</p>
       <div class="rf-bolsas" id="rf-bolsas"></div>
       ${logged ? '' : '<p class="rf-calc-foot">Entre na sua conta para ver quanto falta para cada bolsa.</p>'}
+      </div>
     </section>
 
     <h2 class="rf-sec-t">Como funciona</h2>
@@ -181,7 +186,7 @@ function renderReferral(view) {
     const first = (meName() || '').split(' ')[0], t = $('#rf-title');
     if (t && first) t.innerHTML = `<span>${esc(first)},</span> <span class="ap-grad">suas indicações.</span>`;
   } else {
-    view.innerHTML = `<div class="wrap ref">${refHeroHTML(out)}<div class="rf-body" id="rf-body">${out ? refInfo(null) : ''}</div></div>`;
+    view.innerHTML = `<div class="wrap ref">${refHeroHTML(out)}<div class="rf-body" id="rf-body">${out ? `<div class="rf-side">${refWays()}</div><div class="rf-rest">${refMore(null)}</div>` : ''}</div></div>`;
     paintIcons(view);
     if (out) refBindCalc(view, null);
   }
@@ -211,7 +216,7 @@ async function refLoadMine(id) {
   list.slice(0, 3).forEach((r, k) => { const av = document.querySelector(`.rf-hero .ref-av.a${k + 1}`); if (av) av.textContent = initials(r.name); });
 
   const rs = (n) => `${n} ${n === 1 ? 'desconto' : 'descontos'}`;
-  body.innerHTML = `
+  body.innerHTML = `<div class="rf-side">
     ${conf ? `
     <section class="rf-goal rf-in">
       <span class="rf-goal-ico"><i data-icon="star"></i></span>
@@ -246,7 +251,8 @@ async function refLoadMine(id) {
         </div>`}
       </div>
     </section>
-    <div class="rf-in" style="--d:${conf ? 2 : 1}">${refInfo(conf)}</div>`;
+    </div>
+    <div class="rf-rest rf-in" style="--d:${conf ? 2 : 1}">${refWays()}${refMore(conf)}</div>`;
   refBindCalc(body, conf);
   paintIcons(body);
 }
