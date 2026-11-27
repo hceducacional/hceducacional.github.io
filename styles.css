@@ -4629,3 +4629,16 @@ html.lk-lock, html.lk-lock body { overflow: hidden; }
 @keyframes helloIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes helloMarq { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .tb-hello.marq .tb-hello-in { animation: helloIn .01s both !important; } }
+
+/* celular: no lugar do sol/lua, um ponto que diz se o polo está atendendo agora */
+.hw-live { display: none; }
+@media (max-width: 860px) {
+  .hw-ico { display: none; }
+  .hw-live { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; letter-spacing: -.01em; }
+  .hw-live i { position: relative; width: 9px; height: 9px; border-radius: 50%; background: rgba(120, 120, 128, .9); box-shadow: 0 0 0 2px rgba(255, 255, 255, .35); }
+  .hw-live.on i { background: #30d158; box-shadow: 0 0 0 2px rgba(255, 255, 255, .55), 0 0 10px rgba(48, 209, 88, .8); }
+  .hw-live.on i::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: #30d158; animation: hwLive 1.8s ease-out infinite; }
+  .hw-live:not(.on) span { opacity: .8; }
+}
+@keyframes hwLive { from { transform: scale(1); opacity: .7; } to { transform: scale(2.8); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .hw-live i::after { animation: none !important; } }

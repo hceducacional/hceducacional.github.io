@@ -3663,6 +3663,9 @@ function hoursState(now = new Date()) {
     el.querySelector('.hw-end small').textContent = PHONE() && st.endSmall.length > 5 ? (st.mode === 'closed' ? 'abre' : 'até') : st.endSmall;
     el.querySelector('.hw-end b').textContent = st.endLabel;
     el.style.setProperty('--p', Math.min(1, Math.max(0, st.progress)).toFixed(4));
+    // celular: ponto verde = atendimento aberto agora; cinza = fechado (almoço, noite, fim de semana)
+    const live = el.querySelector('.hw-live'), on = st.mode === 'open';
+    live.classList.toggle('on', on); live.querySelector('span').textContent = on ? 'Aberto' : 'Fechado';
     if (st.icon !== lastIcon) { el.querySelector('.hw-ico').innerHTML = st.icon === 'moon' ? MOON : SUN; lastIcon = st.icon; }
     el.setAttribute('aria-label', `Horário de atendimento: ${st.status}. ${st.remaining}`);
 
