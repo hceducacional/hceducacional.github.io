@@ -5384,3 +5384,16 @@ a.sc-row:hover, .sc-row:hover { background: #f5f5f7; }
   .mp-pin:hover circle, .mp-pin.sel circle { transform: scale(2.1); }
   .mp-svg path { stroke-width: 2.4; }
 }
+
+/* Secretaria — páginas da lista de alunos (50 por página) */
+.sc-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; margin: 18px 0 8px; }
+.sc-pager:empty { display: none; }
+.sc-pager button { min-width: 40px; height: 40px; padding: 0 10px; border: 0; border-radius: 999px; background: #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, .06); font: 600 14px/1 "Inter", sans-serif; color: var(--ink-2); font-variant-numeric: tabular-nums; cursor: pointer; transition: background .2s, color .2s, transform .15s; }
+.sc-pager button:hover:not(:disabled):not(.on) { background: var(--line-soft); }
+.sc-pager button:active:not(:disabled) { transform: scale(.94); }
+.sc-pager button.on { background: linear-gradient(150deg, #34c759, #1f9d55); color: #fff; box-shadow: 0 6px 14px -6px rgba(31, 157, 85, .6); }
+.sc-pager button:disabled { opacity: .35; cursor: default; }
+.sc-pg-arrow { display: grid; place-items: center; }
+.sc-pg-arrow i { width: 18px; height: 18px; display: grid; }
+.sc-pg-gap { min-width: 18px; text-align: center; color: var(--faint); font-weight: 700; }
+@media (max-width: 560px) { .sc-pager { gap: 4px; } .sc-pager button { min-width: 36px; height: 36px; padding: 0 8px; font-size: 13.5px; } }

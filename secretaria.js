@@ -388,9 +388,10 @@ function secBindTarefas(root) {
 /* =========================================================
    ALUNOS — lista com busca e filtros
    ========================================================= */
-const secListState = { q: '', status: '', fac: '', limit: 60 };
+const secListState = { q: '', status: '', fac: '', page: 1 };
+const SEC_POR_PAGINA = 50;
 function secAlunos(view, status) {
-  if (status != null) secListState.status = status;
+  if (status != null && status !== secListState.status) { secListState.status = status; secListState.page = 1; }
   const facs = secLista('faculdade', true);
   const body = `
     <div class="sc-tools">
@@ -402,7 +403,8 @@ function secAlunos(view, status) {
       ${Object.entries(SEC_STATUS).map(([s, [t, c]]) => `<button type="button" data-st="${s}" style="--c:${c}" class="${secListState.status === s ? 'on' : ''}"><i></i>${t}</button>`).join('')}
     </div>
     <p class="sc-result" id="sc-count"></p>
-    <div class="sc-list" id="sc-list"></div>`;
+    <div class="sc-list" id="sc-list"></div>
+    <nav class="sc-pager" id="sc-pager" aria-label="Páginas da lista"></nav>`;
   secShell(view, 'alunos', 'Alunos', 'Toque num aluno para abrir a ficha completa.', body);
   const draw = () => {
     const q = secFold(secListState.q.trim()), qd = q.replace(/\D/g, '');
@@ -413,8 +415,13 @@ function secAlunos(view, status) {
       if (secListState.fac && !ms.some((m) => secCurso(m.curso_id)?.faculdade_id === secListState.fac)) return false;
       return true;
     });
-    $('#sc-count').textContent = `${list.length} ${list.length === 1 ? 'aluno' : 'alunos'}`;
-    const more = list.length > secListState.limit; list = list.slice(0, secListState.limit);
+    // páginas de 50: 1 2 3 … (a página escolhida fica guardada ao abrir uma ficha e voltar)
+    const total = list.length, pages = Math.max(1, Math.ceil(total / SEC_POR_PAGINA));
+    const pg = secListState.page = Math.min(Math.max(1, secListState.page), pages);
+    const de = (pg - 1) * SEC_POR_PAGINA;
+    const fmt = (n) => n.toLocaleString('pt-BR');
+    $('#sc-count').textContent = total > SEC_POR_PAGINA ? `${fmt(de + 1)}–${fmt(Math.min(de + SEC_POR_PAGINA, total))} de ${fmt(total)} alunos` : `${fmt(total)} ${total === 1 ? 'aluno' : 'alunos'}`;
+    list = list.slice(de, de + SEC_POR_PAGINA);
     $('#sc-list').innerHTML = list.length ? list.map((a) => {
       const ms = secMatsDe(a.id), m = ms[0], c = m && secCurso(m.curso_id);
       return `<a class="sc-item" href="#secretaria/aluno/${a.id}">
@@ -422,15 +429,28 @@ function secAlunos(view, status) {
         <span class="sc-item-t"><b>${esc(a.nome)}</b><small>Cód. ${a.codigo} · CPF ${secCpfFmt(a.cpf)}${a.celular ? ' · ' + esc(a.celular) : ''}</small></span>
         <span class="sc-item-c">${c ? `<small>${esc(c.nome)}${ms.length > 1 ? ` <em>+${ms.length - 1}</em>` : ''}</small>` : '<small class="sc-faint">Sem matrícula</small>'}${m ? secStatusPill(m.status) : ''}</span>
         <i data-icon="right" class="sc-go"></i></a>`;
-    }).join('') + (more ? '<button type="button" class="btn-soft sc-more" id="sc-more">Mostrar mais</button>' : '')
+    }).join('')
       : `<div class="sc-none"><p>Nenhum aluno encontrado.</p><a class="btn-dark" href="#secretaria/aluno/novo">Cadastrar aluno</a></div>`;
     paintIcons($('#sc-list'));
-    $('#sc-more')?.addEventListener('click', () => { secListState.limit += 60; draw(); });
+    // números das páginas: sempre a 1ª e a última, e as vizinhas da atual (1 … 4 5 6 … 42)
+    const nums = [...new Set([1, pg - 2, pg - 1, pg, pg + 1, pg + 2, pages])].filter((n) => n >= 1 && n <= pages).sort((a, b) => a - b);
+    const btns = []; nums.forEach((n, i) => { if (i && n - nums[i - 1] > 1) btns.push('<span class="sc-pg-gap">…</span>'); btns.push(`<button type="button" data-pg="${n}" class="${n === pg ? 'on' : ''}"${n === pg ? ' aria-current="page"' : ''}>${n}</button>`); });
+    $('#sc-pager').innerHTML = pages > 1 ? `
+      <button type="button" class="sc-pg-arrow" data-pg="${pg - 1}" ${pg === 1 ? 'disabled' : ''} aria-label="Página anterior"><i data-icon="left"></i></button>
+      ${btns.join('')}
+      <button type="button" class="sc-pg-arrow" data-pg="${pg + 1}" ${pg === pages ? 'disabled' : ''} aria-label="Próxima página"><i data-icon="right"></i></button>` : '';
+    paintIcons($('#sc-pager'));
   };
-  $('#sc-q').addEventListener('input', (e) => { secListState.q = e.target.value; secListState.limit = 60; draw(); });
-  $('#sc-fac').addEventListener('change', (e) => { secListState.fac = e.target.value; draw(); });
+  $('#sc-pager').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-pg]'); if (!b || b.disabled) return;
+    secListState.page = +b.dataset.pg; draw();
+    const top = $('.sc-tools').getBoundingClientRect().top + window.scrollY - 110;
+    if (window.scrollY > top) window.scrollTo({ top, behavior: 'smooth' });
+  });
+  $('#sc-q').addEventListener('input', (e) => { secListState.q = e.target.value; secListState.page = 1; draw(); });
+  $('#sc-fac').addEventListener('change', (e) => { secListState.fac = e.target.value; secListState.page = 1; draw(); });
   view.querySelectorAll('[data-st]').forEach((b) => b.addEventListener('click', () => {
-    secListState.status = b.dataset.st; history.replaceState(null, '', '#secretaria/alunos' + (b.dataset.st ? '/' + b.dataset.st : ''));
+    secListState.status = b.dataset.st; secListState.page = 1; history.replaceState(null, '', '#secretaria/alunos' + (b.dataset.st ? '/' + b.dataset.st : ''));
     view.querySelectorAll('[data-st]').forEach((x) => x.classList.toggle('on', x === b)); draw();
   }));
   draw();
