@@ -131,7 +131,7 @@ window.HC_CONTENT = {
         "O HC Instituto Educacional parabeniza todos os alunos por essa conquista e reforça o compromisso de acompanhar cada etapa dessa jornada. Como dizia a mensagem que estampou o cenário da noite: aqui não existem obstáculos para os seus sonhos!"
       ],
       "date": "2026-10-20",
-      "rank": 0,
+      "rank": 1,
       "star": true,
       "focus": [
         "56% 38%",
@@ -162,7 +162,7 @@ window.HC_CONTENT = {
         "O HC Instituto Educacional parabeniza todos os formandos e deseja que essa nova etapa seja repleta de realizações. Em breve, mais novidades sobre a cerimônia!"
       ],
       "date": "2026-09-18",
-      "rank": 2,
+      "rank": 3,
       "star": true,
       "focus": [
         "50% 36%",
@@ -193,7 +193,7 @@ window.HC_CONTENT = {
         "O HC Instituto Educacional agradece a todos os alunos e parceiros que doaram e participaram da ação. Juntos, fizemos o Dia das Crianças de muita gente ainda mais feliz!"
       ],
       "date": "2026-10-12",
-      "rank": 1,
+      "rank": 2,
       "star": true,
       "focus": [
         "50% 45%",
@@ -222,7 +222,7 @@ window.HC_CONTENT = {
         "O HC Instituto Educacional agradece a todos os profissionais e alunos que participaram e fizeram deste encontro uma experiência tão especial."
       ],
       "date": "2026-04-19",
-      "rank": 3,
+      "rank": 4,
       "star": true,
       "focus": [
         "47% 35%",
@@ -255,8 +255,7 @@ window.HC_CONTENT = {
         "E tem mais: os cursos do Centro Universitário FAVENIHC têm nota máxima 5 no MEC. Quer saber mais? Siga @favenihc e @hceducacional no Instagram ou fale com o nosso Setor Comercial."
       ],
       "date": "2026-02-19",
-      "rank": 4,
-      "star": true,
+      "star": false,
       "focus": [
         "82% 14%",
         "50% 12%"
@@ -303,6 +302,39 @@ window.HC_CONTENT = {
         "assets/conteudo/noticia-n1794527770981-g4-48eab0f1.jpg"
       ],
       "authorId": "a1"
+    },
+    {
+      "id": "n1795544048734",
+      "cat": "Comunicados",
+      "body": [
+        "O HC Instituto Educacional vai lançar em breve o seu novo site. A plataforma reúne num só lugar os estudos, as novidades e os serviços acadêmicos do instituto, e foi pensada para facilitar a vida de alunos e visitantes.",
+        "[imagem 1]",
+        "Uma parte do site já está no ar. Os estudantes de graduação do Polo Humberto de Campos já podem usar a função de agendamentos para marcar provas e tutorias presenciais. O processo leva menos de um minuto, e o aluno consegue ver na hora quais turnos ainda têm vagas.",
+        "[imagem 2]",
+        "Com o lançamento completo, o site também vai dar acesso direto às plataformas de ensino, como a Plataforma de Informática, onde o aluno acompanha o próprio progresso nos cursos.",
+        "Outra novidade é a seção Acontece no HC, que vai reunir eventos, formaturas, conquistas e comunicados oficiais do instituto.",
+        "O site também terá um Programa de Indicações. Quem indicar amigos para estudar no HC poderá acompanhar pelo site as indicações confirmadas e ganhar prêmios e vantagens.",
+        "No topo da página, um aviso vai mostrar em tempo real se o polo está aberto, o que evita viagens perdidas fora do horário de atendimento.",
+        "[imagem 3]",
+        "A data do lançamento completo ainda não foi divulgada. Até lá, os alunos já podem usar o agendamento online para garantir seus horários no polo."
+      ],
+      "date": "2026-11-24",
+      "rank": 0,
+      "star": true,
+      "focus": [
+        "40% 57%",
+        "",
+        ""
+      ],
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/eae21ea0-5d2d-403c-aca3-013f31047513.webp",
+      "title": "HC Instituto Educacional prepara lançamento de novo site",
+      "author": "Mateus Sousa",
+      "excerpt": "Prepare-se para o lançamento completo em breve; sistema de agendamentos já está no ar!",
+      "gallery": [
+        "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/c613962a-c972-4b17-a532-9e52f04f7f55.webp",
+        "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/4e8c9576-81e2-4a15-a175-fcd0a20e0484.webp"
+      ],
+      "authorId": "amwew9xh2"
     }
   ],
   "brand": [
@@ -467,8 +499,78 @@ window.HC_CONTENT = {
       "ico": "cpu",
       "desc": "O que é informática, a história do computador, hardware e software, os tipos de computador e as peças que fazem tudo funcionar.",
       "kind": "disc",
-      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/117238e0-ea8d-4155-b6ad-d9fb43970f89.webp",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/7cc206a2-2b66-4b47-886c-434ba5bf2b01.webp",
       "titulo": "Introdução à Informática",
+      "visivel": true
+    },
+    {
+      "id": "d2",
+      "cor": 1,
+      "ico": "win",
+      "desc": "Área de trabalho, menu Iniciar, janelas, pastas e arquivos, atalhos e personalização: o Windows sem mistério.",
+      "kind": "disc",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/a0c0df66-9d99-48f2-87b5-074150d78ea1.webp",
+      "titulo": "Sistema Operacional Windows",
+      "visivel": true
+    },
+    {
+      "id": "d3",
+      "cor": 2,
+      "ico": "doc",
+      "desc": "Do primeiro documento à impressão: digitar, formatar, inserir imagens e tabelas, salvar e usar os atalhos do Word.",
+      "kind": "disc",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/57a2cfb4-d602-4304-9cfe-3eb6200039e6.webp",
+      "titulo": "Editor de Textos: Word",
+      "visivel": true
+    },
+    {
+      "id": "d4",
+      "cor": 3,
+      "ico": "sheet",
+      "desc": "Células, fórmulas, funções e gráficos: organize números e faça contas automáticas com o Excel.",
+      "kind": "disc",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/8d187d9f-547d-4f8f-9672-de1e31ca0f86.webp",
+      "titulo": "Planilhas Eletrônicas: Excel",
+      "visivel": true
+    },
+    {
+      "id": "d5",
+      "cor": 4,
+      "ico": "globe",
+      "desc": "Como a internet funciona, os navegadores, pesquisas no Google, e-mail e os cuidados para navegar com segurança.",
+      "kind": "disc",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/4afd3935-9086-448d-ae3f-a41c4c3db5ac.webp",
+      "titulo": "Internet e Navegadores",
+      "visivel": true
+    },
+    {
+      "id": "d6",
+      "cor": 5,
+      "ico": "chat",
+      "desc": "WhatsApp, Facebook e Instagram com responsabilidade: publicar, conversar e proteger a sua privacidade.",
+      "kind": "disc",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/d8f2e89d-efc6-4d03-af54-4b9ae66c47bb.webp",
+      "titulo": "Redes Sociais e Comunicação Digital",
+      "visivel": true
+    },
+    {
+      "id": "d7",
+      "cor": 6,
+      "ico": "shield",
+      "desc": "Antivírus, atualizações, senhas fortes, golpes e sites seguros: proteja o seu computador e os seus dados.",
+      "kind": "disc",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/940b2371-30ff-4052-bdfa-9e1f09249b69.webp",
+      "titulo": "Segurança Digital",
+      "visivel": true
+    },
+    {
+      "id": "d8",
+      "cor": 7,
+      "ico": "zap",
+      "desc": "Os atalhos que poupam tempo, dicas para usar o computador mais rápido, recursos de acessibilidade e o glossário.",
+      "kind": "disc",
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/187efa99-9c32-4469-be3c-1a4ee9c44565.webp",
+      "titulo": "Atalhos, Produtividade e Acessibilidade",
       "visivel": true
     }
   ],
@@ -492,19 +594,19 @@ window.HC_CONTENT = {
       "c1": "#34d399",
       "c2": "#047857",
       "id": "f1",
-      "url": "",
+      "url": "https://universa.unifaveni.com.br/financeiro/painel/titulos",
       "kind": "btn",
-      "name": "Boletos e 2ª via",
+      "name": "FAVENI",
       "image": "",
       "panel": "h-fin"
     },
     {
-      "c1": "#fbbf24",
-      "c2": "#c2410c",
+      "c1": "#00103c",
+      "c2": "#002246",
       "id": "f2",
-      "url": "",
+      "url": "https://universa.abeu.edu.br/financeiro/painel/titulos",
       "kind": "btn",
-      "name": "Negociar mensalidades",
+      "name": "UNIABEU",
       "image": "",
       "panel": "h-fin"
     },
@@ -517,22 +619,52 @@ window.HC_CONTENT = {
       "title": "EM BREVE"
     },
     {
-      "c1": "#60a5fa",
-      "c2": "#1e3a8a",
-      "id": "hb1794923815354",
-      "url": "",
+      "c1": "#00549f",
+      "c2": "#919191",
+      "id": "hb1795548348403",
+      "url": "https://universa.unisba.edu.br/financeiro/painel/titulos",
       "kind": "btn",
-      "name": "NOVO BOTÃO",
+      "name": "UNISBA",
       "image": "",
-      "panel": "hp1794923815354"
+      "panel": "h-fin"
+    },
+    {
+      "c1": "#ff9d00",
+      "c2": "#0062ad",
+      "id": "hb1795548430693",
+      "url": "https://universa.domalberto.com.br/financeiro/painel/titulos",
+      "kind": "btn",
+      "name": "DOM ALBERTO",
+      "image": "",
+      "panel": "h-fin"
+    },
+    {
+      "c1": "#21a4c4",
+      "c2": "#0e7490",
+      "id": "hb1795548553139",
+      "url": "https://universa.faculdadefutura.com.br/financeiro/painel/titulos",
+      "kind": "btn",
+      "name": "FUTURA",
+      "image": "",
+      "panel": "h-fin"
+    },
+    {
+      "c1": "#22c55e",
+      "c2": "#000000",
+      "id": "hb1795548591882",
+      "url": "https://universa.faveni.edu.br/financeiro/painel/titulos",
+      "kind": "btn",
+      "name": "PÓS-GRADUAÇÃO",
+      "image": "",
+      "panel": "h-fin"
     },
     {
       "c1": "#22c55e",
       "c2": "#0e7490",
-      "id": "hb1794923819811",
+      "id": "hb1795548774420",
       "url": "",
       "kind": "btn",
-      "name": "NOVO BOTÃO",
+      "name": "EM BREVE",
       "image": "",
       "panel": "hp1794923815354"
     }

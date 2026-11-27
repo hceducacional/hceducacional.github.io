@@ -416,7 +416,11 @@ function openAuth(mode = 'login', data = {}) {
       const { data: res, error } = await sb.auth.signUp({ email, password: pass, options: { data: { name, username }, emailRedirectTo: siteUrl() } });
       busy(false);
       if (error) return msg(authError(error));
-      if (res.session) { await setUser(res.user); close(); return toast('Conta criada!'); }
+      if (res.session) {
+        await setUser(res.user); close();
+        if (auth.profile?.status === 'pending') return openAuth('info', { title: 'Conta criada', icon: 'clock', tone: 'wait', text: 'Pronto! Agora é só aguardar: a secretaria do polo vai liberar o seu acesso em breve.' });
+        return toast('Conta criada!');
+      }
       draw('sent', { email, kind: 'signup' });
     }
 
