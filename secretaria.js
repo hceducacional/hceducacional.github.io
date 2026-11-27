@@ -389,7 +389,7 @@ function secBindTarefas(root) {
    ALUNOS — lista com busca e filtros
    ========================================================= */
 const secListState = { q: '', status: '', fac: '', page: 1 };
-const SEC_POR_PAGINA = 50;
+const SEC_POR_PAGINA = 25;
 function secAlunos(view, status) {
   if (status != null && status !== secListState.status) { secListState.status = status; secListState.page = 1; }
   const facs = secLista('faculdade', true);
@@ -948,11 +948,21 @@ function secCadastros(view) {
    RELATÓRIOS — filtros, tabela, imprimir e planilha
    ========================================================= */
 const secRel = { docs: '', fac: '', curso: '', tipo: '', status: '', turma: '', periodo: '', instrucao: '', formacao: '', estado: '', cidade: '', conhecimento: '', indicacao: '', campo: 'inclusao', de: '', ate: '', ordem: 'alfa' };
+/* tipos de relatório: a lista com filtros e os relatórios prontos */
+const SEC_REL_MODOS = [
+  ['lista', 'Lista de alunos', 'users'], ['remat', 'Rematrículas do mês', 'refresh'], ['venc', 'Vencimentos do mês', 'clock'],
+  ['fac', 'Por faculdade', 'building'], ['curso', 'Por curso', 'cap'], ['estado', 'Por estado', 'map'], ['cidade', 'Por cidade', 'map'],
+  ['turma', 'Por turma', 'users'], ['periodo', 'Por período', 'calendar'], ['niver', 'Aniversariantes do mês', 'party'], ['docs', 'Documentos pendentes', 'report'],
+];
+let secRelModo = 'lista';
+const secRelState = { mes: '', atrasadas: '1', ativas: '1' };
 function secRelatorios(view) {
+  const modos = `<div class="sc-chips sc-rel-modos" role="tablist">${SEC_REL_MODOS.map(([k, t, ico]) => `<button type="button" data-rmodo="${k}" class="${secRelModo === k ? 'on' : ''}"><i data-icon="${ico}"></i>${t}</button>`).join('')}</div>`;
+  if (secRelModo !== 'lista') return secRelPronto(view, modos);
   const l = (t) => secLista(t, true).map((x) => x.nome);
   const sel = (k, label, opts) => secField(label, `<select data-r="${k}">${secOpts(opts, secRel[k], 'Todos')}</select>`);
   const cidades = [...new Set(SEC.alunos.filter((a) => !secRel.estado || a.estado === secRel.estado).map((a) => a.cidade).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt'));
-  const body = `
+  const body = `${modos}
     <section class="sc-card sc-filters">
       <div class="sc-cols c4">
         ${sel('fac', 'Faculdade', secLista('faculdade', true).map((f) => [f.id, f.nome]))}
@@ -997,12 +1007,134 @@ function secRelatorios(view) {
     if (['fac', 'tipo'].includes(el.dataset.r)) secRel.curso = '';
     secRelatorios(view);
   }));
+  secRelModoBind(view);
   $('#sc-rclear').addEventListener('click', () => { Object.keys(secRel).forEach((k) => { secRel[k] = ''; }); secRel.campo = 'inclusao'; secRel.ordem = 'alfa'; secRelatorios(view); });
   $('#sc-rprint').addEventListener('click', () => { document.body.classList.add('sc-printing'); window.print(); setTimeout(() => document.body.classList.remove('sc-printing'), 500); });
   $('#sc-rcsv').addEventListener('click', () => secCsv('relatorio-alunos', ['Código', 'Nome', 'CPF', 'Nascimento', 'Sexo', 'Celular', 'Telefone', 'E-mail', 'Endereço', 'Nº', 'Bairro', 'Cidade', 'UF', 'CEP', 'Instrução', 'Formação', 'Como conheceu', 'Indicado por', 'Curso', 'Faculdade', 'Tipo', 'Situação', 'Turma', 'Período', 'Nº matrícula', 'Início', 'Expiração', 'Documentos pendentes', 'Cadastrado em'],
     rows.map(({ a, m, c }) => [a.codigo, a.nome, secCpfFmt(a.cpf), secDate(a.nascimento), a.sexo, a.celular, a.telefone, a.email, a.endereco, a.numero, a.bairro, a.cidade, a.estado, a.cep, a.instrucao, a.formacao, a.conhecimento, a.indicacao,
       c?.nome, secLNome(c?.faculdade_id), secLNome(c?.tipo_id), m ? SEC_STATUS[m.status]?.[0] : '', m?.turma, m ? (secPeriodo(m)?.nome || m.periodo) : '', m?.numero, m ? secDate(m.inicio) : '', m ? secDate(m.expiracao) : '', m ? secLista('documento').filter((d) => !(m.documentos || {})[d.id]).map((d) => d.nome).join(', ') : '', secDate(a.created_at.slice(0, 10))])));
 }
+function secRelModoBind(view) {
+  view.querySelectorAll('[data-rmodo]').forEach((b) => b.addEventListener('click', () => { secRelModo = b.dataset.rmodo; secRelatorios(view); }));
+}
+const secRelPrint = () => { document.body.classList.add('sc-printing'); window.print(); setTimeout(() => document.body.classList.remove('sc-printing'), 500); };
+const secMesNome = (ym) => { const [y, m] = ym.split('-').map(Number); return `${MESES[m - 1]} de ${y}`; };
+
+/* relatórios prontos: rematrículas, vencimentos, aniversariantes, documentos e os agrupados */
+function secRelPronto(view, modos) {
+  const modo = secRelModo, [, titulo] = SEC_REL_MODOS.find(([k]) => k === modo);
+  if (!secRelState.mes) secRelState.mes = secToday().slice(0, 7);
+  const mes = secRelState.mes, fmt = (n) => n.toLocaleString('pt-BR');
+  const porMes = ['remat', 'venc', 'niver'].includes(modo), agrupado = ['fac', 'curso', 'estado', 'cidade', 'turma', 'periodo'].includes(modo);
+  const pct = (n, t) => (t ? Math.round((n / t) * 100) : 0);
+  let head = [], rows = [], csvHead = [], csvRows = [], resumo = '', onRow = null, sub = '';
+
+  if (modo === 'remat') {
+    // matrículas ativas de graduação cuja janela (25 → 10) abre no mês escolhido; opcionalmente as atrasadas
+    const itens = SEC.mats.map((m) => [m, secJanela(m)]).filter(([, j]) => j && (j.abre.slice(0, 7) === mes || (secRelState.atrasadas && j.fase === 'atrasada' && j.abre.slice(0, 7) < mes)))
+      .sort(([a, ja], [b, jb]) => ja.abre.localeCompare(jb.abre) || secFold(secAluno(a.aluno_id)?.nome).localeCompare(secFold(secAluno(b.aluno_id)?.nome)));
+    const fase = { antes: 'Ainda não abriu', aberta: 'Aberta', fechando: 'Fechando', atrasada: 'Atrasada' };
+    const tone = { antes: '#6e6e73', aberta: '#1f9d55', fechando: '#c76a00', atrasada: '#d70015' };
+    head = ['Aluno', 'Celular', 'Curso', 'Período', 'Expira', 'Janela', 'Situação'];
+    rows = itens.map(([m, j]) => { const a = secAluno(m.aluno_id), c = secCurso(m.curso_id), pp = secPeriodo(m), prox = secProxPeriodo(m, secInicioPeriodo(j.fecha));
+      return { id: a?.id, cells: [`<b>${esc(a?.nome || '')}</b>`, esc(a?.celular || ''), `${esc(c?.nome || '')}<small class="sc-sub">${esc(secLNome(c?.faculdade_id))}</small>`,
+        pp ? `${pp.n}º${prox && prox !== pp.n ? ` → ${prox}º` : ''}${pp.total ? ` <small class="sc-sub">de ${pp.total}</small>` : ''}` : '', secDate(m.expiracao), `${secDate(j.abre).slice(0, 5)} a ${secDate(j.fecha).slice(0, 5)}`,
+        `<span class="sc-pill" style="--c:${tone[j.fase]}"><i></i>${fase[j.fase]}</span>`] }; });
+    csvHead = ['Aluno', 'CPF', 'Celular', 'Curso', 'Faculdade', 'Período atual', 'Próximo período', 'Expiração', 'Janela abre', 'Janela fecha', 'Situação'];
+    csvRows = itens.map(([m, j]) => { const a = secAluno(m.aluno_id), c = secCurso(m.curso_id), pp = secPeriodo(m);
+      return [a?.nome, secCpfFmt(a?.cpf || ''), a?.celular, c?.nome, secLNome(c?.faculdade_id), pp?.nome, secProxPeriodo(m, secInicioPeriodo(j.fecha)) ? secPerNome(secProxPeriodo(m, secInicioPeriodo(j.fecha))) : '', secDate(m.expiracao), secDate(j.abre), secDate(j.fecha), fase[j.fase]]; });
+    const atr = itens.filter(([, j]) => j.fase === 'atrasada').length;
+    resumo = `${fmt(itens.length)} ${itens.length === 1 ? 'rematrícula' : 'rematrículas'}${atr ? ` · ${atr} atrasada${atr > 1 ? 's' : ''}` : ''}`;
+    sub = `Janela da faculdade do dia 25 ao dia 10. Só cursos por período (graduação).`;
+  } else if (modo === 'venc') {
+    const itens = SEC.mats.filter((m) => m.status === 'ativo' && m.expiracao?.slice(0, 7) === mes).sort((a, b) => a.expiracao.localeCompare(b.expiracao));
+    head = ['Expira', 'Aluno', 'Celular', 'Curso', 'Período', 'Turma'];
+    rows = itens.map((m) => { const a = secAluno(m.aluno_id), c = secCurso(m.curso_id); return { id: a?.id, cells: [secDate(m.expiracao), `<b>${esc(a?.nome || '')}</b>`, esc(a?.celular || ''), `${esc(c?.nome || '')}<small class="sc-sub">${esc(secLNome(c?.faculdade_id))}</small>`, esc(secPerTxt(secPeriodo(m))), esc(m.turma || '')] }; });
+    csvHead = ['Expiração', 'Aluno', 'CPF', 'Celular', 'Curso', 'Faculdade', 'Período', 'Turma'];
+    csvRows = itens.map((m) => { const a = secAluno(m.aluno_id), c = secCurso(m.curso_id); return [secDate(m.expiracao), a?.nome, secCpfFmt(a?.cpf || ''), a?.celular, c?.nome, secLNome(c?.faculdade_id), secPeriodo(m)?.nome || m.periodo, m.turma]; });
+    resumo = `${fmt(itens.length)} ${itens.length === 1 ? 'matrícula vence' : 'matrículas vencem'} em ${secMesNome(mes).split(' de')[0]}`;
+  } else if (modo === 'niver') {
+    const mm = mes.slice(5), ano = +mes.slice(0, 4);
+    const itens = SEC.alunos.filter((a) => a.nascimento?.slice(5, 7) === mm).sort((a, b) => a.nascimento.slice(8).localeCompare(b.nascimento.slice(8)) || secFold(a.nome).localeCompare(secFold(b.nome)));
+    head = ['Dia', 'Aluno', 'Faz', 'Celular', 'Curso'];
+    rows = itens.map((a) => { const m = secMatsDe(a.id)[0], c = m && secCurso(m.curso_id); return { id: a.id, cells: [a.nascimento.slice(8), `<b>${esc(a.nome)}</b>`, `${ano - +a.nascimento.slice(0, 4)} anos`, esc(a.celular || ''), esc(c?.nome || '')] }; });
+    csvHead = ['Dia', 'Aluno', 'Nascimento', 'Idade no aniversário', 'Celular', 'E-mail', 'Curso'];
+    csvRows = itens.map((a) => { const m = secMatsDe(a.id)[0]; return [a.nascimento.slice(8), a.nome, secDate(a.nascimento), ano - +a.nascimento.slice(0, 4), a.celular, a.email, m && secCurso(m.curso_id)?.nome]; });
+    resumo = `${fmt(itens.length)} ${itens.length === 1 ? 'aniversariante' : 'aniversariantes'} em ${secMesNome(mes).split(' de')[0]}`;
+  } else if (modo === 'docs') {
+    const docs = secLista('documento');
+    const itens = SEC.mats.filter((m) => m.status === 'ativo').map((m) => [m, docs.filter((d) => !(m.documentos || {})[d.id])]).filter(([, f]) => f.length)
+      .sort(([a, fa], [b, fb]) => fb.length - fa.length || secFold(secAluno(a.aluno_id)?.nome).localeCompare(secFold(secAluno(b.aluno_id)?.nome)));
+    head = ['Aluno', 'Celular', 'Curso', 'Faltam', 'Documentos pendentes'];
+    rows = itens.map(([m, f]) => { const a = secAluno(m.aluno_id), c = secCurso(m.curso_id); return { id: a?.id, cells: [`<b>${esc(a?.nome || '')}</b>`, esc(a?.celular || ''), esc(c?.nome || ''), `${f.length} de ${docs.length}`, `<small>${f.map((d) => esc(d.nome)).join(', ')}</small>`] }; });
+    csvHead = ['Aluno', 'CPF', 'Celular', 'Curso', 'Faculdade', 'Qtd. pendente', 'Documentos pendentes'];
+    csvRows = itens.map(([m, f]) => { const a = secAluno(m.aluno_id), c = secCurso(m.curso_id); return [a?.nome, secCpfFmt(a?.cpf || ''), a?.celular, c?.nome, secLNome(c?.faculdade_id), f.length, f.map((d) => d.nome).join(', ')]; });
+    resumo = docs.length ? `${fmt(itens.length)} ${itens.length === 1 ? 'matrícula ativa com documento pendente' : 'matrículas ativas com documento pendente'}` : 'Nenhum documento exigido cadastrado (aba Cadastros).';
+  } else {
+    // agrupados: faculdade, curso, turma e período contam matrículas; estado e cidade contam alunos
+    const porMat = ['fac', 'curso', 'turma', 'periodo'].includes(modo), soAtivas = !!secRelState.ativas;
+    const g = new Map();
+    const add = (key, label, sub2, filtro, a, m) => {
+      const e = g.get(key) || { label, sub: sub2, filtro, alunos: new Set(), st: {} }; g.set(key, e);
+      e.alunos.add(a.id); if (m) e.st[m.status] = (e.st[m.status] || 0) + 1;
+    };
+    if (porMat) {
+      SEC.mats.forEach((m) => {
+        if (soAtivas && m.status !== 'ativo') return;
+        const a = secAluno(m.aluno_id); if (!a) return; const c = secCurso(m.curso_id);
+        if (modo === 'fac') { const f = c?.faculdade_id || ''; add(f, secLNome(f) || 'Sem faculdade', '', { fac: f }, a, m); }
+        if (modo === 'curso') add(m.curso_id || '', c?.nome || 'Sem curso', secLNome(c?.faculdade_id), { fac: c?.faculdade_id || '', curso: m.curso_id || '' }, a, m);
+        if (modo === 'turma') add(m.turma || '', m.turma || 'Sem turma', '', { turma: m.turma || '' }, a, m);
+        if (modo === 'periodo') { const pp = secPeriodo(m); add(pp ? String(pp.n).padStart(3, '0') : '~', pp ? pp.nome : 'Sem período', '', { periodo: pp?.nome || '' }, a, m); }
+      });
+    } else {
+      SEC.alunos.forEach((a) => {
+        const ms = secMatsDe(a.id), ativa = ms.find((m) => m.status === 'ativo');
+        if (soAtivas && !ativa) return;
+        const uf = String(a.estado || '').trim().toUpperCase();
+        if (modo === 'estado') add(uf || '~', uf ? `${uf} · ${BR_UF_NOME[uf] || uf}` : 'Sem estado informado', '', { estado: uf }, a, ativa || ms[0]);
+        if (modo === 'cidade') { const ci = String(a.cidade || '').trim(); add(ci ? secFold(ci + uf) : '~', ci ? `${ci}${uf ? ' - ' + uf : ''}` : 'Sem cidade informada', '', { estado: uf, cidade: ci }, a, ativa || ms[0]); }
+      });
+    }
+    const totAlunos = new Set([...g.values()].flatMap((e) => [...e.alunos])).size;
+    const grupos = [...g.entries()].sort(([ka, a], [kb, b]) => (modo === 'periodo' || modo === 'turma' ? (ka === '' || ka === '~') - (kb === '' || kb === '~') || ka.localeCompare(kb) : b.alunos.size - a.alunos.size || a.label.localeCompare(b.label, 'pt')));
+    const st = (e, k) => e.st[k] || 0;
+    const max = Math.max(1, ...grupos.map(([, e]) => e.alunos.size));
+    const nomeG = { fac: 'Faculdade', curso: 'Curso', estado: 'Estado', cidade: 'Cidade', turma: 'Turma', periodo: 'Período' }[modo];
+    head = [nomeG, 'Alunos', 'Ativas', 'Concluídas', 'Canceladas / trancadas', '% dos alunos'];
+    rows = grupos.map(([, e]) => ({ filtro: e.filtro, cells: [`<b>${esc(e.label)}</b>${e.sub ? `<small class="sc-sub">${esc(e.sub)}</small>` : ''}`, `<b>${fmt(e.alunos.size)}</b>`, fmt(st(e, 'ativo')), fmt(st(e, 'concluido')), fmt(st(e, 'cancelado') + st(e, 'trancado')),
+      `<span class="sc-relbar"><i style="--p:${(e.alunos.size / max).toFixed(3)}"></i><em>${pct(e.alunos.size, totAlunos)}%</em></span>`] }));
+    csvHead = [nomeG, ...(modo === 'curso' ? ['Faculdade'] : []), 'Alunos', 'Matrículas ativas', 'Concluídas', 'Canceladas', 'Trancadas', 'Pendentes', '% dos alunos'];
+    csvRows = grupos.map(([, e]) => [e.label, ...(modo === 'curso' ? [e.sub] : []), e.alunos.size, st(e, 'ativo'), st(e, 'concluido'), st(e, 'cancelado'), st(e, 'trancado'), st(e, 'pendente'), pct(e.alunos.size, totAlunos) + '%']);
+    resumo = `${fmt(grupos.length)} ${grupos.length === 1 ? 'grupo' : 'grupos'} · ${fmt(totAlunos)} alunos${soAtivas ? ' com matrícula ativa' : ''}`;
+    sub = porMat ? 'Conta as matrículas (um aluno com dois cursos aparece nos dois).' : 'Conta cada aluno uma vez, pelo endereço da ficha.';
+    onRow = (filtro) => { Object.keys(secRel).forEach((k) => { secRel[k] = ''; }); secRel.campo = 'inclusao'; secRel.ordem = 'alfa'; Object.assign(secRel, filtro); if (soAtivas) secRel.status = 'ativo'; secRelModo = 'lista'; secRelatorios(view); };
+  }
+
+  const body = `${modos}
+    <section class="sc-card sc-filters sc-rel-bar">
+      ${porMes ? secField('Mês', `<input type="month" id="sc-rmes" value="${mes}">`) : ''}
+      ${modo === 'remat' ? `<label class="sc-checkline"><input type="checkbox" id="sc-ratr"${secRelState.atrasadas ? ' checked' : ''}> Incluir atrasadas de meses anteriores</label>` : ''}
+      ${agrupado ? `<label class="sc-checkline"><input type="checkbox" id="sc-rati"${secRelState.ativas ? ' checked' : ''}> Só matrículas ativas</label>` : ''}
+      <span class="sc-grow"></span>
+      <button type="button" class="btn-soft" id="sc-rcsv"><i data-icon="report"></i>Exportar planilha</button><button type="button" class="btn-dark" id="sc-rprint"><i data-icon="report"></i>Imprimir / PDF</button>
+    </section>
+    <p class="sc-result">${resumo}${sub ? `<span class="sc-faint"> · ${sub}</span>` : ''}${onRow ? '<span class="sc-faint"> · Toque numa linha para ver os alunos.</span>' : ''}</p>
+    <div class="sc-table-wrap sc-print"><h2 class="sc-print-title">${titulo}${porMes ? ' · ' + secMesNome(mes) : ''} · HC Instituto Educacional · ${secDate(secToday())}</h2>
+      <table class="sc-table${agrupado ? ' sc-table-g' : ''}"><thead><tr>${head.map((h, i) => `<th${agrupado && i ? ' class="n"' : ''}>${h}</th>`).join('')}</tr></thead>
+      <tbody id="sc-rbody">${rows.length ? rows.map((r, i) => `<tr data-i="${i}"${r.id || r.filtro ? ' class="go"' : ''}>${r.cells.map((c, j) => `<td${agrupado && j ? ' class="n"' : ''}>${c}</td>`).join('')}</tr>`).join('')
+        : `<tr><td colspan="${head.length}" class="sc-empty">Nada para mostrar${porMes ? ' nesse mês' : ''}.</td></tr>`}</tbody></table></div>`;
+  secShell(view, 'relatorios', 'Relatórios', 'Escolha um relatório; dá para imprimir ou baixar a planilha.', body);
+  secRelModoBind(view);
+  $('#sc-rbody').querySelectorAll('tr.go').forEach((tr) => tr.addEventListener('click', () => { const r = rows[+tr.dataset.i]; if (r.filtro) onRow(r.filtro); else location.hash = `#secretaria/aluno/${r.id}`; }));
+  $('#sc-rmes')?.addEventListener('change', (e) => { if (e.target.value) { secRelState.mes = e.target.value; secRelatorios(view); } });
+  $('#sc-ratr')?.addEventListener('change', (e) => { secRelState.atrasadas = e.target.checked ? '1' : ''; secRelatorios(view); });
+  $('#sc-rati')?.addEventListener('change', (e) => { secRelState.ativas = e.target.checked ? '1' : ''; secRelatorios(view); });
+  $('#sc-rprint').addEventListener('click', secRelPrint);
+  $('#sc-rcsv').addEventListener('click', () => secCsv(`relatorio-${modo}${porMes ? '-' + mes : ''}`, csvHead, csvRows));
+}
+const BR_UF_NOME = { AC: 'Acre', AL: 'Alagoas', AP: 'Amapá', AM: 'Amazonas', BA: 'Bahia', CE: 'Ceará', DF: 'Distrito Federal', ES: 'Espírito Santo', GO: 'Goiás', MA: 'Maranhão', MT: 'Mato Grosso', MS: 'Mato Grosso do Sul', MG: 'Minas Gerais', PA: 'Pará', PB: 'Paraíba', PR: 'Paraná', PE: 'Pernambuco', PI: 'Piauí', RJ: 'Rio de Janeiro', RN: 'Rio Grande do Norte', RS: 'Rio Grande do Sul', RO: 'Rondônia', RR: 'Roraima', SC: 'Santa Catarina', SP: 'São Paulo', SE: 'Sergipe', TO: 'Tocantins' };
+
 function secRelRows() {
   const r = secRel, ind = secFold(r.indicacao.trim());
   const docIds = secLista('documento').map((d) => d.id);
