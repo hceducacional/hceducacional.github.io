@@ -596,7 +596,7 @@ window.HC_CONTENT = {
       "id": "f1",
       "url": "https://universa.unifaveni.com.br/financeiro/painel/titulos",
       "kind": "btn",
-      "name": "FAVENI",
+      "name": "UNIFAVENI",
       "image": "",
       "panel": "h-fin"
     },

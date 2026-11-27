@@ -40,6 +40,19 @@
   const ENTER_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4v7a4 4 0 0 1-4 4H4"/><path d="m9 10-5 5 5 5"/></svg>';
   const BELL_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a6 6 0 0 0-6 6v3.6l-1.7 3.1A1 1 0 0 0 5.2 16h13.6a1 1 0 0 0 .9-1.3L18 11.6V8a6 6 0 0 0-6-6Z"/><path d="M9.5 18a2.5 2.5 0 0 0 5 0Z"/></svg>';
 
+  /* NOVIDADES: o aviso no alto, à esquerda, alterna entre estes itens (o sino mostra quantos são).
+     Para anunciar algo novo, acrescente uma linha: tag (etiqueta), t (título), d (detalhe), go (para onde leva) e as cores c1/c2. */
+  const NEWS = [
+    { tag: 'Novo curso', t: 'Informática do Zero', d: '8 disciplinas, do básico ao avançado', go: '#informatica/cursos', c1: '#f7154c', c2: '#ff8f4e' },
+    { tag: 'Nova disciplina', t: 'Introdução à Informática', d: '9 aulas e uma avaliação para começar', go: '#informatica/disciplina-d1', c1: '#2563eb', c2: '#38bdf8' },
+    { tag: 'Nova disciplina', t: 'Sistema Operacional Windows', d: 'Pastas, arquivos, janelas e atalhos', go: '#informatica/disciplina-d2', c1: '#0ea5e9', c2: '#22d3ee' },
+    { tag: 'Nova disciplina', t: 'Word e Excel', d: 'Textos formatados e planilhas com fórmulas', go: '#informatica/disciplina-d3', c1: '#059669', c2: '#34d399' },
+    { tag: 'Nova disciplina', t: 'Internet e Segurança Digital', d: 'Navegue, pesquise e se proteja de golpes', go: '#informatica/disciplina-d5', c1: '#7c3aed', c2: '#c084fc' },
+    { tag: 'Novos níveis', t: 'Digitação: Primeiro comando', d: 'Treine com os dez dedos e ganhe XP', go: '#informatica/cursos', c1: '#f59e0b', c2: '#fb7a3c' },
+    { tag: 'Novidade', t: 'Loja de itens', d: 'Troque seu Saldo HC por avatares e molduras', go: '#informatica/loja', c1: '#1d56d6', c2: '#2fd6ec' },
+  ];
+  const NEWS_MS = 5000; // tempo de cada novidade no aviso
+
   let run = 0; // cada abertura da tela ganha um número; timers antigos se calam
 
   /* faixa de boas-vindas no pé da tela: a faixa laranja entra da esquerda, a foto do aluno sobe de trás dela
@@ -85,10 +98,15 @@
           </span>
         </button>`).join('')}
       </div>
-      <button class="ifm-news" type="button" data-go="1">
-        <span class="ifm-bell">${BELL_SVG}<i>1</i></span>
-        <span class="ifm-news-pill">Novos níveis para você explorar</span>
-      </button>
+      <div class="ifm-news" role="region" aria-label="Novidades da plataforma">
+        <span class="ifm-bell" aria-hidden="true">${BELL_SVG}<i>${NEWS.length}</i></span>
+        <button class="ifm-news-card" type="button">
+          <span class="ifm-news-top"><b class="ifm-news-tag"></b><em class="ifm-news-n"></em></span>
+          <span class="ifm-news-txt" aria-live="polite"></span>
+          <span class="ifm-news-go" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span>
+          <span class="ifm-news-bars" aria-hidden="true">${NEWS.map(() => '<i><b></b></i>').join('')}</span>
+        </button>
+      </div>
       ${welcome()}
       <p class="ifm-wait" role="status"><em>Aguarde, preparando</em><span class="ifm-spin" aria-hidden="true"></span></p>
       <p class="ifm-enter" aria-live="polite"><span class="ifm-enter-ico">${ENTER_SVG}</span><span>Pressione enter <em><span>${OPTS[START].hint}</span></em></span></p>
@@ -144,7 +162,37 @@
         go(k);
       });
     });
-    stage.querySelector('.ifm-news').addEventListener('click', () => go(1));
+    /* aviso de novidades: alterna sozinho a cada NEWS_MS (pausa com o mouse em cima); clicar abre a novidade da vez */
+    const news = stage.querySelector('.ifm-news'), nCard = news.querySelector('.ifm-news-card');
+    const nTxt = news.querySelector('.ifm-news-txt'), nTag = news.querySelector('.ifm-news-tag'), nNum = news.querySelector('.ifm-news-n');
+    const nBars = [...news.querySelectorAll('.ifm-news-bars i')];
+    let ni = -1, nTimer = 0;
+    const showNews = (k) => {
+      if (!alive()) return;
+      ni = (k + NEWS.length) % NEWS.length;
+      const n = NEWS[ni];
+      nTag.textContent = n.tag; nNum.textContent = `${ni + 1} de ${NEWS.length}`;
+      news.style.setProperty('--c1', n.c1); news.style.setProperty('--c2', n.c2);
+      nTxt.querySelector('span:not(.out)')?.classList.add('out');
+      setTimeout(() => nTxt.querySelector('.out')?.remove(), 380);
+      const el = document.createElement('span');
+      el.innerHTML = `<strong>${n.t}</strong><small>${n.d}</small>`;
+      nTxt.appendChild(el);
+      nCard.setAttribute('aria-label', `Novidade: ${n.t}. ${n.d}`);
+      nBars.forEach((b, j) => { b.className = j < ni ? 'done' : ''; });
+      void nBars[ni].offsetWidth; nBars[ni].className = 'on';
+      clearTimeout(nTimer);
+      if (!reduce) nTimer = setTimeout(() => { if (alive() && !news.matches(':hover')) showNews(ni + 1); }, NEWS_MS);
+    };
+    news.addEventListener('mouseleave', () => { if (alive() && !reduce) { clearTimeout(nTimer); nTimer = setTimeout(() => showNews(ni + 1), 1200); } });
+    showNews(0);
+    nCard.addEventListener('click', () => {
+      if (leaving) return;
+      const to = NEWS[ni].go;
+      if (to === '#informatica/cursos') return go(1);
+      leaving = true; stage.classList.add('leave');
+      setTimeout(() => { if (alive()) location.hash = to; }, reduce ? 0 : 620);
+    });
 
     const onKey = (e) => {
       if (!alive()) return document.removeEventListener('keydown', onKey);

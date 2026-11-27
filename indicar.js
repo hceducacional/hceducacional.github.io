@@ -4,23 +4,65 @@
    Banco: supabase/06-indicacoes.sql (tabela referrals). O aluno lê
    pela função my_referrals, que nunca devolve o CPF.
    ========================================================= */
-const REF_GOAL = 10; // indicações confirmadas para aparecer o aviso de procurar o polo
-const REF_STATUS = { pendente: 'Pendente', confirmada: 'Confirmada' };
+const REF_GOAL = 10; // painel: quem chegou a 10 confirmadas (bolsas de 10 amigos)
+const REF_STATUS = { pendente: 'Pendente', confirmada: 'Confirmada', usada: 'Usada no desconto' };
+const REF_ICO = { pendente: 'clock', confirmada: 'check', usada: 'star' };
+const REF_COLOR = { pendente: ['#fbbf24', '#f97316'], confirmada: ['#34d399', '#059669'], usada: ['#a78bfa', '#7c3aed'] };
 const refAdm = { list: [], people: [], filter: '', q: '' };
 
-const refStatusPill = (s) => `<span class="rf-st s-${s}">${s === 'confirmada' ? '<i data-icon="check"></i>' : '<i data-icon="clock"></i>'}${REF_STATUS[s]}</span>`;
+const refStatusPill = (s) => `<span class="rf-st s-${s}"><i data-icon="${REF_ICO[s] || 'clock'}"></i>${REF_STATUS[s] || s}</span>`;
 const refOrbit = (names) => {
   const pick = names.length ? names.slice(0, 3) : ['Ana Lima', 'João Pedro', 'Maria Clara'];
   const deg = [-70, 50, 170];
   return `<span class="orb-spin" style="--r:98px;--t:32s">${pick.map((n, k) => `
     <span class="orb-arm" style="--deg:${deg[k]}deg"><span class="orb-up"><span class="ref-av a${k + 1}">${esc(initials(n))}</span></span></span>`).join('')}</span>`;
 };
+/* ---------- Regulamento "Indique um amigo" (Grupo Educacional FAVENI) ----------
+   Cada indicação confirmada já vale desconto (R$ 30 ou R$ 50 numa mensalidade, ou % no curso),
+   ou o aluno junta indicações e troca por bolsa. Quem não é aluno também indica e recebe em depósito.
+   Para mudar valores ou regras, edite as tabelas abaixo. */
+const REF_ME = [['grad', 'Graduação'], ['seg', '2ª Graduação'], ['pos', 'Pós-graduação'], ['cap', 'Capacitação'], ['fora', 'Não sou aluno']];
+const REF_FRIEND = [['grad', 'Graduação'], ['seg', '2ª Graduação'], ['pos', 'Pós-graduação']];
+/* ganho por indicação: REF_GAIN[curso do amigo][curso que eu faço] = [valor numa mensalidade, ou % alternativo] */
+const REF_GAIN = {
+  pos: { grad: [30], seg: [30], pos: [30, '10% de desconto no curso todo'], cap: [30, '10% de desconto no curso todo'] },
+  seg: { grad: [50], seg: [50, '5% de desconto no curso todo'], pos: [50, '10% de desconto no curso todo'], cap: [50, '10% de desconto no curso todo'] },
+  grad: { grad: [50, '10% de desconto no semestre'], seg: [50, '5% de desconto no curso todo'], pos: [50, '10% de desconto no curso todo'], cap: [50, '10% de desconto no curso todo'] },
+};
+/* bolsas: juntando indicações confirmadas */
+const REF_BOLSAS = {
+  grad: [[10, 'Um semestre integral', '10 amigos no mesmo curso de graduação (ou de igual valor)'], [20, 'Um semestre integral', '20 amigos em graduação diferente ou de menor valor']],
+  seg: [[10, 'Meia bolsa na 2ª Licenciatura', '10 amigos em cursos de 2ª graduação'], [20, 'Bolsa integral na 2ª Licenciatura', '20 amigos em cursos de 2ª graduação']],
+  pos: [[5, 'Meia bolsa na Pós-graduação', '5 amigos em graduação, 2ª graduação ou pós'], [10, 'Bolsa integral na Pós-graduação', '10 amigos em graduação, 2ª graduação ou pós'],
+    [6, 'Bolsa integral na Pós-graduação', 'Já é certificado em outra pós aqui? 6 amigos bastam']],
+};
+const REF_RULES = [
+  'Vale para indicações feitas a partir de 25/01/2023, em qualquer instituição do Grupo Educacional FAVENI.',
+  'Não vale para o curso de Engenharia de Segurança do Trabalho (880 horas).',
+  'Na matrícula, o amigo precisa informar o seu nome como quem indicou. Se esquecer, ele mesmo envia um protocolo ao Financeiro com o seu nome completo e CPF.',
+  'A indicação é confirmada quando o amigo paga a matrícula. Se ele se matricular por um Agente Educacional, vale no pagamento da 1ª mensalidade.',
+  'Para receber, envie um protocolo ao setor Financeiro com o nome completo e o CPF do amigo indicado.',
+  'Aluno: o desconto entra nas parcelas em aberto que ainda não venceram. Se já terminou de pagar, recebe em depósito ou usa o desconto num curso novo.',
+  'Não é aluno: recebe o valor em depósito, pedindo por e-mail ao setor Financeiro.',
+  'Cada indicação vale uma vez: ou vira desconto, ou conta para a bolsa. A indicação já usada como desconto não conta mais para a bolsa.',
+  'Para a bolsa, abra um único protocolo com o nome de todos os indicados.',
+  'O desconto não vale para matrícula e taxas. Os descontos em % são aplicados sobre o valor com desconto de pagamento antecipado (exceto cobertura de oferta).',
+  'Conta o número de pessoas indicadas, não o número de cursos que elas fazem.',
+  'Indicação cruzada não vale: você não pode indicar alguém que indicou você.',
+  'Agentes Educacionais não ganham por indicação, e alunos não podem indicar Agentes Educacionais.',
+  'Se algum desses requisitos não for cumprido, a indicação perde a validade.',
+];
+const refMoney = (v) => `R$ ${v},00`;
+const refPick = (k, def) => { try { return localStorage.getItem(`hc-ref-${k}`) || def; } catch { return def; } };
+const refKeep = (k, v) => { try { localStorage.setItem(`hc-ref-${k}`, v); } catch {} };
+
 const refSteps = () => `
-  <section class="ref-steps">
+  <section class="ref-steps rf-steps4">
     ${[
-      ['userPlus', 'Convide', 'Fale do HC Instituto Educacional para amigos, familiares e colegas que querem estudar.'],
-      ['users', 'Matrícula', 'Na matrícula, a pessoa diz que foi indicada por você. A secretaria do polo registra a indicação.'],
-      ['check', 'Acompanhe', 'Cada indicação aparece aqui. Quando a matrícula se concretiza, ela passa para confirmada.'],
+      ['userPlus', 'Convide', 'Fale do HC Instituto Educacional para amigos, familiares e colegas. Não precisa ser aluno para indicar.'],
+      ['users', 'Matrícula', 'Na matrícula, o amigo informa o seu nome como quem indicou. A secretaria do polo registra aqui.'],
+      ['check', 'Confirmação', 'Quando o amigo paga a matrícula, a indicação passa para confirmada e já vale desconto.'],
+      ['mail', 'Resgate', 'Envie um protocolo ao Financeiro com o nome completo e o CPF do amigo. Para bolsa, um protocolo só com todos.'],
     ].map(([ico, t, d], k) => `
     <article class="ref-step" style="--k:${k}">
       <span class="ref-num">0${k + 1}</span>
@@ -29,6 +71,80 @@ const refSteps = () => `
       <p>${d}</p>
     </article>`).join('')}
   </section>`;
+
+/* as duas formas de ganhar, a calculadora, o passo a passo e as regras (com e sem conta) */
+function refInfo(conf) {
+  const logged = conf != null;
+  const chips = (name, opts, cur) => `<div class="rf-chips" role="radiogroup" data-chips="${name}">${opts.map(([k, t]) => `<button type="button" role="radio" aria-checked="${k === cur}" data-v="${k}" class="${k === cur ? 'on' : ''}">${t}</button>`).join('')}</div>`;
+  return `
+    <section class="rf-ways">
+      <article class="rf-way w-now">
+        <span class="rf-way-ico"><i data-icon="check"></i></span>
+        <small>Use já</small>
+        <h3>Desconto desde a 1ª indicação</h3>
+        <p>Cada amigo confirmado vale <b>R$ 30 a R$ 50</b> numa mensalidade, ou até <b>10% de desconto</b> no curso todo.</p>
+      </article>
+      <article class="rf-way w-save">
+        <span class="rf-way-ico"><i data-icon="trophy"></i></span>
+        <small>Ou acumule</small>
+        <h3>Junte indicações e ganhe bolsa</h3>
+        <p>Com <b>5, 10 ou 20 amigos</b>, troque por meia bolsa, um semestre integral ou bolsa integral.</p>
+      </article>
+      <p class="rf-either"><b>Cada indicação vale uma vez.</b> A que você usar como desconto não conta mais para a bolsa. Quer a bolsa? Guarde as indicações sem resgatar.</p>
+      <p class="rf-out-note"><i data-icon="userPlus"></i><span><b>Não é aluno?</b> Você também pode indicar e recebe o valor em depósito.</span></p>
+    </section>
+
+    <section class="rf-calc" id="rf-calc">
+      <header><p class="rf-kick">Simulador</p><h2>Quanto eu ganho?</h2></header>
+      <label class="rf-lbl">Eu faço</label>
+      ${chips('me', REF_ME, refPick('me', 'grad'))}
+      <label class="rf-lbl">Meu amigo vai fazer</label>
+      ${chips('fr', REF_FRIEND, refPick('fr', 'grad'))}
+      <div class="rf-gain" id="rf-gain" aria-live="polite"></div>
+      <h3 class="rf-sub-t">Bolsas acumulando indicações</h3>
+      <p class="rf-sub-p">${logged ? 'Contam só as indicações confirmadas que você ainda não usou como desconto.' : 'Contam só as indicações confirmadas que ainda não foram usadas como desconto.'}</p>
+      <div class="rf-bolsas" id="rf-bolsas"></div>
+      ${logged ? '' : '<p class="rf-calc-foot">Entre na sua conta para ver quanto falta para cada bolsa.</p>'}
+    </section>
+
+    <h2 class="rf-sec-t">Como funciona</h2>
+    ${refSteps()}
+
+    <details class="rf-rules">
+      <summary><span class="rf-rules-ico"><i data-icon="alert"></i></span><span><b>Regras importantes</b><small>Regulamento da promoção “Indique um amigo”</small></span><i class="rf-rules-chev" data-icon="down"></i></summary>
+      <ol>${REF_RULES.map((r) => `<li>${r}</li>`).join('')}</ol>
+    </details>`;
+}
+/* liga os botões da calculadora e desenha o resultado */
+function refBindCalc(root, conf) {
+  const calc = root.querySelector('#rf-calc'); if (!calc) return;
+  const draw = () => {
+    const me = calc.querySelector('[data-chips="me"] .on').dataset.v, fr = calc.querySelector('[data-chips="fr"] .on').dataset.v;
+    const fora = me === 'fora';
+    const [v, alt] = fora ? [REF_GAIN[fr].grad[0]] : REF_GAIN[fr][me];
+    calc.querySelector('#rf-gain').innerHTML = `
+      <span class="rf-gain-v"><small>a cada amigo confirmado</small><b>${refMoney(v)}</b><em>${fora ? 'em depósito na sua conta' : 'de desconto em uma mensalidade'}</em></span>
+      ${alt ? `<span class="rf-gain-or">ou</span><span class="rf-gain-v alt"><small>se preferir</small><b>${alt.split(' ')[0]}</b><em>${alt.split(' ').slice(1).join(' ')}</em></span>` : ''}`;
+    const bs = REF_BOLSAS[me];
+    calc.querySelector('#rf-bolsas').innerHTML = bs ? bs.map(([n, t, d]) => {
+      const ok = conf >= n, p = conf == null ? 0 : Math.min(1, conf / n);
+      return `<div class="rf-bolsa${ok ? ' ok' : ''}">
+        <span class="rf-bolsa-n"><b>${n}</b><small>amigos</small></span>
+        <span class="rf-bolsa-t"><strong>${t}</strong><small>${d}</small>
+          ${conf != null ? `<span class="rf-meter sm"><i style="--p:${p}"></i></span><em>${ok ? 'Você já pode pedir esta bolsa' : `${conf} de ${n} · faltam ${n - conf}`}</em>` : ''}</span>
+        ${ok ? '<span class="rf-st s-confirmada"><i data-icon="check"></i>Alcançada</span>' : ''}
+      </div>`;
+    }).join('') : `<p class="rf-bolsa-none">${fora ? 'As bolsas são para quem estuda aqui. Indicando sem ser aluno, você recebe o valor de cada indicação em depósito.' : 'As bolsas valem para quem faz graduação, 2ª graduação ou pós-graduação. Na capacitação, você ganha a cada indicação confirmada.'}</p>`;
+    paintIcons(calc);
+  };
+  calc.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-chips] button'); if (!b) return;
+    const g = b.parentElement;
+    g.querySelectorAll('button').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); });
+    refKeep(g.dataset.chips, b.dataset.v); draw();
+  });
+  draw();
+}
 
 /* ---------- Página do aluno ----------
    A animação (círculo, órbita e título) aparece na hora; os dados chegam
@@ -43,7 +159,7 @@ function refHeroHTML(out) {
       <span class="ref-ring r1"></span><span class="ref-ring r2"></span><span class="ref-ring r3"></span>
       ${out
         ? '<span class="ref-core"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>'
-        : '<span class="ref-core rf-core"><b id="rf-num">0</b><small id="rf-numl">confirmadas</small></span>'}
+        : '<span class="ref-core rf-core"><b id="rf-num">0</b><small id="rf-numl">disponíveis</small></span>'}
       ${refOrbit([])}
     </div>
     <p class="ref-badge"><span class="ref-dot"></span>Indicações</p>
@@ -51,9 +167,9 @@ function refHeroHTML(out) {
       ? '<h1 class="ref-title"><span>Indique.</span> <span class="ap-grad">Estudem juntos.</span></h1>'
       : `<h1 class="ref-title" id="rf-title"><span>${first ? esc(first) + ',' : 'Suas'}</span> <span class="ap-grad">${first ? 'suas indicações.' : 'indicações.'}</span></h1>`}
     <p class="ref-sub">${out
-      ? 'Convide quem você conhece para estudar no HC Instituto Educacional. Além de estudarem juntos, você ainda conquista vantagens exclusivas. Entre na sua conta para acompanhar as suas indicações.'
-      : 'Acompanhe aqui quem você indicou para estudar no HC Instituto Educacional e as vantagens que você conquista.'}</p>
-    <p class="ref-prize"><span class="ref-prize-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M11.2 7.4C10 4.6 8.1 3 6.6 3.6c-1.4.6-1.1 2.9 1 3.8zM12.8 7.4C14 4.6 15.9 3 17.4 3.6c1.4.6 1.1 2.9-1 3.8z"/><rect x="2.5" y="8" width="8.4" height="4.4" rx="1.2"/><rect x="13.1" y="8" width="8.4" height="4.4" rx="1.2"/><rect x="4" y="13.6" width="6.9" height="7.4" rx="1.2"/><rect x="13.1" y="13.6" width="6.9" height="7.4" rx="1.2"/></svg></span><span><b class="ap-grad">Ganhe prêmios</b> por suas indicações</span></p>
+      ? 'Convide quem você conhece para estudar no HC Instituto Educacional. Cada amigo matriculado já vale desconto, ou junte indicações e ganhe uma bolsa. Não é aluno? Também pode indicar.'
+      : 'Cada amigo que se matricula já vale desconto na sua mensalidade. Ou junte indicações e ganhe uma bolsa de estudos.'}</p>
+    <p class="ref-prize"><span class="ref-prize-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M11.2 7.4C10 4.6 8.1 3 6.6 3.6c-1.4.6-1.1 2.9 1 3.8zM12.8 7.4C14 4.6 15.9 3 17.4 3.6c1.4.6 1.1 2.9-1 3.8z"/><rect x="2.5" y="8" width="8.4" height="4.4" rx="1.2"/><rect x="13.1" y="8" width="8.4" height="4.4" rx="1.2"/><rect x="4" y="13.6" width="6.9" height="7.4" rx="1.2"/><rect x="13.1" y="13.6" width="6.9" height="7.4" rx="1.2"/></svg></span><span><b class="ap-grad">Desconto</b> já na 1ª indicação</span></p>
     ${out ? '<div class="me-cta rf-cta"><button class="btn-dark" type="button" data-auth="login">Entrar</button><button class="btn-soft" type="button" data-auth="signup">Criar conta</button></div>' : ''}
   </section>`;
 }
@@ -65,8 +181,9 @@ function renderReferral(view) {
     const first = (meName() || '').split(' ')[0], t = $('#rf-title');
     if (t && first) t.innerHTML = `<span>${esc(first)},</span> <span class="ap-grad">suas indicações.</span>`;
   } else {
-    view.innerHTML = `<div class="wrap ref">${refHeroHTML(out)}<div class="rf-body" id="rf-body">${out ? refSteps() : ''}</div></div>`;
+    view.innerHTML = `<div class="wrap ref">${refHeroHTML(out)}<div class="rf-body" id="rf-body">${out ? refInfo(null) : ''}</div></div>`;
     paintIcons(view);
+    if (out) refBindCalc(view, null);
   }
   if (out || !auth.ready) return; // sem conta: só a apresentação; sessão carregando: o roteador chama de novo
   refLoadMine(++refLoadId);
@@ -81,62 +198,56 @@ async function refLoadMine(id) {
   }
   const list = data || [];
   const conf = list.filter((r) => r.status === 'confirmada').length;
-  const pend = list.length - conf;
-  const done = conf >= REF_GOAL;
-  const pct = Math.min(1, conf / REF_GOAL);
-
+  const pend = list.filter((r) => r.status === 'pendente').length;
+  const used = list.filter((r) => r.status === 'usada').length;
   // círculo: conta até o número; órbita: iniciais de quem foi indicado
   const num = $('#rf-num');
   if (num) {
-    $('#rf-numl').textContent = conf === 1 ? 'confirmada' : 'confirmadas';
+    $('#rf-numl').textContent = conf === 1 ? 'disponível' : 'disponíveis';
     const t0 = performance.now(), dur = Math.min(900, 120 * conf);
     const tick = (t) => { const k = Math.min(1, (t - t0) / dur); num.textContent = Math.round(conf * (1 - (1 - k) ** 3)); if (k < 1) requestAnimationFrame(tick); };
     if (conf) requestAnimationFrame(tick);
   }
   list.slice(0, 3).forEach((r, k) => { const av = document.querySelector(`.rf-hero .ref-av.a${k + 1}`); if (av) av.textContent = initials(r.name); });
 
+  const rs = (n) => `${n} ${n === 1 ? 'desconto' : 'descontos'}`;
   body.innerHTML = `
-    ${done ? `
+    ${conf ? `
     <section class="rf-goal rf-in">
       <span class="rf-goal-ico"><i data-icon="star"></i></span>
       <div class="rf-goal-txt">
-        <h2>Você chegou a ${REF_GOAL} indicações confirmadas!</h2>
-        <p>Procure a secretaria do polo para saber como prosseguir.</p>
-        <small>${esc(AG.address)}</small>
+        <h2>Você já tem ${rs(conf)} para usar!</h2>
+        <p>Envie um protocolo ao setor Financeiro com o nome completo e o CPF de cada amigo confirmado. Ou continue juntando para trocar por uma bolsa: a indicação usada como desconto não conta mais para ela.</p>
+        <small>Dúvidas? Fale com a secretaria do polo: ${esc(AG.address)}</small>
       </div>
-      <a class="btn-dark rf-goal-btn" href="https://wa.me/${AG.phone}?text=${encodeURIComponent(`Olá! Sou ${meName()} e cheguei a ${REF_GOAL} indicações confirmadas no site do HC Instituto Educacional. Como faço para prosseguir?`)}" target="_blank" rel="noopener"><i data-icon="chat"></i>Falar com a secretaria</a>
+      <a class="btn-dark rf-goal-btn" href="https://wa.me/${AG.phone}?text=${encodeURIComponent(`Olá! Sou ${meName()} e tenho ${conf} ${conf === 1 ? 'indicação confirmada' : 'indicações confirmadas'} no site do HC Instituto Educacional. Como faço para usar o desconto?`)}" target="_blank" rel="noopener"><i data-icon="chat"></i>Falar com a secretaria</a>
     </section>` : ''}
 
-    <section class="rf-card rf-in" style="--d:${done ? 1 : 0}">
-      <div class="rf-progress">
-        <div class="rf-prog-head">
-          <span><b>${Math.min(conf, REF_GOAL)}</b> de ${REF_GOAL} confirmadas</span>
-          <small>${done ? 'Meta alcançada' : `Faltam ${REF_GOAL - conf}`}</small>
-        </div>
-        <span class="rf-meter ${done ? 'full' : ''}"><i style="--p:${pct}"></i></span>
-        <div class="rf-counts">
-          <span><b>${list.length}</b>${list.length === 1 ? 'indicação' : 'indicações'}</span>
-          <span class="c-pend"><b>${pend}</b>${pend === 1 ? 'pendente' : 'pendentes'}</span>
-          <span class="c-conf"><b>${conf}</b>${conf === 1 ? 'confirmada' : 'confirmadas'}</span>
-        </div>
+    <section class="rf-card rf-in" style="--d:${conf ? 1 : 0}">
+      <div class="rf-counts">
+        <span><b>${list.length}</b>${list.length === 1 ? 'indicação' : 'indicações'}</span>
+        <span class="c-pend"><b>${pend}</b>${pend === 1 ? 'pendente' : 'pendentes'}</span>
+        <span class="c-conf"><b>${conf}</b>${conf === 1 ? 'disponível' : 'disponíveis'}</span>
+        <span class="c-used"><b>${used}</b>${used === 1 ? 'usada' : 'usadas'}</span>
       </div>
 
       <h3 class="rf-list-title">Quem você indicou</h3>
       <div class="rf-list">
         ${list.length ? list.map((r) => `
         <div class="rf-row">
-          <span class="aa-av" style="--a:${r.status === 'confirmada' ? '#34d399' : '#fbbf24'};--b:${r.status === 'confirmada' ? '#059669' : '#f97316'}">${esc(initials(r.name))}</span>
+          <span class="aa-av" style="--a:${(REF_COLOR[r.status] || REF_COLOR.pendente)[0]};--b:${(REF_COLOR[r.status] || REF_COLOR.pendente)[1]}">${esc(initials(r.name))}</span>
           <span class="rf-who"><strong>${esc(r.name)}</strong><small>${esc(r.course)}</small></span>
           ${refStatusPill(r.status)}
         </div>`).join('') : `
         <div class="rf-empty">
           <span class="rf-empty-ico"><i data-icon="userPlus"></i></span>
           <strong>Nenhuma indicação ainda</strong>
-          <p>Quando alguém que você indicou fizer a matrícula, a secretaria do polo registra e ela aparece aqui.</p>
+          <p>Quando alguém que você indicou fizer a matrícula informando o seu nome, a secretaria do polo registra e ela aparece aqui.</p>
         </div>`}
       </div>
     </section>
-    <div class="rf-in" style="--d:${done ? 2 : 1}">${refSteps()}</div>`;
+    <div class="rf-in" style="--d:${conf ? 2 : 1}">${refInfo(conf)}</div>`;
+  refBindCalc(body, conf);
   paintIcons(body);
 }
 
@@ -157,7 +268,7 @@ function renderReferralAdmin(view) {
       </header>
       <div class="aa-kpis" id="rf-kpis"></div>
       <section class="aa-bar">
-        <div class="aa-seg" id="rf-filter">${[['', 'Todas'], ['pendente', 'Pendentes'], ['confirmada', 'Confirmadas']].map(([k, t]) => `<button type="button" data-rff="${k}" class="${refAdm.filter === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+        <div class="aa-seg" id="rf-filter">${[['', 'Todas'], ['pendente', 'Pendentes'], ['confirmada', 'Confirmadas'], ['usada', 'Usadas']].map(([k, t]) => `<button type="button" data-rff="${k}" class="${refAdm.filter === k ? 'on' : ''}">${t}</button>`).join('')}</div>
         <label class="us-search aa-search"><i data-icon="search"></i><input type="search" id="rf-q" placeholder="Buscar aluno, indicado ou CPF"></label>
       </section>
       <section class="ag-panel ag-list-panel">
@@ -196,12 +307,12 @@ function refDraw() {
   all.forEach((r) => { if (r.status === 'confirmada') confBy[r.referrer_id] = (confBy[r.referrer_id] || 0) + 1; });
   const kpi = (ico, c, n, t, s) => `<div class="aa-kpi" style="--a:${c[0]};--b:${c[1]}"><span class="aa-kpi-ico"><i data-icon="${ico}"></i></span><b>${n}</b><span>${t}</span>${s ? `<small>${s}</small>` : ''}</div>`;
   const refs = new Set(all.map((r) => r.referrer_id)).size;
-  const conf = all.filter((r) => r.status === 'confirmada').length;
+  const conf = all.filter((r) => r.status === 'confirmada').length, used = all.filter((r) => r.status === 'usada').length;
   $('#rf-kpis').innerHTML =
     kpi('userPlus', ['#60a5fa', '#2563eb'], all.length, 'Indicações', `${refs} ${refs === 1 ? 'aluno indicou' : 'alunos indicaram'}`) +
-    kpi('clock', ['#fbbf24', '#f97316'], all.length - conf, 'Pendentes', 'a confirmar') +
-    kpi('check', ['#34d399', '#059669'], conf, 'Confirmadas', 'matrículas') +
-    kpi('star', ['#a78bfa', '#7c3aed'], Object.values(confBy).filter((n) => n >= REF_GOAL).length, 'Na meta', `${REF_GOAL}+ confirmadas`);
+    kpi('clock', ['#fbbf24', '#f97316'], all.length - conf - used, 'Pendentes', 'a confirmar') +
+    kpi('check', ['#34d399', '#059669'], conf, 'Confirmadas', `${used} ${used === 1 ? 'usada' : 'usadas'} no desconto`) +
+    kpi('star', ['#a78bfa', '#7c3aed'], Object.values(confBy).filter((n) => n >= REF_GOAL).length, 'Na meta', `${REF_GOAL}+ disponíveis`);
 
   // agrupa por aluno que indicou, com os filtros
   const q = fold(refAdm.q.trim()), qd = cpfDigits(refAdm.q);
@@ -226,13 +337,16 @@ function refDraw() {
       </div>
       ${items.map((r) => `
       <div class="aa-row rf-arow" data-id="${r.id}">
-        <span class="aa-av" style="--a:${r.status === 'confirmada' ? '#34d399' : '#fbbf24'};--b:${r.status === 'confirmada' ? '#059669' : '#f97316'}">${esc(initials(r.name))}</span>
+        <span class="aa-av" style="--a:${(REF_COLOR[r.status] || REF_COLOR.pendente)[0]};--b:${(REF_COLOR[r.status] || REF_COLOR.pendente)[1]}">${esc(initials(r.name))}</span>
         <span class="aa-who"><strong>${esc(r.name)}</strong><small>${esc(r.course)} · CPF ${cpfMask(r.cpf)} · ${new Date(r.created_at).toLocaleDateString('pt-BR')}</small></span>
         ${refStatusPill(r.status)}
         <span class="ag-acts">
           ${r.status === 'pendente'
             ? `<button class="aa-btn ok" data-rf="confirmar" title="Confirmar indicação"><i data-icon="check"></i><span>Confirmar</span></button>`
-            : `<button class="btn-soft sm" data-rf="pendente" title="Voltar para pendente"><i data-icon="left"></i>Pendente</button>`}
+            : r.status === 'confirmada'
+              ? `<button class="btn-soft sm" data-rf="usar" title="O aluno resgatou o desconto desta indicação: ela deixa de contar para a bolsa"><i data-icon="star"></i>Usada no desconto</button>
+                 <button class="icon-btn neutral" data-rf="pendente" title="Voltar para pendente"><i data-icon="left"></i></button>`
+              : `<button class="btn-soft sm" data-rf="desusar" title="Voltar para confirmada (volta a contar para a bolsa)"><i data-icon="left"></i>Confirmada</button>`}
           <button class="icon-btn neutral" data-rf="editar" title="Editar"><i data-icon="edit"></i></button>
           ${r.history?.length ? `<button class="icon-btn neutral" data-rf="hist" title="Histórico"><i data-icon="clock"></i></button>` : ''}
           <button class="icon-btn" data-rf="apagar" title="Apagar indicação"><i data-icon="trash"></i></button>
@@ -258,6 +372,7 @@ async function refAvisar(r, txt) {
 }
 function refError(err) {
   if (/referrals_cpf_unico|duplicate/i.test(err?.message || '')) return 'Essa pessoa (CPF) já foi indicada por outro aluno.';
+  if (/status_check|check constraint/i.test(err?.message || '')) return 'Falta preparar o banco: rode o script supabase/25-indicacao-usada.sql no Supabase.';
   return authError(err);
 }
 async function refAction(e) {
@@ -267,6 +382,12 @@ async function refAction(e) {
   const first = r.name.split(' ')[0];
   switch (b.dataset.rf) {
     case 'confirmar': if (await refUpdate(r, { status: 'confirmada' }, 'Confirmada')) refAvisar(r, `Indicação de ${first} confirmada`); break;
+    case 'usar': {
+      if (!(await confirmDialog({ title: `Marcar a indicação de ${first} como usada?`, sub: 'Use quando o aluno resgatar o desconto desta indicação. Ela deixa de contar para a bolsa.', ok: 'Marcar como usada' }))) return;
+      if (await refUpdate(r, { status: 'usada' }, 'Usada no desconto')) toast(`Indicação de ${first} marcada como usada`);
+      break;
+    }
+    case 'desusar': if (await refUpdate(r, { status: 'confirmada' }, 'Voltou para confirmada')) toast(`${first} voltou para confirmada`); break;
     case 'pendente': if (await refUpdate(r, { status: 'pendente' }, 'Voltou para pendente')) toast(`${first} voltou para pendente`); break;
     case 'editar': refDialog(r); break;
     case 'hist':
