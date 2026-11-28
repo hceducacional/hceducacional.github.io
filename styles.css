@@ -4137,6 +4137,17 @@ html.lk-lock, html.lk-lock body { overflow: hidden; }
   .au-login .au-card { flex: 1 1 auto; min-height: 0; max-height: none; }
 }
 
+/* entrar / criar conta no celular e no tablet: em vez de o formulário rolar preso dentro da janela,
+   a tela toda rola. Com o teclado aberto, sobra embaixo um espaço do tamanho dele (--kb, medido no
+   auth.js), então dá para arrastar para cima e para baixo e alcançar todos os campos e o botão. */
+@media (hover: none) and (pointer: coarse) {
+  .au-login { display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+    padding: calc(env(safe-area-inset-top) + 16px) 16px calc(var(--kb, 0px) + env(safe-area-inset-bottom) + 24px); }
+  .au-login .lk-backdrop { position: fixed; touch-action: auto; }
+  .au-login .au-shell, .au-login.in .au-shell { flex: none; margin: auto; max-height: none; }
+  .au-login .au-card { max-height: none; overflow: visible; }
+}
+
 /* ===== Avisos no celular (avisos.js) ===== */
 .ag-st.s-pendente { background: #fff4e0; color: #b45309; }
 .ag-tabs button.hot b { min-width: 20px; height: 20px; padding: 0 6px; display: inline-grid; place-items: center; border-radius: 999px; background: #f59e0b; color: #fff; font-size: 12px; }

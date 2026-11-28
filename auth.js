@@ -495,7 +495,21 @@ function openAuth(mode = 'login', data = {}) {
     go.disabled = on;
   };
   document.documentElement.classList.add('lk-lock'); // o site do fundo não rola com a janela aberta
+  /* celular e tablet: a janela inteira rola. Quando o teclado sobe, ganha um espaço do tamanho
+     dele embaixo (--kb), para o aluno arrastar e alcançar os campos e o botão escondidos. */
+  const vv = window.visualViewport;
+  const onVV = () => {
+    const kb = vv ? Math.max(0, innerHeight - vv.height - vv.offsetTop) : 0;
+    wrap.style.setProperty('--kb', Math.round(kb) + 'px');
+  };
+  vv?.addEventListener('resize', onVV); vv?.addEventListener('scroll', onVV);
+  const onFocusIn = (e) => { // o campo tocado fica visível acima do teclado
+    if (!e.target.matches?.('input, select, textarea') || !matchMedia('(pointer: coarse)').matches) return;
+    setTimeout(() => { onVV(); e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 320);
+  };
+  wrap.addEventListener('focusin', onFocusIn);
   const close = () => {
+    vv?.removeEventListener('resize', onVV); vv?.removeEventListener('scroll', onVV);
     document.removeEventListener('keydown', onKey);
     document.documentElement.classList.remove('lk-lock');
     wrap.classList.remove('in');
