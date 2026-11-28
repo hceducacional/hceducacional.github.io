@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HC Instituto Educacional</title>
+<meta property="og:title" content="HC Instituto Educacional">
+<meta property="og:image" content="https://hceducacional.app.br/assets/previas/site.jpg">
+<script>
+  // link de notícia sem prévia ainda (n/<id>.html) → abre a notícia; qualquer outro endereço → início do site
+  var m = location.pathname.match(/\/n\/([\w-]+)(\.html)?\/?$/);
+  location.replace('/' + (m ? '#noticias/' + m[1] : ''));
+</script>
+</head>
+<body></body>
+</html>

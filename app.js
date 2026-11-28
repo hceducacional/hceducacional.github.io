@@ -2144,7 +2144,9 @@ function openNewsSheet(n, card) {
 /* ---------- Compartilhar uma notícia ----------
    No celular abre a folha de compartilhar do próprio aparelho (WhatsApp,
    Instagram, Facebook…). No computador mostra as redes mais usadas. */
-const newsLink = (n) => `${location.origin}${location.pathname}#noticias/${n.id}`;
+// o link vai para a página da prévia (n/<id>.html, com a foto e o título para o WhatsApp), que abre a notícia;
+// se a notícia ainda não tiver prévia (criada depois da última publicação), o 404.html leva para ela do mesmo jeito
+const newsLink = (n) => `${location.origin}${location.pathname.replace(/[^/]*$/, '')}n/${n.id}.html`;
 function shareNews(n, btn) {
   const url = newsLink(n), text = `${n.title} — HC Instituto Educacional`;
   const touch = matchMedia('(pointer: coarse)').matches;
