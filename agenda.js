@@ -12,7 +12,7 @@ const AG = {
       days: { 2: ['manha', 'tarde'], 4: ['manha', 'tarde'], 5: ['manha', 'tarde'], 6: ['manha'] } },
   },
   shifts: { manha: { label: 'Manhã', time: '08h30', start: 510 }, tarde: { label: 'Tarde', time: '14h30', start: 870 } },
-  colleges: ['Unifaveni', 'Uniabeu', 'Futura', 'Dom Alberto'],
+  colleges: ['Unifaveni', 'Uniabeu', 'Futura', 'Dom Alberto', 'UNISBA', 'NEXUS'],
   phone: '5598984861475', phoneTxt: '98 98486-1475',
   address: 'Rua Santa Cruz, São Bernardo, Humberto de Campos – MA', manager: 'Adriane Carvalho',
   maxDays: 120,
@@ -68,7 +68,7 @@ function agDayOpen(kind, date) {
 
 /* ---------- página pública: agendamento em etapas ---------- */
 const agForm = { kind: '', name: '', cpf: '', course: '', college: '', date: '', shift: '', month: '', step: 0 };
-const AG_COLLEGE_COLORS = { Unifaveni: ['#34d6ae', '#0e9f7e'], Uniabeu: ['#0b7a9a', '#070f3d'], Futura: ['#08a8f5', '#06237e'], 'Dom Alberto': ['#f0163a', '#8a0618'] };
+const AG_COLLEGE_COLORS = { Unifaveni: ['#34d6ae', '#0e9f7e'], Uniabeu: ['#0b7a9a', '#070f3d'], Futura: ['#08a8f5', '#06237e'], 'Dom Alberto': ['#f0163a', '#8a0618'], UNISBA: ['#8b5cf6', '#4c1d95'], NEXUS: ['#f59e0b', '#b45309'] };
 const AG_STEPS = [
   { id: 'tipo', title: 'O que você vai agendar?', sub: 'Escolha o tipo de atendimento presencial.', c: ['#60a5fa', '#2563eb'] },
   { id: 'dados', title: 'Seus dados', sub: 'Usados para confirmar a sua presença no polo.', c: ['#34d399', '#059669'] },
@@ -199,37 +199,19 @@ function agGo(n, dir = 1) {
   if (box.classList.contains('expanded')) box.scrollTo({ top: 0, behavior: dir ? 'smooth' : 'auto' });
   else if (dir && PHONE()) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-/* O cartão do agendamento se expande e ocupa a tela (como a notícia aberta):
-   assim a página não sobe nem desce enquanto o aluno preenche as etapas. */
-let agPh = null;
-function agExpand(on, instant) {
+/* No celular e no tablet o cartão do agendamento se abre no próprio site (sem pop-up):
+   ele fica na página, que rola normalmente — assim o aluno sobe e desce à vontade
+   enquanto preenche, mesmo com o teclado aberto. O ✕ recolhe e volta para a etapa 1. */
+function agExpand(on) {
   const box = $('#ag-box'); if (!box) return;
   if (on) {
-    if (box.classList.contains('expanded') || !PHONE()) return; // no computador o cartão fica no lugar
-    box.classList.remove('ag-rise'); // a subida de entrada não deve se repetir ao recolher
-    agPh = document.createElement('div'); agPh.className = 'ag-ph'; agPh.style.height = box.offsetHeight + 'px';
-    box.before(agPh);
-    const bd = document.createElement('div'); bd.className = 'ag-backdrop'; bd.dataset.close = '1';
-    document.body.append(bd, box);
-    document.body.classList.add('modal-open');
-    // leve: o cartão já assume o tamanho final e só sobe/aparece (transform + opacidade)
-    box.classList.add('expanded', 'sheet-in');
-    setTimeout(() => box.classList.remove('sheet-in'), 520);
-    requestAnimationFrame(() => bd.classList.add('in'));
+    if (box.classList.contains('open') || !PHONE()) return; // no computador o cartão fica como está
+    box.classList.remove('ag-rise');
+    box.classList.add('open');
   } else {
-    if (!box.classList.contains('expanded')) return;
-    const bd = document.querySelector('.ag-backdrop');
-    const done = () => {
-      box.classList.remove('expanded', 'sheet-out', 'sheet-in');
-      box.removeAttribute('style');
-      if (agPh?.isConnected) agPh.replaceWith(box); else box.remove(); // a página mudou: o cartão não volta
-      agPh = null; bd?.remove();
-      document.body.classList.remove('modal-open');
-    };
-    if (instant || !agPh?.isConnected) return done();
-    box.classList.add('sheet-out');
-    bd?.classList.remove('in');
-    setTimeout(done, 380);
+    if (!box.classList.contains('open')) return;
+    box.classList.remove('open');
+    if (box.getBoundingClientRect().top < 0) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 window.addEventListener('hashchange', () => agExpand(false, true));
@@ -249,7 +231,7 @@ function agStepHTML(id) {
     <label class="ag-field"><span>Curso</span><input id="ag-course" maxlength="80" placeholder="Ex.: Pedagogia" value="${esc(agForm.course)}"></label>
   </div>`;
   if (id === 'faculdade') return `<div class="ag-big4">${AG.colleges.map((c) => `
-    <button type="button" class="ag-tile sm ${agForm.college === c ? 'on' : ''}" data-college="${c}" style="--a:${AG_COLLEGE_COLORS[c][0]};--b:${AG_COLLEGE_COLORS[c][1]}">
+    <button type="button" class="ag-tile ag-sm ${agForm.college === c ? 'on' : ''}" data-college="${c}" style="--a:${AG_COLLEGE_COLORS[c][0]};--b:${AG_COLLEGE_COLORS[c][1]}">
       <strong>${c}</strong><span class="ag-tile-go"><i data-icon="right"></i></span>
     </button>`).join('')}</div>`;
   if (id === 'data') {

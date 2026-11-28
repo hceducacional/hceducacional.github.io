@@ -2712,11 +2712,11 @@ body:not(.is-admin) .admin-only { display: none !important; }
 .ag-tile::before { content: ""; position: absolute; z-index: -1; right: -40px; top: -40px; width: 160px; height: 160px; border-radius: 50%; background: radial-gradient(circle closest-side, rgba(255, 255, 255, .3), rgba(255, 255, 255, 0)); }
 .ag-tile:hover { transform: translateY(-4px); box-shadow: 0 24px 44px -20px var(--b), inset 0 1px 0 rgba(255, 255, 255, .28); }
 .ag-tile:active { transform: scale(.97); }
-.ag-tile.sm { min-height: 96px; justify-content: flex-end; }
+.ag-tile.ag-sm { min-height: 96px; justify-content: flex-end; }
 .ag-tile-ico { width: 46px; height: 46px; margin-bottom: auto; border-radius: 14px; display: grid; place-items: center; background: rgba(255, 255, 255, .22); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .ag-tile-ico i { width: 24px; height: 24px; display: grid; }
 .ag-tile strong { margin-top: 18px; font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
-.ag-tile.sm strong { margin-top: 0; font-size: 19px; }
+.ag-tile.ag-sm strong { margin-top: 0; font-size: 19px; }
 .ag-tile small { font-size: 13.5px; line-height: 1.35; opacity: .88; }
 .ag-tile em { margin-top: 8px; padding: 5px 10px; border-radius: 999px; font-style: normal; font-size: 12.5px; font-weight: 700; background: rgba(255, 255, 255, .24); }
 .ag-tile-go { position: absolute; right: 16px; bottom: 16px; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .24); transition: transform .4s var(--ease), background .3s; }
@@ -2744,7 +2744,7 @@ body:not(.is-admin) .admin-only { display: none !important; }
   .ag-wiz { padding: 16px 14px 22px; }
   .ag-big2 { grid-template-columns: 1fr; gap: 12px; }
   .ag-tile { min-height: 132px; padding: 18px; border-radius: 22px; }
-  .ag-tile.sm { min-height: 84px; }
+  .ag-tile.ag-sm { min-height: 84px; }
   .ag-pane-body { margin-top: 18px; }
   .ag-rv { grid-template-columns: 76px 1fr auto; gap: 8px; }
 }
@@ -2828,6 +2828,10 @@ body:not(.is-admin) .admin-only { display: none !important; }
 .ag-closebtn { display: none; flex: none; width: 36px; height: 36px; border-radius: 50%; border: 0; place-items: center; background: var(--bg); color: var(--ink); cursor: pointer; }
 .ag-closebtn i { width: 18px; height: 18px; display: grid; }
 .ag-wiz.expanded .ag-closebtn { display: grid; }
+.ag-wiz.open .ag-closebtn { display: grid; }
+.ag-wiz.open { scroll-margin-top: calc(env(safe-area-inset-top) + 72px); overflow: clip; }
+/* a barra das etapas (voltar, progresso, ✕) acompanha a rolagem enquanto o cartão está aberto */
+.ag-wiz.open .ag-prog { position: sticky; top: calc(env(safe-area-inset-top) + 66px); z-index: 3; margin: -12px -14px 12px; padding: 10px 14px; border-radius: 0 0 18px 18px; background: #fff; box-shadow: 0 8px 16px -12px rgba(0, 0, 0, .18); }
 .ag-ph { pointer-events: none; }
 @media (max-width: 860px) {
   .ag-wiz.expanded {

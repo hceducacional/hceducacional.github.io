@@ -12,7 +12,7 @@ create table if not exists public.appointments (
   name       text not null check (char_length(name) between 3 and 120),
   cpf        text not null check (cpf ~ '^\d{11}$'),
   course     text not null check (char_length(course) between 2 and 80),
-  college    text not null check (college in ('Unifaveni', 'Uniabeu', 'Futura', 'Dom Alberto')),
+  college    text not null check (college in ('Unifaveni', 'Uniabeu', 'Futura', 'Dom Alberto', 'UNISBA', 'NEXUS')),
   date       date not null,
   shift      text not null check (shift in ('manha', 'tarde')),
   status     text not null default 'confirmado' check (status in ('confirmado', 'compareceu', 'faltou', 'cancelado')),
