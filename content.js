@@ -282,8 +282,7 @@ window.HC_CONTENT = {
         "Que a pureza e a alegria das crianças continuem inspirando cada um de nós a fazer o bem todos os dias!"
       ],
       "date": "2025-10-12",
-      "rank": 6,
-      "star": true,
+      "star": false,
       "focus": [
         "50% 42%",
         "50% 30%",
@@ -343,15 +342,15 @@ window.HC_CONTENT = {
         "Neste sábado (28), os alunos das Licenciaturas do polo HC Instituto Educacional, em Humberto de Campos, participaram da Aula 05 – Psicologia da Aprendizagem e Intervenção Pedagógica: entender para intervir, conduzida pelo professor José Mateus de Sousa.",
         "O objetivo do encontro foi compreender como o ser humano aprende, à luz das principais teorias da Psicologia da Educação, e preparar cada participante para observar um caso real e planejar uma intervenção que ajude o aluno a avançar.",
         "A aula começou com uma pergunta simples: o que você já aprendeu fora da escola? Andar de bicicleta, cozinhar, dirigir… A partir das respostas, a turma chegou à ideia central do dia: aprender não é decorar. É uma mudança relativamente duradoura no jeito de pensar, sentir e agir, que nasce da experiência. Por isso, todo aluno aprende, mas cada um do seu jeito e no seu tempo.",
-        "[imagem 7]",
+        "[imagem 6]",
         "Em seguida, os alunos conheceram as grandes teorias da aprendizagem: o Behaviorismo de B. F. Skinner, com os reforços positivo e negativo; o Construtivismo de Jean Piaget e os estágios do desenvolvimento; o Sociointeracionismo de Lev Vygotsky e a Zona de Desenvolvimento Proximal; a afetividade de Henri Wallon; e a Aprendizagem Significativa de David Ausubel.",
         "Exemplos do dia a dia ajudaram a fixar os conceitos, como o da criança que só conhece cachorro e vê um gato pela primeira vez: ela assimila, acomoda e equilibra até descobrir que \"miau\" é um gato.",
-        "[imagem 8]",
+        "[imagem 7]",
         "Na segunda parte, o foco foi o olhar da Psicopedagogia sobre quem aprende. A turma discutiu a diferença entre dificuldade e transtorno de aprendizagem: a dificuldade é passageira e melhora com uma boa intervenção; o transtorno, como a dislexia, tem origem neurobiológica, é persistente e precisa de diagnóstico por uma equipe multiprofissional.",
-        "[imagem 9]",
+        "[imagem 8]",
         "Os alunos também conheceram a Lei nº 14.254/2021, que garante acompanhamento integral a estudantes com dislexia, TDAH ou outros transtornos de aprendizagem, e analisaram dois casos: Pedro, que passou a ter notas baixas depois da separação dos pais, e Júlia, que troca letras desde o 1º ano. A conclusão da turma: o professor não diagnostica. Ele observa, registra e encaminha.",
         "Para fechar a parte teórica, a turma montou o passo a passo da intervenção pedagógica: observar e investigar, definir o foco, planejar e aplicar estratégias diferenciadas e, por fim, avaliar e replanejar.",
-        "[imagem 10]",
+        "[imagem 9]",
         "Depois veio o momento prático: uma atividade de fixação com 15 questões, resolvida com consulta aos slides da aula, para colocar em prática tudo o que foi discutido.",
         "O encontro terminou com uma frase de Paulo Freire que resume a proposta da aula: ensinar não é transferir conhecimento, mas criar as possibilidades para a sua produção ou a sua construção."
       ],
@@ -363,17 +362,25 @@ window.HC_CONTENT = {
         "50% 42%",
         "",
         "",
+        "",
+        "",
+        "",
+        "",
         ""
       ],
       "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/040eaa28-c647-49f0-9d9a-0da57b555521.jpg",
       "title": "Psicologia da Aprendizagem: aula das Licenciaturas ensina a entender o aluno para intervir",
       "author": "Comunicação HC",
-      "excerpt": "No 5º encontro das Licenciaturas, o professor José Mateus de Sousa levou à turma as grandes teorias da aprendizagem, o olhar da Psicopedagogia e um passo a passo para a intervenção pedagógica.",
+      "excerpt": "No 5º encontro das Licenciaturas, o professor Mateus levou à turma as grandes teorias da aprendizagem, o olhar da Psicopedagogia e um passo a passo para a intervenção pedagógica.",
       "gallery": [
         "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/32441158-0540-4c98-8152-2b80b5a53e58.jpg",
         "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/d995e3c4-43a6-4f29-82b6-d7b9b7151a66.jpg",
         "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/204559c8-615e-4756-b073-bf04746e474e.jpg",
-        "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/21847246-e882-4807-882c-cc377de82b86.jpg"
+        "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/21847246-e882-4807-882c-cc377de82b86.jpg",
+        "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/117b17a2-51f6-47e8-a843-64047dcad756.jpg",
+        "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/1100bebe-3c21-489e-97c1-df4e7c306644.jpg",
+        "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/c647084b-bc6d-45c2-93c1-770e16770e81.jpg",
+        "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/6365322c-b3f2-4a90-a56e-aed6cc7c55f5.jpg"
       ],
       "authorId": "a1"
     }

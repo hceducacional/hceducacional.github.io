@@ -1485,7 +1485,7 @@ const initials = (name = '') => { // "Comunicação HC" → "CH" (ignora "de", "
   return ((main.length ? main : w).slice(0, 2).map((x) => x[0]).join('') || '?').toUpperCase();
 };
 const avatarHTML = (a, cls = '') => `<span class="avatar ${cls}" aria-hidden="true">${a.image ? `<img src="${esc(imgUrl(a.image))}" alt=""${objPos(a.focus)}>` : `<span>${esc(initials(a.name))}</span>`}</span>`;
-const MAX_NEWS_IMGS = 5;      // capa + até 4 imagens extras
+const MAX_NEWS_IMGS = 10;     // capa + até 9 imagens extras (fotos no topo e imagens usadas no meio do texto)
 const NEWS_SLIDE_MS = 10000;  // troca das imagens ao abrir a notícia
 /* Imagens reais da notícia, com a capa primeiro (n.image é sempre a capa) */
 const newsImages = (n) => [n.image, ...(n.gallery || [])].filter((src) => src && src !== NEWS_DEFAULT_IMG);
