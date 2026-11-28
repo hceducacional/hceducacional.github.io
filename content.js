@@ -131,7 +131,7 @@ window.HC_CONTENT = {
         "O HC Instituto Educacional parabeniza todos os alunos por essa conquista e reforça o compromisso de acompanhar cada etapa dessa jornada. Como dizia a mensagem que estampou o cenário da noite: aqui não existem obstáculos para os seus sonhos!"
       ],
       "date": "2026-10-20",
-      "rank": 1,
+      "rank": 2,
       "star": true,
       "focus": [
         "56% 38%",
@@ -162,7 +162,7 @@ window.HC_CONTENT = {
         "O HC Instituto Educacional parabeniza todos os formandos e deseja que essa nova etapa seja repleta de realizações. Em breve, mais novidades sobre a cerimônia!"
       ],
       "date": "2026-09-18",
-      "rank": 3,
+      "rank": 4,
       "star": true,
       "focus": [
         "50% 36%",
@@ -193,7 +193,7 @@ window.HC_CONTENT = {
         "O HC Instituto Educacional agradece a todos os alunos e parceiros que doaram e participaram da ação. Juntos, fizemos o Dia das Crianças de muita gente ainda mais feliz!"
       ],
       "date": "2026-10-12",
-      "rank": 2,
+      "rank": 3,
       "star": true,
       "focus": [
         "50% 45%",
@@ -222,7 +222,7 @@ window.HC_CONTENT = {
         "O HC Instituto Educacional agradece a todos os profissionais e alunos que participaram e fizeram deste encontro uma experiência tão especial."
       ],
       "date": "2026-04-19",
-      "rank": 4,
+      "rank": 5,
       "star": true,
       "focus": [
         "47% 35%",
@@ -282,7 +282,7 @@ window.HC_CONTENT = {
         "Que a pureza e a alegria das crianças continuem inspirando cada um de nós a fazer o bem todos os dias!"
       ],
       "date": "2025-10-12",
-      "rank": 5,
+      "rank": 6,
       "star": true,
       "focus": [
         "50% 42%",
@@ -319,7 +319,7 @@ window.HC_CONTENT = {
         "A data do lançamento completo ainda não foi divulgada. Até lá, os alunos já podem usar o agendamento online para garantir seus horários no polo."
       ],
       "date": "2026-11-24",
-      "rank": 0,
+      "rank": 1,
       "star": true,
       "focus": [
         "40% 57%",
@@ -335,6 +335,47 @@ window.HC_CONTENT = {
         "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/4e8c9576-81e2-4a15-a175-fcd0a20e0484.webp"
       ],
       "authorId": "amwew9xh2"
+    },
+    {
+      "id": "n1795873101848",
+      "cat": "Acadêmico",
+      "body": [
+        "Neste sábado (28), os alunos das Licenciaturas do polo HC Instituto Educacional, em Humberto de Campos, participaram da Aula 05 – Psicologia da Aprendizagem e Intervenção Pedagógica: entender para intervir, conduzida pelo professor José Mateus de Sousa.",
+        "O objetivo do encontro foi compreender como o ser humano aprende, à luz das principais teorias da Psicologia da Educação, e preparar cada participante para observar um caso real e planejar uma intervenção que ajude o aluno a avançar.",
+        "A aula começou com uma pergunta simples: o que você já aprendeu fora da escola? Andar de bicicleta, cozinhar, dirigir… A partir das respostas, a turma chegou à ideia central do dia: aprender não é decorar. É uma mudança relativamente duradoura no jeito de pensar, sentir e agir, que nasce da experiência. Por isso, todo aluno aprende, mas cada um do seu jeito e no seu tempo.",
+        "[imagem 7]",
+        "Em seguida, os alunos conheceram as grandes teorias da aprendizagem: o Behaviorismo de B. F. Skinner, com os reforços positivo e negativo; o Construtivismo de Jean Piaget e os estágios do desenvolvimento; o Sociointeracionismo de Lev Vygotsky e a Zona de Desenvolvimento Proximal; a afetividade de Henri Wallon; e a Aprendizagem Significativa de David Ausubel.",
+        "Exemplos do dia a dia ajudaram a fixar os conceitos, como o da criança que só conhece cachorro e vê um gato pela primeira vez: ela assimila, acomoda e equilibra até descobrir que \"miau\" é um gato.",
+        "[imagem 8]",
+        "Na segunda parte, o foco foi o olhar da Psicopedagogia sobre quem aprende. A turma discutiu a diferença entre dificuldade e transtorno de aprendizagem: a dificuldade é passageira e melhora com uma boa intervenção; o transtorno, como a dislexia, tem origem neurobiológica, é persistente e precisa de diagnóstico por uma equipe multiprofissional.",
+        "[imagem 9]",
+        "Os alunos também conheceram a Lei nº 14.254/2021, que garante acompanhamento integral a estudantes com dislexia, TDAH ou outros transtornos de aprendizagem, e analisaram dois casos: Pedro, que passou a ter notas baixas depois da separação dos pais, e Júlia, que troca letras desde o 1º ano. A conclusão da turma: o professor não diagnostica. Ele observa, registra e encaminha.",
+        "Para fechar a parte teórica, a turma montou o passo a passo da intervenção pedagógica: observar e investigar, definir o foco, planejar e aplicar estratégias diferenciadas e, por fim, avaliar e replanejar.",
+        "[imagem 10]",
+        "Depois veio o momento prático: uma atividade de fixação com 15 questões, resolvida com consulta aos slides da aula, para colocar em prática tudo o que foi discutido.",
+        "O encontro terminou com uma frase de Paulo Freire que resume a proposta da aula: ensinar não é transferir conhecimento, mas criar as possibilidades para a sua produção ou a sua construção."
+      ],
+      "date": "2026-11-28",
+      "rank": 0,
+      "star": true,
+      "focus": [
+        "",
+        "50% 42%",
+        "",
+        "",
+        ""
+      ],
+      "image": "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/040eaa28-c647-49f0-9d9a-0da57b555521.jpg",
+      "title": "Psicologia da Aprendizagem: aula das Licenciaturas ensina a entender o aluno para intervir",
+      "author": "Comunicação HC",
+      "excerpt": "No 5º encontro das Licenciaturas, o professor José Mateus de Sousa levou à turma as grandes teorias da aprendizagem, o olhar da Psicopedagogia e um passo a passo para a intervenção pedagógica.",
+      "gallery": [
+        "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/32441158-0540-4c98-8152-2b80b5a53e58.jpg",
+        "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/d995e3c4-43a6-4f29-82b6-d7b9b7151a66.jpg",
+        "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/204559c8-615e-4756-b073-bf04746e474e.jpg",
+        "https://xeqmgwzkwzhmkpvrguln.supabase.co/storage/v1/object/public/site/2026-11/21847246-e882-4807-882c-cc377de82b86.jpg"
+      ],
+      "authorId": "a1"
     }
   ],
   "brand": [
